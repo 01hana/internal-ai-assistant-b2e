@@ -31,32 +31,32 @@
 
 **目的**：建立 NestJS + TypeScript 專案骨架、基礎工具、Docker local dev baseline、環境變數規範與目錄結構。
 
-- [ ] T001 建立 NestJS + TypeScript 專案結構、application bootstrap 與全域 request/validation/error/response 接線，包含 `package.json`、`tsconfig.json`、`nest-cli.json`、`src/main.ts`、`src/app.module.ts`
+- [X] T001 建立 NestJS + TypeScript 專案結構、application bootstrap 與全域 request/validation/error/response 接線，包含 `package.json`、`tsconfig.json`、`nest-cli.json`、`src/main.ts`、`src/app.module.ts`
   - 說明：建立可啟動的 NestJS app skeleton，並在 `main.ts` / `app.module.ts` 接上 global validation、exception handling、response envelope、requestId propagation；controller 只處理 DTO 與 response，不放業務規則。
   - 輸出：`src/main.ts`、`src/app.module.ts`、global `ValidationPipe`、global exception filter、response envelope interceptor、requestId middleware/interceptor 接線、app bootstrap smoke check。
   - 完成條件：app 可成功啟動；DTO validation 生效且未知欄位依專案規則拒絕或處理；所有 response/error envelope 都包含 requestId；非預期錯誤不向 client 洩漏 stack trace、secret、OpenAI API key、database credential 或 connector secret；後續 assistant / approval / feedback / tool controller 可共用全域 response/error 行為。
-- [ ] T002 [P] 在 `prisma/schema.prisma` 與 `prisma/migrations/` 設定 Prisma 基礎結構
-- [ ] T003 [P] 在 `jest.config.*`、`test/jest-e2e.json` 設定 Jest unit/e2e 測試環境
-- [ ] T004 [P] 在 `src/common/config/` 實作 config module，負責從 `.env` / `process.env` 載入並驗證 `LLM_MODEL`、`DATABASE_URL`、OpenAI credentials 與 runtime flags。Local development 使用 `.env`，範例名稱放在 `.env.example`，正式環境由 CI/CD secret 或 secret manager 注入；程式碼不得 hardcode secret、database URL、OpenAI API key 或模型實際值。
+- [X] T002 [P] 在 `prisma/schema.prisma` 與 `prisma/migrations/` 設定 Prisma 基礎結構
+- [X] T003 [P] 在 `jest.config.*`、`test/jest-e2e.json` 設定 Jest unit/e2e 測試環境
+- [X] T004 [P] 在 `src/common/config/` 實作 config module，負責從 `.env` / `process.env` 載入並驗證 `LLM_MODEL`、`DATABASE_URL`、OpenAI credentials 與 runtime flags。Local development 使用 `.env`，範例名稱放在 `.env.example`，正式環境由 CI/CD secret 或 secret manager 注入；程式碼不得 hardcode secret、database URL、OpenAI API key 或模型實際值。
   - 說明：建立所有 runtime 設定的唯一入口，避免 controller/service/domain 直接讀取或硬寫模型、secret、database URL。
   - 輸出：config module、typed config DTO、env validation rules、啟動錯誤格式。
   - 完成條件：缺少必要 env 會 fail fast；`LLM_MODEL` 只在 config/provider layer 使用；secret 不會出現在一般 log、error response 或 audit metadata。
-- [ ] T005 [P] 建立 `.env.example`，列出 `DATABASE_URL`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB`、`LLM_MODEL`、OpenAI API key placeholder 與 runtime flags，但不得包含任何真實 secret
+- [X] T005 [P] 建立 `.env.example`，列出 `DATABASE_URL`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB`、`LLM_MODEL`、OpenAI API key placeholder 與 runtime flags，但不得包含任何真實 secret
   - 說明：提供 Docker/local dev 可用的環境變數範本，同時避免把真實 secret 帶進 repo。
   - 輸出：`.env.example`、必要時 README env 說明。
   - 完成條件：範例值皆為 placeholder；沒有真實 OpenAI key、DB 密碼或 connector secret；與 config validation 欄位一致。
-- [ ] T006 [P] 建立 local development 用 `Dockerfile`，支援 NestJS backend app service 在容器中啟動
-- [ ] T007 [P] 建立 `docker-compose.yml`，包含 `app`、`postgres` 與 optional/profile-based `redis`；Redis 僅預留給 queue/backpressure/rate limit，MVP 未使用時可不啟用
-- [ ] T008 [P] 建立 `.dockerignore`，避免 node_modules、build output、local env、log、cache 與 secret 檔案進入 Docker build context
-- [ ] T009 [P] 建立原始碼模組目錄：`src/assistant`、`src/query-understanding`、`src/identity`、`src/permissions`、`src/tools`、`src/connectors/mock`、`src/llm/openai`、`src/prisma`、`src/retrieval`、`src/evidence`、`src/approvals`、`src/audit`、`src/feedback`、`src/observability`、`src/common`
-- [ ] T010 [P] 建立 `src/common/config`、`src/common/errors`、`src/common/request-id`、`src/common/response`、`src/common/sse`、`src/common/logger`，並避免建立 `src/common/providers`
-- [ ] T011 [P] 建立測試目錄：`test/unit`、`test/integration`、`test/contract`、`test/e2e`、`test/eval`
-- [ ] T012 [P] 在專案 README 中補上 v1 範圍排除說明：不做完整 admin UI/CRUD、不做真實 ERP/MES/WMS/SCM/CRM connector、不做 frontend SDK/widget
-- [ ] T013 [P] 在 README 補上 Docker Compose quickstart：`docker compose up`、app / postgres 啟動、Prisma migration、Prisma seed、test database initialization、unit / integration / contract / e2e / eval command、SSE smoke testing command 或手動步驟
+- [X] T006 [P] 建立 local development 用 `Dockerfile`，支援 NestJS backend app service 在容器中啟動
+- [X] T007 [P] 建立 `docker-compose.yml`，包含 `app`、`postgres` 與 optional/profile-based `redis`；Redis 僅預留給 queue/backpressure/rate limit，MVP 未使用時可不啟用
+- [X] T008 [P] 建立 `.dockerignore`，避免 node_modules、build output、local env、log、cache 與 secret 檔案進入 Docker build context
+- [X] T009 [P] 建立原始碼模組目錄：`src/assistant`、`src/query-understanding`、`src/identity`、`src/permissions`、`src/tools`、`src/connectors/mock`、`src/llm/openai`、`src/prisma`、`src/retrieval`、`src/evidence`、`src/approvals`、`src/audit`、`src/feedback`、`src/observability`、`src/common`
+- [X] T010 [P] 建立 `src/common/config`、`src/common/errors`、`src/common/request-id`、`src/common/response`、`src/common/sse`、`src/common/logger`，並避免建立 `src/common/providers`
+- [X] T011 [P] 建立測試目錄：`test/unit`、`test/integration`、`test/contract`、`test/e2e`、`test/eval`
+- [X] T012 [P] 在專案 README 中補上 v1 範圍排除說明：不做完整 admin UI/CRUD、不做真實 ERP/MES/WMS/SCM/CRM connector、不做 frontend SDK/widget
+- [X] T013 [P] 在 README 補上 Docker Compose quickstart：`docker compose up`、app / postgres 啟動、Prisma migration、Prisma seed、test database initialization、unit / integration / contract / e2e / eval command、SSE smoke testing command 或手動步驟
   - 說明：建立 local dev/test baseline 的操作入口，讓後續 Codex 或工程師能從空環境啟動 app、DB、migration、seed 與 smoke test。
   - 輸出：README quickstart、Docker Compose command、migration/seed/test DB command、SSE smoke 步驟。
   - 完成條件：README 可指引 `docker compose up` 啟動 app 與 postgres；migration/seed/test DB 初始化步驟清楚；unit/integration/contract/e2e/eval 指令列出；不包含 production deployment、Kubernetes、Helm、CI/CD 範圍。
-- [ ] T014 [P] 在 README 或 checklist 補上 secret 規則：`.env` 不得 commit；`.env.example` 可 commit 但不得放真實 secret；OpenAI API key 不得出現在 README、測試 fixture、audit metadata、error log
+- [X] T014 [P] 在 README 或 checklist 補上 secret 規則：`.env` 不得 commit；`.env.example` 可 commit 但不得放真實 secret；OpenAI API key 不得出現在 README、測試 fixture、audit metadata、error log
   - 說明：把 secret 管理規則寫成實作前必讀約束，避免後續 fixture、README 或 audit sample 泄漏憑證。
   - 輸出：README/checklist secret section。
   - 完成條件：明確禁止 `.env` commit；禁止 OpenAI API key / connector secrets 進入 README、fixture、audit metadata、error log；與 secret redaction 測試一致。
