@@ -15,6 +15,6 @@
     "strictPropertyInitialization": false,
     "noImplicitAny": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "jest.config.ts"],
+  "include": ["src/**/*.ts", "jest.config.ts", "prisma.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

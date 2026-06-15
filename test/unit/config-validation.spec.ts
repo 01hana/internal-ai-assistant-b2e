@@ -15,7 +15,9 @@ describe('validateEnvironment', () => {
     expect(validateEnvironment(validEnv)).toMatchObject({
       DATABASE_URL: validEnv.DATABASE_URL,
       LLM_MODEL: validEnv.LLM_MODEL,
-      OPENAI_API_KEY: validEnv.OPENAI_API_KEY
+      OPENAI_API_KEY: validEnv.OPENAI_API_KEY,
+      ENABLE_SWAGGER_DOCS: false,
+      SWAGGER_PATH: 'docs'
     });
   });
 
@@ -23,5 +25,18 @@ describe('validateEnvironment', () => {
     expect(() => validateEnvironment({ ...validEnv, DATABASE_URL: undefined })).toThrow(
       /Invalid environment configuration/
     );
+  });
+
+  it('parses swagger docs settings from environment variables', () => {
+    expect(
+      validateEnvironment({
+        ...validEnv,
+        ENABLE_SWAGGER_DOCS: 'true',
+        SWAGGER_PATH: 'internal/docs'
+      })
+    ).toMatchObject({
+      ENABLE_SWAGGER_DOCS: true,
+      SWAGGER_PATH: 'internal/docs'
+    });
   });
 });

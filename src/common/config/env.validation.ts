@@ -1,5 +1,5 @@
 import { plainToInstance, Transform } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Min, validateSync } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Min, validateSync } from 'class-validator';
 
 const allowedRuntimeEnvironments = ['development', 'test', 'production'] as const;
 
@@ -47,6 +47,17 @@ export class EnvironmentVariables {
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   ENABLE_REDIS = false;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  ENABLE_SWAGGER_DOCS = false;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^[A-Za-z0-9][A-Za-z0-9/_-]*$/)
+  SWAGGER_PATH = 'docs';
 }
 
 export function validateEnvironment(config: Record<string, unknown>) {

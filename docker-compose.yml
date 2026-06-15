@@ -6,14 +6,16 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${PORT:-3000}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://assistant:change-me-local-only@postgres:5432/assistant_dev}
-      POSTGRES_USER: ${POSTGRES_USER:-assistant}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
-      POSTGRES_DB: ${POSTGRES_DB:-assistant_dev}
-      LLM_MODEL: ${LLM_MODEL:-placeholder-model-name}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-placeholder-openai-api-key}
+      DATABASE_URL: ${DATABASE_URL}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      LLM_MODEL: ${LLM_MODEL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       ENABLE_RUNTIME_DEBUG: ${ENABLE_RUNTIME_DEBUG:-false}
       ENABLE_REDIS: ${ENABLE_REDIS:-false}
+      ENABLE_SWAGGER_DOCS: ${ENABLE_SWAGGER_DOCS:-false}
+      SWAGGER_PATH: ${SWAGGER_PATH:-docs}
     ports:
       - "3000:3000"
     depends_on:
@@ -23,9 +25,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-assistant}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
-      POSTGRES_DB: ${POSTGRES_DB:-assistant_dev}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
