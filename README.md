@@ -17,6 +17,8 @@ NestJS + TypeScript backend service for the v1 internal assistant core.
    cp .env.example .env
    ```
 
+   The v1 LLM provider defaults to `LLM_PROVIDER=openai`; `LLM_MODEL` selects the model for that provider, and OpenAI credentials stay provider-specific in `OPENAI_API_KEY`.
+
 2. Install dependencies:
 
    ```sh
@@ -76,4 +78,3 @@ docker compose --profile redis up
 - `.env.example` is committed for placeholders only.
 - Do not place real OpenAI API keys, database credentials, connector secrets, customer data, or internal transaction data in README, test fixtures, audit metadata, or error logs.
 - Runtime secrets must come from local `.env`, CI/CD secrets, or a secret manager.
-

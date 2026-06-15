@@ -37,11 +37,11 @@
   - 完成條件：app 可成功啟動；DTO validation 生效且未知欄位依專案規則拒絕或處理；所有 response/error envelope 都包含 requestId；非預期錯誤不向 client 洩漏 stack trace、secret、OpenAI API key、database credential 或 connector secret；後續 assistant / approval / feedback / tool controller 可共用全域 response/error 行為。
 - [X] T002 [P] 在 `prisma/schema.prisma` 與 `prisma/migrations/` 設定 Prisma 基礎結構
 - [X] T003 [P] 在 `jest.config.*`、`test/jest-e2e.json` 設定 Jest unit/e2e 測試環境
-- [X] T004 [P] 在 `src/common/config/` 實作 config module，負責從 `.env` / `process.env` 載入並驗證 `LLM_MODEL`、`DATABASE_URL`、OpenAI credentials 與 runtime flags。Local development 使用 `.env`，範例名稱放在 `.env.example`，正式環境由 CI/CD secret 或 secret manager 注入；程式碼不得 hardcode secret、database URL、OpenAI API key 或模型實際值。
+- [X] T004 [P] 在 `src/common/config/` 實作 config module，負責從 `.env` / `process.env` 載入並驗證 `LLM_PROVIDER`、`LLM_MODEL`、`DATABASE_URL`、OpenAI provider-specific credentials 與 runtime flags。Local development 使用 `.env`，範例名稱放在 `.env.example`，正式環境由 CI/CD secret 或 secret manager 注入；程式碼不得 hardcode secret、database URL、OpenAI API key、provider 或模型實際值。
   - 說明：建立所有 runtime 設定的唯一入口，避免 controller/service/domain 直接讀取或硬寫模型、secret、database URL。
   - 輸出：config module、typed config DTO、env validation rules、啟動錯誤格式。
-  - 完成條件：缺少必要 env 會 fail fast；`LLM_MODEL` 只在 config/provider layer 使用；secret 不會出現在一般 log、error response 或 audit metadata。
-- [X] T005 [P] 建立 `.env.example`，列出 `DATABASE_URL`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB`、`LLM_MODEL`、OpenAI API key placeholder 與 runtime flags，但不得包含任何真實 secret
+  - 完成條件：缺少必要 env 會 fail fast；`LLM_PROVIDER` / `LLM_MODEL` 只在 config/provider layer 使用；secret 不會出現在一般 log、error response 或 audit metadata。
+- [X] T005 [P] 建立 `.env.example`，列出 `DATABASE_URL`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB`、`LLM_PROVIDER`、`LLM_MODEL`、OpenAI API key placeholder 與 runtime flags，但不得包含任何真實 secret
   - 說明：提供 Docker/local dev 可用的環境變數範本，同時避免把真實 secret 帶進 repo。
   - 輸出：`.env.example`、必要時 README env 說明。
   - 完成條件：範例值皆為 placeholder；沒有真實 OpenAI key、DB 密碼或 connector secret；與 config validation 欄位一致。
@@ -88,12 +88,12 @@
 - [X] T022 [P] 在 `src/common/request-id/` 實作 requestId middleware/interceptor
 - [X] T023 [P] 在 `src/common/response/` 與 `src/common/errors/` 實作共用 response/error envelope
 - [X] T024 [P] 在 `src/common/sse/` 定義 SSE event types 與共用 streaming helpers
-- [ ] T025 [P] 分別在 `src/llm/`、`src/retrieval/`、`src/query-understanding/`、`src/connectors/` 定義 `LlmProvider`、`RetrievalProvider`、`TokenizerAdapter`、`ConnectorAdapter` interfaces，避免將 domain-specific interface 全部塞入 `common`
+- [X] T025 [P] 分別在 `src/llm/`、`src/retrieval/`、`src/query-understanding/`、`src/connectors/` 定義 `LlmProvider`、`RetrievalProvider`、`TokenizerAdapter`、`ConnectorAdapter` interfaces，避免將 domain-specific interface 全部塞入 `common`
   - 說明：讓可替換 provider/adapter 靠近所屬 domain，避免 `common/` 變成雜物區，也避免 LLM、retrieval、tokenizer、business connector 互相耦合。
   - 輸出：`src/llm/llm-provider.interface.ts`、`src/retrieval/retrieval-provider.interface.ts`、`src/query-understanding/tokenizer-adapter.interface.ts`、`src/connectors/connector-adapter.interface.ts`。
   - 完成條件：`src/common/providers/` 不存在；各 interface 只暴露 domain contract；後續 provider/mock connector 能以 interface 注入測試。
-- [ ] T026 [P] 在 `src/llm/openai/` 建立 `OpenAiProvider` shell，實作 `LlmProvider` interface，模型由 `LLM_MODEL` 選擇，controller/service/domain logic 不得硬寫模型名稱
-  - 說明：OpenAI 是 LLM provider，不是 ERP/MES/WMS/SCM/CRM connector；模型選擇必須集中在 config/provider layer。
+- [X] T026 [P] 在 `src/llm/openai/` 建立 `OpenAiProvider` shell，實作 `LlmProvider` interface，v1 provider 由 `LLM_PROVIDER=openai` 選擇，模型由 `LLM_MODEL` 選擇，controller/service/domain logic 不得硬寫 provider 或模型名稱
+  - 說明：OpenAI 是 LLM provider，不是 ERP/MES/WMS/SCM/CRM connector；provider/model 選擇必須集中在 config/provider layer。
   - 輸出：`src/llm/openai/` provider shell、provider config、測試用 mock/fake hooks。
   - 完成條件：沒有 `src/connectors/openai/`；controller/service/domain/prompt 不硬寫模型；provider 能回報 selected provider/model/fallback metadata。
 - [X] T027 [P] 在 `test/unit/config-validation.spec.ts` 撰寫 env validation tests
@@ -129,7 +129,7 @@
   - 說明：MVP 不做 dashboard，但必須保存後續分析所需 raw metrics / raw events。
   - 輸出：metadata helper、duration/dependency/reason enums、observability integration points。
   - 完成條件：AuditEvent、ToolCall、ExecutionPlan、AnswerDecision、EvidenceRef、FeedbackEvent、ReviewItem、ApprovalRequest、ActionDraft、RetrievalRun/Candidate 皆能帶分析欄位。
-- [ ] T039 [P] 在 `src/connectors/mock/` 建立 mock connector fixtures：訂單狀態、工單進度、庫存可用量、客戶/供應商歷史
+- [X] T039 [P] 在 `src/connectors/mock/` 建立 mock connector fixtures：訂單狀態、工單進度、庫存可用量、客戶/供應商歷史
 - [ ] T040 [P] 在 `src/query-understanding/` 建立 `QueryUnderstandingPipeline` shell、`QueryUnderstandingInput` / `QueryUnderstandingOutput` DTO、`QueryUnderstandingResult` persistence contract
   - 說明：先建立 US1/US2 可用的 query understanding contract，避免 ExecutionPlan 直接吃 raw message 導致後續重工。
   - 輸出：pipeline shell、input/output DTO、result persistence/audit contract。
@@ -237,7 +237,7 @@
 - [ ] T067 [P] [US2] 在 `test/unit/permission-filtering.spec.ts` 撰寫 module/operation/row/field permission filtering unit tests
 - [ ] T068 [P] [US2] 在 `test/integration/authorized-tool-execution.spec.ts` 撰寫使用 mock connector 的授權 tool execution integration test
 - [ ] T069 [P] [US2] 在 `test/integration/tool-permission-denied.spec.ts` 撰寫 tool execution 前 permission denied 的 integration test
-- [ ] T070 [P] [US2] 在 `test/unit/openai-provider-config.spec.ts` 撰寫 `OpenAiProvider` 依 `LLM_MODEL` 選擇模型的 unit test，確認實作位於 `src/llm/openai/` 且不在 `connectors/`
+- [ ] T070 [P] [US2] 在 `test/unit/openai-provider-config.spec.ts` 撰寫 `OpenAiProvider` 依 `LLM_PROVIDER=openai` 與 `LLM_MODEL` 選擇 provider/model 的 unit test，確認實作位於 `src/llm/openai/` 且不在 `connectors/`
 
 ### User Story 2 實作任務
 
@@ -261,10 +261,10 @@
   - 說明：遮罩必須發生在 tool/retrieval result 交給 LLM 前，不只是在最終回答後處理。
   - 輸出：row/field masking pipeline、LLM input sanitizer、masking tests。
   - 完成條件：未授權欄位不得進 LLM input；部分授權只回答可見資料；masked fields 不出現在 prompt/debug/audit。
-- [ ] T076 [US2] 在 `src/llm/openai/` 實作支援 `LLM_MODEL` 的 `OpenAiProvider` config/provider layer，支援 `gpt-5.4-mini`、`gpt-5.4`、`gpt-5.4-nano`
-  - 說明：模型切換屬於 provider/config 責任；fallback/model selection 不得散落在業務邏輯。
-  - 輸出：OpenAiProvider implementation、model config mapping、fallback policy hook。
-  - 完成條件：`LLM_MODEL` 可切換三種建議模型；controller/service/domain 不 hardcode model；provider failure 可回 safe degradation metadata。
+- [ ] T076 [US2] 在 `src/llm/openai/` 實作支援 `LLM_PROVIDER=openai` 與 `LLM_MODEL` 的真實 OpenAI SDK provider layer，支援 `gpt-5.4-mini`、`gpt-5.4`、`gpt-5.4-nano`
+  - 說明：provider/model 切換屬於 provider/config 責任；fallback/model selection 不得散落在業務邏輯。
+  - 輸出：OpenAiProvider SDK implementation、provider registry hook、model config mapping、fallback policy hook。
+  - 完成條件：`LLM_PROVIDER=openai` 可選擇 OpenAI provider，`LLM_MODEL` 可切換三種建議模型；controller/service/domain 不 hardcode provider/model；provider failure 可回 safe degradation metadata。
 - [ ] T077 [US2] 在 `src/audit/` 或 `src/observability/` 記錄 selected provider/model 與 fallback decision 到 audit 或 observability metadata
   - 說明：LLM provider/model/fallback 是回答品質與成本分析的重要 raw metric。
   - 輸出：provider/model metadata writer、fallback decision reason enum。
@@ -529,7 +529,7 @@
 - 任何 side-effect tool 在 confirmation 或 approval 前不得執行。
 - 未授權欄位不得進入 LLM input。
 - `OpenAiProvider` 必須位於 `src/llm/openai/`，不屬於 `connectors/`。
-- 模型選擇必須透過 config/provider layer 從 `LLM_MODEL` 取得。
+- provider/model 選擇必須透過 config/provider layer 從 `LLM_PROVIDER` / `LLM_MODEL` 取得。
 - `.env` 不得 commit，OpenAI API key / connector secrets 不得進入 README、fixtures、audit metadata、error log。
 - 所有 DB access 必須透過 `PrismaService` 注入，不得散落 `new PrismaClient()`。
 - Prisma migration / seed / test database baseline 必須可在 local dev/test 重複執行，且 seed 不得含真實客戶資料或 secret。
@@ -544,7 +544,7 @@
 |---------|---------|-------------|
 | Phase 2 foundation | PrismaService 注入與 migration/seed/test DB baseline 可用；identity / host app / organization boundary 在 session/message/history/tool/retrieval 前執行；config/env/secret/logger redaction 通過；provider interfaces 位於各自 domain；QueryUnderstandingPipeline shell 在 ExecutionPlan 前串接 | DB access layer、安全邊界、provider 抽象、query understanding 前置、secret 保護 |
 | US1 session/message/SSE/history/evidence answer | session create/get、message SSE、history retrieval、PageContext、AssistantContextState、ExecutionPlan、EvidenceRef、AnswerDecision/GroundingCheck 可獨立通過；SSE event metadata 完整；history masking 與 audit 通過 | 即時回答、聊天歷史、evidence-grounded answer、audit traceability |
-| US2 permission-aware tool execution / masking before LLM | tool execution 前完成 identity/permission/organization boundary check；未授權 tool 不執行；connector result 先 row/field masking 再進 LLM；OpenAiProvider 位於 `src/llm/openai/` 且模型由 `LLM_MODEL` 控制 | Tool-first、權限不可繞過、LLM provider 管理 |
+| US2 permission-aware tool execution / masking before LLM | tool execution 前完成 identity/permission/organization boundary check；未授權 tool 不執行；connector result 先 row/field masking 再進 LLM；OpenAiProvider 位於 `src/llm/openai/` 且 provider/model 由 `LLM_PROVIDER` / `LLM_MODEL` 控制 | Tool-first、權限不可繞過、LLM provider 管理 |
 | US3 ActionDraft / ApprovalRequest / idempotency | medium-risk 建立 ActionDraft 並等待使用者確認；high/critical 建立 ApprovalRequest 或 EscalationRequest；confirm/approve 前不執行 side-effect；idempotency 防止重複執行；所有狀態 append-only audit | Side-effect safety、approval workflow、idempotency、audit |
 | US4 no-answer / clarification / RAG / feedback-review | 中文理解可保存/debug/eval；PageContext 不足會澄清；無 evidence/low confidence/tool failure/permission denied/evidence conflict 不編造；文件知識走 RAG；live business data 走 connector；FeedbackEvent 可建立 ReviewItem | No-answer gate、RAG 最小閉環、改善 loop |
 | Phase 7 health/readiness / analytics-ready raw events / non-functional validation | dependency status 包含 database、LLM、retrieval、connector、approval workflow；degraded 有 reason；SSE timeout/interruption 與 bounded retry 有測試；analytics-ready raw events 完整；Docker local smoke 與 final validation 可執行 | 可用性、可觀測性、非功能品質、local dev baseline |

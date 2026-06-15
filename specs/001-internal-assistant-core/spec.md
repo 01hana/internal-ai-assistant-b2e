@@ -212,7 +212,7 @@ Pipeline output 必須可被保存、稽核、debug 與 eval 使用，至少包�
 - **FR-018**: 系統必須能在工具或 retrieval 失敗時回覆可行下一步，並記錄失敗原因與相關 requestId。
 - **FR-019**: 系統必須能防止同一高風險或具副作用 request 因重送而被重複執行。
 - **FR-020**: 系統必須保留未來接入不同 LLM provider、retrieval provider、tool connector 與 approval backend 的替換空間。
-- **FR-020a**: v1 LLM provider 預設使用 `OpenAiProvider`，且此 provider 屬於 LLM layer，不屬於 ERP / MES / WMS / SCM / CRM connector。模型必須透過 `LLM_MODEL` 環境變數切換，不得硬寫死在 controller、service、prompt 或業務邏輯中。建議模型設定為主力/demo `gpt-5.4-mini`、高品質測試 `gpt-5.4`、廉價快速/fallback `gpt-5.4-nano`。
+- **FR-020a**: v1 LLM provider 預設使用 `OpenAiProvider`，且此 provider 屬於 LLM layer，不屬於 ERP / MES / WMS / SCM / CRM connector。Provider 必須透過 `LLM_PROVIDER` 環境變數選擇，v1 支援值為 `openai`；模型必須透過 `LLM_MODEL` 環境變數切換，不得硬寫死在 controller、service、prompt 或業務邏輯中。OpenAI credential 使用 provider-specific `OPENAI_API_KEY`，未來新增 provider 時應新增各自 credential env。建議模型設定為主力/demo `gpt-5.4-mini`、高品質測試 `gpt-5.4`、廉價快速/fallback `gpt-5.4-nano`。
 - **FR-021**: 系統必須維護 `AssistantContextState`，至少追蹤 current task、current module/page、current entity type/id、last intent、last entities、last tool calls、last evidence refs、pending clarification、pending approval request 與 task state。
 - **FR-022**: 每次 assistant request 必須支援可選的 `PageContext` / `ScreenContext`，包含 host module、route 或 screenId、entityType、entityId、selectedRows、activeFilters、visibleColumns 與 user-visible page state。
 - **FR-023**: 當使用者使用「這筆資料」、「這張訂單」、「目前這個工單」、「剛剛選取的幾筆」等代稱時，系統必須先使用 page/screen context 解析目標；若上下文不足，必須要求澄清。
@@ -318,4 +318,4 @@ Pipeline output 必須可被保存、稽核、debug 與 eval 使用，至少包�
 - 前端 SDK/widget 不是本 spec 的主要實作範圍，只保留 API/嵌入式 contract 需求。
 - 初期可使用 mock connector 與固定 eval dataset 驗證 assistant core；真實宿主系統整合在後續 feature specs 展開。
 - 高風險操作的實際執行 worker、主管審核 UI 與通知渠道可在後續 specs 補充，但本 spec 必須先定義 approval domain 與 audit requirement。
-- v1 預設 LLM provider 為 `OpenAiProvider`；模型由 `LLM_MODEL` 環境變數決定，預設建議使用 `gpt-5.4-mini`。
+- v1 預設 LLM provider 為 `OpenAiProvider`；provider 由 `LLM_PROVIDER` 環境變數決定，v1 支援 `openai`，模型由 `LLM_MODEL` 環境變數決定，預設建議使用 `gpt-5.4-mini`。

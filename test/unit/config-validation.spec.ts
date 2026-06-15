@@ -5,6 +5,7 @@ const validEnv = {
   POSTGRES_USER: 'assistant',
   POSTGRES_PASSWORD: 'assistant_dev_password',
   POSTGRES_DB: 'assistant_dev',
+  LLM_PROVIDER: 'openai',
   LLM_MODEL: 'local-placeholder-model',
   OPENAI_API_KEY: 'placeholder-openai-api-key',
   NODE_ENV: 'test'
@@ -14,6 +15,7 @@ describe('validateEnvironment', () => {
   it('accepts the required phase 1 environment variables', () => {
     expect(validateEnvironment(validEnv)).toMatchObject({
       DATABASE_URL: validEnv.DATABASE_URL,
+      LLM_PROVIDER: 'openai',
       LLM_MODEL: validEnv.LLM_MODEL,
       OPENAI_API_KEY: validEnv.OPENAI_API_KEY,
       ENABLE_SWAGGER_DOCS: false,
@@ -23,6 +25,20 @@ describe('validateEnvironment', () => {
 
   it('fails fast when required environment variables are missing', () => {
     expect(() => validateEnvironment({ ...validEnv, DATABASE_URL: undefined })).toThrow(
+      /Invalid environment configuration/
+    );
+  });
+
+  it('defaults the v1 LLM provider to openai when omitted', () => {
+    const { LLM_PROVIDER: _llmProvider, ...envWithoutProvider } = validEnv;
+
+    expect(validateEnvironment(envWithoutProvider)).toMatchObject({
+      LLM_PROVIDER: 'openai'
+    });
+  });
+
+  it('fails fast when an unsupported LLM provider is configured', () => {
+    expect(() => validateEnvironment({ ...validEnv, LLM_PROVIDER: 'unsupported-provider' })).toThrow(
       /Invalid environment configuration/
     );
   });

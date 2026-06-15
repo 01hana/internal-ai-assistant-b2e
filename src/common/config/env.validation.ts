@@ -2,6 +2,7 @@ import { plainToInstance, Transform } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Min, validateSync } from 'class-validator';
 
 const allowedRuntimeEnvironments = ['development', 'test', 'production'] as const;
+const allowedLlmProviders = ['openai'] as const;
 
 export class EnvironmentVariables {
   @IsOptional()
@@ -29,6 +30,12 @@ export class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   POSTGRES_DB!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  @IsIn(allowedLlmProviders)
+  LLM_PROVIDER: (typeof allowedLlmProviders)[number] = 'openai';
 
   @IsString()
   @IsNotEmpty()

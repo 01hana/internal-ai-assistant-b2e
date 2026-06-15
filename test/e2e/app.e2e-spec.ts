@@ -14,6 +14,7 @@ describe('App bootstrap', () => {
     process.env.POSTGRES_USER = 'assistant';
     process.env.POSTGRES_PASSWORD = 'assistant_dev_password';
     process.env.POSTGRES_DB = 'assistant_dev';
+    process.env.LLM_PROVIDER = 'openai';
     process.env.LLM_MODEL = 'local-placeholder-model';
     process.env.OPENAI_API_KEY = 'placeholder-openai-api-key';
     process.env.ENABLE_SWAGGER_DOCS = String(enableSwaggerDocs);
