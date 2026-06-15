@@ -1,7 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
+import { AuditWriterService } from '../../src/audit/audit-writer.service';
 import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.filter';
 import { redactSecrets } from '../../src/common/logger/redaction.util';
 import { StructuredLogEntry, StructuredLoggerService } from '../../src/common/logger/structured-logger.service';
+import { PrismaService } from '../../src/prisma/prisma.service';
 
 describe('secret redaction foundation', () => {
   it('redacts OpenAI credentials, connector secrets, and database credentials from logs', () => {
@@ -47,5 +49,41 @@ describe('secret redaction foundation', () => {
     expect(JSON.stringify(metadata)).not.toContain('sk-proj-secret-value');
     expect(JSON.stringify(metadata)).not.toContain('connector-secret-value');
     expect(JSON.stringify(metadata)).not.toContain('db-password');
+  });
+
+  it('redacts secrets before AuditEvent metadata is persisted', async () => {
+    const create = jest.fn(async ({ data }) => ({
+      id: 'audit-001',
+      timestamp: new Date('2026-06-15T00:00:00.000Z'),
+      ...data
+    }));
+    const prisma = {
+      db: {
+        auditEvent: {
+          create
+        }
+      }
+    } as unknown as PrismaService;
+    const writer = new AuditWriterService(prisma);
+
+    await writer.append({
+      requestId: 'req-audit-secret',
+      organizationId: 'org-001',
+      hostApp: 'erp',
+      actorId: 'actor-001',
+      eventType: 'secret_redaction_test',
+      permissionResult: {
+        connectorSecret: 'connector-secret-value'
+      },
+      metadata: {
+        openaiApiKey: 'sk-proj-secret-value-1234567890',
+        databaseUrl: 'postgresql://assistant:db-password@localhost:5432/assistant_dev'
+      }
+    });
+
+    const serialized = JSON.stringify(create.mock.calls[0][0].data);
+    expect(serialized).not.toContain('sk-proj-secret-value');
+    expect(serialized).not.toContain('connector-secret-value');
+    expect(serialized).not.toContain('db-password');
   });
 });
