@@ -98,44 +98,44 @@
   - 完成條件：沒有 `src/connectors/openai/`；controller/service/domain/prompt 不硬寫模型；provider 能回報 selected provider/model/fallback metadata。
 - [X] T027 [P] 在 `test/unit/config-validation.spec.ts` 撰寫 env validation tests
 - [X] T028 [P] 在 `src/common/config/` 實作 config validation，缺少必要 env 時回傳明確啟動錯誤
-- [ ] T029 [P] 在 `test/integration/secret-redaction.spec.ts` 撰寫 OpenAI credentials、connector secrets 不得出現在 structured logger、一般 log、error response、audit metadata 的測試
+- [X] T029 [P] 在 `test/integration/secret-redaction.spec.ts` 撰寫 OpenAI credentials、connector secrets 不得出現在 structured logger、一般 log、error response、audit metadata 的測試
   - 說明：驗證所有錯誤路徑與 audit/observability metadata 都會遮罩 secret，包含 LLM 與 connector credentials。
   - 輸出：secret redaction integration spec、測試用 fake secret fixtures、logger/log/error/audit assertion helpers。
   - 完成條件：OpenAI key、connector secret、DB credential 不出現在 structured logger、一般 log、error response、AuditEvent metadata；失敗路徑也通過。
-- [ ] T030 [P] 在 `test/unit/identity-context-validation.spec.ts` 撰寫 `ActorContext`、`HostAppContext`、`CompanyBoundary` validation unit tests
-- [ ] T031 [P] 在 `test/integration/missing-identity-context.spec.ts` 撰寫缺少 actor、hostApp、organizationId、permissionScopes 或 requestId 時拒絕處理的 integration test
-- [ ] T032 [P] 在 `test/integration/organization-boundary.spec.ts` 撰寫不同 organization / hostApp 不可存取 session、message、history、tool result 的 integration test
-- [ ] T033 [P] 在 `src/identity/` 實作 `ActorContext`、`HostAppContext`、`CompanyBoundary` DTO / validator / guard 或 service
+- [X] T030 [P] 在 `test/unit/identity-context-validation.spec.ts` 撰寫 `ActorContext`、`HostAppContext`、`CompanyBoundary` validation unit tests
+- [X] T031 [P] 在 `test/integration/missing-identity-context.spec.ts` 撰寫缺少 actor、hostApp、organizationId、permissionScopes 或 requestId 時拒絕處理的 integration test
+- [X] T032 [P] 在 `test/integration/organization-boundary.spec.ts` 撰寫不同 organization / hostApp 不可存取 session、message、history、tool result 的 integration test
+- [X] T033 [P] 在 `src/identity/` 實作 `ActorContext`、`HostAppContext`、`CompanyBoundary` DTO / validator / guard 或 service
   - 說明：所有 assistant request 都必須先取得可驗證的 actor、host app、organization boundary、role、permission scope 與 requestId。
   - 輸出：identity DTO、validator/guard/service、共用錯誤型別。
   - 完成條件：session/message/history/tool/retrieval 前會先驗證 identity；缺少必要欄位會被拒絕；`AssistantContextState` 不會取代 identity check。
-- [ ] T034 [P] 在 `src/identity/` 實作 request-level identity context extraction，供 assistant、permissions、tools、retrieval、audit 共用
+- [X] T034 [P] 在 `src/identity/` 實作 request-level identity context extraction，供 assistant、permissions、tools、retrieval、audit 共用
   - 說明：建立單一 request context extraction，讓權限、安全、稽核與工具執行都使用同一份身份邊界。
   - 輸出：request context extractor、typed identity context、測試 helper。
   - 完成條件：assistant、permissions、tools、retrieval、audit 皆可取得一致 context；跨 organization / hostApp 資料不可被混用。
-- [ ] T035 [P] 在 `src/identity/` 實作 missing or invalid identity context 的一致錯誤回應；`AssistantContextState` 不得取代 identity / permission check
+- [X] T035 [P] 在 `src/identity/` 實作 missing or invalid identity context 的一致錯誤回應；`AssistantContextState` 不得取代 identity / permission check
   - 說明：缺少 actor、hostApp、organizationId、permissionScopes 或 requestId 時必須 fail closed。
   - 輸出：identity error mapping、response envelope integration、audit/observability metadata policy。
   - 完成條件：missing identity integration test 通過；錯誤回應一致；不先查資料再過濾。
-- [ ] T036 [P] 在 `src/permissions/` 實作 permission policy interfaces 與 masking utilities
+- [X] T036 [P] 在 `src/permissions/` 實作 permission policy interfaces 與 masking utilities
   - 說明：支援 module/operation/row/field-level permission，並在資料進入 LLM input 前完成 masking/data minimization。
   - 輸出：permission policy interfaces、masking utilities、field allow/deny helpers。
   - 完成條件：未授權 tool/retrieval 不執行；未授權 row/field 不進 LLM input；部分授權只回覆可見範圍。
-- [ ] T037 [P] 在 `src/audit/` 實作 append-only audit writer interface
+- [X] T037 [P] 在 `src/audit/` 實作 append-only audit writer interface
   - 說明：提供核心 runtime 的不可變稽核入口，涵蓋對話、工具、權限、evidence、LLM decision、approval、feedback。
   - 輸出：audit writer interface、append-only persistence adapter、metadata redaction hook。
   - 完成條件：AuditEvent 不可被更新覆蓋；metadata 最小化且遮罩 secret；所有安全決策與失敗路徑可追溯。
-- [ ] T038 [P] 在 `src/observability/` 實作 analytics-ready raw event metadata helpers，包含 `durationMs`、dependency status、noAnswerReason、permissionDeniedReason、toolFailureReason、approval/confirmation decision status
+- [X] T038 [P] 在 `src/observability/` 實作 analytics-ready raw event metadata helpers，包含 `durationMs`、dependency status、noAnswerReason、permissionDeniedReason、toolFailureReason、approval/confirmation decision status
   - 說明：MVP 不做 dashboard，但必須保存後續分析所需 raw metrics / raw events。
   - 輸出：metadata helper、duration/dependency/reason enums、observability integration points。
   - 完成條件：AuditEvent、ToolCall、ExecutionPlan、AnswerDecision、EvidenceRef、FeedbackEvent、ReviewItem、ApprovalRequest、ActionDraft、RetrievalRun/Candidate 皆能帶分析欄位。
 - [X] T039 [P] 在 `src/connectors/mock/` 建立 mock connector fixtures：訂單狀態、工單進度、庫存可用量、客戶/供應商歷史
-- [ ] T040 [P] 在 `src/query-understanding/` 建立 `QueryUnderstandingPipeline` shell、`QueryUnderstandingInput` / `QueryUnderstandingOutput` DTO、`QueryUnderstandingResult` persistence contract
+- [X] T040 [P] 在 `src/query-understanding/` 建立 `QueryUnderstandingPipeline` shell、`QueryUnderstandingInput` / `QueryUnderstandingOutput` DTO、`QueryUnderstandingResult` persistence contract
   - 說明：先建立 US1/US2 可用的 query understanding contract，避免 ExecutionPlan 直接吃 raw message 導致後續重工。
   - 輸出：pipeline shell、input/output DTO、result persistence/audit contract。
   - 完成條件：pipeline output 可保存、debug、eval；至少支援 taskType、entityCandidates、candidateTools、riskLevel、confidence、clarificationNeeds、requiredEvidence。
-- [ ] T041 [P] 在 `src/query-understanding/` 建立最小 pass-through / rule-based placeholder，至少輸出 taskType、entityCandidates、candidateTools、riskLevel、confidence、clarificationNeeds、requiredEvidence
-- [ ] T042 [P] 在 `src/assistant/` 的 `ExecutionPlan` 建立流程前串接 `QueryUnderstandingPipeline` shell，確保 US1/US2 不繞過 query understanding contract
+- [X] T041 [P] 在 `src/query-understanding/` 建立最小 pass-through / rule-based placeholder，至少輸出 taskType、entityCandidates、candidateTools、riskLevel、confidence、clarificationNeeds、requiredEvidence
+- [X] T042 [P] 在 `src/assistant/` 的 `ExecutionPlan` 建立流程前串接 `QueryUnderstandingPipeline` shell，確保 US1/US2 不繞過 query understanding contract
   - 說明：ExecutionPlan 必須基於 query understanding output，而不是直接由 controller 或 message handler 臨時推斷。
   - 輸出：assistant planning integration、pipeline result to ExecutionPlan mapper、測試 fake pipeline。
   - 完成條件：US1/US2 message flow 會先執行 query understanding；低信心或需澄清資訊會進入 ExecutionPlan decision；audit 可追溯 pipeline result。
