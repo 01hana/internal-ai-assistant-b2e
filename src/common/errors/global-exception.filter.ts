@@ -9,6 +9,7 @@ import {
 import { Response } from 'express';
 import { getRequestId } from '../request-id/request-id.util';
 import { RequestWithRequestId } from '../request-id/request-id.middleware';
+import { redactSecrets } from '../logger/redaction.util';
 
 type ErrorResponseBody = {
   message?: string | string[];
@@ -31,8 +32,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       requestId: getRequestId(request),
       error: {
         code: this.toErrorCode(status, body.error),
-        message: this.toSafeMessage(status, body.message ?? httpException.message),
-        details: status === HttpStatus.INTERNAL_SERVER_ERROR ? undefined : this.toDetails(body.message)
+        message: redactSecrets(this.toSafeMessage(status, body.message ?? httpException.message)),
+        details: status === HttpStatus.INTERNAL_SERVER_ERROR ? undefined : redactSecrets(this.toDetails(body.message))
       }
     });
   }

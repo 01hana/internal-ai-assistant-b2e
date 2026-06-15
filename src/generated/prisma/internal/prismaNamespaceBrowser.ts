@@ -51,7 +51,27 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-
+  AssistantSession: 'AssistantSession',
+  AssistantMessage: 'AssistantMessage',
+  AssistantContextState: 'AssistantContextState',
+  ExecutionPlan: 'ExecutionPlan',
+  AnswerDecision: 'AnswerDecision',
+  ClarificationQuestion: 'ClarificationQuestion',
+  GroundingCheck: 'GroundingCheck',
+  ToolDefinition: 'ToolDefinition',
+  ToolCall: 'ToolCall',
+  EvidenceRef: 'EvidenceRef',
+  AuditEvent: 'AuditEvent',
+  FeedbackEvent: 'FeedbackEvent',
+  ReviewItem: 'ReviewItem',
+  ApprovalRequest: 'ApprovalRequest',
+  ActionDraft: 'ActionDraft',
+  EscalationRequest: 'EscalationRequest',
+  QueryUnderstandingResult: 'QueryUnderstandingResult',
+  KnowledgeDocument: 'KnowledgeDocument',
+  KnowledgeChunk: 'KnowledgeChunk',
+  RetrievalRun: 'RetrievalRun',
+  RetrievalCandidate: 'RetrievalCandidate'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -68,4 +88,436 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const AssistantSessionScalarFieldEnum = {
+  id: 'id',
+  hostApp: 'hostApp',
+  organizationId: 'organizationId',
+  actorId: 'actorId',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  lastMessageAt: 'lastMessageAt'
+} as const
+
+export type AssistantSessionScalarFieldEnum = (typeof AssistantSessionScalarFieldEnum)[keyof typeof AssistantSessionScalarFieldEnum]
+
+
+export const AssistantMessageScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  requestId: 'requestId',
+  role: 'role',
+  content: 'content',
+  answerDecision: 'answerDecision',
+  pageContext: 'pageContext',
+  createdAt: 'createdAt'
+} as const
+
+export type AssistantMessageScalarFieldEnum = (typeof AssistantMessageScalarFieldEnum)[keyof typeof AssistantMessageScalarFieldEnum]
+
+
+export const AssistantContextStateScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  currentTask: 'currentTask',
+  currentModule: 'currentModule',
+  currentPage: 'currentPage',
+  currentEntityType: 'currentEntityType',
+  currentEntityId: 'currentEntityId',
+  lastIntent: 'lastIntent',
+  lastEntities: 'lastEntities',
+  lastToolCallIds: 'lastToolCallIds',
+  lastEvidenceRefIds: 'lastEvidenceRefIds',
+  pendingClarification: 'pendingClarification',
+  pendingApprovalRequestId: 'pendingApprovalRequestId',
+  taskState: 'taskState',
+  updatedAt: 'updatedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type AssistantContextStateScalarFieldEnum = (typeof AssistantContextStateScalarFieldEnum)[keyof typeof AssistantContextStateScalarFieldEnum]
+
+
+export const ExecutionPlanScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  messageId: 'messageId',
+  taskType: 'taskType',
+  requiredEvidence: 'requiredEvidence',
+  candidateTools: 'candidateTools',
+  permissionChecks: 'permissionChecks',
+  riskAssessment: 'riskAssessment',
+  clarificationNeeds: 'clarificationNeeds',
+  expectedAnswerShape: 'expectedAnswerShape',
+  requiresMultiStepToolUse: 'requiresMultiStepToolUse',
+  decision: 'decision',
+  createdAt: 'createdAt'
+} as const
+
+export type ExecutionPlanScalarFieldEnum = (typeof ExecutionPlanScalarFieldEnum)[keyof typeof ExecutionPlanScalarFieldEnum]
+
+
+export const AnswerDecisionScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  messageId: 'messageId',
+  status: 'status',
+  noAnswerReason: 'noAnswerReason',
+  clarificationQuestionId: 'clarificationQuestionId',
+  groundingCheckId: 'groundingCheckId',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+} as const
+
+export type AnswerDecisionScalarFieldEnum = (typeof AnswerDecisionScalarFieldEnum)[keyof typeof AnswerDecisionScalarFieldEnum]
+
+
+export const ClarificationQuestionScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  messageId: 'messageId',
+  question: 'question',
+  reason: 'reason',
+  status: 'status',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  answeredAt: 'answeredAt'
+} as const
+
+export type ClarificationQuestionScalarFieldEnum = (typeof ClarificationQuestionScalarFieldEnum)[keyof typeof ClarificationQuestionScalarFieldEnum]
+
+
+export const GroundingCheckScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  messageId: 'messageId',
+  covered: 'covered',
+  checkedClaimCount: 'checkedClaimCount',
+  unsupportedClaimCount: 'unsupportedClaimCount',
+  evidenceRefIds: 'evidenceRefIds',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+} as const
+
+export type GroundingCheckScalarFieldEnum = (typeof GroundingCheckScalarFieldEnum)[keyof typeof GroundingCheckScalarFieldEnum]
+
+
+export const ToolDefinitionScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  version: 'version',
+  description: 'description',
+  resource: 'resource',
+  operation: 'operation',
+  inputSchema: 'inputSchema',
+  outputSchema: 'outputSchema',
+  requiredPermissions: 'requiredPermissions',
+  riskLevel: 'riskLevel',
+  hasSideEffect: 'hasSideEffect',
+  requiresConfirmation: 'requiresConfirmation',
+  requiresApproval: 'requiresApproval',
+  connectorKey: 'connectorKey',
+  timeoutMs: 'timeoutMs',
+  auditBehavior: 'auditBehavior',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ToolDefinitionScalarFieldEnum = (typeof ToolDefinitionScalarFieldEnum)[keyof typeof ToolDefinitionScalarFieldEnum]
+
+
+export const ToolCallScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  sessionId: 'sessionId',
+  messageId: 'messageId',
+  toolDefinitionId: 'toolDefinitionId',
+  toolName: 'toolName',
+  toolVersion: 'toolVersion',
+  inputSummary: 'inputSummary',
+  permissionResult: 'permissionResult',
+  outputSummary: 'outputSummary',
+  status: 'status',
+  executionStatus: 'executionStatus',
+  idempotencyKey: 'idempotencyKey',
+  durationMs: 'durationMs',
+  errorCode: 'errorCode',
+  createdAt: 'createdAt',
+  executedAt: 'executedAt'
+} as const
+
+export type ToolCallScalarFieldEnum = (typeof ToolCallScalarFieldEnum)[keyof typeof ToolCallScalarFieldEnum]
+
+
+export const EvidenceRefScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  messageId: 'messageId',
+  sourceType: 'sourceType',
+  sourceId: 'sourceId',
+  toolCallId: 'toolCallId',
+  documentId: 'documentId',
+  chunkId: 'chunkId',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  fieldPaths: 'fieldPaths',
+  timestamp: 'timestamp',
+  permissionSnapshot: 'permissionSnapshot',
+  summary: 'summary'
+} as const
+
+export type EvidenceRefScalarFieldEnum = (typeof EvidenceRefScalarFieldEnum)[keyof typeof EvidenceRefScalarFieldEnum]
+
+
+export const AuditEventScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  timestamp: 'timestamp',
+  organizationId: 'organizationId',
+  hostApp: 'hostApp',
+  actorId: 'actorId',
+  sessionId: 'sessionId',
+  messageId: 'messageId',
+  eventType: 'eventType',
+  decision: 'decision',
+  toolCallId: 'toolCallId',
+  riskLevel: 'riskLevel',
+  permissionResult: 'permissionResult',
+  evidenceRefIds: 'evidenceRefIds',
+  durationMs: 'durationMs',
+  metadata: 'metadata'
+} as const
+
+export type AuditEventScalarFieldEnum = (typeof AuditEventScalarFieldEnum)[keyof typeof AuditEventScalarFieldEnum]
+
+
+export const FeedbackEventScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  messageId: 'messageId',
+  rating: 'rating',
+  reason: 'reason',
+  comment: 'comment',
+  intent: 'intent',
+  toolCallIds: 'toolCallIds',
+  evidenceRefIds: 'evidenceRefIds',
+  answerDecision: 'answerDecision',
+  createdAt: 'createdAt'
+} as const
+
+export type FeedbackEventScalarFieldEnum = (typeof FeedbackEventScalarFieldEnum)[keyof typeof FeedbackEventScalarFieldEnum]
+
+
+export const ReviewItemScalarFieldEnum = {
+  id: 'id',
+  sourceType: 'sourceType',
+  sourceId: 'sourceId',
+  status: 'status',
+  priority: 'priority',
+  summary: 'summary',
+  suggestedImprovement: 'suggestedImprovement',
+  createdAt: 'createdAt',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type ReviewItemScalarFieldEnum = (typeof ReviewItemScalarFieldEnum)[keyof typeof ReviewItemScalarFieldEnum]
+
+
+export const ApprovalRequestScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  sessionId: 'sessionId',
+  messageId: 'messageId',
+  requesterActorId: 'requesterActorId',
+  approverActorId: 'approverActorId',
+  riskLevel: 'riskLevel',
+  status: 'status',
+  actionSummary: 'actionSummary',
+  payloadSummary: 'payloadSummary',
+  evidenceRefIds: 'evidenceRefIds',
+  decisionReason: 'decisionReason',
+  idempotencyKey: 'idempotencyKey',
+  auditEventIds: 'auditEventIds',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  decidedAt: 'decidedAt'
+} as const
+
+export type ApprovalRequestScalarFieldEnum = (typeof ApprovalRequestScalarFieldEnum)[keyof typeof ApprovalRequestScalarFieldEnum]
+
+
+export const ActionDraftScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  sessionId: 'sessionId',
+  messageId: 'messageId',
+  actorId: 'actorId',
+  toolName: 'toolName',
+  resource: 'resource',
+  operation: 'operation',
+  riskLevel: 'riskLevel',
+  payloadSummary: 'payloadSummary',
+  preview: 'preview',
+  status: 'status',
+  idempotencyKey: 'idempotencyKey',
+  createdAt: 'createdAt',
+  confirmedAt: 'confirmedAt',
+  executedAt: 'executedAt',
+  expiresAt: 'expiresAt'
+} as const
+
+export type ActionDraftScalarFieldEnum = (typeof ActionDraftScalarFieldEnum)[keyof typeof ActionDraftScalarFieldEnum]
+
+
+export const EscalationRequestScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  sessionId: 'sessionId',
+  messageId: 'messageId',
+  reason: 'reason',
+  status: 'status',
+  ownerType: 'ownerType',
+  summary: 'summary',
+  createdAt: 'createdAt',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type EscalationRequestScalarFieldEnum = (typeof EscalationRequestScalarFieldEnum)[keyof typeof EscalationRequestScalarFieldEnum]
+
+
+export const QueryUnderstandingResultScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  messageId: 'messageId',
+  sentences: 'sentences',
+  tokens: 'tokens',
+  phrases: 'phrases',
+  normalizedTerms: 'normalizedTerms',
+  timeRanges: 'timeRanges',
+  resolvedReferences: 'resolvedReferences',
+  entityCandidates: 'entityCandidates',
+  subTasks: 'subTasks',
+  confidence: 'confidence',
+  clarificationNeeds: 'clarificationNeeds',
+  createdAt: 'createdAt'
+} as const
+
+export type QueryUnderstandingResultScalarFieldEnum = (typeof QueryUnderstandingResultScalarFieldEnum)[keyof typeof QueryUnderstandingResultScalarFieldEnum]
+
+
+export const KnowledgeDocumentScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  sourceType: 'sourceType',
+  sourceKey: 'sourceKey',
+  version: 'version',
+  language: 'language',
+  status: 'status',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type KnowledgeDocumentScalarFieldEnum = (typeof KnowledgeDocumentScalarFieldEnum)[keyof typeof KnowledgeDocumentScalarFieldEnum]
+
+
+export const KnowledgeChunkScalarFieldEnum = {
+  id: 'id',
+  documentId: 'documentId',
+  chunkIndex: 'chunkIndex',
+  heading: 'heading',
+  content: 'content',
+  tokenCount: 'tokenCount',
+  metadata: 'metadata',
+  embeddingRef: 'embeddingRef',
+  vectorId: 'vectorId',
+  enabled: 'enabled',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type KnowledgeChunkScalarFieldEnum = (typeof KnowledgeChunkScalarFieldEnum)[keyof typeof KnowledgeChunkScalarFieldEnum]
+
+
+export const RetrievalRunScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  messageId: 'messageId',
+  query: 'query',
+  normalizedQuery: 'normalizedQuery',
+  filters: 'filters',
+  strategy: 'strategy',
+  selectedEvidenceRefIds: 'selectedEvidenceRefIds',
+  noAnswerReason: 'noAnswerReason',
+  durationMs: 'durationMs',
+  createdAt: 'createdAt'
+} as const
+
+export type RetrievalRunScalarFieldEnum = (typeof RetrievalRunScalarFieldEnum)[keyof typeof RetrievalRunScalarFieldEnum]
+
+
+export const RetrievalCandidateScalarFieldEnum = {
+  id: 'id',
+  retrievalRunId: 'retrievalRunId',
+  chunkId: 'chunkId',
+  sourceId: 'sourceId',
+  sourceType: 'sourceType',
+  score: 'score',
+  rank: 'rank',
+  selected: 'selected',
+  reason: 'reason'
+} as const
+
+export type RetrievalCandidateScalarFieldEnum = (typeof RetrievalCandidateScalarFieldEnum)[keyof typeof RetrievalCandidateScalarFieldEnum]
+
+
+export const SortOrder = {
+  asc: 'asc',
+  desc: 'desc'
+} as const
+
+export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+export const QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+} as const
+
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 

@@ -21,9 +21,17 @@ describe('App bootstrap', () => {
 
     const { AppModule } = await import('../../src/app.module');
     const { setupSwagger } = await import('../../src/common/docs/swagger.setup');
+    const { PrismaService } = await import('../../src/prisma/prisma.service');
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule]
-    }).compile();
+    })
+      .overrideProvider(PrismaService)
+      .useValue({
+        onModuleInit: jest.fn(),
+        onModuleDestroy: jest.fn(),
+        db: {}
+      })
+      .compile();
 
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api/v1');

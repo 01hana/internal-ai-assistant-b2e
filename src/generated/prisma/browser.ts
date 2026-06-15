@@ -17,4 +17,108 @@ import * as Prisma from './internal/prismaNamespaceBrowser'
 export { Prisma }
 export * as $Enums from './enums'
 export * from './enums';
-
+/**
+ * Model AssistantSession
+ * 
+ */
+export type AssistantSession = Prisma.AssistantSessionModel
+/**
+ * Model AssistantMessage
+ * 
+ */
+export type AssistantMessage = Prisma.AssistantMessageModel
+/**
+ * Model AssistantContextState
+ * 
+ */
+export type AssistantContextState = Prisma.AssistantContextStateModel
+/**
+ * Model ExecutionPlan
+ * 
+ */
+export type ExecutionPlan = Prisma.ExecutionPlanModel
+/**
+ * Model AnswerDecision
+ * 
+ */
+export type AnswerDecision = Prisma.AnswerDecisionModel
+/**
+ * Model ClarificationQuestion
+ * 
+ */
+export type ClarificationQuestion = Prisma.ClarificationQuestionModel
+/**
+ * Model GroundingCheck
+ * 
+ */
+export type GroundingCheck = Prisma.GroundingCheckModel
+/**
+ * Model ToolDefinition
+ * 
+ */
+export type ToolDefinition = Prisma.ToolDefinitionModel
+/**
+ * Model ToolCall
+ * 
+ */
+export type ToolCall = Prisma.ToolCallModel
+/**
+ * Model EvidenceRef
+ * 
+ */
+export type EvidenceRef = Prisma.EvidenceRefModel
+/**
+ * Model AuditEvent
+ * 
+ */
+export type AuditEvent = Prisma.AuditEventModel
+/**
+ * Model FeedbackEvent
+ * 
+ */
+export type FeedbackEvent = Prisma.FeedbackEventModel
+/**
+ * Model ReviewItem
+ * 
+ */
+export type ReviewItem = Prisma.ReviewItemModel
+/**
+ * Model ApprovalRequest
+ * 
+ */
+export type ApprovalRequest = Prisma.ApprovalRequestModel
+/**
+ * Model ActionDraft
+ * 
+ */
+export type ActionDraft = Prisma.ActionDraftModel
+/**
+ * Model EscalationRequest
+ * 
+ */
+export type EscalationRequest = Prisma.EscalationRequestModel
+/**
+ * Model QueryUnderstandingResult
+ * 
+ */
+export type QueryUnderstandingResult = Prisma.QueryUnderstandingResultModel
+/**
+ * Model KnowledgeDocument
+ * 
+ */
+export type KnowledgeDocument = Prisma.KnowledgeDocumentModel
+/**
+ * Model KnowledgeChunk
+ * 
+ */
+export type KnowledgeChunk = Prisma.KnowledgeChunkModel
+/**
+ * Model RetrievalRun
+ * 
+ */
+export type RetrievalRun = Prisma.RetrievalRunModel
+/**
+ * Model RetrievalCandidate
+ * 
+ */
+export type RetrievalCandidate = Prisma.RetrievalCandidateModel

@@ -16,10 +16,10 @@
     "test:e2e": "jest --config test/jest-e2e.json",
     "test:eval": "jest --config jest.config.ts --testMatch '<rootDir>/test/eval/**/*.spec.ts' --passWithNoTests",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate": "prisma migrate dev --name init",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:seed": "node -e \"console.log('Prisma seed baseline is added in Phase 2 (T019).')\"",
-    "test:db:init": "node -e \"console.log('Test database initialization is added in Phase 2 (T019).')\""
+    "prisma:seed": "ts-node --project tsconfig.scripts.json scripts/seed.ts",
+    "test:db:init": "ts-node --project tsconfig.scripts.json scripts/test-db-init.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.26",
@@ -27,6 +27,7 @@
     "@nestjs/core": "^11.1.26",
     "@nestjs/platform-express": "^11.1.26",
     "@nestjs/swagger": "^11.4.4",
+    "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",

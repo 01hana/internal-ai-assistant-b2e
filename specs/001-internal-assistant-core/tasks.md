@@ -69,25 +69,25 @@
 
 **重要**：此階段完成前，不應開始任何 user story 的功能實作。
 
-- [ ] T015 在 `prisma/schema.prisma` 定義 `AssistantSession`、`AssistantMessage`、`AssistantContextState`、`ExecutionPlan`、`AnswerDecision`、`ClarificationQuestion`、`GroundingCheck` 模型
-- [ ] T016 在 `prisma/schema.prisma` 定義 `ToolDefinition`、`ToolCall`、`EvidenceRef`、`AuditEvent`、`FeedbackEvent`、`ReviewItem` 模型
-- [ ] T017 在 `prisma/schema.prisma` 定義 `ApprovalRequest`、`ActionDraft`、`EscalationRequest`、`KnowledgeDocument`、`KnowledgeChunk`、`RetrievalRun`、`RetrievalCandidate` 模型
-- [ ] T018 建立 `src/prisma/prisma.module.ts` 與 `src/prisma/prisma.service.ts`
+- [X] T015 在 `prisma/schema.prisma` 定義 `AssistantSession`、`AssistantMessage`、`AssistantContextState`、`ExecutionPlan`、`AnswerDecision`、`ClarificationQuestion`、`GroundingCheck` 模型
+- [X] T016 在 `prisma/schema.prisma` 定義 `ToolDefinition`、`ToolCall`、`EvidenceRef`、`AuditEvent`、`FeedbackEvent`、`ReviewItem` 模型
+- [X] T017 在 `prisma/schema.prisma` 定義 `ApprovalRequest`、`ActionDraft`、`EscalationRequest`、`KnowledgeDocument`、`KnowledgeChunk`、`RetrievalRun`、`RetrievalCandidate` 模型
+- [X] T018 建立 `src/prisma/prisma.module.ts` 與 `src/prisma/prisma.service.ts`
   - 說明：建立 NestJS 共用 Prisma access layer；`PrismaService` 封裝 PrismaClient lifecycle，供 assistant、audit、tools、retrieval、approvals、feedback 等 module 注入使用；各 module 不得自行 `new PrismaClient()`。
   - 輸出：`src/prisma/prisma.module.ts`、`src/prisma/prisma.service.ts`、`PrismaModule` export `PrismaService`、Prisma lifecycle hooks、unit 或 integration smoke test。
   - 完成條件：`PrismaService` extends 或封裝 `PrismaClient`；app startup 可建立 DB connection；app shutdown 可正確 disconnect；assistant / audit / tools / retrieval / approvals / feedback 可注入；測試環境可 mock PrismaService 或使用 test database；不出現多個散落 PrismaClient instance；DB 連線錯誤不得洩漏 credential。
-- [ ] T019 建立 Prisma migration / seed / test database initialization baseline
+- [X] T019 建立 Prisma migration / seed / test database initialization baseline
   - 說明：建立 local dev 與 test 所需 migration / seed baseline；seed 僅包含內部 AI 助理 MVP 所需資料，讓 mock connector、RAG 文件知識、tool registry、eval/test cases 可穩定重現。
   - 輸出：`prisma/seed.ts`、seed helper 或 fixtures 目錄、mock connector fixtures seed 或 deterministic fixture loader、KnowledgeDocument / KnowledgeChunk fixtures、ToolDefinition fixtures、test database reset / migration / seed script、README quickstart command。
   - 完成條件：migration script 可成功執行；seed script 可成功執行；dev/test seed 不含真實客戶資料、真實內部交易資料、OpenAI API key 或 connector secret；fixtures 支援 order status、work order progress、inventory availability、customer/supplier history、SOP/policy/field guide/manual RAG、read/medium-risk/high-risk tool 測試；test database 可重置並重複執行 unit/integration/contract/e2e tests。
-- [ ] T020 [P] 建立 redaction-aware structured logger
+- [X] T020 [P] 建立 redaction-aware structured logger
   - 說明：建立統一 structured logger，供 request lifecycle、tool execution、retrieval、LLM provider、approval、feedback/review 使用；logger 支援 requestId correlation，並與 append-only AuditEvent 分工：log 用於 runtime/debug，AuditEvent 用於可追溯稽核。
   - 輸出：`src/common/logger/` 或等價路徑、logger service、redaction utility / policy、requestId correlation integration、logger unit tests 或 integration tests、secret-redaction test 與 logger 整合。
   - 完成條件：log 至少包含 timestamp、level、requestId、module/context、message；error log 不包含 OpenAI API key、connector secret、database credential；tool input/output summary、evidence summary、history content 進入 log 前會被 redacted 或最小化；client error response 不洩漏 stack trace；AuditEvent metadata 與一般 log 都遵守 redaction policy，但兩者職責不混淆；secret-redaction 或 logger redaction test 覆蓋失敗路徑。
-- [ ] T021 在 `specs/001-internal-assistant-core/data-model-notes.md` 決定並記錄 `AssistantContextState.taskState`：新增 `waiting_confirmation` / `waiting_escalation`，或改由 `ActionDraft.status`、`ApprovalRequest.status`、`EscalationRequest.status` 承擔狀態追蹤
-- [ ] T022 [P] 在 `src/common/request-id/` 實作 requestId middleware/interceptor
-- [ ] T023 [P] 在 `src/common/response/` 與 `src/common/errors/` 實作共用 response/error envelope
-- [ ] T024 [P] 在 `src/common/sse/` 定義 SSE event types 與共用 streaming helpers
+- [X] T021 在 `specs/001-internal-assistant-core/data-model-notes.md` 決定並記錄 `AssistantContextState.taskState`：新增 `waiting_confirmation` / `waiting_escalation`，或改由 `ActionDraft.status`、`ApprovalRequest.status`、`EscalationRequest.status` 承擔狀態追蹤
+- [X] T022 [P] 在 `src/common/request-id/` 實作 requestId middleware/interceptor
+- [X] T023 [P] 在 `src/common/response/` 與 `src/common/errors/` 實作共用 response/error envelope
+- [X] T024 [P] 在 `src/common/sse/` 定義 SSE event types 與共用 streaming helpers
 - [ ] T025 [P] 分別在 `src/llm/`、`src/retrieval/`、`src/query-understanding/`、`src/connectors/` 定義 `LlmProvider`、`RetrievalProvider`、`TokenizerAdapter`、`ConnectorAdapter` interfaces，避免將 domain-specific interface 全部塞入 `common`
   - 說明：讓可替換 provider/adapter 靠近所屬 domain，避免 `common/` 變成雜物區，也避免 LLM、retrieval、tokenizer、business connector 互相耦合。
   - 輸出：`src/llm/llm-provider.interface.ts`、`src/retrieval/retrieval-provider.interface.ts`、`src/query-understanding/tokenizer-adapter.interface.ts`、`src/connectors/connector-adapter.interface.ts`。
@@ -96,8 +96,8 @@
   - 說明：OpenAI 是 LLM provider，不是 ERP/MES/WMS/SCM/CRM connector；模型選擇必須集中在 config/provider layer。
   - 輸出：`src/llm/openai/` provider shell、provider config、測試用 mock/fake hooks。
   - 完成條件：沒有 `src/connectors/openai/`；controller/service/domain/prompt 不硬寫模型；provider 能回報 selected provider/model/fallback metadata。
-- [ ] T027 [P] 在 `test/unit/config-validation.spec.ts` 撰寫 env validation tests
-- [ ] T028 [P] 在 `src/common/config/` 實作 config validation，缺少必要 env 時回傳明確啟動錯誤
+- [X] T027 [P] 在 `test/unit/config-validation.spec.ts` 撰寫 env validation tests
+- [X] T028 [P] 在 `src/common/config/` 實作 config validation，缺少必要 env 時回傳明確啟動錯誤
 - [ ] T029 [P] 在 `test/integration/secret-redaction.spec.ts` 撰寫 OpenAI credentials、connector secrets 不得出現在 structured logger、一般 log、error response、audit metadata 的測試
   - 說明：驗證所有錯誤路徑與 audit/observability metadata 都會遮罩 secret，包含 LLM 與 connector credentials。
   - 輸出：secret redaction integration spec、測試用 fake secret fixtures、logger/log/error/audit assertion helpers。
