@@ -152,21 +152,21 @@
 
 ### User Story 1 測試任務
 
-- [ ] T043 [P] [US1] 在 `test/contract/assistant-sessions.contract.spec.ts` 撰寫 `POST /assistant/sessions` 與 `GET /assistant/sessions/:id` contract test
+- [X] T043 [P] [US1] 在 `test/contract/assistant-sessions.contract.spec.ts` 撰寫 `POST /assistant/sessions` 與 `GET /assistant/sessions/:id` contract test
   - 說明：鎖定 session create/get 的 API envelope、requestId、identity boundary 與錯誤格式。
   - 輸出：session contract spec、成功/不存在/不可見案例。
   - 完成條件：不同 actor、host app、organization 不可取得他人 session；錯誤回應一致。
-- [ ] T044 [P] [US1] 在 `test/contract/assistant-messages-sse.contract.spec.ts` 撰寫 `POST /assistant/sessions/:id/messages` SSE events contract test
+- [X] T044 [P] [US1] 在 `test/contract/assistant-messages-sse.contract.spec.ts` 撰寫 `POST /assistant/sessions/:id/messages` SSE events contract test
   - 說明：驗證送出訊息後只能以 SSE 回覆，並固定必要 event sequence 與 event metadata。
   - 輸出：SSE contract spec、event sequence assertions、final/error case fixtures。
   - 完成條件：事件包含 `tool_call_started`、`tool_call_completed`、`evidence_attached`、`answer_delta`、`final`、`error`；每個 event 含 requestId/sessionId/messageId/eventType/sequence；`final` 含完整 answerDecision。
-- [ ] T045 [P] [US1] 在 `test/contract/assistant-message-history.contract.spec.ts` 撰寫 `GET /assistant/sessions/:id/messages` contract test，驗證 requestId、sessionId、pagination、message order、role、answerDecision、evidence summary 與 response envelope
-- [ ] T046 [P] [US1] 在 `test/integration/authorized-evidence-answer.spec.ts` 撰寫授權 evidence-grounded answer integration test
-- [ ] T047 [P] [US1] 在 `test/integration/field-masking-before-llm.spec.ts` 撰寫未授權欄位會在進入 LLM input 前被遮罩的 integration test
-- [ ] T048 [P] [US1] 在 `test/unit/assistant-context-state.spec.ts` 撰寫 `AssistantContextState` 與 `PageContext` 解析的 unit tests
-- [ ] T049 [P] [US1] 在 `test/integration/session-history-on-open.spec.ts` 撰寫同一 actor / organization / hostApp 重新打開 AI 助理時可取得既有 session message history 的 integration test
-- [ ] T050 [P] [US1] 在 `test/integration/session-history-permission-boundary.spec.ts` 撰寫 session history 權限邊界測試，確認不同 actor、host app 或 organization 不可讀取他人 session history
-- [ ] T051 [P] [US1] 在 `test/integration/session-history-masking.spec.ts` 撰寫歷史訊息中的 evidence summary / tool summary 必須套用 masking 與資料最小化的 integration test
+- [X] T045 [P] [US1] 在 `test/contract/assistant-message-history.contract.spec.ts` 撰寫 `GET /assistant/sessions/:id/messages` contract test，驗證 requestId、sessionId、pagination、message order、role、answerDecision、evidence summary 與 response envelope
+- [X] T046 [P] [US1] 在 `test/integration/authorized-evidence-answer.spec.ts` 撰寫授權 evidence-grounded answer integration test
+- [X] T047 [P] [US1] 在 `test/integration/field-masking-before-llm.spec.ts` 撰寫未授權欄位會在進入 LLM input 前被遮罩的 integration test
+- [X] T048 [P] [US1] 在 `test/unit/assistant-context-state.spec.ts` 撰寫 `AssistantContextState` 與 `PageContext` 解析的 unit tests
+- [X] T049 [P] [US1] 在 `test/integration/session-history-on-open.spec.ts` 撰寫同一 actor / organization / hostApp 重新打開 AI 助理時可取得既有 session message history 的 integration test
+- [X] T050 [P] [US1] 在 `test/integration/session-history-permission-boundary.spec.ts` 撰寫 session history 權限邊界測試，確認不同 actor、host app 或 organization 不可讀取他人 session history
+- [X] T051 [P] [US1] 在 `test/integration/session-history-masking.spec.ts` 撰寫歷史訊息中的 evidence summary / tool summary 必須套用 masking 與資料最小化的 integration test
 
 ### User Story 1 實作任務
 

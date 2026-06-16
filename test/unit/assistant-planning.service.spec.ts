@@ -107,6 +107,96 @@ describe('AssistantPlanningService', () => {
     expect(result.queryUnderstanding.taskType).toBe('inventory_availability_lookup');
   });
 
+  it('passes page context through AssistantPlanningService into QueryUnderstandingService before execution-plan creation', async () => {
+    const pageContext = {
+      module: 'orders',
+      screenId: 'order-detail',
+      entityType: 'order',
+      entityId: 'SO-10001',
+      visibleColumns: ['status', 'customerName']
+    };
+    const understandAndPersist = jest.fn().mockResolvedValue({
+      output: {
+        taskType: 'order_status_lookup',
+        sentences: [{ index: 0, text: '這張訂單目前狀態？' }],
+        tokens: [],
+        phrases: [],
+        normalizedTerms: ['訂單'],
+        timeRanges: [],
+        resolvedReferences: ['module', 'entityId'],
+        entityCandidates: [{ type: 'orderId', value: 'SO-10001', confidence: 0.92 }],
+        subTasks: [{ type: 'order_status_lookup', text: '這張訂單目前狀態？' }],
+        candidateTools: [{ key: 'mock.orders.status.lookup', reason: 'order status query' }],
+        riskLevel: RiskLevel.low,
+        confidence: 0.92,
+        clarificationNeeds: [],
+        requiredEvidence: ['identity_context', 'structured_record']
+      },
+      persisted: {
+        id: 'qu-002',
+        requestId: 'req-plan-002',
+        messageId: 'message-002',
+        sentences: [],
+        tokens: [],
+        phrases: [],
+        normalizedTerms: [],
+        timeRanges: null,
+        resolvedReferences: null,
+        entityCandidates: [],
+        subTasks: null,
+        confidence: 0.92,
+        clarificationNeeds: null,
+        createdAt: new Date('2026-06-15T00:00:00.000Z')
+      }
+    });
+    const create = jest.fn().mockResolvedValue({
+      id: 'plan-002',
+      sessionId: 'session-001',
+      messageId: 'message-002',
+      taskType: 'order_status_lookup',
+      requiredEvidence: ['identity_context', 'structured_record'],
+      candidateTools: [{ key: 'mock.orders.status.lookup', reason: 'order status query' }],
+      permissionChecks: [{ scopes: ['orders:read'] }],
+      riskAssessment: RiskLevel.low,
+      clarificationNeeds: null,
+      expectedAnswerShape: { format: 'text', includesEvidence: true },
+      requiresMultiStepToolUse: false,
+      decision: ExecutionDecision.continue,
+      createdAt: new Date('2026-06-15T00:00:01.000Z')
+    });
+    const append = jest.fn().mockResolvedValue({
+      id: 'audit-002',
+      timestamp: new Date('2026-06-15T00:00:01.500Z')
+    });
+    const service = new AssistantPlanningService(
+      { understandAndPersist } as unknown as QueryUnderstandingService,
+      {
+        db: {
+          executionPlan: {
+            create
+          }
+        }
+      } as unknown as PrismaService,
+      { append } as unknown as AuditWriterService
+    );
+
+    await service.createPlan({
+      requestId: 'req-plan-002',
+      sessionId: 'session-001',
+      messageId: 'message-002',
+      text: '這張訂單目前狀態？',
+      identityContext,
+      pageContext
+    });
+
+    expect(understandAndPersist).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: 'req-plan-002',
+        pageContext
+      })
+    );
+  });
+
   it('maps low-confidence output into clarify decision', () => {
     expect(
       determinePlanningDecision({
