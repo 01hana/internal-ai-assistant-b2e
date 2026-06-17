@@ -7,45 +7,90 @@ import { AssistantSseBuildInput, AssistantSseEventRecord } from './assistant-sse
 export class AssistantSseEventBuilder {
   buildMessageEvents(input: AssistantSseBuildInput): AssistantSseEventRecord[] {
     const sequence = new SseSequence();
+    const events: AssistantSseEventRecord[] = [];
 
-    return [
-      this.wrap(
-        createSseEvent({
-          requestId: input.requestId,
-          sessionId: input.sessionId,
-          messageId: input.messageId,
-          eventType: 'tool_call_started',
-          sequence: sequence.next(),
-          data: {
-            toolCallId: input.toolCallId
-          }
-        })
-      ),
-      this.wrap(
-        createSseEvent({
-          requestId: input.requestId,
-          sessionId: input.sessionId,
-          messageId: input.messageId,
-          eventType: 'tool_call_completed',
-          sequence: sequence.next(),
-          data: {
-            toolCallId: input.toolCallId,
-            status: 'completed'
-          }
-        })
-      ),
-      this.wrap(
-        createSseEvent({
-          requestId: input.requestId,
-          sessionId: input.sessionId,
-          messageId: input.messageId,
-          eventType: 'evidence_attached',
-          sequence: sequence.next(),
-          data: {
-            evidenceRefs: input.evidenceRefIds
-          }
-        })
-      ),
+    if (input.toolLifecycle === 'completed') {
+      events.push(this.buildToolStartedEvent(input, sequence));
+      events.push(
+        this.wrap(
+          createSseEvent({
+            requestId: input.requestId,
+            sessionId: input.sessionId,
+            messageId: input.messageId,
+            eventType: 'tool_call_completed',
+            sequence: sequence.next(),
+            data: {
+              toolCallId: input.toolCallId,
+              toolName: input.toolName,
+              status: 'completed',
+              executionStatus: 'executed'
+            }
+          })
+        )
+      );
+
+      if (input.evidenceRefIds.length > 0) {
+        events.push(
+          this.wrap(
+            createSseEvent({
+              requestId: input.requestId,
+              sessionId: input.sessionId,
+              messageId: input.messageId,
+              eventType: 'evidence_attached',
+              sequence: sequence.next(),
+              data: {
+                evidenceRefs: input.evidenceRefIds
+              }
+            })
+          )
+        );
+      }
+    }
+
+    if (input.toolLifecycle === 'blocked') {
+      events.push(
+        this.wrap(
+          createSseEvent({
+            requestId: input.requestId,
+            sessionId: input.sessionId,
+            messageId: input.messageId,
+            eventType: 'tool_call_blocked',
+            sequence: sequence.next(),
+            data: {
+              toolCallId: input.toolCallId,
+              toolName: input.toolName,
+              status: 'blocked',
+              executionStatus: 'not_started',
+              deniedReason: input.deniedReason
+            }
+          })
+        )
+      );
+    }
+
+    if (input.toolLifecycle === 'failed') {
+      events.push(this.buildToolStartedEvent(input, sequence));
+      events.push(
+        this.wrap(
+          createSseEvent({
+            requestId: input.requestId,
+            sessionId: input.sessionId,
+            messageId: input.messageId,
+            eventType: 'tool_call_failed',
+            sequence: sequence.next(),
+            data: {
+              toolCallId: input.toolCallId,
+              toolName: input.toolName,
+              status: 'failed',
+              executionStatus: 'failed',
+              errorCode: input.errorCode
+            }
+          })
+        )
+      );
+    }
+
+    events.push(
       this.wrap(
         createSseEvent({
           requestId: input.requestId,
@@ -57,7 +102,9 @@ export class AssistantSseEventBuilder {
             delta: input.answerDelta
           }
         })
-      ),
+      )
+    );
+    events.push(
       this.wrap(
         createSseEvent({
           requestId: input.requestId,
@@ -68,7 +115,9 @@ export class AssistantSseEventBuilder {
           data: input.finalData
         })
       )
-    ];
+    );
+
+    return events;
   }
 
   buildErrorEvent(input: { requestId: string; sessionId: string; code: string; message: string }): AssistantSseEventRecord {
@@ -92,5 +141,21 @@ export class AssistantSseEventBuilder {
       event: payload.eventType,
       payload
     };
+  }
+
+  private buildToolStartedEvent(input: AssistantSseBuildInput, sequence: SseSequence): AssistantSseEventRecord {
+    return this.wrap(
+      createSseEvent({
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.messageId,
+        eventType: 'tool_call_started',
+        sequence: sequence.next(),
+        data: {
+          toolCallId: input.toolCallId,
+          toolName: input.toolName
+        }
+      })
+    );
   }
 }

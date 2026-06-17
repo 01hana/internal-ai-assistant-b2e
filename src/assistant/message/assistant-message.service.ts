@@ -7,7 +7,6 @@ import { AssistantContextStateService } from '../context/assistant-context-state
 import { toPageContextAuditMetadata, toPageContextPersistence } from '../page-context/page-context.mapper';
 import { AssistantPlanningService } from '../planning/assistant-planning.service';
 import { AssistantReadonlyRuntimeService } from '../runtime/assistant-readonly-runtime.service';
-import { ToolCallService } from '../runtime/tool-call.service';
 import { AssistantSessionService } from '../session/assistant-session.service';
 import { AssistantSseEventBuilder } from '../sse/assistant-sse-event.builder';
 import { AssistantSseEventRecord } from '../sse/assistant-sse.types';
@@ -21,7 +20,6 @@ export class AssistantMessageService {
     private readonly messageRepository: AssistantMessageRepository,
     private readonly planningService: AssistantPlanningService,
     private readonly readonlyRuntimeService: AssistantReadonlyRuntimeService,
-    private readonly toolCallService: ToolCallService,
     private readonly evidenceRefService: EvidenceRefService,
     private readonly answerDecisionService: AnswerDecisionService,
     private readonly contextStateService: AssistantContextStateService,
@@ -74,7 +72,7 @@ export class AssistantMessageService {
       pageContext: input.pageContext
     });
 
-    if (runtimeResult.deniedReason) {
+    if (runtimeResult.toolLifecycle !== 'completed') {
       const answerDecision = await this.answerDecisionService.decide({
         requestId: input.requestId,
         messageId: assistantMessage.id,
@@ -92,7 +90,7 @@ export class AssistantMessageService {
         sessionId: session.id,
         pageContext: input.pageContext,
         planningResult,
-        toolCallIds: [],
+        toolCallIds: runtimeResult.toolCallId ? [runtimeResult.toolCallId] : [],
         evidenceRefIds: []
       });
 
@@ -105,10 +103,12 @@ export class AssistantMessageService {
         messageId: assistantMessage.id,
         eventType: 'answer_generated',
         decision: answerDecision.status,
+        toolCallId: runtimeResult.toolCallId,
         evidenceRefIds: [],
         metadata: toJsonInput({
           toolName: runtimeResult.toolName,
           deniedReason: runtimeResult.deniedReason,
+          errorCode: runtimeResult.connectorErrorCode,
           answerDecisionId: answerDecision.answerDecisionId,
           groundingCheckId: answerDecision.groundingCheckId
         })
@@ -118,7 +118,11 @@ export class AssistantMessageService {
         requestId: input.requestId,
         sessionId: session.id,
         messageId: assistantMessage.id,
-        toolCallId: 'not-executed',
+        toolCallId: runtimeResult.toolCallId ?? 'not-executed',
+        toolName: runtimeResult.toolName,
+        toolLifecycle: runtimeResult.toolLifecycle,
+        deniedReason: runtimeResult.deniedReason,
+        errorCode: runtimeResult.connectorErrorCode,
         evidenceRefIds: [],
         answerDelta: answerDecision.answer.delta,
         finalData: {
@@ -129,29 +133,17 @@ export class AssistantMessageService {
       });
     }
 
-    const { toolCall } = await this.toolCallService.createCompletedToolCall({
-      requestId: input.requestId,
-      sessionId: session.id,
-      messageId: assistantMessage.id,
-      identityContext: input.identityContext,
-      toolName: runtimeResult.toolName,
-      toolVersion: runtimeResult.toolVersion,
-      entityId: runtimeResult.entityRef.entityId,
-      visibleFields: runtimeResult.visibleFields,
-      sanitizedResult: runtimeResult.sanitizedResult
-    });
-
-    const evidenceRef = runtimeResult.structuredRecord
+    const evidenceRef = Object.keys(runtimeResult.sanitizedResult).length > 0 && runtimeResult.toolCallId
       ? await this.evidenceRefService.attachStructuredRecordEvidence({
           requestId: input.requestId,
           sessionId: session.id,
           messageId: assistantMessage.id,
-          toolCallId: toolCall.id,
+          toolCallId: runtimeResult.toolCallId,
           identityContext: input.identityContext,
           entityType: runtimeResult.entityRef.entityType ?? 'order',
           entityId: runtimeResult.entityRef.entityId ?? runtimeResult.toolName,
-          record: runtimeResult.structuredRecord,
-          visibleFields: runtimeResult.visibleFields
+          record: runtimeResult.sanitizedResult,
+          visibleFields: Object.keys(runtimeResult.sanitizedResult)
         })
       : undefined;
 
@@ -179,7 +171,7 @@ export class AssistantMessageService {
       sessionId: session.id,
       pageContext: input.pageContext,
       planningResult,
-      toolCallIds: [toolCall.id],
+      toolCallIds: runtimeResult.toolCallId ? [runtimeResult.toolCallId] : [],
       evidenceRefIds: evidenceRef ? [evidenceRef.id] : []
     });
 
@@ -190,12 +182,12 @@ export class AssistantMessageService {
       actorId: input.identityContext.actor.actorId,
       sessionId: session.id,
       messageId: assistantMessage.id,
-      toolCallId: toolCall.id,
+      toolCallId: runtimeResult.toolCallId,
       eventType: 'answer_generated',
       decision: answerDecision.status,
       evidenceRefIds: evidenceRef ? [evidenceRef.id] : [],
       metadata: toJsonInput({
-        toolName: toolCall.toolName,
+        toolName: runtimeResult.toolName,
         answerDecisionId: answerDecision.answerDecisionId,
         groundingCheckId: answerDecision.groundingCheckId
       })
@@ -205,7 +197,9 @@ export class AssistantMessageService {
       requestId: input.requestId,
       sessionId: session.id,
       messageId: assistantMessage.id,
-      toolCallId: toolCall.id,
+      toolCallId: runtimeResult.toolCallId ?? 'not-executed',
+      toolName: runtimeResult.toolName,
+      toolLifecycle: runtimeResult.toolLifecycle,
       evidenceRefIds: evidenceRef ? [evidenceRef.id] : [],
       answerDelta: answerDecision.answer.delta,
       finalData: {

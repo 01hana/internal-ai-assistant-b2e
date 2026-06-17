@@ -2,18 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { RiskLevel, ToolOperation } from '../../generated/prisma/enums';
 import { MockConnectorAdapter } from '../../connectors/mock/mock-connector.adapter';
-import { minimizeForLlmInput } from '../../permissions/masking.util';
+import { LlmInputSanitizerService } from '../../permissions/llm-input-sanitizer.service';
 import { ToolPermissionPrecheckService } from '../../permissions/tool-permission-precheck.service';
 import { ToolRegistryService } from '../../tools/tool-registry.service';
 import { getPageEntityRef, getVisibleColumns } from '../page-context/page-context.mapper';
 import { AssistantReadonlyRuntimeInput, AssistantReadonlyRuntimeResult } from './runtime.types';
+import { ToolCallService } from './tool-call.service';
 
 @Injectable()
 export class AssistantReadonlyRuntimeService {
   constructor(
     private readonly toolRegistry: ToolRegistryService,
     private readonly mockConnector: MockConnectorAdapter,
-    private readonly permissionPrecheck: ToolPermissionPrecheckService
+    private readonly permissionPrecheck: ToolPermissionPrecheckService,
+    private readonly toolCallService: ToolCallService,
+    private readonly llmInputSanitizer: LlmInputSanitizerService
   ) {}
 
   async execute(input: AssistantReadonlyRuntimeInput): Promise<AssistantReadonlyRuntimeResult> {
@@ -33,10 +36,24 @@ export class AssistantReadonlyRuntimeService {
         operation: ToolOperation.read,
         deniedReason: toolResolution.deniedReason ?? 'tool_not_registered'
       });
+      const { toolCall } = await this.toolCallService.blockToolCall({
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.messageId,
+        identityContext: input.identityContext,
+        toolName,
+        toolVersion: 'unknown',
+        riskLevel: RiskLevel.high,
+        entityId: entityRef.entityId,
+        visibleFields,
+        deniedReason: toolResolution.deniedReason ?? 'tool_not_registered'
+      });
 
       return {
         toolName,
         toolVersion: 'unknown',
+        toolCallId: toolCall.id,
+        toolLifecycle: 'blocked',
         riskLevel: RiskLevel.high,
         entityRef,
         visibleFields,
@@ -60,10 +77,24 @@ export class AssistantReadonlyRuntimeService {
         deniedReason: validation.deniedReason,
         schemaErrorReason: validation.schemaErrorReason
       });
+      const { toolCall } = await this.toolCallService.blockToolCall({
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.messageId,
+        identityContext: input.identityContext,
+        toolName: tool.key,
+        toolVersion: tool.version,
+        riskLevel: tool.riskLevel,
+        entityId: entityRef.entityId,
+        visibleFields,
+        deniedReason: validation.deniedReason
+      });
 
       return {
         toolName: tool.key,
         toolVersion: tool.version,
+        toolCallId: toolCall.id,
+        toolLifecycle: 'blocked',
         riskLevel: tool.riskLevel,
         entityRef,
         visibleFields,
@@ -83,9 +114,24 @@ export class AssistantReadonlyRuntimeService {
     });
 
     if (!permission.allowed) {
+      const { toolCall } = await this.toolCallService.blockToolCall({
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.messageId,
+        identityContext: input.identityContext,
+        toolName: tool.key,
+        toolVersion: tool.version,
+        riskLevel: tool.riskLevel,
+        entityId: entityRef.entityId,
+        visibleFields,
+        deniedReason: permission.reason ?? 'missing_scope'
+      });
+
       return {
         toolName: tool.key,
         toolVersion: tool.version,
+        toolCallId: toolCall.id,
+        toolLifecycle: 'blocked',
         riskLevel: tool.riskLevel,
         entityRef,
         visibleFields,
@@ -94,6 +140,18 @@ export class AssistantReadonlyRuntimeService {
       };
     }
 
+    const startedAt = Date.now();
+    const { toolCall: startedToolCall } = await this.toolCallService.startToolCall({
+      requestId: input.requestId,
+      sessionId: input.sessionId,
+      messageId: input.messageId,
+      identityContext: input.identityContext,
+      toolName: tool.key,
+      toolVersion: tool.version,
+      riskLevel: tool.riskLevel,
+      entityId: entityRef.entityId,
+      visibleFields
+    });
     const connectorResult = await this.mockConnector.execute({
       requestId: input.requestId,
       organizationId: input.identityContext.company.organizationId,
@@ -101,17 +159,67 @@ export class AssistantReadonlyRuntimeService {
       toolKey: tool.key,
       arguments: toolInput
     });
-    const structuredRecord = connectorResult.status === 'succeeded' ? connectorResult.data : undefined;
-    const sanitizedResult = structuredRecord ? minimizeForLlmInput(structuredRecord, visibleFields) : {};
+    const durationMs = Math.max(1, Date.now() - startedAt);
+
+    if (connectorResult.status !== 'succeeded' || !connectorResult.data) {
+      const { toolCall } = await this.toolCallService.failToolCall({
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.messageId,
+        identityContext: input.identityContext,
+        toolCallId: startedToolCall.id,
+        toolName: tool.key,
+        toolVersion: tool.version,
+        riskLevel: tool.riskLevel,
+        errorCode: connectorResult.error?.code ?? connectorResult.status,
+        durationMs
+      });
+
+      return {
+        toolName: tool.key,
+        toolVersion: tool.version,
+        toolCallId: toolCall.id,
+        toolLifecycle: 'failed',
+        riskLevel: tool.riskLevel,
+        entityRef,
+        visibleFields,
+        sanitizedResult: {},
+        connectorStatus: connectorResult.status,
+        connectorErrorCode: connectorResult.error?.code,
+        durationMs
+      };
+    }
+
+    const sanitization = this.llmInputSanitizer.sanitize({
+      record: connectorResult.data,
+      visibleFields
+    });
+    const sanitizedResult = sanitization.sanitized;
+    const { toolCall } = await this.toolCallService.completeToolCall({
+      requestId: input.requestId,
+      sessionId: input.sessionId,
+      messageId: input.messageId,
+      identityContext: input.identityContext,
+      toolCallId: startedToolCall.id,
+      toolName: tool.key,
+      toolVersion: tool.version,
+      riskLevel: tool.riskLevel,
+      visibleFields,
+      sanitizedResult,
+      durationMs
+    });
 
     return {
       toolName: tool.key,
       toolVersion: tool.version,
+      toolCallId: toolCall.id,
+      toolLifecycle: 'completed',
       riskLevel: tool.riskLevel,
       entityRef,
       visibleFields,
-      structuredRecord,
-      sanitizedResult
+      sanitizedResult,
+      connectorStatus: connectorResult.status,
+      durationMs
     };
   }
 }

@@ -1,6 +1,8 @@
 export type SseEventType =
   | 'tool_call_started'
   | 'tool_call_completed'
+  | 'tool_call_blocked'
+  | 'tool_call_failed'
   | 'evidence_attached'
   | 'approval_required'
   | 'confirmation_required'

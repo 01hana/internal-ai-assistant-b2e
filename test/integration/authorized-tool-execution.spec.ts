@@ -38,6 +38,13 @@ describe('US2 authorized mock connector tool execution', () => {
     expect(response.status).toBe(200);
 
     const events = parseSseResponse(response.text);
+    expect(events.map((event) => event.event)).toEqual([
+      'tool_call_started',
+      'tool_call_completed',
+      'evidence_attached',
+      'answer_delta',
+      'final'
+    ]);
     const finalEvent = events.find((event) => event.event === 'final');
     const completedToolEvent = events.find((event) => event.event === 'tool_call_completed');
     const latestToolCall = state.toolCalls[state.toolCalls.length - 1];

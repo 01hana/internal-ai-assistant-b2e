@@ -1,11 +1,11 @@
-import { RiskLevel, ExecutionDecision, ToolOperation } from '../../src/generated/prisma/enums';
+import { RiskLevel, ExecutionDecision, ToolCallStatus, ToolExecutionStatus, ToolOperation } from '../../src/generated/prisma/enums';
 import { AssistantReadonlyRuntimeService } from '../../src/assistant/runtime/assistant-readonly-runtime.service';
 import { ToolCallService } from '../../src/assistant/runtime/tool-call.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { RegisteredToolDefinition, ToolPermissionDeniedReason } from '../../src/tools/tool-registry.types';
 
 describe('AssistantReadonlyRuntimeService', () => {
-  it('uses registry output and connector data, then minimizes the structured record for downstream use', async () => {
+  it('starts and completes a tool call, then returns only sanitized connector data', async () => {
     const connectorExecute = jest.fn().mockResolvedValue({
       status: 'succeeded',
       data: {
@@ -14,42 +14,58 @@ describe('AssistantReadonlyRuntimeService', () => {
         amount: 128000
       }
     });
+    const startToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-001' } });
+    const completeToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-001' } });
     const service = createRuntimeService({
-      connectorExecute
+      connectorExecute,
+      startToolCall,
+      completeToolCall
     });
 
     const result = await service.execute(runtimeInput());
 
+    expect(startToolCall).toHaveBeenCalledWith(expect.objectContaining({ toolName: 'mock.orders.status.lookup' }));
     expect(connectorExecute).toHaveBeenCalledWith(expect.objectContaining({ toolKey: 'mock.orders.status.lookup' }));
-    expect(result.toolName).toBe('mock.orders.status.lookup');
-    expect(result.sanitizedResult).toEqual({
-      status: 'picking'
-    });
-    expect(JSON.stringify(result.sanitizedResult)).not.toContain('128000');
+    expect(completeToolCall).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolCallId: 'tool-call-001',
+        sanitizedResult: { status: 'picking' }
+      })
+    );
+    expect(result.toolCallId).toBe('tool-call-001');
+    expect(result.toolLifecycle).toBe('completed');
+    expect(result.sanitizedResult).toEqual({ status: 'picking' });
+    expect(JSON.stringify(result)).not.toContain('128000');
   });
 
   it.each<ToolPermissionDeniedReason>(['tool_not_registered', 'tool_inactive'])(
-    'does not call the connector when registry resolution fails with %s',
+    'blocks the tool call and does not call the connector when registry resolution fails with %s',
     async (deniedReason) => {
       const connectorExecute = jest.fn();
       const recordDenied = jest.fn();
+      const blockToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-blocked-001' } });
       const service = createRuntimeService({
         registryResult: { deniedReason },
         connectorExecute,
-        recordDenied
+        recordDenied,
+        blockToolCall
       });
 
       const result = await service.execute(runtimeInput());
 
       expect(connectorExecute).not.toHaveBeenCalled();
       expect(recordDenied).toHaveBeenCalledWith(expect.objectContaining({ deniedReason }));
+      expect(blockToolCall).toHaveBeenCalledWith(expect.objectContaining({ deniedReason }));
+      expect(result.toolCallId).toBe('tool-call-blocked-001');
+      expect(result.toolLifecycle).toBe('blocked');
       expect(result.deniedReason).toBe(deniedReason);
     }
   );
 
-  it('does not call the connector when input schema validation fails', async () => {
+  it('blocks the tool call and does not call the connector when input schema validation fails', async () => {
     const connectorExecute = jest.fn();
     const recordDenied = jest.fn();
+    const blockToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-blocked-schema' } });
     const service = createRuntimeService({
       validation: {
         valid: false,
@@ -57,7 +73,8 @@ describe('AssistantReadonlyRuntimeService', () => {
         schemaErrorReason: 'missing_required_entityId'
       },
       connectorExecute,
-      recordDenied
+      recordDenied,
+      blockToolCall
     });
 
     const result = await service.execute(runtimeInput());
@@ -69,64 +86,167 @@ describe('AssistantReadonlyRuntimeService', () => {
         schemaErrorReason: 'missing_required_entityId'
       })
     );
+    expect(blockToolCall).toHaveBeenCalledWith(expect.objectContaining({ deniedReason: 'schema_invalid' }));
+    expect(result.toolLifecycle).toBe('blocked');
     expect(result.deniedReason).toBe('schema_invalid');
   });
 
-  it('does not call the connector when permission pre-check denies execution', async () => {
+  it('blocks the tool call and does not call the connector when permission pre-check denies execution', async () => {
     const connectorExecute = jest.fn();
+    const blockToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-blocked-permission' } });
     const service = createRuntimeService({
       permission: {
         allowed: false,
         reason: 'missing_scope',
         missingScopes: ['orders:read']
       },
-      connectorExecute
+      connectorExecute,
+      blockToolCall
     });
 
     const result = await service.execute(runtimeInput());
 
     expect(connectorExecute).not.toHaveBeenCalled();
+    expect(blockToolCall).toHaveBeenCalledWith(expect.objectContaining({ deniedReason: 'missing_scope' }));
+    expect(result.toolLifecycle).toBe('blocked');
     expect(result.deniedReason).toBe('missing_scope');
+  });
+
+  it('fails an in-progress tool call when the connector returns a failed result', async () => {
+    const failToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-failed-001' } });
+    const service = createRuntimeService({
+      connectorExecute: jest.fn().mockResolvedValue({
+        status: 'failed',
+        error: { code: 'NOT_FOUND', message: 'Record not found.' }
+      }),
+      failToolCall
+    });
+
+    const result = await service.execute(runtimeInput());
+
+    expect(failToolCall).toHaveBeenCalledWith(expect.objectContaining({ errorCode: 'NOT_FOUND' }));
+    expect(result.toolCallId).toBe('tool-call-failed-001');
+    expect(result.toolLifecycle).toBe('failed');
+    expect(result.connectorStatus).toBe('failed');
+    expect(result.sanitizedResult).toEqual({});
   });
 });
 
 describe('ToolCallService', () => {
-  it('creates a completed tool call with the existing stable payload shape', async () => {
+  it('creates, completes, fails, and blocks tool calls with lifecycle-safe payloads', async () => {
     const create = jest.fn().mockResolvedValue({ id: 'tool-call-001', toolName: 'mock.orders.status.lookup' });
-    const service = new ToolCallService({
-      db: {
-        toolCall: {
-          create
+    const update = jest.fn(async ({ where, data }) => ({ id: where.id, ...data }));
+    const append = jest.fn().mockResolvedValue({ id: 'audit-001' });
+    const service = new ToolCallService(
+      {
+        db: {
+          toolCall: {
+            create,
+            update
+          }
         }
-      }
-    } as unknown as PrismaService);
+      } as unknown as PrismaService,
+      { append } as never
+    );
 
-    const result = await service.createCompletedToolCall({
+    const started = await service.startToolCall({
       requestId: 'req-001',
       sessionId: 'session-001',
       messageId: 'message-001',
       identityContext: identityContext(),
       toolName: 'mock.orders.status.lookup',
+      toolVersion: '1.0.0',
+      riskLevel: RiskLevel.low,
       entityId: 'SO-10001',
-      visibleFields: ['status', 'customerName'],
-      sanitizedResult: {
-        status: '已確認',
-        customerName: '王小明企業'
-      }
+      visibleFields: ['status']
+    });
+
+    await service.completeToolCall({
+      requestId: 'req-001',
+      sessionId: 'session-001',
+      messageId: 'message-001',
+      identityContext: identityContext(),
+      toolCallId: started.toolCall.id,
+      toolName: 'mock.orders.status.lookup',
+      toolVersion: '1.0.0',
+      riskLevel: RiskLevel.low,
+      visibleFields: ['status'],
+      sanitizedResult: { status: '已確認' },
+      durationMs: 3
+    });
+
+    await service.failToolCall({
+      requestId: 'req-001',
+      sessionId: 'session-001',
+      messageId: 'message-001',
+      identityContext: identityContext(),
+      toolCallId: started.toolCall.id,
+      toolName: 'mock.orders.status.lookup',
+      toolVersion: '1.0.0',
+      riskLevel: RiskLevel.low,
+      errorCode: 'NOT_FOUND',
+      durationMs: 3
+    });
+
+    await service.blockToolCall({
+      requestId: 'req-001',
+      sessionId: 'session-001',
+      messageId: 'message-001',
+      identityContext: identityContext(),
+      toolName: 'mock.orders.status.lookup',
+      toolVersion: '1.0.0',
+      riskLevel: RiskLevel.low,
+      entityId: 'SO-10001',
+      visibleFields: ['status'],
+      deniedReason: 'missing_scope'
     });
 
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          toolName: 'mock.orders.status.lookup',
-          outputSummary: {
-            status: '已確認',
-            customerName: '王小明企業'
+          status: ToolCallStatus.pending,
+          executionStatus: ToolExecutionStatus.in_progress,
+          inputSummary: {
+            entityId: 'SO-10001',
+            visibleFieldCount: 1
           }
         })
       })
     );
-    expect(result.toolCall.id).toBe('tool-call-001');
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: ToolCallStatus.success,
+          executionStatus: ToolExecutionStatus.executed,
+          outputSummary: { status: '已確認' }
+        })
+      })
+    );
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: ToolCallStatus.failed,
+          executionStatus: ToolExecutionStatus.failed,
+          outputSummary: {},
+          errorCode: 'NOT_FOUND'
+        })
+      })
+    );
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: ToolCallStatus.blocked,
+          executionStatus: ToolExecutionStatus.not_started,
+          outputSummary: {},
+          errorCode: 'missing_scope'
+        })
+      })
+    );
+    expect(JSON.stringify(create.mock.calls)).not.toContain('128000');
+    expect(append).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'tool_call_started' }));
+    expect(append).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'tool_call_completed' }));
+    expect(append).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'tool_call_failed' }));
+    expect(append).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'tool_call_blocked' }));
   });
 });
 
@@ -136,6 +256,10 @@ function createRuntimeService(overrides?: {
   permission?: { allowed: true } | { allowed: false; reason: ToolPermissionDeniedReason; missingScopes?: string[] };
   connectorExecute?: jest.Mock;
   recordDenied?: jest.Mock;
+  startToolCall?: jest.Mock;
+  completeToolCall?: jest.Mock;
+  failToolCall?: jest.Mock;
+  blockToolCall?: jest.Mock;
 }) {
   return new AssistantReadonlyRuntimeService(
     {
@@ -157,6 +281,19 @@ function createRuntimeService(overrides?: {
     {
       check: jest.fn().mockResolvedValue(overrides?.permission ?? { allowed: true }),
       recordDenied: overrides?.recordDenied ?? jest.fn()
+    } as never,
+    {
+      startToolCall: overrides?.startToolCall ?? jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-001' } }),
+      completeToolCall: overrides?.completeToolCall ?? jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-001' } }),
+      failToolCall: overrides?.failToolCall ?? jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-failed-001' } }),
+      blockToolCall: overrides?.blockToolCall ?? jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-blocked-001' } })
+    } as never,
+    {
+      sanitize: jest.fn(({ record, visibleFields }) => ({
+        sanitized: Object.fromEntries(Object.entries(record).filter(([field]) => visibleFields.includes(field))),
+        visibleFields,
+        removedFieldCount: Object.keys(record).filter((field) => !visibleFields.includes(field)).length
+      }))
     } as never
   );
 }

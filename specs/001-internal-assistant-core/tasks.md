@@ -245,7 +245,7 @@
   - 說明：LLM 只能選擇已註冊 tool，所有 input 必須通過 schema validation，不得任意呼叫 API 或資料庫。
   - 輸出：tool registry service、ToolDefinition loader、input/output schema validator。
   - 完成條件：未註冊或 inactive tool 不可執行；schema invalid 會 fail closed；tool version 可供 audit replay。
-- [ ] T072 [US2] 在 `src/tools/` 實作 `ToolCall` lifecycle，包含 permission result、input summary、output summary、durationMs、executionStatus
+- [x] T072 [US2] 在 `src/tools/` 實作 `ToolCall` lifecycle，包含 permission result、input summary、output summary、durationMs、executionStatus
   - 說明：ToolCall 是工具執行與 audit/analytics 的 source-of-truth raw record。
   - 輸出：ToolCall service、status transitions、summary redaction、duration tracking。
   - 完成條件：started/completed/failed/blocked 狀態可追蹤；input/output summary 不含未遮罩敏感內容；durationMs 與 failure reason 可分析。
@@ -257,7 +257,7 @@
   - 說明：任何 retrieval 或 tool execution 前都必須先檢查 identity、host app、organization boundary、role、permission scope。
   - 輸出：permission pre-check service、deny reason mapper、audit integration。
   - 完成條件：未授權 tool 不執行；權限不足回 permission_denied；拒絕原因寫入 audit/observability metadata。
-- [ ] T075 [US2] 在 `src/permissions/` 實作進入 LLM input 前的 row/field masking
+- [x] T075 [US2] 在 `src/permissions/` 實作進入 LLM input 前的 row/field masking
   - 說明：遮罩必須發生在 tool/retrieval result 交給 LLM 前，不只是在最終回答後處理。
   - 輸出：row/field masking pipeline、LLM input sanitizer、masking tests。
   - 完成條件：未授權欄位不得進 LLM input；部分授權只回答可見資料；masked fields 不出現在 prompt/debug/audit。

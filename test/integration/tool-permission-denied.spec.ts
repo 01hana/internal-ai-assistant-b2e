@@ -41,11 +41,39 @@ describe('US2 tool permission denied before execution', () => {
     expect(response.status).toBe(200);
 
     const events = parseSseResponse(response.text);
+    const eventNames = events.map((event) => event.event);
     const finalEvent = events.find((event) => event.event === 'final');
     const newAuditEvents = state.auditEvents.slice(initialAuditCount);
     const latestAssistantMessage = state.messages[state.messages.length - 1];
+    const newToolCalls = state.toolCalls.slice(initialToolCallCount);
 
-    expect(state.toolCalls).toHaveLength(initialToolCallCount);
+    expect(eventNames).toEqual(['tool_call_blocked', 'answer_delta', 'final']);
+    expect(eventNames).not.toContain('tool_call_completed');
+    expect(eventNames).not.toContain('evidence_attached');
+    expect(events.find((event) => event.event === 'tool_call_blocked')?.data?.data).toEqual(
+      expect.objectContaining({
+        toolName: 'mock.inventory.availability.lookup',
+        status: 'blocked',
+        executionStatus: 'not_started',
+        deniedReason: 'missing_scope'
+      })
+    );
+    expect(newToolCalls).toEqual([
+      expect.objectContaining({
+        toolName: 'mock.inventory.availability.lookup',
+        status: 'blocked',
+        executionStatus: 'not_started',
+        errorCode: 'missing_scope',
+        outputSummary: {}
+      })
+    ]);
+    expect(state.evidenceRefs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          toolCallId: newToolCalls[0]?.id
+        })
+      ])
+    );
     expect(newAuditEvents).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

@@ -548,7 +548,7 @@ function createPrismaMock(state: MockState) {
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
           toolName: data.toolName ?? 'mock.general.lookup',
-          toolVersion: data.toolVersion ?? 'v1',
+          toolVersion: data.toolVersion ?? '1.0.0',
           inputSummary: data.inputSummary ?? null,
           permissionResult: data.permissionResult ?? null,
           outputSummary: data.outputSummary ?? null,
@@ -561,6 +561,15 @@ function createPrismaMock(state: MockState) {
         };
         state.toolCalls.push(record);
         return record;
+      }),
+      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ToolCallRecord> }) => {
+        const toolCall = state.toolCalls.find((item) => item.id === where.id);
+        if (!toolCall) {
+          throw new Error(`ToolCall ${where.id} not found.`);
+        }
+
+        Object.assign(toolCall, data);
+        return toolCall;
       }),
       findMany: jest.fn(async ({ where }: { where: { sessionId: string } }) =>
         state.toolCalls
