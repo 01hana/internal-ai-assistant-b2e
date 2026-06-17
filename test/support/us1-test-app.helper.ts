@@ -1,6 +1,16 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { AssistantMessageRole, AssistantSessionStatus, AssistantTaskState, EvidenceSourceType, ExecutionDecision, RiskLevel, ToolCallStatus, ToolExecutionStatus } from '../../src/generated/prisma/enums';
+import {
+  AssistantMessageRole,
+  AssistantSessionStatus,
+  AssistantTaskState,
+  EvidenceSourceType,
+  ExecutionDecision,
+  RiskLevel,
+  ToolCallStatus,
+  ToolExecutionStatus,
+  ToolOperation
+} from '../../src/generated/prisma/enums';
 import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.filter';
 import { RequestIdInterceptor } from '../../src/common/request-id/request-id.interceptor';
 import { ResponseEnvelopeInterceptor } from '../../src/common/response/response-envelope.interceptor';
@@ -62,6 +72,28 @@ type ToolCallRecord = {
   errorCode: string | null;
   createdAt: Date;
   executedAt: Date | null;
+};
+
+type ToolDefinitionRecord = {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  resource: string;
+  operation: ToolOperation;
+  inputSchema: unknown;
+  outputSchema: unknown;
+  requiredPermissions: string[];
+  riskLevel: RiskLevel;
+  hasSideEffect: boolean;
+  requiresConfirmation: boolean;
+  requiresApproval: boolean;
+  connectorKey: string;
+  timeoutMs: number;
+  auditBehavior: unknown;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 type EvidenceRefRecord = {
@@ -161,6 +193,7 @@ type MockState = {
   sessions: SessionRecord[];
   contextStates: ContextStateRecord[];
   messages: MessageRecord[];
+  toolDefinitions: ToolDefinitionRecord[];
   toolCalls: ToolCallRecord[];
   evidenceRefs: EvidenceRefRecord[];
   auditEvents: AuditEventRecord[];
@@ -280,6 +313,53 @@ function createPrismaMock(state: MockState) {
               item.hostApp === where.hostApp &&
               item.actorId === where.actorId
           ) ?? null
+      )
+    },
+    toolDefinition: {
+      findMany: jest.fn(
+        async ({
+          orderBy
+        }: {
+          orderBy?: Array<{ name?: 'asc' | 'desc'; version?: 'asc' | 'desc' }>;
+        } = {}) => {
+          const tools = [...state.toolDefinitions];
+          if (orderBy?.length) {
+            tools.sort((left, right) => {
+              for (const order of orderBy) {
+                if (order.name) {
+                  const comparison = left.name.localeCompare(right.name);
+                  if (comparison !== 0) {
+                    return order.name === 'asc' ? comparison : -comparison;
+                  }
+                }
+                if (order.version) {
+                  const comparison = left.version.localeCompare(right.version);
+                  if (comparison !== 0) {
+                    return order.version === 'asc' ? comparison : -comparison;
+                  }
+                }
+              }
+              return 0;
+            });
+          }
+          return tools;
+        }
+      ),
+      findFirst: jest.fn(
+        async ({
+          where,
+          orderBy
+        }: {
+          where: { name?: string };
+          orderBy?: { updatedAt?: 'asc' | 'desc' };
+        }) => {
+          const tools = state.toolDefinitions.filter((item) => !where.name || item.name === where.name);
+          return tools.sort((left, right) =>
+            (orderBy?.updatedAt ?? 'desc') === 'desc'
+              ? right.updatedAt.getTime() - left.updatedAt.getTime()
+              : left.updatedAt.getTime() - right.updatedAt.getTime()
+          )[0] ?? null;
+        }
       )
     },
     assistantContextState: {
@@ -687,6 +767,7 @@ function createInitialState(): MockState {
         createdAt: new Date('2026-06-16T00:00:04.000Z')
       }
     ],
+    toolDefinitions: createToolDefinitions(baseDate),
     toolCalls: [
       {
         id: 'tool-call-owned-001',
@@ -694,7 +775,7 @@ function createInitialState(): MockState {
         sessionId: 'session-owned-001',
         messageId: 'message-owned-assistant-001',
         toolName: 'mock.orders.status.lookup',
-        toolVersion: 'v1',
+        toolVersion: '1.0.0',
         inputSummary: { entityId: 'SO-10001' },
         permissionResult: { scopes: ['orders:read'] },
         outputSummary: { status: '已確認', customerName: '王小明企業' },
@@ -729,6 +810,91 @@ function createInitialState(): MockState {
     executionPlans: [],
     groundingChecks: [],
     answerDecisions: []
+  };
+}
+
+function createToolDefinitions(baseDate: Date): ToolDefinitionRecord[] {
+  return [
+    createToolDefinition({
+      id: 'tool-definition-orders-001',
+      name: 'mock.orders.status.lookup',
+      description: 'Lookup mock order status.',
+      resource: 'orders',
+      requiredPermissions: ['orders:read'],
+      outputRequired: ['orderId', 'status'],
+      baseDate
+    }),
+    createToolDefinition({
+      id: 'tool-definition-work-orders-001',
+      name: 'mock.work-orders.progress.lookup',
+      description: 'Lookup mock work order progress.',
+      resource: 'work_orders',
+      requiredPermissions: ['work-orders:read'],
+      outputRequired: ['workOrderId', 'status'],
+      baseDate
+    }),
+    createToolDefinition({
+      id: 'tool-definition-inventory-001',
+      name: 'mock.inventory.availability.lookup',
+      description: 'Lookup mock inventory availability.',
+      resource: 'inventory',
+      requiredPermissions: ['inventory:read'],
+      outputRequired: ['itemSku', 'availableQuantity'],
+      baseDate
+    }),
+    createToolDefinition({
+      id: 'tool-definition-business-partner-001',
+      name: 'mock.business-partner.history.lookup',
+      description: 'Lookup mock customer or supplier history.',
+      resource: 'business_partners',
+      requiredPermissions: ['business-partners:read'],
+      outputRequired: ['partnerId', 'relationshipStatus'],
+      baseDate
+    })
+  ];
+}
+
+function createToolDefinition(input: {
+  id: string;
+  name: string;
+  description: string;
+  resource: string;
+  requiredPermissions: string[];
+  outputRequired: string[];
+  baseDate: Date;
+}): ToolDefinitionRecord {
+  return {
+    id: input.id,
+    name: input.name,
+    version: '1.0.0',
+    description: input.description,
+    resource: input.resource,
+    operation: ToolOperation.read,
+    inputSchema: {
+      type: 'object',
+      required: ['entityId'],
+      properties: {
+        entityId: { type: 'string' }
+      }
+    },
+    outputSchema: {
+      type: 'object',
+      required: input.outputRequired
+    },
+    requiredPermissions: input.requiredPermissions,
+    riskLevel: RiskLevel.low,
+    hasSideEffect: false,
+    requiresConfirmation: false,
+    requiresApproval: false,
+    connectorKey: 'mock',
+    timeoutMs: 3000,
+    auditBehavior: {
+      summarizeInput: true,
+      summarizeOutput: true
+    },
+    isActive: true,
+    createdAt: new Date(input.baseDate),
+    updatedAt: new Date(input.baseDate)
   };
 }
 

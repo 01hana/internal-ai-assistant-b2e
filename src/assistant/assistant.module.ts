@@ -2,8 +2,11 @@ import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { EvidenceModule } from '../evidence/evidence.module';
 import { IdentityModule } from '../identity/identity.module';
+import { MockConnectorModule } from '../connectors/mock/mock-connector.module';
+import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { QueryUnderstandingModule } from '../query-understanding/query-understanding.module';
+import { ToolsModule } from '../tools/tools.module';
 import { AnswerDecisionService } from './answer/answer-decision.service';
 import { AssistantController } from './assistant.controller';
 import { AssistantContextStateService } from './context/assistant-context-state.service';
@@ -19,7 +22,7 @@ import { AssistantSessionService } from './session/assistant-session.service';
 import { AssistantSseEventBuilder } from './sse/assistant-sse-event.builder';
 
 @Module({
-  imports: [PrismaModule, AuditModule, QueryUnderstandingModule, IdentityModule, EvidenceModule],
+  imports: [PrismaModule, AuditModule, QueryUnderstandingModule, IdentityModule, EvidenceModule, ToolsModule, MockConnectorModule, PermissionsModule],
   controllers: [AssistantController],
   providers: [
     AssistantPlanningService,

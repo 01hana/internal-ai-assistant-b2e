@@ -241,7 +241,7 @@
 
 ### User Story 2 實作任務
 
-- [ ] T071 [US2] 在 `src/tools/` 實作 `ToolDefinition` registry 與 schema validation
+- [x] T071 [US2] 在 `src/tools/` 實作 `ToolDefinition` registry 與 schema validation
   - 說明：LLM 只能選擇已註冊 tool，所有 input 必須通過 schema validation，不得任意呼叫 API 或資料庫。
   - 輸出：tool registry service、ToolDefinition loader、input/output schema validator。
   - 完成條件：未註冊或 inactive tool 不可執行；schema invalid 會 fail closed；tool version 可供 audit replay。
@@ -249,11 +249,11 @@
   - 說明：ToolCall 是工具執行與 audit/analytics 的 source-of-truth raw record。
   - 輸出：ToolCall service、status transitions、summary redaction、duration tracking。
   - 完成條件：started/completed/failed/blocked 狀態可追蹤；input/output summary 不含未遮罩敏感內容；durationMs 與 failure reason 可分析。
-- [ ] T073 [US2] 在 `src/connectors/mock/` 實作訂單、工單、庫存、客戶/供應商查詢的 mock connector adapter execution
+- [x] T073 [US2] 在 `src/connectors/mock/` 實作訂單、工單、庫存、客戶/供應商查詢的 mock connector adapter execution
   - 說明：v1 用 mock business connector 驗證 structured lookup；不實作真實 ERP/MES/WMS/SCM/CRM connector。
   - 輸出：mock connector adapter、deterministic fixtures、connector result DTO。
   - 完成條件：order/work-order/inventory/customer-supplier examples 可被 tool 使用；live business data 不走 RAG/vector search；結果先進 permission/masking 再給 LLM。
-- [ ] T074 [US2] 在 `src/permissions/` 實作 retrieval/tool execution 前的 permission pre-checks
+- [x] T074 [US2] 在 `src/permissions/` 實作 retrieval/tool execution 前的 permission pre-checks
   - 說明：任何 retrieval 或 tool execution 前都必須先檢查 identity、host app、organization boundary、role、permission scope。
   - 輸出：permission pre-check service、deny reason mapper、audit integration。
   - 完成條件：未授權 tool 不執行；權限不足回 permission_denied；拒絕原因寫入 audit/observability metadata。

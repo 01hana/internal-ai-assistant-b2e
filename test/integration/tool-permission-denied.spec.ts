@@ -51,7 +51,7 @@ describe('US2 tool permission denied before execution', () => {
         expect.objectContaining({
           eventType: 'tool_permission_denied',
           metadata: expect.objectContaining({
-            permissionDeniedReason: 'missing_scope'
+            deniedReason: 'missing_scope'
           })
         })
       ])

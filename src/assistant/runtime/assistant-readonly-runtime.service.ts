@@ -1,37 +1,118 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
+import { RiskLevel, ToolOperation } from '../../generated/prisma/enums';
+import { MockConnectorAdapter } from '../../connectors/mock/mock-connector.adapter';
 import { minimizeForLlmInput } from '../../permissions/masking.util';
+import { ToolPermissionPrecheckService } from '../../permissions/tool-permission-precheck.service';
+import { ToolRegistryService } from '../../tools/tool-registry.service';
 import { getPageEntityRef, getVisibleColumns } from '../page-context/page-context.mapper';
-import { AssistantReadonlyRuntimeInput, AssistantReadonlyRuntimeResult, StructuredOrderRecord } from './runtime.types';
+import { AssistantReadonlyRuntimeInput, AssistantReadonlyRuntimeResult } from './runtime.types';
 
 @Injectable()
 export class AssistantReadonlyRuntimeService {
-  execute(input: AssistantReadonlyRuntimeInput): AssistantReadonlyRuntimeResult {
+  constructor(
+    private readonly toolRegistry: ToolRegistryService,
+    private readonly mockConnector: MockConnectorAdapter,
+    private readonly permissionPrecheck: ToolPermissionPrecheckService
+  ) {}
+
+  async execute(input: AssistantReadonlyRuntimeInput): Promise<AssistantReadonlyRuntimeResult> {
     const entityRef = getPageEntityRef(input.pageContext);
     const visibleFields = getVisibleColumns(input.pageContext);
-    const structuredRecord = this.resolveStructuredRecord(input.executionPlan.taskType, entityRef.entityId);
+    const toolName = firstToolName(input.executionPlan.candidateTools);
+    const toolResolution = await this.toolRegistry.resolveExecutableTool(toolName);
+    const tool = toolResolution.tool;
+
+    if (!tool) {
+      await this.permissionPrecheck.recordDenied({
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.messageId,
+        identityContext: input.identityContext,
+        toolName,
+        operation: ToolOperation.read,
+        deniedReason: toolResolution.deniedReason ?? 'tool_not_registered'
+      });
+
+      return {
+        toolName,
+        toolVersion: 'unknown',
+        riskLevel: RiskLevel.high,
+        entityRef,
+        visibleFields,
+        sanitizedResult: {},
+        deniedReason: toolResolution.deniedReason ?? 'tool_not_registered'
+      };
+    }
+
+    const toolInput = {
+      entityId: entityRef.entityId
+    };
+    const validation = this.toolRegistry.validateInput(tool, toolInput);
+    if (!validation.valid) {
+      await this.permissionPrecheck.recordDenied({
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.messageId,
+        identityContext: input.identityContext,
+        toolName: tool.key,
+        operation: tool.operation,
+        deniedReason: validation.deniedReason,
+        schemaErrorReason: validation.schemaErrorReason
+      });
+
+      return {
+        toolName: tool.key,
+        toolVersion: tool.version,
+        riskLevel: tool.riskLevel,
+        entityRef,
+        visibleFields,
+        sanitizedResult: {},
+        deniedReason: validation.deniedReason
+      };
+    }
+
+    const permission = await this.permissionPrecheck.check({
+      requestId: input.requestId,
+      sessionId: input.sessionId,
+      messageId: input.messageId,
+      identityContext: input.identityContext,
+      toolName: tool.key,
+      operation: tool.operation,
+      requiredPermissionScopes: tool.requiredPermissionScopes
+    });
+
+    if (!permission.allowed) {
+      return {
+        toolName: tool.key,
+        toolVersion: tool.version,
+        riskLevel: tool.riskLevel,
+        entityRef,
+        visibleFields,
+        sanitizedResult: {},
+        deniedReason: permission.reason
+      };
+    }
+
+    const connectorResult = await this.mockConnector.execute({
+      requestId: input.requestId,
+      organizationId: input.identityContext.company.organizationId,
+      actorId: input.identityContext.actor.actorId,
+      toolKey: tool.key,
+      arguments: toolInput
+    });
+    const structuredRecord = connectorResult.status === 'succeeded' ? connectorResult.data : undefined;
     const sanitizedResult = structuredRecord ? minimizeForLlmInput(structuredRecord, visibleFields) : {};
 
     return {
-      toolName: firstToolName(input.executionPlan.candidateTools),
+      toolName: tool.key,
+      toolVersion: tool.version,
+      riskLevel: tool.riskLevel,
       entityRef,
       visibleFields,
       structuredRecord,
       sanitizedResult
     };
-  }
-
-  private resolveStructuredRecord(taskType: string, entityId?: string): StructuredOrderRecord | undefined {
-    if (taskType === 'order_status_lookup' && entityId === 'SO-10001') {
-      return {
-        orderId: 'SO-10001',
-        status: '已確認',
-        customerName: '王小明企業',
-        amount: 128000
-      };
-    }
-
-    return undefined;
   }
 }
 

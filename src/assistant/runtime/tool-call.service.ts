@@ -15,7 +15,7 @@ export class ToolCallService {
         sessionId: input.sessionId,
         messageId: input.messageId,
         toolName: input.toolName,
-        toolVersion: 'v1',
+        toolVersion: input.toolVersion ?? 'v1',
         inputSummary: toJsonInput({
           entityId: input.entityId,
           visibleFields: input.visibleFields

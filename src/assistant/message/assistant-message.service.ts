@@ -65,10 +65,69 @@ export class AssistantMessageService {
       requestId: input.requestId
     });
 
-    const runtimeResult = this.readonlyRuntimeService.execute({
+    const runtimeResult = await this.readonlyRuntimeService.execute({
+      requestId: input.requestId,
+      sessionId: session.id,
+      messageId: assistantMessage.id,
+      identityContext: input.identityContext,
       executionPlan: planningResult.executionPlan,
       pageContext: input.pageContext
     });
+
+    if (runtimeResult.deniedReason) {
+      const answerDecision = await this.answerDecisionService.decide({
+        requestId: input.requestId,
+        messageId: assistantMessage.id,
+        executionPlan: planningResult.executionPlan,
+        evidenceRefs: []
+      });
+
+      await this.messageRepository.completeAssistantMessage({
+        messageId: assistantMessage.id,
+        content: answerDecision.answer.text,
+        answerDecision: answerDecision.status
+      });
+
+      await this.contextStateService.updateAfterMessageFlow({
+        sessionId: session.id,
+        pageContext: input.pageContext,
+        planningResult,
+        toolCallIds: [],
+        evidenceRefIds: []
+      });
+
+      await this.auditWriter.append({
+        requestId: input.requestId,
+        organizationId: input.identityContext.company.organizationId,
+        hostApp: input.identityContext.hostApp.hostApp,
+        actorId: input.identityContext.actor.actorId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        eventType: 'answer_generated',
+        decision: answerDecision.status,
+        evidenceRefIds: [],
+        metadata: toJsonInput({
+          toolName: runtimeResult.toolName,
+          deniedReason: runtimeResult.deniedReason,
+          answerDecisionId: answerDecision.answerDecisionId,
+          groundingCheckId: answerDecision.groundingCheckId
+        })
+      });
+
+      return this.sseEventBuilder.buildMessageEvents({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        toolCallId: 'not-executed',
+        evidenceRefIds: [],
+        answerDelta: answerDecision.answer.delta,
+        finalData: {
+          answerDecision: answerDecision.status,
+          answer: answerDecision.answer.text,
+          evidenceRefs: []
+        }
+      });
+    }
 
     const { toolCall } = await this.toolCallService.createCompletedToolCall({
       requestId: input.requestId,
@@ -76,6 +135,7 @@ export class AssistantMessageService {
       messageId: assistantMessage.id,
       identityContext: input.identityContext,
       toolName: runtimeResult.toolName,
+      toolVersion: runtimeResult.toolVersion,
       entityId: runtimeResult.entityRef.entityId,
       visibleFields: runtimeResult.visibleFields,
       sanitizedResult: runtimeResult.sanitizedResult
@@ -89,7 +149,7 @@ export class AssistantMessageService {
           toolCallId: toolCall.id,
           identityContext: input.identityContext,
           entityType: runtimeResult.entityRef.entityType ?? 'order',
-          entityId: runtimeResult.structuredRecord.orderId,
+          entityId: runtimeResult.entityRef.entityId ?? runtimeResult.toolName,
           record: runtimeResult.structuredRecord,
           visibleFields: runtimeResult.visibleFields
         })

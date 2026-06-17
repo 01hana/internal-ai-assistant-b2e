@@ -140,6 +140,10 @@ function inferCandidateTools(text: string, entities: QueryUnderstandingEntityCan
     return [];
   }
 
+  if (isDestructiveIntent(text)) {
+    return [];
+  }
+
   if (entities.some((entity) => entity.type === 'orderId') || text.includes('訂單')) {
     return [{ key: 'mock.orders.status.lookup', reason: 'order status query' }];
   }
@@ -157,6 +161,10 @@ function inferCandidateTools(text: string, entities: QueryUnderstandingEntityCan
   }
 
   return [{ key: 'mock.general.lookup', reason: 'generic internal lookup' }];
+}
+
+function isDestructiveIntent(text: string): boolean {
+  return text.includes('刪除') || text.includes('取消') || text.includes('核准');
 }
 
 function inferTaskType(text: string, candidateTools: QueryUnderstandingToolCandidate[]): string {

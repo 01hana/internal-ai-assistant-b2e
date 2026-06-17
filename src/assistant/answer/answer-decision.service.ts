@@ -130,6 +130,15 @@ export class AnswerDecisionService {
         if (field === 'customerName') {
           return `客戶名稱是${value}`;
         }
+        if (field === 'availableQuantity') {
+          return `目前可用庫存為${value}`;
+        }
+        if (field === 'incomingQuantity') {
+          return `預計入庫數量為${value}`;
+        }
+        if (field === 'allocatedQuantity') {
+          return `已配置數量為${value}`;
+        }
         return undefined;
       })
       .filter((value): value is string => Boolean(value));
