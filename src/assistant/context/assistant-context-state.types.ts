@@ -1,0 +1,10 @@
+import { PageContextDto } from '../page-context/page-context.dto';
+import { AssistantPlanningResult } from '../planning/assistant-planning.types';
+
+export interface UpdateAssistantContextStateInput {
+  sessionId: string;
+  pageContext?: PageContextDto;
+  planningResult: AssistantPlanningResult;
+  toolCallIds: string[];
+  evidenceRefIds: string[];
+}

@@ -170,53 +170,53 @@
 
 ### User Story 1 實作任務
 
-- [ ] T052 [US1] 在 `src/assistant/` 實作 `AssistantModule`、session service、session controller
-- [ ] T053 [US1] 在 `src/assistant/` 實作 `POST /assistant/sessions/:id/messages` endpoint、user/assistant message persistence、SSE response orchestration、`AssistantContextState` update、final `answerDecision` 與必要 `AuditEvent`
+- [X] T052 [US1] 在 `src/assistant/` 實作 `AssistantModule`、session service、session controller
+- [X] T053 [US1] 在 `src/assistant/` 實作 `POST /assistant/sessions/:id/messages` endpoint、user/assistant message persistence、SSE response orchestration、`AssistantContextState` update、final `answerDecision` 與必要 `AuditEvent`
   - 說明：接收使用者訊息後，必須驗證 identity / host app / organization boundary，載入 session/context，執行 query understanding → ExecutionPlan → permission → retrieval/tool → evidence → answer decision，並以 SSE 回傳。
   - 輸出：assistant controller/service、message persistence、SSE orchestration、context update、audit writer integration。
   - 完成條件：contract test 通過；SSE event sequence 正確；每個 event 含 requestId/sessionId/messageId/eventType/sequence；final 含 answerDecision；必要 AuditEvent 已寫入；未授權欄位不得進入 LLM input。
-- [ ] T054 [US1] 在 `src/assistant/` 實作 `GET /assistant/sessions/:id/messages` endpoint，支援 `limit`、`cursor`、`order=asc`、role、answerDecision、evidence summary、tool summary 與 response envelope
+- [X] T054 [US1] 在 `src/assistant/` 實作 `GET /assistant/sessions/:id/messages` endpoint，支援 `limit`、`cursor`、`order=asc`、role、answerDecision、evidence summary 與 response envelope
   - 說明：用於使用者重新打開 AI 助理聊天視窗時載入既有 session history。此 endpoint 必須重新檢查 actor、host app、organization boundary 與 session ownership / visibility。
   - 輸出：assistant history endpoint、history query service、pagination cursor handling、history response DTO、history audit integration。
   - 完成條件：history contract test 通過；不同 actor / host app / organization 不可讀取他人 history；session 不存在、過期、關閉或不可見時回傳一致錯誤；evidence/tool summary 套用 masking 與 data minimization；寫入 session_history_viewed 或 session_resumed audit event。
-- [ ] T055 [US1] 在 `src/assistant/dto/` 實作 `PageContext` DTO validation 與儲存
+- [X] T055 [US1] 在 `src/assistant/dto/` 實作 `PageContext` DTO validation 與儲存
   - 說明：PageContext 是解析「這筆」「這張」「目前」等指示詞的必要上下文，不可用猜測替代缺失資料。
   - 輸出：PageContext DTO、validation rules、persistence mapper。
   - 完成條件：缺少必要 page/entity context 時可觸發 clarification；不可越權引用不可見 selectedRows / filters / visibleColumns。
-- [ ] T056 [US1] 在 `src/assistant/` 實作 `AssistantContextState` load/update lifecycle
+- [X] T056 [US1] 在 `src/assistant/` 實作 `AssistantContextState` load/update lifecycle
   - 說明：保存 current task、last intent/entities/tool calls/evidence、pending clarification/approval 與 task state，但不得承擔身份或權限檢查。
   - 輸出：context state service、load/update methods、state transition tests hooks。
   - 完成條件：message flow 會更新 context；taskState 與 ActionDraft/ApprovalRequest/EscalationRequest 狀態不互相矛盾；audit 可追溯 state 變更。
-- [ ] T057 [US1] 在 `src/assistant/` 實作 read-only evidence answers 使用的 `ExecutionPlan` 建立流程，並使用 Phase 2 的 `QueryUnderstandingPipeline` shell 輸出
+- [X] T057 [US1] 在 `src/assistant/` 實作 read-only evidence answers 使用的 `ExecutionPlan` 建立流程，並使用 Phase 2 的 `QueryUnderstandingPipeline` shell 輸出
   - 說明：建立 read-only 問答的計畫，必須在 retrieval/tool/answer generation 前決定 evidence、candidate tools、permission checks、risk 與 answer shape。
   - 輸出：ExecutionPlan builder、query-understanding mapper、plan persistence/audit integration。
   - 完成條件：ExecutionPlan 在任何資料查詢前建立；permissionChecks/riskAssessment/requiredEvidence 不可空白；低信心會導向 clarification/no-answer。
-- [ ] T058 [US1] 在 `src/evidence/` 實作 `EvidenceRef` normalization 與 attachment
+- [X] T058 [US1] 在 `src/evidence/` 實作 `EvidenceRef` normalization 與 attachment
   - 說明：將 tool result、document chunk、context state 等來源標準化成可追溯 evidence。
   - 輸出：EvidenceRef service、source normalizers、message attachment integration。
   - 完成條件：assistant final answer 可列 evidence refs；未授權 evidence 不附加；evidence summary 套用 masking/data minimization。
-- [ ] T059 [US1] 在 `src/assistant/` 實作 answered responses 使用的 `AnswerDecision`、`AnswerPlan`、`GroundingCheck`
+- [X] T059 [US1] 在 `src/assistant/` 實作 answered responses 使用的 `AnswerDecision`、`AnswerPlan`、`GroundingCheck`
   - 說明：final answer 前必須確認回答沒有超出 EvidenceRef / ToolCall result / context coverage。
   - 輸出：AnswerPlan builder、AnswerDecision mapper、GroundingCheck service。
   - 完成條件：沒有足夠 evidence 不產生確定答案；tool/document evidence 衝突時進入 clarification/no-answer/review；`final` SSE event 帶完整 answerDecision。
-- [ ] T060 [US1] 在 `src/common/sse/` 實作 SSE events：`tool_call_started`、`tool_call_completed`、`evidence_attached`、`answer_delta`、`final`、`error`
+- [X] T060 [US1] 在 `src/common/sse/` 實作 SSE events：`tool_call_started`、`tool_call_completed`、`evidence_attached`、`answer_delta`、`final`、`error`
   - 說明：SSE 是 v1 唯一即時回答通道，所有事件必須可排序、可追蹤、可恢復錯誤語意。
   - 輸出：SSE event envelope、sequence generator、streaming helpers、error event mapper。
   - 完成條件：每個 event 含 requestId/sessionId/messageId/eventType/sequence；錯誤路徑產生 `error` event；`final` event 結束 stream 並包含 answerDecision。
-- [ ] T061 [US1] 在 `src/audit/` 寫入 `AuditEvent`：session created、message received、execution plan created、evidence attached、answer generated
-- [ ] T062 [US1] 在 `src/assistant/` 實作 session history access control，檢查 actor、host app、organization boundary、session ownership / visibility，並使用 Phase 2 identity boundary check
+- [X] T061 [US1] 在 `src/audit/` 寫入 `AuditEvent`：session created、message received、execution plan created、evidence attached、answer generated
+- [X] T062 [US1] 在 `src/assistant/` 實作 session history access control，檢查 actor、host app、organization boundary、session ownership / visibility，並使用 Phase 2 identity boundary check
   - 說明：history retrieval 是 runtime API，不是後台查詢；必須與 message/tool/retrieval 使用同一套身份邊界。
   - 輸出：history access policy、session ownership/visibility checks、boundary test helpers。
   - 完成條件：不可讀取其他 actor / host app / organization 的 history；不可先讀取後再過濾；拒絕原因可 audit。
-- [ ] T063 [US1] 在 `src/assistant/` 實作 v1 session restore runtime behavior：host app 帶入 `sessionId` 時讀取 session summary 與 message history；session 不存在、過期、關閉或不可見時回傳一致錯誤或要求建立新 session
+- [X] T063 [US1] 在 `src/assistant/` 實作 v1 session restore runtime behavior：host app 帶入 `sessionId` 時讀取 session summary 與 message history；session 不存在、過期、關閉或不可見時回傳一致錯誤或要求建立新 session
   - 說明：支援聊天視窗重新開啟的最小 restore strategy，不實作完整 active session auto-resolve。
   - 輸出：restore flow service、session state checks、錯誤回應 mapping。
   - 完成條件：有 sessionId 時可讀 summary/history；不存在/過期/關閉/不可見時 fail closed；不新增 `sessions/active` 或 `sessions/resolve` 產品化策略。
-- [ ] T064 [US1] 在 `src/audit/` 寫入 `session_history_viewed` 或 `session_resumed` audit event，metadata 必須最小化並避免敏感內容進入一般 log
+- [X] T064 [US1] 在 `src/audit/` 寫入 `session_history_viewed` 或 `session_resumed` audit event，metadata 必須最小化並避免敏感內容進入一般 log
   - 說明：history access 必須可追溯，但 audit 不應保存完整敏感 message content 或未遮罩 evidence。
   - 輸出：history audit event writer、metadata minimization policy。
   - 完成條件：每次 successful history retrieval 有 audit；拒絕路徑有 permissionDeniedReason；audit/log 無完整敏感內容。
-- [ ] T065 [US1] 在 `src/assistant/` 或 `src/permissions/` 實作 history response 的 message/evidence/tool summary masking 與資料最小化
+- [X] T065 [US1] 在 `src/assistant/` 或 `src/permissions/` 實作 history response 的 message/evidence/tool summary masking 與資料最小化
   - 說明：歷史訊息中的 evidence/tool summary 也必須遵守目前 actor 的 field/row permission，不可因為是舊訊息就放寬。
   - 輸出：history response sanitizer、evidence/tool summary masker、DTO mapper。
   - 完成條件：history masking test 通過；敏感欄位被移除或遮罩；response 只保留聊天視窗恢復所需最小資訊。

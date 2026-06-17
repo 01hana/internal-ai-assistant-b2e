@@ -6,7 +6,7 @@ export async function seedCoreData(prisma: PrismaClient) {
   await prisma.toolDefinition.upsert({
     where: {
       name_version: {
-        name: 'mock.order.status.lookup',
+        name: 'mock.orders.status.lookup',
         version: '1.0.0'
       }
     },
@@ -15,7 +15,7 @@ export async function seedCoreData(prisma: PrismaClient) {
       updatedAt: new Date()
     },
     create: {
-      name: 'mock.order.status.lookup',
+      name: 'mock.orders.status.lookup',
       version: '1.0.0',
       description: 'Lookup mock order status for internal assistant development.',
       resource: 'orders',
@@ -137,4 +137,6 @@ async function main() {
   }
 }
 
-void main();
+if (require.main === module) {
+  void main();
+}

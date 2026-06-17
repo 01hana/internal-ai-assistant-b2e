@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AuditWriterService } from '../audit/audit-writer.service';
-import { Prisma, ExecutionPlan } from '../generated/prisma/client';
-import { ExecutionDecision } from '../generated/prisma/enums';
-import { createRuntimeDecisionMetadata } from '../observability/observability-metadata.helper';
-import { PrismaService } from '../prisma/prisma.service';
-import { QueryUnderstandingService } from '../query-understanding/query-understanding.service';
-import { QueryUnderstandingOutput } from '../query-understanding/query-understanding.types';
+import { AuditWriterService } from '../../audit/audit-writer.service';
+import { Prisma, ExecutionPlan } from '../../generated/prisma/client';
+import { ExecutionDecision } from '../../generated/prisma/enums';
+import { createRuntimeDecisionMetadata } from '../../observability/observability-metadata.helper';
+import { PrismaService } from '../../prisma/prisma.service';
+import { QueryUnderstandingService } from '../../query-understanding/query-understanding.service';
+import { QueryUnderstandingOutput } from '../../query-understanding/query-understanding.types';
 import { AssistantPlanningInput, AssistantPlanningResult, PersistedExecutionPlan } from './assistant-planning.types';
 
 @Injectable()

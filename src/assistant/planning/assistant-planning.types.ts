@@ -1,7 +1,7 @@
-import { Prisma } from '../generated/prisma/client';
-import { ExecutionDecision, RiskLevel } from '../generated/prisma/enums';
-import { RequestIdentityContext } from '../identity/identity-context.types';
-import { PersistedQueryUnderstandingResult, QueryUnderstandingOutput } from '../query-understanding/query-understanding.types';
+import { Prisma } from '../../generated/prisma/client';
+import { ExecutionDecision, RiskLevel } from '../../generated/prisma/enums';
+import { RequestIdentityContext } from '../../identity/identity-context.types';
+import { PersistedQueryUnderstandingResult, QueryUnderstandingOutput } from '../../query-understanding/query-understanding.types';
 
 export interface AssistantPlanningInput {
   requestId: string;

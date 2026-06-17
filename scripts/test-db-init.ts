@@ -1,8 +1,15 @@
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
 import { createPrismaClient } from '../src/prisma/prisma-client.factory';
 import { seedCoreData } from './seed';
+import { assertSafeTestDatabaseReset } from './test-db-safety';
+import { seedUs1TestFixtures } from './us1-test-fixtures';
+
+loadEnv({ path: '.env.test', override: true });
+loadEnv();
 
 async function main() {
+  assertSafeTestDatabaseReset(process.env);
+
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
@@ -43,6 +50,7 @@ async function main() {
 
   try {
     await seedCoreData(seedPrisma);
+    await seedUs1TestFixtures(seedPrisma);
   } finally {
     await seedPrisma.$disconnect();
   }
