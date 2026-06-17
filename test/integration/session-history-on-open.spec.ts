@@ -36,4 +36,31 @@ describe('session history on open integration', () => {
       })
     );
   });
+
+  it('fails closed for closed or expired sessions during restore', async () => {
+    for (const sessionId of ['session-closed-001', 'session-expired-001']) {
+      const sessionResponse = await request(app.getHttpServer())
+        .get(`/api/v1/assistant/sessions/${sessionId}`)
+        .set(createIdentityHeaders({ 'x-request-id': `req-us1-restore-${sessionId}` }));
+      const historyResponse = await request(app.getHttpServer())
+        .get(`/api/v1/assistant/sessions/${sessionId}/messages`)
+        .query({ limit: 50, order: 'asc' })
+        .set(createIdentityHeaders({ 'x-request-id': `req-us1-history-${sessionId}` }));
+
+      expect(sessionResponse.status).toBe(404);
+      expect(historyResponse.status).toBe(404);
+      expect(sessionResponse.body.error).toEqual(
+        expect.objectContaining({
+          code: expect.any(String),
+          message: expect.any(String)
+        })
+      );
+      expect(historyResponse.body.error).toEqual(
+        expect.objectContaining({
+          code: expect.any(String),
+          message: expect.any(String)
+        })
+      );
+    }
+  });
 });

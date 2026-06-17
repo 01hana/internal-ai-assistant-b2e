@@ -32,11 +32,11 @@ describe('assistant message history contract', () => {
               content: expect.any(String),
               createdAt: expect.any(String)
             })
-          ]),
-          nextCursor: expect.anything()
+          ])
         })
       })
     );
+    expect(typeof response.body.data.nextCursor === 'string' || response.body.data.nextCursor === null).toBe(true);
 
     const assistantMessages = response.body.data.messages.filter((message: { role: string }) => message.role === 'assistant');
     expect(assistantMessages[0]).toEqual(
@@ -45,6 +45,29 @@ describe('assistant message history contract', () => {
         evidenceRefs: expect.any(Array)
       })
     );
+  });
+
+  it('returns cursor pagination without duplicating the previous page', async () => {
+    const firstPage = await request(app.getHttpServer())
+      .get('/api/v1/assistant/sessions/session-owned-001/messages')
+      .query({ limit: 1, order: 'asc' })
+      .set(createIdentityHeaders({ 'x-request-id': 'req-us1-history-page-1' }));
+
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.body.data.messages).toHaveLength(1);
+    expect(firstPage.body.data.nextCursor).toEqual(expect.any(String));
+    expect(firstPage.body.data.nextCursor).toBe(firstPage.body.data.messages[0].messageId);
+
+    const secondPage = await request(app.getHttpServer())
+      .get('/api/v1/assistant/sessions/session-owned-001/messages')
+      .query({ limit: 1, order: 'asc', cursor: firstPage.body.data.nextCursor })
+      .set(createIdentityHeaders({ 'x-request-id': 'req-us1-history-page-2' }));
+
+    expect(secondPage.status).toBe(200);
+    expect(secondPage.body.data.messages).toHaveLength(1);
+    expect(secondPage.body.data.messages[0].messageId).not.toBe(firstPage.body.data.nextCursor);
+    expect(secondPage.body.data.messages[0].messageId).not.toBe(firstPage.body.data.messages[0].messageId);
+    expect(secondPage.body.data.nextCursor).toBeNull();
   });
 
   it('rejects cross-boundary history reads with the shared error envelope', async () => {

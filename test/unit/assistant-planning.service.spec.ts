@@ -1,4 +1,4 @@
-import { AssistantPlanningService, determinePlanningDecision } from '../../src/assistant/assistant-planning.service';
+import { AssistantPlanningService, determinePlanningDecision } from '../../src/assistant/planning/assistant-planning.service';
 import { ExecutionDecision, RiskLevel } from '../../src/generated/prisma/enums';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { QueryUnderstandingService } from '../../src/query-understanding/query-understanding.service';

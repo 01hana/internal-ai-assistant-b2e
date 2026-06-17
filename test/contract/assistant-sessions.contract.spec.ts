@@ -1,12 +1,15 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestApp } from '../support/us1-test-app.helper';
+import { createIdentityHeaders, createUs1TestAppWithState, Us1TestState } from '../support/us1-test-app.helper';
 
 describe('assistant sessions contract', () => {
   let app: INestApplication;
+  let state: Us1TestState;
 
   beforeAll(async () => {
-    app = await createUs1TestApp();
+    const testApp = await createUs1TestAppWithState();
+    app = testApp.app;
+    state = testApp.state;
   });
 
   afterAll(async () => {
@@ -57,6 +60,22 @@ describe('assistant sessions contract', () => {
         })
       })
     );
+    expect(state.auditEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          requestId: 'req-us1-session-get',
+          sessionId: 'session-owned-001',
+          eventType: 'session_resumed',
+          metadata: {
+            hasContextState: true,
+            taskState: 'completed',
+            currentModule: 'orders',
+            currentEntityType: 'order',
+            currentEntityId: 'SO-10001'
+          }
+        })
+      ])
+    );
   });
 
   it('rejects non-visible sessions with a consistent error envelope across actor, host app, and organization boundaries', async () => {
@@ -81,5 +100,32 @@ describe('assistant sessions contract', () => {
         })
       })
     );
+    expect(
+      state.auditEvents.some(
+        (event) => event.requestId === 'req-us1-session-hidden' && event.eventType === 'session_resumed'
+      )
+    ).toBe(false);
   });
+
+  it.each(['session-closed-001', 'session-expired-001'])(
+    'does not write session_resumed audit for inactive session %s',
+    async (sessionId) => {
+      const requestId = `req-us1-session-${sessionId}`;
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/assistant/sessions/${sessionId}`)
+        .set(createIdentityHeaders({ 'x-request-id': requestId }));
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          requestId,
+          error: expect.objectContaining({
+            code: expect.any(String),
+            message: expect.any(String)
+          })
+        })
+      );
+      expect(state.auditEvents.some((event) => event.requestId === requestId && event.eventType === 'session_resumed')).toBe(false);
+    }
+  );
 });

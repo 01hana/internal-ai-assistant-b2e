@@ -1,4 +1,4 @@
-import { AssistantPlanningService } from '../../src/assistant/assistant-planning.service';
+import { AssistantPlanningService } from '../../src/assistant/planning/assistant-planning.service';
 import { RiskLevel, ExecutionDecision } from '../../src/generated/prisma/enums';
 import { AuditWriterService } from '../../src/audit/audit-writer.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
