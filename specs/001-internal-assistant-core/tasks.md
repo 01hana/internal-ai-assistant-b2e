@@ -31,32 +31,32 @@
 
 **目的**：建立 NestJS + TypeScript 專案骨架、基礎工具、Docker local dev baseline、環境變數規範與目錄結構。
 
-- [X] T001 建立 NestJS + TypeScript 專案結構、application bootstrap 與全域 request/validation/error/response 接線，包含 `package.json`、`tsconfig.json`、`nest-cli.json`、`src/main.ts`、`src/app.module.ts`
+- [x] T001 建立 NestJS + TypeScript 專案結構、application bootstrap 與全域 request/validation/error/response 接線，包含 `package.json`、`tsconfig.json`、`nest-cli.json`、`src/main.ts`、`src/app.module.ts`
   - 說明：建立可啟動的 NestJS app skeleton，並在 `main.ts` / `app.module.ts` 接上 global validation、exception handling、response envelope、requestId propagation；controller 只處理 DTO 與 response，不放業務規則。
   - 輸出：`src/main.ts`、`src/app.module.ts`、global `ValidationPipe`、global exception filter、response envelope interceptor、requestId middleware/interceptor 接線、app bootstrap smoke check。
   - 完成條件：app 可成功啟動；DTO validation 生效且未知欄位依專案規則拒絕或處理；所有 response/error envelope 都包含 requestId；非預期錯誤不向 client 洩漏 stack trace、secret、OpenAI API key、database credential 或 connector secret；後續 assistant / approval / feedback / tool controller 可共用全域 response/error 行為。
-- [X] T002 [P] 在 `prisma/schema.prisma` 與 `prisma/migrations/` 設定 Prisma 基礎結構
-- [X] T003 [P] 在 `jest.config.*`、`test/jest-e2e.json` 設定 Jest unit/e2e 測試環境
-- [X] T004 [P] 在 `src/common/config/` 實作 config module，負責從 `.env` / `process.env` 載入並驗證 `LLM_PROVIDER`、`LLM_MODEL`、`DATABASE_URL`、OpenAI provider-specific credentials 與 runtime flags。Local development 使用 `.env`，範例名稱放在 `.env.example`，正式環境由 CI/CD secret 或 secret manager 注入；程式碼不得 hardcode secret、database URL、OpenAI API key、provider 或模型實際值。
+- [x] T002 [P] 在 `prisma/schema.prisma` 與 `prisma/migrations/` 設定 Prisma 基礎結構
+- [x] T003 [P] 在 `jest.config.*`、`test/jest-e2e.json` 設定 Jest unit/e2e 測試環境
+- [x] T004 [P] 在 `src/common/config/` 實作 config module，負責從 `.env` / `process.env` 載入並驗證 `LLM_PROVIDER`、`LLM_MODEL`、`DATABASE_URL`、OpenAI provider-specific credentials 與 runtime flags。Local development 使用 `.env`，範例名稱放在 `.env.example`，正式環境由 CI/CD secret 或 secret manager 注入；程式碼不得 hardcode secret、database URL、OpenAI API key、provider 或模型實際值。
   - 說明：建立所有 runtime 設定的唯一入口，避免 controller/service/domain 直接讀取或硬寫模型、secret、database URL。
   - 輸出：config module、typed config DTO、env validation rules、啟動錯誤格式。
   - 完成條件：缺少必要 env 會 fail fast；`LLM_PROVIDER` / `LLM_MODEL` 只在 config/provider layer 使用；secret 不會出現在一般 log、error response 或 audit metadata。
-- [X] T005 [P] 建立 `.env.example`，列出 `DATABASE_URL`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB`、`LLM_PROVIDER`、`LLM_MODEL`、OpenAI API key placeholder 與 runtime flags，但不得包含任何真實 secret
+- [x] T005 [P] 建立 `.env.example`，列出 `DATABASE_URL`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB`、`LLM_PROVIDER`、`LLM_MODEL`、OpenAI API key placeholder 與 runtime flags，但不得包含任何真實 secret
   - 說明：提供 Docker/local dev 可用的環境變數範本，同時避免把真實 secret 帶進 repo。
   - 輸出：`.env.example`、必要時 README env 說明。
   - 完成條件：範例值皆為 placeholder；沒有真實 OpenAI key、DB 密碼或 connector secret；與 config validation 欄位一致。
-- [X] T006 [P] 建立 local development 用 `Dockerfile`，支援 NestJS backend app service 在容器中啟動
-- [X] T007 [P] 建立 `docker-compose.yml`，包含 `app`、`postgres` 與 optional/profile-based `redis`；Redis 僅預留給 queue/backpressure/rate limit，MVP 未使用時可不啟用
-- [X] T008 [P] 建立 `.dockerignore`，避免 node_modules、build output、local env、log、cache 與 secret 檔案進入 Docker build context
-- [X] T009 [P] 建立原始碼模組目錄：`src/assistant`、`src/query-understanding`、`src/identity`、`src/permissions`、`src/tools`、`src/connectors/mock`、`src/llm/openai`、`src/prisma`、`src/retrieval`、`src/evidence`、`src/approvals`、`src/audit`、`src/feedback`、`src/observability`、`src/common`
-- [X] T010 [P] 建立 `src/common/config`、`src/common/errors`、`src/common/request-id`、`src/common/response`、`src/common/sse`、`src/common/logger`，並避免建立 `src/common/providers`
-- [X] T011 [P] 建立測試目錄：`test/unit`、`test/integration`、`test/contract`、`test/e2e`、`test/eval`
-- [X] T012 [P] 在專案 README 中補上 v1 範圍排除說明：不做完整 admin UI/CRUD、不做真實 ERP/MES/WMS/SCM/CRM connector、不做 frontend SDK/widget
-- [X] T013 [P] 在 README 補上 Docker Compose quickstart：`docker compose up`、app / postgres 啟動、Prisma migration、Prisma seed、test database initialization、unit / integration / contract / e2e / eval command、SSE smoke testing command 或手動步驟
+- [x] T006 [P] 建立 local development 用 `Dockerfile`，支援 NestJS backend app service 在容器中啟動
+- [x] T007 [P] 建立 `docker-compose.yml`，包含 `app`、`postgres` 與 optional/profile-based `redis`；Redis 僅預留給 queue/backpressure/rate limit，MVP 未使用時可不啟用
+- [x] T008 [P] 建立 `.dockerignore`，避免 node_modules、build output、local env、log、cache 與 secret 檔案進入 Docker build context
+- [x] T009 [P] 建立原始碼模組目錄：`src/assistant`、`src/query-understanding`、`src/identity`、`src/permissions`、`src/tools`、`src/connectors/mock`、`src/llm/openai`、`src/prisma`、`src/retrieval`、`src/evidence`、`src/approvals`、`src/audit`、`src/feedback`、`src/observability`、`src/common`
+- [x] T010 [P] 建立 `src/common/config`、`src/common/errors`、`src/common/request-id`、`src/common/response`、`src/common/sse`、`src/common/logger`，並避免建立 `src/common/providers`
+- [x] T011 [P] 建立測試目錄：`test/unit`、`test/integration`、`test/contract`、`test/e2e`、`test/eval`
+- [x] T012 [P] 在專案 README 中補上 v1 範圍排除說明：不做完整 admin UI/CRUD、不做真實 ERP/MES/WMS/SCM/CRM connector、不做 frontend SDK/widget
+- [x] T013 [P] 在 README 補上 Docker Compose quickstart：`docker compose up`、app / postgres 啟動、Prisma migration、Prisma seed、test database initialization、unit / integration / contract / e2e / eval command、SSE smoke testing command 或手動步驟
   - 說明：建立 local dev/test baseline 的操作入口，讓後續 Codex 或工程師能從空環境啟動 app、DB、migration、seed 與 smoke test。
   - 輸出：README quickstart、Docker Compose command、migration/seed/test DB command、SSE smoke 步驟。
   - 完成條件：README 可指引 `docker compose up` 啟動 app 與 postgres；migration/seed/test DB 初始化步驟清楚；unit/integration/contract/e2e/eval 指令列出；不包含 production deployment、Kubernetes、Helm、CI/CD 範圍。
-- [X] T014 [P] 在 README 或 checklist 補上 secret 規則：`.env` 不得 commit；`.env.example` 可 commit 但不得放真實 secret；OpenAI API key 不得出現在 README、測試 fixture、audit metadata、error log
+- [x] T014 [P] 在 README 或 checklist 補上 secret 規則：`.env` 不得 commit；`.env.example` 可 commit 但不得放真實 secret；OpenAI API key 不得出現在 README、測試 fixture、audit metadata、error log
   - 說明：把 secret 管理規則寫成實作前必讀約束，避免後續 fixture、README 或 audit sample 泄漏憑證。
   - 輸出：README/checklist secret section。
   - 完成條件：明確禁止 `.env` commit；禁止 OpenAI API key / connector secrets 進入 README、fixture、audit metadata、error log；與 secret redaction 測試一致。
@@ -69,73 +69,73 @@
 
 **重要**：此階段完成前，不應開始任何 user story 的功能實作。
 
-- [X] T015 在 `prisma/schema.prisma` 定義 `AssistantSession`、`AssistantMessage`、`AssistantContextState`、`ExecutionPlan`、`AnswerDecision`、`ClarificationQuestion`、`GroundingCheck` 模型
-- [X] T016 在 `prisma/schema.prisma` 定義 `ToolDefinition`、`ToolCall`、`EvidenceRef`、`AuditEvent`、`FeedbackEvent`、`ReviewItem` 模型
-- [X] T017 在 `prisma/schema.prisma` 定義 `ApprovalRequest`、`ActionDraft`、`EscalationRequest`、`KnowledgeDocument`、`KnowledgeChunk`、`RetrievalRun`、`RetrievalCandidate` 模型
-- [X] T018 建立 `src/prisma/prisma.module.ts` 與 `src/prisma/prisma.service.ts`
+- [x] T015 在 `prisma/schema.prisma` 定義 `AssistantSession`、`AssistantMessage`、`AssistantContextState`、`ExecutionPlan`、`AnswerDecision`、`ClarificationQuestion`、`GroundingCheck` 模型
+- [x] T016 在 `prisma/schema.prisma` 定義 `ToolDefinition`、`ToolCall`、`EvidenceRef`、`AuditEvent`、`FeedbackEvent`、`ReviewItem` 模型
+- [x] T017 在 `prisma/schema.prisma` 定義 `ApprovalRequest`、`ActionDraft`、`EscalationRequest`、`KnowledgeDocument`、`KnowledgeChunk`、`RetrievalRun`、`RetrievalCandidate` 模型
+- [x] T018 建立 `src/prisma/prisma.module.ts` 與 `src/prisma/prisma.service.ts`
   - 說明：建立 NestJS 共用 Prisma access layer；`PrismaService` 封裝 PrismaClient lifecycle，供 assistant、audit、tools、retrieval、approvals、feedback 等 module 注入使用；各 module 不得自行 `new PrismaClient()`。
   - 輸出：`src/prisma/prisma.module.ts`、`src/prisma/prisma.service.ts`、`PrismaModule` export `PrismaService`、Prisma lifecycle hooks、unit 或 integration smoke test。
   - 完成條件：`PrismaService` extends 或封裝 `PrismaClient`；app startup 可建立 DB connection；app shutdown 可正確 disconnect；assistant / audit / tools / retrieval / approvals / feedback 可注入；測試環境可 mock PrismaService 或使用 test database；不出現多個散落 PrismaClient instance；DB 連線錯誤不得洩漏 credential。
-- [X] T019 建立 Prisma migration / seed / test database initialization baseline
+- [x] T019 建立 Prisma migration / seed / test database initialization baseline
   - 說明：建立 local dev 與 test 所需 migration / seed baseline；seed 僅包含內部 AI 助理 MVP 所需資料，讓 mock connector、RAG 文件知識、tool registry、eval/test cases 可穩定重現。
   - 輸出：`prisma/seed.ts`、seed helper 或 fixtures 目錄、mock connector fixtures seed 或 deterministic fixture loader、KnowledgeDocument / KnowledgeChunk fixtures、ToolDefinition fixtures、test database reset / migration / seed script、README quickstart command。
   - 完成條件：migration script 可成功執行；seed script 可成功執行；dev/test seed 不含真實客戶資料、真實內部交易資料、OpenAI API key 或 connector secret；fixtures 支援 order status、work order progress、inventory availability、customer/supplier history、SOP/policy/field guide/manual RAG、read/medium-risk/high-risk tool 測試；test database 可重置並重複執行 unit/integration/contract/e2e tests。
-- [X] T020 [P] 建立 redaction-aware structured logger
+- [x] T020 [P] 建立 redaction-aware structured logger
   - 說明：建立統一 structured logger，供 request lifecycle、tool execution、retrieval、LLM provider、approval、feedback/review 使用；logger 支援 requestId correlation，並與 append-only AuditEvent 分工：log 用於 runtime/debug，AuditEvent 用於可追溯稽核。
   - 輸出：`src/common/logger/` 或等價路徑、logger service、redaction utility / policy、requestId correlation integration、logger unit tests 或 integration tests、secret-redaction test 與 logger 整合。
   - 完成條件：log 至少包含 timestamp、level、requestId、module/context、message；error log 不包含 OpenAI API key、connector secret、database credential；tool input/output summary、evidence summary、history content 進入 log 前會被 redacted 或最小化；client error response 不洩漏 stack trace；AuditEvent metadata 與一般 log 都遵守 redaction policy，但兩者職責不混淆；secret-redaction 或 logger redaction test 覆蓋失敗路徑。
-- [X] T021 在 `specs/001-internal-assistant-core/data-model-notes.md` 決定並記錄 `AssistantContextState.taskState`：新增 `waiting_confirmation` / `waiting_escalation`，或改由 `ActionDraft.status`、`ApprovalRequest.status`、`EscalationRequest.status` 承擔狀態追蹤
-- [X] T022 [P] 在 `src/common/request-id/` 實作 requestId middleware/interceptor
-- [X] T023 [P] 在 `src/common/response/` 與 `src/common/errors/` 實作共用 response/error envelope
-- [X] T024 [P] 在 `src/common/sse/` 定義 SSE event types 與共用 streaming helpers
-- [X] T025 [P] 分別在 `src/llm/`、`src/retrieval/`、`src/query-understanding/`、`src/connectors/` 定義 `LlmProvider`、`RetrievalProvider`、`TokenizerAdapter`、`ConnectorAdapter` interfaces，避免將 domain-specific interface 全部塞入 `common`
+- [x] T021 在 `specs/001-internal-assistant-core/data-model-notes.md` 決定並記錄 `AssistantContextState.taskState`：新增 `waiting_confirmation` / `waiting_escalation`，或改由 `ActionDraft.status`、`ApprovalRequest.status`、`EscalationRequest.status` 承擔狀態追蹤
+- [x] T022 [P] 在 `src/common/request-id/` 實作 requestId middleware/interceptor
+- [x] T023 [P] 在 `src/common/response/` 與 `src/common/errors/` 實作共用 response/error envelope
+- [x] T024 [P] 在 `src/common/sse/` 定義 SSE event types 與共用 streaming helpers
+- [x] T025 [P] 分別在 `src/llm/`、`src/retrieval/`、`src/query-understanding/`、`src/connectors/` 定義 `LlmProvider`、`RetrievalProvider`、`TokenizerAdapter`、`ConnectorAdapter` interfaces，避免將 domain-specific interface 全部塞入 `common`
   - 說明：讓可替換 provider/adapter 靠近所屬 domain，避免 `common/` 變成雜物區，也避免 LLM、retrieval、tokenizer、business connector 互相耦合。
   - 輸出：`src/llm/llm-provider.interface.ts`、`src/retrieval/retrieval-provider.interface.ts`、`src/query-understanding/tokenizer-adapter.interface.ts`、`src/connectors/connector-adapter.interface.ts`。
   - 完成條件：`src/common/providers/` 不存在；各 interface 只暴露 domain contract；後續 provider/mock connector 能以 interface 注入測試。
-- [X] T026 [P] 在 `src/llm/openai/` 建立 `OpenAiProvider` shell，實作 `LlmProvider` interface，v1 provider 由 `LLM_PROVIDER=openai` 選擇，模型由 `LLM_MODEL` 選擇，controller/service/domain logic 不得硬寫 provider 或模型名稱
+- [x] T026 [P] 在 `src/llm/openai/` 建立 `OpenAiProvider` shell，實作 `LlmProvider` interface，v1 provider 由 `LLM_PROVIDER=openai` 選擇，模型由 `LLM_MODEL` 選擇，controller/service/domain logic 不得硬寫 provider 或模型名稱
   - 說明：OpenAI 是 LLM provider，不是 ERP/MES/WMS/SCM/CRM connector；provider/model 選擇必須集中在 config/provider layer。
   - 輸出：`src/llm/openai/` provider shell、provider config、測試用 mock/fake hooks。
   - 完成條件：沒有 `src/connectors/openai/`；controller/service/domain/prompt 不硬寫模型；provider 能回報 selected provider/model/fallback metadata。
-- [X] T027 [P] 在 `test/unit/config-validation.spec.ts` 撰寫 env validation tests
-- [X] T028 [P] 在 `src/common/config/` 實作 config validation，缺少必要 env 時回傳明確啟動錯誤
-- [X] T029 [P] 在 `test/integration/secret-redaction.spec.ts` 撰寫 OpenAI credentials、connector secrets 不得出現在 structured logger、一般 log、error response、audit metadata 的測試
+- [x] T027 [P] 在 `test/unit/config-validation.spec.ts` 撰寫 env validation tests
+- [x] T028 [P] 在 `src/common/config/` 實作 config validation，缺少必要 env 時回傳明確啟動錯誤
+- [x] T029 [P] 在 `test/integration/secret-redaction.spec.ts` 撰寫 OpenAI credentials、connector secrets 不得出現在 structured logger、一般 log、error response、audit metadata 的測試
   - 說明：驗證所有錯誤路徑與 audit/observability metadata 都會遮罩 secret，包含 LLM 與 connector credentials。
   - 輸出：secret redaction integration spec、測試用 fake secret fixtures、logger/log/error/audit assertion helpers。
   - 完成條件：OpenAI key、connector secret、DB credential 不出現在 structured logger、一般 log、error response、AuditEvent metadata；失敗路徑也通過。
-- [X] T030 [P] 在 `test/unit/identity-context-validation.spec.ts` 撰寫 `ActorContext`、`HostAppContext`、`CompanyBoundary` validation unit tests
-- [X] T031 [P] 在 `test/integration/missing-identity-context.spec.ts` 撰寫缺少 actor、hostApp、organizationId、permissionScopes 或 requestId 時拒絕處理的 integration test
-- [X] T032 [P] 在 `test/integration/organization-boundary.spec.ts` 撰寫不同 organization / hostApp 不可存取 session、message、history、tool result 的 integration test
-- [X] T033 [P] 在 `src/identity/` 實作 `ActorContext`、`HostAppContext`、`CompanyBoundary` DTO / validator / guard 或 service
+- [x] T030 [P] 在 `test/unit/identity-context-validation.spec.ts` 撰寫 `ActorContext`、`HostAppContext`、`CompanyBoundary` validation unit tests
+- [x] T031 [P] 在 `test/integration/missing-identity-context.spec.ts` 撰寫缺少 actor、hostApp、organizationId、permissionScopes 或 requestId 時拒絕處理的 integration test
+- [x] T032 [P] 在 `test/integration/organization-boundary.spec.ts` 撰寫不同 organization / hostApp 不可存取 session、message、history、tool result 的 integration test
+- [x] T033 [P] 在 `src/identity/` 實作 `ActorContext`、`HostAppContext`、`CompanyBoundary` DTO / validator / guard 或 service
   - 說明：所有 assistant request 都必須先取得可驗證的 actor、host app、organization boundary、role、permission scope 與 requestId。
   - 輸出：identity DTO、validator/guard/service、共用錯誤型別。
   - 完成條件：session/message/history/tool/retrieval 前會先驗證 identity；缺少必要欄位會被拒絕；`AssistantContextState` 不會取代 identity check。
-- [X] T034 [P] 在 `src/identity/` 實作 request-level identity context extraction，供 assistant、permissions、tools、retrieval、audit 共用
+- [x] T034 [P] 在 `src/identity/` 實作 request-level identity context extraction，供 assistant、permissions、tools、retrieval、audit 共用
   - 說明：建立單一 request context extraction，讓權限、安全、稽核與工具執行都使用同一份身份邊界。
   - 輸出：request context extractor、typed identity context、測試 helper。
   - 完成條件：assistant、permissions、tools、retrieval、audit 皆可取得一致 context；跨 organization / hostApp 資料不可被混用。
-- [X] T035 [P] 在 `src/identity/` 實作 missing or invalid identity context 的一致錯誤回應；`AssistantContextState` 不得取代 identity / permission check
+- [x] T035 [P] 在 `src/identity/` 實作 missing or invalid identity context 的一致錯誤回應；`AssistantContextState` 不得取代 identity / permission check
   - 說明：缺少 actor、hostApp、organizationId、permissionScopes 或 requestId 時必須 fail closed。
   - 輸出：identity error mapping、response envelope integration、audit/observability metadata policy。
   - 完成條件：missing identity integration test 通過；錯誤回應一致；不先查資料再過濾。
-- [X] T036 [P] 在 `src/permissions/` 實作 permission policy interfaces 與 masking utilities
+- [x] T036 [P] 在 `src/permissions/` 實作 permission policy interfaces 與 masking utilities
   - 說明：支援 module/operation/row/field-level permission，並在資料進入 LLM input 前完成 masking/data minimization。
   - 輸出：permission policy interfaces、masking utilities、field allow/deny helpers。
   - 完成條件：未授權 tool/retrieval 不執行；未授權 row/field 不進 LLM input；部分授權只回覆可見範圍。
-- [X] T037 [P] 在 `src/audit/` 實作 append-only audit writer interface
+- [x] T037 [P] 在 `src/audit/` 實作 append-only audit writer interface
   - 說明：提供核心 runtime 的不可變稽核入口，涵蓋對話、工具、權限、evidence、LLM decision、approval、feedback。
   - 輸出：audit writer interface、append-only persistence adapter、metadata redaction hook。
   - 完成條件：AuditEvent 不可被更新覆蓋；metadata 最小化且遮罩 secret；所有安全決策與失敗路徑可追溯。
-- [X] T038 [P] 在 `src/observability/` 實作 analytics-ready raw event metadata helpers，包含 `durationMs`、dependency status、noAnswerReason、permissionDeniedReason、toolFailureReason、approval/confirmation decision status
+- [x] T038 [P] 在 `src/observability/` 實作 analytics-ready raw event metadata helpers，包含 `durationMs`、dependency status、noAnswerReason、permissionDeniedReason、toolFailureReason、approval/confirmation decision status
   - 說明：MVP 不做 dashboard，但必須保存後續分析所需 raw metrics / raw events。
   - 輸出：metadata helper、duration/dependency/reason enums、observability integration points。
   - 完成條件：AuditEvent、ToolCall、ExecutionPlan、AnswerDecision、EvidenceRef、FeedbackEvent、ReviewItem、ApprovalRequest、ActionDraft、RetrievalRun/Candidate 皆能帶分析欄位。
-- [X] T039 [P] 在 `src/connectors/mock/` 建立 mock connector fixtures：訂單狀態、工單進度、庫存可用量、客戶/供應商歷史
-- [X] T040 [P] 在 `src/query-understanding/` 建立 `QueryUnderstandingPipeline` shell、`QueryUnderstandingInput` / `QueryUnderstandingOutput` DTO、`QueryUnderstandingResult` persistence contract
+- [x] T039 [P] 在 `src/connectors/mock/` 建立 mock connector fixtures：訂單狀態、工單進度、庫存可用量、客戶/供應商歷史
+- [x] T040 [P] 在 `src/query-understanding/` 建立 `QueryUnderstandingPipeline` shell、`QueryUnderstandingInput` / `QueryUnderstandingOutput` DTO、`QueryUnderstandingResult` persistence contract
   - 說明：先建立 US1/US2 可用的 query understanding contract，避免 ExecutionPlan 直接吃 raw message 導致後續重工。
   - 輸出：pipeline shell、input/output DTO、result persistence/audit contract。
   - 完成條件：pipeline output 可保存、debug、eval；至少支援 taskType、entityCandidates、candidateTools、riskLevel、confidence、clarificationNeeds、requiredEvidence。
-- [X] T041 [P] 在 `src/query-understanding/` 建立最小 pass-through / rule-based placeholder，至少輸出 taskType、entityCandidates、candidateTools、riskLevel、confidence、clarificationNeeds、requiredEvidence
-- [X] T042 [P] 在 `src/assistant/` 的 `ExecutionPlan` 建立流程前串接 `QueryUnderstandingPipeline` shell，確保 US1/US2 不繞過 query understanding contract
+- [x] T041 [P] 在 `src/query-understanding/` 建立最小 pass-through / rule-based placeholder，至少輸出 taskType、entityCandidates、candidateTools、riskLevel、confidence、clarificationNeeds、requiredEvidence
+- [x] T042 [P] 在 `src/assistant/` 的 `ExecutionPlan` 建立流程前串接 `QueryUnderstandingPipeline` shell，確保 US1/US2 不繞過 query understanding contract
   - 說明：ExecutionPlan 必須基於 query understanding output，而不是直接由 controller 或 message handler 臨時推斷。
   - 輸出：assistant planning integration、pipeline result to ExecutionPlan mapper、測試 fake pipeline。
   - 完成條件：US1/US2 message flow 會先執行 query understanding；低信心或需澄清資訊會進入 ExecutionPlan decision；audit 可追溯 pipeline result。
@@ -152,71 +152,71 @@
 
 ### User Story 1 測試任務
 
-- [X] T043 [P] [US1] 在 `test/contract/assistant-sessions.contract.spec.ts` 撰寫 `POST /assistant/sessions` 與 `GET /assistant/sessions/:id` contract test
+- [x] T043 [P] [US1] 在 `test/contract/assistant-sessions.contract.spec.ts` 撰寫 `POST /assistant/sessions` 與 `GET /assistant/sessions/:id` contract test
   - 說明：鎖定 session create/get 的 API envelope、requestId、identity boundary 與錯誤格式。
   - 輸出：session contract spec、成功/不存在/不可見案例。
   - 完成條件：不同 actor、host app、organization 不可取得他人 session；錯誤回應一致。
-- [X] T044 [P] [US1] 在 `test/contract/assistant-messages-sse.contract.spec.ts` 撰寫 `POST /assistant/sessions/:id/messages` SSE events contract test
+- [x] T044 [P] [US1] 在 `test/contract/assistant-messages-sse.contract.spec.ts` 撰寫 `POST /assistant/sessions/:id/messages` SSE events contract test
   - 說明：驗證送出訊息後只能以 SSE 回覆，並固定必要 event sequence 與 event metadata。
   - 輸出：SSE contract spec、event sequence assertions、final/error case fixtures。
   - 完成條件：事件包含 `tool_call_started`、`tool_call_completed`、`evidence_attached`、`answer_delta`、`final`、`error`；每個 event 含 requestId/sessionId/messageId/eventType/sequence；`final` 含完整 answerDecision。
-- [X] T045 [P] [US1] 在 `test/contract/assistant-message-history.contract.spec.ts` 撰寫 `GET /assistant/sessions/:id/messages` contract test，驗證 requestId、sessionId、pagination、message order、role、answerDecision、evidence summary 與 response envelope
-- [X] T046 [P] [US1] 在 `test/integration/authorized-evidence-answer.spec.ts` 撰寫授權 evidence-grounded answer integration test
-- [X] T047 [P] [US1] 在 `test/integration/field-masking-before-llm.spec.ts` 撰寫未授權欄位會在進入 LLM input 前被遮罩的 integration test
-- [X] T048 [P] [US1] 在 `test/unit/assistant-context-state.spec.ts` 撰寫 `AssistantContextState` 與 `PageContext` 解析的 unit tests
-- [X] T049 [P] [US1] 在 `test/integration/session-history-on-open.spec.ts` 撰寫同一 actor / organization / hostApp 重新打開 AI 助理時可取得既有 session message history 的 integration test
-- [X] T050 [P] [US1] 在 `test/integration/session-history-permission-boundary.spec.ts` 撰寫 session history 權限邊界測試，確認不同 actor、host app 或 organization 不可讀取他人 session history
-- [X] T051 [P] [US1] 在 `test/integration/session-history-masking.spec.ts` 撰寫歷史訊息中的 evidence summary / tool summary 必須套用 masking 與資料最小化的 integration test
+- [x] T045 [P] [US1] 在 `test/contract/assistant-message-history.contract.spec.ts` 撰寫 `GET /assistant/sessions/:id/messages` contract test，驗證 requestId、sessionId、pagination、message order、role、answerDecision、evidence summary 與 response envelope
+- [x] T046 [P] [US1] 在 `test/integration/authorized-evidence-answer.spec.ts` 撰寫授權 evidence-grounded answer integration test
+- [x] T047 [P] [US1] 在 `test/integration/field-masking-before-llm.spec.ts` 撰寫未授權欄位會在進入 LLM input 前被遮罩的 integration test
+- [x] T048 [P] [US1] 在 `test/unit/assistant-context-state.spec.ts` 撰寫 `AssistantContextState` 與 `PageContext` 解析的 unit tests
+- [x] T049 [P] [US1] 在 `test/integration/session-history-on-open.spec.ts` 撰寫同一 actor / organization / hostApp 重新打開 AI 助理時可取得既有 session message history 的 integration test
+- [x] T050 [P] [US1] 在 `test/integration/session-history-permission-boundary.spec.ts` 撰寫 session history 權限邊界測試，確認不同 actor、host app 或 organization 不可讀取他人 session history
+- [x] T051 [P] [US1] 在 `test/integration/session-history-masking.spec.ts` 撰寫歷史訊息中的 evidence summary / tool summary 必須套用 masking 與資料最小化的 integration test
 
 ### User Story 1 實作任務
 
-- [X] T052 [US1] 在 `src/assistant/` 實作 `AssistantModule`、session service、session controller
-- [X] T053 [US1] 在 `src/assistant/` 實作 `POST /assistant/sessions/:id/messages` endpoint、user/assistant message persistence、SSE response orchestration、`AssistantContextState` update、final `answerDecision` 與必要 `AuditEvent`
+- [x] T052 [US1] 在 `src/assistant/` 實作 `AssistantModule`、session service、session controller
+- [x] T053 [US1] 在 `src/assistant/` 實作 `POST /assistant/sessions/:id/messages` endpoint、user/assistant message persistence、SSE response orchestration、`AssistantContextState` update、final `answerDecision` 與必要 `AuditEvent`
   - 說明：接收使用者訊息後，必須驗證 identity / host app / organization boundary，載入 session/context，執行 query understanding → ExecutionPlan → permission → retrieval/tool → evidence → answer decision，並以 SSE 回傳。
   - 輸出：assistant controller/service、message persistence、SSE orchestration、context update、audit writer integration。
   - 完成條件：contract test 通過；SSE event sequence 正確；每個 event 含 requestId/sessionId/messageId/eventType/sequence；final 含 answerDecision；必要 AuditEvent 已寫入；未授權欄位不得進入 LLM input。
-- [X] T054 [US1] 在 `src/assistant/` 實作 `GET /assistant/sessions/:id/messages` endpoint，支援 `limit`、`cursor`、`order=asc`、role、answerDecision、evidence summary 與 response envelope
+- [x] T054 [US1] 在 `src/assistant/` 實作 `GET /assistant/sessions/:id/messages` endpoint，支援 `limit`、`cursor`、`order=asc`、role、answerDecision、evidence summary 與 response envelope
   - 說明：用於使用者重新打開 AI 助理聊天視窗時載入既有 session history。此 endpoint 必須重新檢查 actor、host app、organization boundary 與 session ownership / visibility。
   - 輸出：assistant history endpoint、history query service、pagination cursor handling、history response DTO、history audit integration。
   - 完成條件：history contract test 通過；不同 actor / host app / organization 不可讀取他人 history；session 不存在、過期、關閉或不可見時回傳一致錯誤；evidence/tool summary 套用 masking 與 data minimization；寫入 session_history_viewed 或 session_resumed audit event。
-- [X] T055 [US1] 在 `src/assistant/dto/` 實作 `PageContext` DTO validation 與儲存
+- [x] T055 [US1] 在 `src/assistant/dto/` 實作 `PageContext` DTO validation 與儲存
   - 說明：PageContext 是解析「這筆」「這張」「目前」等指示詞的必要上下文，不可用猜測替代缺失資料。
   - 輸出：PageContext DTO、validation rules、persistence mapper。
   - 完成條件：缺少必要 page/entity context 時可觸發 clarification；不可越權引用不可見 selectedRows / filters / visibleColumns。
-- [X] T056 [US1] 在 `src/assistant/` 實作 `AssistantContextState` load/update lifecycle
+- [x] T056 [US1] 在 `src/assistant/` 實作 `AssistantContextState` load/update lifecycle
   - 說明：保存 current task、last intent/entities/tool calls/evidence、pending clarification/approval 與 task state，但不得承擔身份或權限檢查。
   - 輸出：context state service、load/update methods、state transition tests hooks。
   - 完成條件：message flow 會更新 context；taskState 與 ActionDraft/ApprovalRequest/EscalationRequest 狀態不互相矛盾；audit 可追溯 state 變更。
-- [X] T057 [US1] 在 `src/assistant/` 實作 read-only evidence answers 使用的 `ExecutionPlan` 建立流程，並使用 Phase 2 的 `QueryUnderstandingPipeline` shell 輸出
+- [x] T057 [US1] 在 `src/assistant/` 實作 read-only evidence answers 使用的 `ExecutionPlan` 建立流程，並使用 Phase 2 的 `QueryUnderstandingPipeline` shell 輸出
   - 說明：建立 read-only 問答的計畫，必須在 retrieval/tool/answer generation 前決定 evidence、candidate tools、permission checks、risk 與 answer shape。
   - 輸出：ExecutionPlan builder、query-understanding mapper、plan persistence/audit integration。
   - 完成條件：ExecutionPlan 在任何資料查詢前建立；permissionChecks/riskAssessment/requiredEvidence 不可空白；低信心會導向 clarification/no-answer。
-- [X] T058 [US1] 在 `src/evidence/` 實作 `EvidenceRef` normalization 與 attachment
+- [x] T058 [US1] 在 `src/evidence/` 實作 `EvidenceRef` normalization 與 attachment
   - 說明：將 tool result、document chunk、context state 等來源標準化成可追溯 evidence。
   - 輸出：EvidenceRef service、source normalizers、message attachment integration。
   - 完成條件：assistant final answer 可列 evidence refs；未授權 evidence 不附加；evidence summary 套用 masking/data minimization。
-- [X] T059 [US1] 在 `src/assistant/` 實作 answered responses 使用的 `AnswerDecision`、`AnswerPlan`、`GroundingCheck`
+- [x] T059 [US1] 在 `src/assistant/` 實作 answered responses 使用的 `AnswerDecision`、`AnswerPlan`、`GroundingCheck`
   - 說明：final answer 前必須確認回答沒有超出 EvidenceRef / ToolCall result / context coverage。
   - 輸出：AnswerPlan builder、AnswerDecision mapper、GroundingCheck service。
   - 完成條件：沒有足夠 evidence 不產生確定答案；tool/document evidence 衝突時進入 clarification/no-answer/review；`final` SSE event 帶完整 answerDecision。
-- [X] T060 [US1] 在 `src/common/sse/` 實作 SSE events：`tool_call_started`、`tool_call_completed`、`evidence_attached`、`answer_delta`、`final`、`error`
+- [x] T060 [US1] 在 `src/common/sse/` 實作 SSE events：`tool_call_started`、`tool_call_completed`、`evidence_attached`、`answer_delta`、`final`、`error`
   - 說明：SSE 是 v1 唯一即時回答通道，所有事件必須可排序、可追蹤、可恢復錯誤語意。
   - 輸出：SSE event envelope、sequence generator、streaming helpers、error event mapper。
   - 完成條件：每個 event 含 requestId/sessionId/messageId/eventType/sequence；錯誤路徑產生 `error` event；`final` event 結束 stream 並包含 answerDecision。
-- [X] T061 [US1] 在 `src/audit/` 寫入 `AuditEvent`：session created、message received、execution plan created、evidence attached、answer generated
-- [X] T062 [US1] 在 `src/assistant/` 實作 session history access control，檢查 actor、host app、organization boundary、session ownership / visibility，並使用 Phase 2 identity boundary check
+- [x] T061 [US1] 在 `src/audit/` 寫入 `AuditEvent`：session created、message received、execution plan created、evidence attached、answer generated
+- [x] T062 [US1] 在 `src/assistant/` 實作 session history access control，檢查 actor、host app、organization boundary、session ownership / visibility，並使用 Phase 2 identity boundary check
   - 說明：history retrieval 是 runtime API，不是後台查詢；必須與 message/tool/retrieval 使用同一套身份邊界。
   - 輸出：history access policy、session ownership/visibility checks、boundary test helpers。
   - 完成條件：不可讀取其他 actor / host app / organization 的 history；不可先讀取後再過濾；拒絕原因可 audit。
-- [X] T063 [US1] 在 `src/assistant/` 實作 v1 session restore runtime behavior：host app 帶入 `sessionId` 時讀取 session summary 與 message history；session 不存在、過期、關閉或不可見時回傳一致錯誤或要求建立新 session
+- [x] T063 [US1] 在 `src/assistant/` 實作 v1 session restore runtime behavior：host app 帶入 `sessionId` 時讀取 session summary 與 message history；session 不存在、過期、關閉或不可見時回傳一致錯誤或要求建立新 session
   - 說明：支援聊天視窗重新開啟的最小 restore strategy，不實作完整 active session auto-resolve。
   - 輸出：restore flow service、session state checks、錯誤回應 mapping。
   - 完成條件：有 sessionId 時可讀 summary/history；不存在/過期/關閉/不可見時 fail closed；不新增 `sessions/active` 或 `sessions/resolve` 產品化策略。
-- [X] T064 [US1] 在 `src/audit/` 寫入 `session_history_viewed` 或 `session_resumed` audit event，metadata 必須最小化並避免敏感內容進入一般 log
+- [x] T064 [US1] 在 `src/audit/` 寫入 `session_history_viewed` 或 `session_resumed` audit event，metadata 必須最小化並避免敏感內容進入一般 log
   - 說明：history access 必須可追溯，但 audit 不應保存完整敏感 message content 或未遮罩 evidence。
   - 輸出：history audit event writer、metadata minimization policy。
   - 完成條件：每次 successful history retrieval 有 audit；拒絕路徑有 permissionDeniedReason；audit/log 無完整敏感內容。
-- [X] T065 [US1] 在 `src/assistant/` 或 `src/permissions/` 實作 history response 的 message/evidence/tool summary masking 與資料最小化
+- [x] T065 [US1] 在 `src/assistant/` 或 `src/permissions/` 實作 history response 的 message/evidence/tool summary masking 與資料最小化
   - 說明：歷史訊息中的 evidence/tool summary 也必須遵守目前 actor 的 field/row permission，不可因為是舊訊息就放寬。
   - 輸出：history response sanitizer、evidence/tool summary masker、DTO mapper。
   - 完成條件：history masking test 通過；敏感欄位被移除或遮罩；response 只保留聊天視窗恢復所需最小資訊。
@@ -233,11 +233,11 @@
 
 ### User Story 2 測試任務
 
-- [ ] T066 [P] [US2] 在 `test/unit/tool-risk-classification.spec.ts` 撰寫 risk classification 與 tool selection unit tests
-- [ ] T067 [P] [US2] 在 `test/unit/permission-filtering.spec.ts` 撰寫 module/operation/row/field permission filtering unit tests
-- [ ] T068 [P] [US2] 在 `test/integration/authorized-tool-execution.spec.ts` 撰寫使用 mock connector 的授權 tool execution integration test
-- [ ] T069 [P] [US2] 在 `test/integration/tool-permission-denied.spec.ts` 撰寫 tool execution 前 permission denied 的 integration test
-- [ ] T070 [P] [US2] 在 `test/unit/openai-provider-config.spec.ts` 撰寫 `OpenAiProvider` 依 `LLM_PROVIDER=openai` 與 `LLM_MODEL` 選擇 provider/model 的 unit test，確認實作位於 `src/llm/openai/` 且不在 `connectors/`
+- [x] T066 [P] [US2] 在 `test/unit/tool-risk-classification.spec.ts` 撰寫 risk classification 與 tool selection unit tests
+- [x] T067 [P] [US2] 在 `test/unit/permission-filtering.spec.ts` 撰寫 module/operation/row/field permission filtering unit tests
+- [x] T068 [P] [US2] 在 `test/integration/authorized-tool-execution.spec.ts` 撰寫使用 mock connector 的授權 tool execution integration test
+- [x] T069 [P] [US2] 在 `test/integration/tool-permission-denied.spec.ts` 撰寫 tool execution 前 permission denied 的 integration test
+- [x] T070 [P] [US2] 在 `test/unit/openai-provider-config.spec.ts` 撰寫 `OpenAiProvider` 依 `LLM_PROVIDER=openai` 與 `LLM_MODEL` 選擇 provider/model 的 unit test，確認實作位於 `src/llm/openai/` 且不在 `connectors/`
 
 ### User Story 2 實作任務
 
@@ -540,11 +540,11 @@
 
 以下任務為本期 MVP 最重要的驗收節點，必須全部通過才可宣告 MVP 完成。
 
-| 任務範圍 | 驗收標準 | 對應核心需求 |
-|---------|---------|-------------|
-| Phase 2 foundation | PrismaService 注入與 migration/seed/test DB baseline 可用；identity / host app / organization boundary 在 session/message/history/tool/retrieval 前執行；config/env/secret/logger redaction 通過；provider interfaces 位於各自 domain；QueryUnderstandingPipeline shell 在 ExecutionPlan 前串接 | DB access layer、安全邊界、provider 抽象、query understanding 前置、secret 保護 |
-| US1 session/message/SSE/history/evidence answer | session create/get、message SSE、history retrieval、PageContext、AssistantContextState、ExecutionPlan、EvidenceRef、AnswerDecision/GroundingCheck 可獨立通過；SSE event metadata 完整；history masking 與 audit 通過 | 即時回答、聊天歷史、evidence-grounded answer、audit traceability |
-| US2 permission-aware tool execution / masking before LLM | tool execution 前完成 identity/permission/organization boundary check；未授權 tool 不執行；connector result 先 row/field masking 再進 LLM；OpenAiProvider 位於 `src/llm/openai/` 且 provider/model 由 `LLM_PROVIDER` / `LLM_MODEL` 控制 | Tool-first、權限不可繞過、LLM provider 管理 |
-| US3 ActionDraft / ApprovalRequest / idempotency | medium-risk 建立 ActionDraft 並等待使用者確認；high/critical 建立 ApprovalRequest 或 EscalationRequest；confirm/approve 前不執行 side-effect；idempotency 防止重複執行；所有狀態 append-only audit | Side-effect safety、approval workflow、idempotency、audit |
-| US4 no-answer / clarification / RAG / feedback-review | 中文理解可保存/debug/eval；PageContext 不足會澄清；無 evidence/low confidence/tool failure/permission denied/evidence conflict 不編造；文件知識走 RAG；live business data 走 connector；FeedbackEvent 可建立 ReviewItem | No-answer gate、RAG 最小閉環、改善 loop |
-| Phase 7 health/readiness / analytics-ready raw events / non-functional validation | dependency status 包含 database、LLM、retrieval、connector、approval workflow；degraded 有 reason；SSE timeout/interruption 與 bounded retry 有測試；analytics-ready raw events 完整；Docker local smoke 與 final validation 可執行 | 可用性、可觀測性、非功能品質、local dev baseline |
+| 任務範圍                                                                          | 驗收標準                                                                                                                                                                                                                                                                                        | 對應核心需求                                                                    |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Phase 2 foundation                                                                | PrismaService 注入與 migration/seed/test DB baseline 可用；identity / host app / organization boundary 在 session/message/history/tool/retrieval 前執行；config/env/secret/logger redaction 通過；provider interfaces 位於各自 domain；QueryUnderstandingPipeline shell 在 ExecutionPlan 前串接 | DB access layer、安全邊界、provider 抽象、query understanding 前置、secret 保護 |
+| US1 session/message/SSE/history/evidence answer                                   | session create/get、message SSE、history retrieval、PageContext、AssistantContextState、ExecutionPlan、EvidenceRef、AnswerDecision/GroundingCheck 可獨立通過；SSE event metadata 完整；history masking 與 audit 通過                                                                            | 即時回答、聊天歷史、evidence-grounded answer、audit traceability                |
+| US2 permission-aware tool execution / masking before LLM                          | tool execution 前完成 identity/permission/organization boundary check；未授權 tool 不執行；connector result 先 row/field masking 再進 LLM；OpenAiProvider 位於 `src/llm/openai/` 且 provider/model 由 `LLM_PROVIDER` / `LLM_MODEL` 控制                                                         | Tool-first、權限不可繞過、LLM provider 管理                                     |
+| US3 ActionDraft / ApprovalRequest / idempotency                                   | medium-risk 建立 ActionDraft 並等待使用者確認；high/critical 建立 ApprovalRequest 或 EscalationRequest；confirm/approve 前不執行 side-effect；idempotency 防止重複執行；所有狀態 append-only audit                                                                                              | Side-effect safety、approval workflow、idempotency、audit                       |
+| US4 no-answer / clarification / RAG / feedback-review                             | 中文理解可保存/debug/eval；PageContext 不足會澄清；無 evidence/low confidence/tool failure/permission denied/evidence conflict 不編造；文件知識走 RAG；live business data 走 connector；FeedbackEvent 可建立 ReviewItem                                                                         | No-answer gate、RAG 最小閉環、改善 loop                                         |
+| Phase 7 health/readiness / analytics-ready raw events / non-functional validation | dependency status 包含 database、LLM、retrieval、connector、approval workflow；degraded 有 reason；SSE timeout/interruption 與 bounded retry 有測試；analytics-ready raw events 完整；Docker local smoke 與 final validation 可執行                                                             | 可用性、可觀測性、非功能品質、local dev baseline                                |
