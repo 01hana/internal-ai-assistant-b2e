@@ -261,11 +261,11 @@
   - 說明：遮罩必須發生在 tool/retrieval result 交給 LLM 前，不只是在最終回答後處理。
   - 輸出：row/field masking pipeline、LLM input sanitizer、masking tests。
   - 完成條件：未授權欄位不得進 LLM input；部分授權只回答可見資料；masked fields 不出現在 prompt/debug/audit。
-- [ ] T076 [US2] 在 `src/llm/openai/` 實作支援 `LLM_PROVIDER=openai` 與 `LLM_MODEL` 的真實 OpenAI SDK provider layer，支援 `gpt-5.4-mini`、`gpt-5.4`、`gpt-5.4-nano`
+- [x] T076 [US2] 在 `src/llm/openai/` 實作支援 `LLM_PROVIDER=openai` 與 `LLM_MODEL` 的真實 OpenAI SDK provider layer，支援 `gpt-5.4-mini`、`gpt-5.4`、`gpt-5.4-nano`
   - 說明：provider/model 切換屬於 provider/config 責任；fallback/model selection 不得散落在業務邏輯。
   - 輸出：OpenAiProvider SDK implementation、provider registry hook、model config mapping、fallback policy hook。
   - 完成條件：`LLM_PROVIDER=openai` 可選擇 OpenAI provider，`LLM_MODEL` 可切換三種建議模型；controller/service/domain 不 hardcode provider/model；provider failure 可回 safe degradation metadata。
-- [ ] T077 [US2] 在 `src/audit/` 或 `src/observability/` 記錄 selected provider/model 與 fallback decision 到 audit 或 observability metadata
+- [x] T077 [US2] 在 `src/audit/` 或 `src/observability/` 記錄 selected provider/model 與 fallback decision 到 audit 或 observability metadata
   - 說明：LLM provider/model/fallback 是回答品質與成本分析的重要 raw metric。
   - 輸出：provider/model metadata writer、fallback decision reason enum。
   - 完成條件：每次 LLM call 可追溯 provider/model；fallback 或 degraded 狀態有 reason；不記錄 API key 或 secret。

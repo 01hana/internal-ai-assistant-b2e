@@ -1,4 +1,5 @@
 import { redactSecrets } from '../common/logger/redaction.util';
+import { LlmProviderMetadata } from '../llm/llm-provider.interface';
 import {
   ApprovalDecisionStatus,
   ConfirmationDecisionStatus,
@@ -58,4 +59,18 @@ export function withConfirmationDecisionStatus(
   status: ConfirmationDecisionStatus
 ): Pick<RuntimeDecisionMetadata, 'confirmationDecisionStatus'> {
   return { confirmationDecisionStatus: status };
+}
+
+export function createLlmProviderMetadata(
+  metadata: LlmProviderMetadata
+): Pick<RuntimeDecisionMetadata, 'llmProvider'> {
+  return {
+    llmProvider: redactSecrets({
+      provider: metadata.provider,
+      model: metadata.model,
+      fallbackUsed: metadata.fallbackUsed,
+      fallbackReason: metadata.fallbackReason,
+      requestId: metadata.requestId
+    })
+  };
 }

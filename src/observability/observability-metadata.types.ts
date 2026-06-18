@@ -28,4 +28,11 @@ export interface RuntimeDecisionMetadata {
   toolFailureReason?: ToolFailureReason;
   approvalDecisionStatus?: ApprovalDecisionStatus;
   confirmationDecisionStatus?: ConfirmationDecisionStatus;
+  llmProvider?: {
+    provider: string;
+    model: string;
+    fallbackUsed: boolean;
+    fallbackReason?: string;
+    requestId?: string;
+  };
 }

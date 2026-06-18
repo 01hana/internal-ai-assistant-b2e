@@ -2,6 +2,7 @@ export interface LlmProviderMetadata {
   provider: string;
   model: string;
   fallbackUsed: boolean;
+  fallbackReason?: string;
   requestId?: string;
 }
 
