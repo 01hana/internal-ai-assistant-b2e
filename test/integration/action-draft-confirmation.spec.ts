@@ -87,10 +87,12 @@ describe('US3 medium-risk action draft confirmation baseline', () => {
         data: expect.objectContaining({
           actionDraftId: 'action-draft-waiting-001',
           recheck: expect.objectContaining({
-            permission: 'passed',
             organizationBoundary: 'passed',
-            toolContract: 'passed',
-            idempotency: 'passed'
+            draftStatus: 'passed',
+            freshness: 'passed',
+            permission: 'pending_execution_guard',
+            toolContract: 'pending_execution_guard',
+            idempotency: 'reserved'
           })
         })
       })

@@ -296,7 +296,7 @@
 
 ### User Story 3 實作任務
 
-- [ ] T083 [US3] 在 `src/approvals/` 實作 `ActionDraft` service/controller 與 statuses
+- [x] T083 [US3] 在 `src/approvals/` 實作 `ActionDraft` service/controller 與 statuses
   - 說明：medium-risk side-effect 必須先建立 ActionDraft，回傳操作預覽並等待使用者本人確認。
   - 輸出：ActionDraft controller/service、status transition rules、preview/payload summary DTO。
   - 完成條件：confirm 前不得執行 side-effect；draft/waiting_confirmation/confirmed/executed/cancelled/expired/failed 狀態合法；狀態轉換寫 audit。

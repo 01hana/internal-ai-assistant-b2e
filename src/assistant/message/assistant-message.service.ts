@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { AuditWriterService } from '../../audit/audit-writer.service';
+import { ActionDraftService } from '../../approvals/action-draft.service';
 import { EvidenceRefService } from '../../evidence/evidence-ref.service';
 import { Prisma } from '../../generated/prisma/client';
+import { AnswerDecisionStatus, RiskLevel } from '../../generated/prisma/enums';
 import { AnswerDecisionService } from '../answer/answer-decision.service';
 import { AssistantContextStateService } from '../context/assistant-context-state.service';
 import { toPageContextAuditMetadata, toPageContextPersistence } from '../page-context/page-context.mapper';
@@ -23,6 +25,7 @@ export class AssistantMessageService {
     private readonly evidenceRefService: EvidenceRefService,
     private readonly answerDecisionService: AnswerDecisionService,
     private readonly contextStateService: AssistantContextStateService,
+    private readonly actionDraftService: ActionDraftService,
     private readonly auditWriter: AuditWriterService,
     private readonly sseEventBuilder: AssistantSseEventBuilder
   ) {}
@@ -62,6 +65,63 @@ export class AssistantMessageService {
       sessionId: session.id,
       requestId: input.requestId
     });
+
+    if (planningResult.executionPlan.riskAssessment === RiskLevel.medium) {
+      const actionDraft = await this.actionDraftService.createForMediumRisk({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        identityContext: input.identityContext,
+        executionPlan: planningResult.executionPlan,
+        pageContext: input.pageContext
+      });
+      const answerText = '這項操作需要你先確認，確認前系統不會執行任何變更。';
+
+      await this.messageRepository.completeAssistantMessage({
+        messageId: assistantMessage.id,
+        content: answerText,
+        answerDecision: AnswerDecisionStatus.confirmation_required
+      });
+
+      await this.contextStateService.markWaitingConfirmation({
+        sessionId: session.id,
+        pageContext: input.pageContext,
+        planningResult,
+        toolCallIds: [],
+        evidenceRefIds: []
+      });
+
+      await this.auditWriter.append({
+        requestId: input.requestId,
+        organizationId: input.identityContext.company.organizationId,
+        hostApp: input.identityContext.hostApp.hostApp,
+        actorId: input.identityContext.actor.actorId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        eventType: 'answer_generated',
+        decision: AnswerDecisionStatus.confirmation_required,
+        metadata: toJsonInput({
+          actionDraftId: actionDraft.actionDraftId,
+          riskLevel: actionDraft.riskLevel,
+          toolName: actionDraft.toolName,
+          resource: actionDraft.resource,
+          operation: actionDraft.operation,
+          expiresAt: actionDraft.expiresAt,
+          pageContext: toPageContextAuditMetadata(input.pageContext)
+        })
+      });
+
+      return this.sseEventBuilder.buildConfirmationRequiredEvents({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        actionDraftId: actionDraft.actionDraftId,
+        riskLevel: actionDraft.riskLevel,
+        preview: actionDraft.preview,
+        expiresAt: actionDraft.expiresAt,
+        answer: answerText
+      });
+    }
 
     const runtimeResult = await this.readonlyRuntimeService.execute({
       requestId: input.requestId,

@@ -1,10 +1,49 @@
 import { Injectable } from '@nestjs/common';
 import { createSseEvent, SseSequence } from '../../common/sse/sse-event.helper';
 import { SseEventEnvelope } from '../../common/sse/sse-event.types';
-import { AssistantSseBuildInput, AssistantSseEventRecord } from './assistant-sse.types';
+import { AssistantConfirmationRequiredBuildInput, AssistantSseBuildInput, AssistantSseEventRecord } from './assistant-sse.types';
 
 @Injectable()
 export class AssistantSseEventBuilder {
+  buildConfirmationRequiredEvents(input: AssistantConfirmationRequiredBuildInput): AssistantSseEventRecord[] {
+    const sequence = new SseSequence();
+
+    return [
+      this.wrap(
+        createSseEvent({
+          requestId: input.requestId,
+          sessionId: input.sessionId,
+          messageId: input.messageId,
+          eventType: 'confirmation_required',
+          sequence: sequence.next(),
+          data: {
+            actionDraftId: input.actionDraftId,
+            requestId: input.requestId,
+            messageId: input.messageId,
+            riskLevel: input.riskLevel,
+            preview: input.preview,
+            expiresAt: input.expiresAt
+          }
+        })
+      ),
+      this.wrap(
+        createSseEvent({
+          requestId: input.requestId,
+          sessionId: input.sessionId,
+          messageId: input.messageId,
+          eventType: 'final',
+          sequence: sequence.next(),
+          data: {
+            answerDecision: 'confirmation_required',
+            answer: input.answer,
+            evidenceRefs: [],
+            actionDraftId: input.actionDraftId
+          }
+        })
+      )
+    ];
+  }
+
   buildMessageEvents(input: AssistantSseBuildInput): AssistantSseEventRecord[] {
     const sequence = new SseSequence();
     const events: AssistantSseEventRecord[] = [];

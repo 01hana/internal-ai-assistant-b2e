@@ -4,6 +4,7 @@ import {
   AssistantMessageRole,
   AssistantSessionStatus,
   AssistantTaskState,
+  ActionDraftStatus,
   EvidenceSourceType,
   ExecutionDecision,
   RiskLevel,
@@ -94,6 +95,26 @@ type ToolDefinitionRecord = {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+};
+
+type ActionDraftRecord = {
+  id: string;
+  requestId: string;
+  sessionId: string;
+  messageId: string | null;
+  actorId: string;
+  toolName: string;
+  resource: string;
+  operation: ToolOperation;
+  riskLevel: RiskLevel;
+  payloadSummary: unknown;
+  preview: unknown;
+  status: ActionDraftStatus;
+  idempotencyKey: string | null;
+  createdAt: Date;
+  confirmedAt: Date | null;
+  executedAt: Date | null;
+  expiresAt: Date | null;
 };
 
 type EvidenceRefRecord = {
@@ -194,6 +215,7 @@ type MockState = {
   contextStates: ContextStateRecord[];
   messages: MessageRecord[];
   toolDefinitions: ToolDefinitionRecord[];
+  actionDrafts: ActionDraftRecord[];
   toolCalls: ToolCallRecord[];
   evidenceRefs: EvidenceRefRecord[];
   auditEvents: AuditEventRecord[];
@@ -540,6 +562,77 @@ function createPrismaMock(state: MockState) {
         return record;
       })
     },
+    actionDraft: {
+      create: jest.fn(async ({ data }: { data: Partial<ActionDraftRecord> }) => {
+        const record: ActionDraftRecord = {
+          id: `action-draft-created-${state.actionDrafts.length + 1}`,
+          requestId: data.requestId ?? 'req-generated',
+          sessionId: data.sessionId ?? 'session-owned-001',
+          messageId: (data.messageId as string | null | undefined) ?? null,
+          actorId: data.actorId ?? 'actor-001',
+          toolName: data.toolName ?? 'mock.orders.status.lookup',
+          resource: data.resource ?? 'orders',
+          operation: (data.operation as ToolOperation) ?? ToolOperation.update,
+          riskLevel: (data.riskLevel as RiskLevel) ?? RiskLevel.medium,
+          payloadSummary: data.payloadSummary ?? {},
+          preview: data.preview ?? {},
+          status: (data.status as ActionDraftStatus) ?? ActionDraftStatus.draft,
+          idempotencyKey: (data.idempotencyKey as string | null | undefined) ?? null,
+          createdAt: nextDate(),
+          confirmedAt: (data.confirmedAt as Date | null | undefined) ?? null,
+          executedAt: (data.executedAt as Date | null | undefined) ?? null,
+          expiresAt: (data.expiresAt as Date | null | undefined) ?? null
+        };
+        state.actionDrafts.push(record);
+        return record;
+      }),
+      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.actionDrafts.find((item) => item.id === where.id) ?? null),
+      findFirst: jest.fn(
+        async ({
+          where
+        }: {
+          where: {
+            id?: string;
+            sessionId?: string;
+            actorId?: string;
+            status?: ActionDraftStatus;
+          };
+        }) =>
+          state.actionDrafts.find(
+            (item) =>
+              (!where.id || item.id === where.id) &&
+              (!where.sessionId || item.sessionId === where.sessionId) &&
+              (!where.actorId || item.actorId === where.actorId) &&
+              (!where.status || item.status === where.status)
+          ) ?? null
+      ),
+      findMany: jest.fn(
+        async ({
+          where
+        }: {
+          where?: {
+            sessionId?: string;
+            actorId?: string;
+            status?: ActionDraftStatus;
+          };
+        } = {}) =>
+          state.actionDrafts.filter(
+            (item) =>
+              (!where?.sessionId || item.sessionId === where.sessionId) &&
+              (!where?.actorId || item.actorId === where.actorId) &&
+              (!where?.status || item.status === where.status)
+          )
+      ),
+      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ActionDraftRecord> }) => {
+        const draft = state.actionDrafts.find((item) => item.id === where.id);
+        if (!draft) {
+          throw new Error(`ActionDraft ${where.id} not found.`);
+        }
+
+        Object.assign(draft, data);
+        return draft;
+      })
+    },
     toolCall: {
       create: jest.fn(async ({ data }: { data: Partial<ToolCallRecord> }) => {
         const record: ToolCallRecord = {
@@ -777,6 +870,7 @@ function createInitialState(): MockState {
       }
     ],
     toolDefinitions: createToolDefinitions(baseDate),
+    actionDrafts: createActionDrafts(baseDate),
     toolCalls: [
       {
         id: 'tool-call-owned-001',
@@ -820,6 +914,73 @@ function createInitialState(): MockState {
     groundingChecks: [],
     answerDecisions: []
   };
+}
+
+function createActionDrafts(baseDate: Date): ActionDraftRecord[] {
+  const common = {
+    requestId: 'req-us3-action-draft-fixture',
+    sessionId: 'session-owned-001',
+    messageId: 'message-owned-assistant-001',
+    actorId: 'actor-001',
+    toolName: 'mock.orders.status.lookup',
+    resource: 'orders',
+    operation: ToolOperation.update,
+    riskLevel: RiskLevel.medium,
+    payloadSummary: {
+      resource: 'orders',
+      entityType: 'order',
+      entityId: 'SO-10001'
+    },
+    preview: {
+      action: 'confirmation_required',
+      resource: 'orders',
+      entityType: 'order',
+      entityId: 'SO-10001',
+      operation: ToolOperation.update
+    },
+    createdAt: new Date(baseDate),
+    confirmedAt: null,
+    executedAt: null
+  };
+
+  return [
+    {
+      ...common,
+      id: 'action-draft-waiting-001',
+      status: ActionDraftStatus.waiting_confirmation,
+      idempotencyKey: null,
+      expiresAt: new Date('2026-12-31T00:00:00.000Z')
+    },
+    {
+      ...common,
+      id: 'action-draft-draft-001',
+      status: ActionDraftStatus.draft,
+      idempotencyKey: null,
+      expiresAt: new Date('2026-12-31T00:00:00.000Z')
+    },
+    {
+      ...common,
+      id: 'action-draft-expired-001',
+      status: ActionDraftStatus.expired,
+      idempotencyKey: null,
+      expiresAt: new Date('2026-01-01T00:00:00.000Z')
+    },
+    {
+      ...common,
+      id: 'action-draft-cancelled-001',
+      status: ActionDraftStatus.cancelled,
+      idempotencyKey: null,
+      expiresAt: new Date('2026-12-31T00:00:00.000Z')
+    },
+    {
+      ...common,
+      id: 'action-draft-executed-001',
+      status: ActionDraftStatus.executed,
+      idempotencyKey: 'idem-action-draft-executed-001',
+      executedAt: new Date('2026-06-16T00:00:07.000Z'),
+      expiresAt: new Date('2026-12-31T00:00:00.000Z')
+    }
+  ];
 }
 
 function createToolDefinitions(baseDate: Date): ToolDefinitionRecord[] {

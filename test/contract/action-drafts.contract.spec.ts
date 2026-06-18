@@ -71,7 +71,12 @@ describe('US3 action drafts contract baseline', () => {
         requestId: 'req-us3-action-draft-confirm-2',
         data: expect.objectContaining({
           actionDraftId: 'action-draft-waiting-001',
-          duplicateSafe: true
+          duplicateSafe: true,
+          recheck: expect.objectContaining({
+            idempotency: 'duplicate',
+            permission: 'pending_execution_guard',
+            toolContract: 'pending_execution_guard'
+          })
         })
       })
     );

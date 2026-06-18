@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { ApprovalsModule } from '../approvals/approvals.module';
 import { EvidenceModule } from '../evidence/evidence.module';
 import { IdentityModule } from '../identity/identity.module';
 import { MockConnectorModule } from '../connectors/mock/mock-connector.module';
@@ -22,7 +23,17 @@ import { AssistantSessionService } from './session/assistant-session.service';
 import { AssistantSseEventBuilder } from './sse/assistant-sse-event.builder';
 
 @Module({
-  imports: [PrismaModule, AuditModule, QueryUnderstandingModule, IdentityModule, EvidenceModule, ToolsModule, MockConnectorModule, PermissionsModule],
+  imports: [
+    PrismaModule,
+    AuditModule,
+    ApprovalsModule,
+    QueryUnderstandingModule,
+    IdentityModule,
+    EvidenceModule,
+    ToolsModule,
+    MockConnectorModule,
+    PermissionsModule
+  ],
   controllers: [AssistantController],
   providers: [
     AssistantPlanningService,

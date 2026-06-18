@@ -1,4 +1,4 @@
-import { AnswerDecisionStatus } from '../../generated/prisma/enums';
+import { AnswerDecisionStatus, RiskLevel } from '../../generated/prisma/enums';
 import { SseEventEnvelope } from '../../common/sse/sse-event.types';
 import { ToolPermissionDeniedReason } from '../../tools/tool-registry.types';
 
@@ -19,7 +19,19 @@ export interface AssistantSseBuildInput {
     answerDecision: AnswerDecisionStatus;
     answer: string;
     evidenceRefs: string[];
+    actionDraftId?: string;
   };
+}
+
+export interface AssistantConfirmationRequiredBuildInput {
+  requestId: string;
+  sessionId: string;
+  messageId: string;
+  actionDraftId: string;
+  riskLevel: RiskLevel;
+  preview: unknown;
+  expiresAt: string | null;
+  answer: string;
 }
 
 export interface AssistantSseEventRecord<TData = unknown> {
