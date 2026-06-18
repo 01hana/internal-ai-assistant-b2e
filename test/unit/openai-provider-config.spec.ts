@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { EnvironmentVariables } from '../../src/common/config/env.validation';
 import { ConnectorAdapter } from '../../src/connectors/connector-adapter.interface';
-import { OpenAiProvider } from '../../src/llm/openai/openai.provider';
+import { OpenAiProvider, OpenAiResponsesClient } from '../../src/llm/openai/openai.provider';
 
 describe('US2 OpenAI provider config boundaries', () => {
   it('selects provider and model from LLM_PROVIDER and LLM_MODEL config', () => {
@@ -10,7 +10,7 @@ describe('US2 OpenAI provider config boundaries', () => {
       LLM_MODEL: 'gpt-5.4-mini',
       OPENAI_API_KEY: 'placeholder-openai-api-key'
     });
-    const provider = new OpenAiProvider(configService);
+    const provider = new OpenAiProvider(configService, createClientMock());
 
     expect(configService.get('LLM_PROVIDER', { infer: true })).toBe('openai');
     expect(provider.getMetadata({ requestId: 'req-us2-openai' })).toEqual({
@@ -34,7 +34,7 @@ describe('US2 OpenAI provider config boundaries', () => {
       LLM_MODEL: 'gpt-5.4-mini',
       OPENAI_API_KEY: 'placeholder-openai-api-key'
     });
-    const provider = new OpenAiProvider(configService);
+    const provider = new OpenAiProvider(configService, createClientMock());
 
     expect('execute' in provider).toBe(false);
     expect('listTools' in provider).toBe(false);
@@ -46,6 +46,14 @@ function createConfigService(values: Partial<EnvironmentVariables>) {
   return {
     get: jest.fn((key: keyof EnvironmentVariables) => values[key])
   } as unknown as ConfigService<EnvironmentVariables, true>;
+}
+
+function createClientMock() {
+  return {
+    responses: {
+      create: jest.fn().mockResolvedValue({ output_text: '' })
+    }
+  } satisfies OpenAiResponsesClient;
 }
 
 function isConnectorAdapter(value: unknown): value is ConnectorAdapter {
