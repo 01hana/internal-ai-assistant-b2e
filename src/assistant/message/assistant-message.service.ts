@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuditWriterService } from '../../audit/audit-writer.service';
 import { ActionDraftService } from '../../approvals/action-draft.service';
+import { ApprovalRequestService } from '../../approvals/approval-request.service';
 import { EvidenceRefService } from '../../evidence/evidence-ref.service';
 import { Prisma } from '../../generated/prisma/client';
 import { AnswerDecisionStatus, RiskLevel } from '../../generated/prisma/enums';
@@ -26,6 +27,7 @@ export class AssistantMessageService {
     private readonly answerDecisionService: AnswerDecisionService,
     private readonly contextStateService: AssistantContextStateService,
     private readonly actionDraftService: ActionDraftService,
+    private readonly approvalRequestService: ApprovalRequestService,
     private readonly auditWriter: AuditWriterService,
     private readonly sseEventBuilder: AssistantSseEventBuilder
   ) {}
@@ -119,6 +121,65 @@ export class AssistantMessageService {
         riskLevel: actionDraft.riskLevel,
         preview: actionDraft.preview,
         expiresAt: actionDraft.expiresAt,
+        answer: answerText
+      });
+    }
+
+    if (
+      planningResult.executionPlan.riskAssessment === RiskLevel.high ||
+      planningResult.executionPlan.riskAssessment === RiskLevel.critical
+    ) {
+      const approvalRequest = await this.approvalRequestService.createForHighRisk({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        identityContext: input.identityContext,
+        executionPlan: planningResult.executionPlan,
+        pageContext: input.pageContext
+      });
+      const answerText = '這項高風險操作需要核准後才可繼續；核准前系統不會執行任何變更。';
+
+      await this.messageRepository.completeAssistantMessage({
+        messageId: assistantMessage.id,
+        content: answerText,
+        answerDecision: AnswerDecisionStatus.approval_required
+      });
+
+      await this.contextStateService.markWaitingApproval({
+        sessionId: session.id,
+        pageContext: input.pageContext,
+        planningResult,
+        toolCallIds: [],
+        evidenceRefIds: [],
+        pendingApprovalRequestId: approvalRequest.approvalRequestId
+      });
+
+      await this.auditWriter.append({
+        requestId: input.requestId,
+        organizationId: input.identityContext.company.organizationId,
+        hostApp: input.identityContext.hostApp.hostApp,
+        actorId: input.identityContext.actor.actorId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        eventType: 'answer_generated',
+        decision: AnswerDecisionStatus.approval_required,
+        metadata: toJsonInput({
+          approvalRequestId: approvalRequest.approvalRequestId,
+          riskLevel: approvalRequest.riskLevel,
+          actionSummary: approvalRequest.actionSummary,
+          expiresAt: approvalRequest.expiresAt,
+          pageContext: toPageContextAuditMetadata(input.pageContext)
+        })
+      });
+
+      return this.sseEventBuilder.buildApprovalRequiredEvents({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        approvalRequestId: approvalRequest.approvalRequestId,
+        riskLevel: approvalRequest.riskLevel,
+        actionSummary: approvalRequest.actionSummary,
+        expiresAt: approvalRequest.expiresAt,
         answer: answerText
       });
     }

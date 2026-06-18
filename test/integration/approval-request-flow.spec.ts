@@ -61,15 +61,28 @@ describe('US3 approval request baseline', () => {
     expect(newAuditEvents).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          eventType: 'approval_request_created'
+          eventType: 'approval_request_created',
+          metadata: expect.objectContaining({
+            approvalRequestId: expect.any(String),
+            status: 'pending',
+            riskLevel: 'high',
+            requesterActorId: 'actor-001',
+            approverActorId: null,
+            toolName: 'mock.orders.status.lookup',
+            resource: 'orders',
+            operation: 'update',
+            expiresAt: expect.any(String)
+          })
         })
       ])
     );
+    expect(JSON.stringify(newAuditEvents)).not.toContain('visibleColumns');
+    expect(JSON.stringify(newAuditEvents)).not.toContain('rawPayload');
   });
 
   it('fails closed when the requester tries to approve directly without approver permission', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/v1/assistant/approval-requests/approval-request-pending-001/approve')
+      .post('/api/v1/assistant/approval-requests/approval-request-pending-denied-001/approve')
       .set(
         createIdentityHeaders({
           'x-request-id': 'req-us3-approval-fail-closed',

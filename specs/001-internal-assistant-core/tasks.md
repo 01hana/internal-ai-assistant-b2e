@@ -300,7 +300,7 @@
   - 說明：medium-risk side-effect 必須先建立 ActionDraft，回傳操作預覽並等待使用者本人確認。
   - 輸出：ActionDraft controller/service、status transition rules、preview/payload summary DTO。
   - 完成條件：confirm 前不得執行 side-effect；draft/waiting_confirmation/confirmed/executed/cancelled/expired/failed 狀態合法；狀態轉換寫 audit。
-- [ ] T084 [US3] 在 `src/approvals/` 實作 `ApprovalRequest` service/controller 與 statuses
+- [x] T084 [US3] 在 `src/approvals/` 實作 `ApprovalRequest` service/controller 與 statuses
   - 說明：high/critical risk action 必須由具審核權限者核准，不可由 requester 自行繞過。
   - 輸出：ApprovalRequest controller/service、approve/reject/cancel handlers、decision reason DTO。
   - 完成條件：approve 前不執行 side-effect；核准者身份/權限可驗證；requester/approver/risk/action/evidence/requestId 可追溯。
@@ -316,7 +316,7 @@
   - 說明：確認或核准不代表可以直接信任先前狀態；執行 side-effect 前必須重新檢查 actor identity、organization boundary、permission scope、risk policy、tool contract、tool version、draft/request status 與 idempotencyKey。
   - 輸出：approval/action-draft execution guard、permission re-check logic、tool compatibility check、idempotency integration。
   - 完成條件：confirm/approve 前不得執行 side-effect；權限變更後會阻擋執行；相同 idempotencyKey 不會重複執行；所有 blocked / executed / failed 狀態皆寫入 AuditEvent。
-- [ ] T088 [US3] 在 `src/common/sse/` 實作 SSE events：`confirmation_required`、`approval_required`
+- [x] T088 [US3] 在 `src/common/sse/` 實作 SSE events：`confirmation_required`、`approval_required`
   - 說明：當 medium/high/critical risk 被判定時，SSE 必須清楚告知前端需要確認或審核，而不是繼續產生一般答案。
   - 輸出：confirmation/approval SSE event DTO、actionDraftId/approvalRequestId payload mapping。
   - 完成條件：event 含 requestId/sessionId/messageId/eventType/sequence；confirmation_required 含 actionDraftId/preview/expiresAt；approval_required 含 approvalRequestId/riskLevel/action summary。

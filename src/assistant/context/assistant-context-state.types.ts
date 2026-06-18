@@ -7,4 +7,5 @@ export interface UpdateAssistantContextStateInput {
   planningResult: AssistantPlanningResult;
   toolCallIds: string[];
   evidenceRefIds: string[];
+  pendingApprovalRequestId?: string;
 }

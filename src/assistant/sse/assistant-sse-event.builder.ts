@@ -1,10 +1,54 @@
 import { Injectable } from '@nestjs/common';
 import { createSseEvent, SseSequence } from '../../common/sse/sse-event.helper';
 import { SseEventEnvelope } from '../../common/sse/sse-event.types';
-import { AssistantConfirmationRequiredBuildInput, AssistantSseBuildInput, AssistantSseEventRecord } from './assistant-sse.types';
+import {
+  AssistantApprovalRequiredBuildInput,
+  AssistantConfirmationRequiredBuildInput,
+  AssistantSseBuildInput,
+  AssistantSseEventRecord
+} from './assistant-sse.types';
 
 @Injectable()
 export class AssistantSseEventBuilder {
+  buildApprovalRequiredEvents(input: AssistantApprovalRequiredBuildInput): AssistantSseEventRecord[] {
+    const sequence = new SseSequence();
+
+    return [
+      this.wrap(
+        createSseEvent({
+          requestId: input.requestId,
+          sessionId: input.sessionId,
+          messageId: input.messageId,
+          eventType: 'approval_required',
+          sequence: sequence.next(),
+          data: {
+            approvalRequestId: input.approvalRequestId,
+            requestId: input.requestId,
+            messageId: input.messageId,
+            riskLevel: input.riskLevel,
+            actionSummary: input.actionSummary,
+            expiresAt: input.expiresAt
+          }
+        })
+      ),
+      this.wrap(
+        createSseEvent({
+          requestId: input.requestId,
+          sessionId: input.sessionId,
+          messageId: input.messageId,
+          eventType: 'final',
+          sequence: sequence.next(),
+          data: {
+            answerDecision: 'approval_required',
+            answer: input.answer,
+            evidenceRefs: [],
+            approvalRequestId: input.approvalRequestId
+          }
+        })
+      )
+    ];
+  }
+
   buildConfirmationRequiredEvents(input: AssistantConfirmationRequiredBuildInput): AssistantSseEventRecord[] {
     const sequence = new SseSequence();
 

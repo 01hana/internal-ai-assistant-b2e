@@ -5,6 +5,7 @@ import {
   AssistantSessionStatus,
   AssistantTaskState,
   ActionDraftStatus,
+  ApprovalRequestStatus,
   EvidenceSourceType,
   ExecutionDecision,
   RiskLevel,
@@ -117,6 +118,26 @@ type ActionDraftRecord = {
   expiresAt: Date | null;
 };
 
+type ApprovalRequestRecord = {
+  id: string;
+  requestId: string;
+  sessionId: string;
+  messageId: string | null;
+  requesterActorId: string;
+  approverActorId: string | null;
+  riskLevel: RiskLevel;
+  status: ApprovalRequestStatus;
+  actionSummary: unknown;
+  payloadSummary: unknown;
+  evidenceRefIds: string[];
+  decisionReason: string | null;
+  idempotencyKey: string | null;
+  auditEventIds: string[];
+  expiresAt: Date | null;
+  createdAt: Date;
+  decidedAt: Date | null;
+};
+
 type EvidenceRefRecord = {
   id: string;
   requestId: string | null;
@@ -216,6 +237,7 @@ type MockState = {
   messages: MessageRecord[];
   toolDefinitions: ToolDefinitionRecord[];
   actionDrafts: ActionDraftRecord[];
+  approvalRequests: ApprovalRequestRecord[];
   toolCalls: ToolCallRecord[];
   evidenceRefs: EvidenceRefRecord[];
   auditEvents: AuditEventRecord[];
@@ -633,6 +655,92 @@ function createPrismaMock(state: MockState) {
         return draft;
       })
     },
+    approvalRequest: {
+      create: jest.fn(async ({ data }: { data: Partial<ApprovalRequestRecord> }) => {
+        const record: ApprovalRequestRecord = {
+          id: `approval-request-created-${state.approvalRequests.length + 1}`,
+          requestId: data.requestId ?? 'req-generated',
+          sessionId: data.sessionId ?? 'session-owned-001',
+          messageId: (data.messageId as string | null | undefined) ?? null,
+          requesterActorId: data.requesterActorId ?? 'actor-001',
+          approverActorId: (data.approverActorId as string | null | undefined) ?? null,
+          riskLevel: (data.riskLevel as RiskLevel) ?? RiskLevel.high,
+          status: (data.status as ApprovalRequestStatus) ?? ApprovalRequestStatus.pending,
+          actionSummary: data.actionSummary ?? {},
+          payloadSummary: data.payloadSummary ?? {},
+          evidenceRefIds: (data.evidenceRefIds as string[] | undefined) ?? [],
+          decisionReason: (data.decisionReason as string | null | undefined) ?? null,
+          idempotencyKey: (data.idempotencyKey as string | null | undefined) ?? null,
+          auditEventIds: (data.auditEventIds as string[] | undefined) ?? [],
+          expiresAt: (data.expiresAt as Date | null | undefined) ?? null,
+          createdAt: nextDate(),
+          decidedAt: (data.decidedAt as Date | null | undefined) ?? null
+        };
+        state.approvalRequests.push(record);
+        return record;
+      }),
+      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.approvalRequests.find((item) => item.id === where.id) ?? null),
+      findFirst: jest.fn(
+        async ({
+          where
+        }: {
+          where: {
+            id?: string;
+            sessionId?: string;
+            requesterActorId?: string;
+            approverActorId?: string;
+            status?: ApprovalRequestStatus;
+          };
+        }) =>
+          state.approvalRequests.find(
+            (item) =>
+              (!where.id || item.id === where.id) &&
+              (!where.sessionId || item.sessionId === where.sessionId) &&
+              (!where.requesterActorId || item.requesterActorId === where.requesterActorId) &&
+              (!where.approverActorId || item.approverActorId === where.approverActorId) &&
+              (!where.status || item.status === where.status)
+          ) ?? null
+      ),
+      findMany: jest.fn(
+        async ({
+          where,
+          orderBy
+        }: {
+          where?: {
+            status?: ApprovalRequestStatus;
+            riskLevel?: RiskLevel;
+            requesterActorId?: string;
+            approverActorId?: string;
+            createdAt?: { gte?: Date; lte?: Date };
+          };
+          orderBy?: { createdAt: 'asc' | 'desc' };
+        } = {}) =>
+          state.approvalRequests
+            .filter(
+              (item) =>
+                (!where?.status || item.status === where.status) &&
+                (!where?.riskLevel || item.riskLevel === where.riskLevel) &&
+                (!where?.requesterActorId || item.requesterActorId === where.requesterActorId) &&
+                (!where?.approverActorId || item.approverActorId === where.approverActorId) &&
+                (!where?.createdAt?.gte || item.createdAt.getTime() >= where.createdAt.gte.getTime()) &&
+                (!where?.createdAt?.lte || item.createdAt.getTime() <= where.createdAt.lte.getTime())
+            )
+            .sort((left, right) =>
+              (orderBy?.createdAt ?? 'desc') === 'desc'
+                ? right.createdAt.getTime() - left.createdAt.getTime()
+                : left.createdAt.getTime() - right.createdAt.getTime()
+            )
+      ),
+      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ApprovalRequestRecord> }) => {
+        const approvalRequest = state.approvalRequests.find((item) => item.id === where.id);
+        if (!approvalRequest) {
+          throw new Error(`ApprovalRequest ${where.id} not found.`);
+        }
+
+        Object.assign(approvalRequest, data);
+        return approvalRequest;
+      })
+    },
     toolCall: {
       create: jest.fn(async ({ data }: { data: Partial<ToolCallRecord> }) => {
         const record: ToolCallRecord = {
@@ -871,6 +979,7 @@ function createInitialState(): MockState {
     ],
     toolDefinitions: createToolDefinitions(baseDate),
     actionDrafts: createActionDrafts(baseDate),
+    approvalRequests: createApprovalRequests(baseDate),
     toolCalls: [
       {
         id: 'tool-call-owned-001',
@@ -979,6 +1088,62 @@ function createActionDrafts(baseDate: Date): ActionDraftRecord[] {
       idempotencyKey: 'idem-action-draft-executed-001',
       executedAt: new Date('2026-06-16T00:00:07.000Z'),
       expiresAt: new Date('2026-12-31T00:00:00.000Z')
+    }
+  ];
+}
+
+function createApprovalRequests(baseDate: Date): ApprovalRequestRecord[] {
+  const common = {
+    requestId: 'req-us3-approval-fixture',
+    sessionId: 'session-owned-001',
+    messageId: 'message-owned-assistant-001',
+    requesterActorId: 'actor-001',
+    approverActorId: 'approver-001',
+    riskLevel: RiskLevel.high,
+    status: ApprovalRequestStatus.pending,
+    actionSummary: {
+      action: 'approval_required',
+      toolName: 'mock.orders.status.lookup',
+      resource: 'orders',
+      operation: ToolOperation.update,
+      entityType: 'order',
+      entityId: 'SO-10001'
+    },
+    payloadSummary: {
+      resource: 'orders',
+      entityType: 'order',
+      entityId: 'SO-10001',
+      riskLevel: RiskLevel.high
+    },
+    evidenceRefIds: ['evidence-owned-001'],
+    decisionReason: null,
+    idempotencyKey: null,
+    auditEventIds: [],
+    expiresAt: new Date('2026-12-31T00:00:00.000Z'),
+    createdAt: new Date(baseDate),
+    decidedAt: null
+  };
+
+  return [
+    {
+      ...common,
+      id: 'approval-request-pending-get-001'
+    },
+    {
+      ...common,
+      id: 'approval-request-pending-approve-001'
+    },
+    {
+      ...common,
+      id: 'approval-request-pending-denied-001'
+    },
+    {
+      ...common,
+      id: 'approval-request-pending-reject-001'
+    },
+    {
+      ...common,
+      id: 'approval-request-pending-cancel-001'
     }
   ];
 }

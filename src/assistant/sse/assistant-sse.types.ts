@@ -34,6 +34,17 @@ export interface AssistantConfirmationRequiredBuildInput {
   answer: string;
 }
 
+export interface AssistantApprovalRequiredBuildInput {
+  requestId: string;
+  sessionId: string;
+  messageId: string;
+  approvalRequestId: string;
+  riskLevel: RiskLevel;
+  actionSummary: unknown;
+  expiresAt: string | null;
+  answer: string;
+}
+
 export interface AssistantSseEventRecord<TData = unknown> {
   event: string;
   payload: SseEventEnvelope<TData>;
