@@ -282,17 +282,17 @@
 
 ### User Story 3 測試任務
 
-- [ ] T078 [P] [US3] 在 `test/contract/action-drafts.contract.spec.ts` 撰寫 `GET /assistant/action-drafts/:id`、`POST /assistant/action-drafts/:id/confirm`、`POST /assistant/action-drafts/:id/cancel` contract tests
+- [x] T078 [P] [US3] 在 `test/contract/action-drafts.contract.spec.ts` 撰寫 `GET /assistant/action-drafts/:id`、`POST /assistant/action-drafts/:id/confirm`、`POST /assistant/action-drafts/:id/cancel` contract tests
   - 說明：鎖定 medium-risk confirmation API，確認前不可執行 side-effect。
   - 輸出：ActionDraft contract spec、get/confirm/cancel 成功與錯誤 fixtures。
   - 完成條件：expired/cancelled/executed draft 不可再次 confirm；duplicate confirm 不重複執行；response envelope/requestId 一致。
-- [ ] T079 [P] [US3] 在 `test/contract/approval-requests.contract.spec.ts` 撰寫 approval get/list/approve/reject/cancel APIs contract tests
+- [x] T079 [P] [US3] 在 `test/contract/approval-requests.contract.spec.ts` 撰寫 approval get/list/approve/reject/cancel APIs contract tests
   - 說明：鎖定 high/critical risk approval API，approval request 不可由任意外部 API 繞過 assistant pipeline 建立。
   - 輸出：ApprovalRequest contract spec、list/get/approve/reject/cancel fixtures。
   - 完成條件：approve/reject 權限不足會拒絕；approved 後仍需 re-check；所有狀態回應一致。
-- [ ] T080 [P] [US3] 在 `test/integration/action-draft-confirmation.spec.ts` 撰寫 medium-risk request 建立 `ActionDraft` 且 confirm 前不執行 side-effect 的 integration test
-- [ ] T081 [P] [US3] 在 `test/integration/approval-request-flow.spec.ts` 撰寫 high/critical request 建立 `ApprovalRequest` 且 approve 前不執行 side-effect 的 integration test
-- [ ] T082 [P] [US3] 在 `test/unit/side-effect-idempotency.spec.ts` 撰寫 confirm/approve/retry duplicate-safe idempotency unit tests
+- [x] T080 [P] [US3] 在 `test/integration/action-draft-confirmation.spec.ts` 撰寫 medium-risk request 建立 `ActionDraft` 且 confirm 前不執行 side-effect 的 integration test
+- [x] T081 [P] [US3] 在 `test/integration/approval-request-flow.spec.ts` 撰寫 high/critical request 建立 `ApprovalRequest` 且 approve 前不執行 side-effect 的 integration test
+- [x] T082 [P] [US3] 在 `test/unit/side-effect-idempotency.spec.ts` 撰寫 confirm/approve/retry duplicate-safe idempotency unit tests
 
 ### User Story 3 實作任務
 
