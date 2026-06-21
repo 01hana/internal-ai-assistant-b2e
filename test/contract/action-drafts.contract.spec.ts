@@ -42,7 +42,7 @@ describe('US3 action drafts contract baseline', () => {
   it('confirms a waiting action draft only through the confirmation flow and keeps duplicate confirm duplicate-safe', async () => {
     const firstResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-draft-confirm-1' }))
+      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-draft-confirm-1', 'x-permission-scopes': 'orders:read,orders:update' }))
       .send({
         idempotencyKey: 'idem-action-draft-confirm-001'
       });
@@ -74,8 +74,8 @@ describe('US3 action drafts contract baseline', () => {
           duplicateSafe: true,
           recheck: expect.objectContaining({
             idempotency: 'duplicate',
-            permission: 'pending_execution_guard',
-            toolContract: 'pending_execution_guard'
+            permission: 'passed',
+            toolContract: 'passed'
           })
         })
       })
@@ -91,7 +91,7 @@ describe('US3 action drafts contract baseline', () => {
       .post(`/api/v1/assistant/action-drafts/${draftId}/confirm`)
       .set(createIdentityHeaders({ 'x-request-id': `req-us3-action-draft-${draftId}` }))
       .send({
-        idempotencyKey: `idem-${draftId}`
+        idempotencyKey: `idem-new-${draftId}`
       });
 
     expect(response.status).toBe(409);

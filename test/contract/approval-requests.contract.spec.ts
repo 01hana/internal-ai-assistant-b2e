@@ -108,7 +108,7 @@ describe('US3 approval requests contract baseline', () => {
         riskLevel: 'high',
         requesterActorId: 'actor-001',
         approverActorId: 'approver-001',
-        toolName: 'mock.orders.status.lookup',
+        toolName: 'mock.orders.cancel',
         resource: 'orders',
         operation: 'update',
         idempotencyKeyPresent: true
@@ -178,7 +178,7 @@ describe('US3 approval requests contract baseline', () => {
         riskLevel: 'high',
         requesterActorId: 'actor-001',
         approverActorId: 'approver-001',
-        toolName: 'mock.orders.status.lookup',
+        toolName: 'mock.orders.cancel',
         resource: 'orders',
         operation: 'update',
         reasonProvided: true
@@ -209,7 +209,7 @@ describe('US3 approval requests contract baseline', () => {
         riskLevel: 'high',
         requesterActorId: 'actor-001',
         approverActorId: 'approver-001',
-        toolName: 'mock.orders.status.lookup',
+        toolName: 'mock.orders.cancel',
         resource: 'orders',
         operation: 'update',
         reasonProvided: false

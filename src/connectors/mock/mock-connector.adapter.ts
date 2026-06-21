@@ -97,6 +97,22 @@ export class MockConnectorAdapter implements ConnectorAdapter {
       return toRecord(mockOrderStatuses.find((record) => record.orderId === entityId));
     }
 
+    if (toolKey === 'mock.orders.status.update') {
+      return {
+        orderId: entityId,
+        status: 'updated',
+        sideEffectApplied: true
+      };
+    }
+
+    if (toolKey === 'mock.orders.cancel') {
+      return {
+        orderId: entityId,
+        status: 'cancelled',
+        sideEffectApplied: true
+      };
+    }
+
     if (toolKey === 'mock.work-orders.progress.lookup') {
       return toRecord(mockWorkOrderProgress.find((record) => record.workOrderId === entityId));
     }

@@ -300,6 +300,7 @@ function createRuntimeService(overrides?: {
 
 function registeredTool(): RegisteredToolDefinition {
   return {
+    id: 'tool-definition-orders-001',
     key: 'mock.orders.status.lookup',
     name: 'mock.orders.status.lookup',
     version: '1.0.0',
@@ -314,7 +315,10 @@ function registeredTool(): RegisteredToolDefinition {
     },
     outputSchema: {
       required: ['orderId', 'status']
-    }
+    },
+    hasSideEffect: false,
+    requiresConfirmation: false,
+    requiresApproval: false
   };
 }
 

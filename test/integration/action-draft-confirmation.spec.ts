@@ -58,6 +58,27 @@ describe('US3 medium-risk action draft confirmation baseline', () => {
       })
     );
     expect(newToolCalls).toHaveLength(0);
+    const createdDraft = state.actionDrafts.find((draft) => draft.id === finalEvent?.data?.data?.actionDraftId);
+    expect(createdDraft).toEqual(
+      expect.objectContaining({
+        operation: 'update',
+        riskLevel: 'medium'
+      })
+    );
+    expect(createdDraft?.payloadSummary).toEqual(
+      expect.objectContaining({
+        toolContract: expect.objectContaining({
+          toolDefinitionId: 'tool-definition-orders-update-001',
+          toolName: 'mock.orders.status.update',
+          toolVersion: '1.0.0',
+          operation: 'update',
+          riskLevel: 'medium',
+          hasSideEffect: true,
+          requiresConfirmation: true,
+          requiresApproval: false
+        })
+      })
+    );
     expect(newAuditEvents).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -67,7 +88,8 @@ describe('US3 medium-risk action draft confirmation baseline', () => {
     );
   });
 
-  it('keeps medium-risk side effects behind explicit confirmation and future re-checks for permission, boundary, tool contract, and idempotency', async () => {
+  it('executes medium-risk side effects only after confirmation re-checks pass', async () => {
+    const initialToolCallCount = state.toolCalls.length;
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
       .set(
@@ -86,16 +108,18 @@ describe('US3 medium-risk action draft confirmation baseline', () => {
         requestId: 'req-us3-action-draft-recheck',
         data: expect.objectContaining({
           actionDraftId: 'action-draft-waiting-001',
+          status: 'executed',
           recheck: expect.objectContaining({
             organizationBoundary: 'passed',
             draftStatus: 'passed',
             freshness: 'passed',
-            permission: 'pending_execution_guard',
-            toolContract: 'pending_execution_guard',
+            permission: 'passed',
+            toolContract: 'passed',
             idempotency: 'reserved'
           })
         })
       })
     );
+    expect(state.toolCalls.slice(initialToolCallCount)).toHaveLength(1);
   });
 });

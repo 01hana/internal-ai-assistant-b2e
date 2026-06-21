@@ -63,6 +63,7 @@ type ToolCallRecord = {
   requestId: string;
   sessionId: string;
   messageId: string | null;
+  toolDefinitionId: string | null;
   toolName: string;
   toolVersion: string;
   inputSummary: unknown;
@@ -70,6 +71,7 @@ type ToolCallRecord = {
   outputSummary: unknown;
   status: ToolCallStatus;
   executionStatus: ToolExecutionStatus;
+  idempotencyKey: string | null;
   durationMs: number | null;
   errorCode: string | null;
   createdAt: Date;
@@ -748,6 +750,7 @@ function createPrismaMock(state: MockState) {
           requestId: data.requestId ?? 'req-generated',
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
+          toolDefinitionId: (data.toolDefinitionId as string | null | undefined) ?? null,
           toolName: data.toolName ?? 'mock.general.lookup',
           toolVersion: data.toolVersion ?? '1.0.0',
           inputSummary: data.inputSummary ?? null,
@@ -755,6 +758,7 @@ function createPrismaMock(state: MockState) {
           outputSummary: data.outputSummary ?? null,
           status: (data.status as ToolCallStatus) ?? ToolCallStatus.pending,
           executionStatus: (data.executionStatus as ToolExecutionStatus) ?? ToolExecutionStatus.not_started,
+          idempotencyKey: (data.idempotencyKey as string | null | undefined) ?? null,
           durationMs: (data.durationMs as number | null | undefined) ?? null,
           errorCode: (data.errorCode as string | null | undefined) ?? null,
           createdAt: nextDate(),
@@ -776,6 +780,10 @@ function createPrismaMock(state: MockState) {
         state.toolCalls
           .filter((item) => item.sessionId === where.sessionId)
           .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
+      ),
+      findFirst: jest.fn(
+        async ({ where }: { where: { idempotencyKey?: string | null } }) =>
+          state.toolCalls.find((item) => where.idempotencyKey && item.idempotencyKey === where.idempotencyKey) ?? null
       )
     },
     evidenceRef: {
@@ -986,6 +994,7 @@ function createInitialState(): MockState {
         requestId: 'req-history-seed-001',
         sessionId: 'session-owned-001',
         messageId: 'message-owned-assistant-001',
+        toolDefinitionId: 'tool-definition-orders-001',
         toolName: 'mock.orders.status.lookup',
         toolVersion: '1.0.0',
         inputSummary: { entityId: 'SO-10001' },
@@ -993,6 +1002,7 @@ function createInitialState(): MockState {
         outputSummary: { status: '已確認', customerName: '王小明企業' },
         status: ToolCallStatus.success,
         executionStatus: ToolExecutionStatus.executed,
+        idempotencyKey: null,
         durationMs: 1,
         errorCode: null,
         createdAt: new Date('2026-06-16T00:00:03.000Z'),
@@ -1026,26 +1036,38 @@ function createInitialState(): MockState {
 }
 
 function createActionDrafts(baseDate: Date): ActionDraftRecord[] {
+  const toolContract = {
+    toolDefinitionId: 'tool-definition-orders-update-001',
+    toolName: 'mock.orders.status.update',
+    toolVersion: '1.0.0',
+    operation: ToolOperation.update,
+    riskLevel: RiskLevel.medium,
+    hasSideEffect: true,
+    requiresConfirmation: true,
+    requiresApproval: false
+  };
   const common = {
     requestId: 'req-us3-action-draft-fixture',
     sessionId: 'session-owned-001',
     messageId: 'message-owned-assistant-001',
     actorId: 'actor-001',
-    toolName: 'mock.orders.status.lookup',
+    toolName: 'mock.orders.status.update',
     resource: 'orders',
     operation: ToolOperation.update,
     riskLevel: RiskLevel.medium,
     payloadSummary: {
       resource: 'orders',
       entityType: 'order',
-      entityId: 'SO-10001'
+      entityId: 'SO-10001',
+      toolContract
     },
     preview: {
       action: 'confirmation_required',
       resource: 'orders',
       entityType: 'order',
       entityId: 'SO-10001',
-      operation: ToolOperation.update
+      operation: ToolOperation.update,
+      toolContract
     },
     createdAt: new Date(baseDate),
     confirmedAt: null,
@@ -1093,6 +1115,16 @@ function createActionDrafts(baseDate: Date): ActionDraftRecord[] {
 }
 
 function createApprovalRequests(baseDate: Date): ApprovalRequestRecord[] {
+  const toolContract = {
+    toolDefinitionId: 'tool-definition-orders-cancel-001',
+    toolName: 'mock.orders.cancel',
+    toolVersion: '1.0.0',
+    operation: ToolOperation.update,
+    riskLevel: RiskLevel.high,
+    hasSideEffect: true,
+    requiresConfirmation: false,
+    requiresApproval: true
+  };
   const common = {
     requestId: 'req-us3-approval-fixture',
     sessionId: 'session-owned-001',
@@ -1103,17 +1135,24 @@ function createApprovalRequests(baseDate: Date): ApprovalRequestRecord[] {
     status: ApprovalRequestStatus.pending,
     actionSummary: {
       action: 'approval_required',
-      toolName: 'mock.orders.status.lookup',
+      toolName: 'mock.orders.cancel',
+      toolDefinitionId: 'tool-definition-orders-cancel-001',
+      toolVersion: '1.0.0',
+      hasSideEffect: true,
+      requiresConfirmation: false,
+      requiresApproval: true,
       resource: 'orders',
       operation: ToolOperation.update,
       entityType: 'order',
-      entityId: 'SO-10001'
+      entityId: 'SO-10001',
+      toolContract
     },
     payloadSummary: {
       resource: 'orders',
       entityType: 'order',
       entityId: 'SO-10001',
-      riskLevel: RiskLevel.high
+      riskLevel: RiskLevel.high,
+      toolContract
     },
     evidenceRefIds: ['evidence-owned-001'],
     decisionReason: null,
@@ -1160,6 +1199,32 @@ function createToolDefinitions(baseDate: Date): ToolDefinitionRecord[] {
       baseDate
     }),
     createToolDefinition({
+      id: 'tool-definition-orders-update-001',
+      name: 'mock.orders.status.update',
+      description: 'Mock order status update side effect.',
+      resource: 'orders',
+      operation: ToolOperation.update,
+      requiredPermissions: ['orders:update'],
+      outputRequired: ['orderId', 'status'],
+      riskLevel: RiskLevel.medium,
+      hasSideEffect: true,
+      requiresConfirmation: true,
+      baseDate
+    }),
+    createToolDefinition({
+      id: 'tool-definition-orders-cancel-001',
+      name: 'mock.orders.cancel',
+      description: 'Mock order cancellation side effect.',
+      resource: 'orders',
+      operation: ToolOperation.update,
+      requiredPermissions: ['orders:approve'],
+      outputRequired: ['orderId', 'status'],
+      riskLevel: RiskLevel.high,
+      hasSideEffect: true,
+      requiresApproval: true,
+      baseDate
+    }),
+    createToolDefinition({
       id: 'tool-definition-work-orders-001',
       name: 'mock.work-orders.progress.lookup',
       description: 'Lookup mock work order progress.',
@@ -1194,8 +1259,13 @@ function createToolDefinition(input: {
   name: string;
   description: string;
   resource: string;
+  operation?: ToolOperation;
   requiredPermissions: string[];
   outputRequired: string[];
+  riskLevel?: RiskLevel;
+  hasSideEffect?: boolean;
+  requiresConfirmation?: boolean;
+  requiresApproval?: boolean;
   baseDate: Date;
 }): ToolDefinitionRecord {
   return {
@@ -1204,7 +1274,7 @@ function createToolDefinition(input: {
     version: '1.0.0',
     description: input.description,
     resource: input.resource,
-    operation: ToolOperation.read,
+    operation: input.operation ?? ToolOperation.read,
     inputSchema: {
       type: 'object',
       required: ['entityId'],
@@ -1217,10 +1287,10 @@ function createToolDefinition(input: {
       required: input.outputRequired
     },
     requiredPermissions: input.requiredPermissions,
-    riskLevel: RiskLevel.low,
-    hasSideEffect: false,
-    requiresConfirmation: false,
-    requiresApproval: false,
+    riskLevel: input.riskLevel ?? RiskLevel.low,
+    hasSideEffect: input.hasSideEffect ?? false,
+    requiresConfirmation: input.requiresConfirmation ?? false,
+    requiresApproval: input.requiresApproval ?? false,
     connectorKey: 'mock',
     timeoutMs: 3000,
     auditBehavior: {

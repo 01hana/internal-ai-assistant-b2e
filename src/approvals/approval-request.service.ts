@@ -13,6 +13,8 @@ import {
   CreateApprovalRequestInput,
   ListApprovalRequestsInput
 } from './approval-request.types';
+import { SideEffectExecutionGuardService } from './side-effect-execution-guard.service';
+import { SideEffectToolContractResolver, toPersistedSideEffectToolContract } from './side-effect-tool-contract.resolver';
 
 const APPROVABLE_STATUSES = new Set<ApprovalRequestStatus>([ApprovalRequestStatus.pending]);
 
@@ -20,26 +22,37 @@ const APPROVABLE_STATUSES = new Set<ApprovalRequestStatus>([ApprovalRequestStatu
 export class ApprovalRequestService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditWriter: AuditWriterService
+    private readonly auditWriter: AuditWriterService,
+    private readonly sideEffectGuard: SideEffectExecutionGuardService,
+    private readonly toolContractResolver: SideEffectToolContractResolver
   ) {}
 
   async createForHighRisk(input: CreateApprovalRequestInput): Promise<ApprovalRequestResponse> {
-    const preview = buildApprovalPreview(input);
+    const tool = await this.toolContractResolver.resolveForApprovalRequest(input);
+    const preview = buildApprovalPreview(input, tool);
+    const toolContract = toPersistedSideEffectToolContract(tool);
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
     const actionSummary = toJsonInput({
       action: 'approval_required',
       toolName: preview.toolName,
+      toolDefinitionId: tool.id,
+      toolVersion: tool.version,
+      hasSideEffect: tool.hasSideEffect,
+      requiresConfirmation: tool.requiresConfirmation,
+      requiresApproval: tool.requiresApproval,
       resource: preview.resource,
       operation: preview.operation,
       entityType: preview.entityType,
-      entityId: preview.entityId
+      entityId: preview.entityId,
+      toolContract
     });
     const payloadSummary = toJsonInput({
       resource: preview.resource,
       entityType: preview.entityType,
       entityId: preview.entityId,
-      riskLevel: input.executionPlan.riskAssessment,
-      visibleFieldCount: input.pageContext?.visibleColumns?.length ?? 0
+      riskLevel: tool.riskLevel,
+      visibleFieldCount: input.pageContext?.visibleColumns?.length ?? 0,
+      toolContract
     });
 
     const approvalRequest = await this.prisma.db.approvalRequest.create({
@@ -49,7 +62,7 @@ export class ApprovalRequestService {
         messageId: input.messageId,
         requesterActorId: input.identityContext.actor.actorId,
         approverActorId: null,
-        riskLevel: input.executionPlan.riskAssessment,
+        riskLevel: tool.riskLevel,
         status: ApprovalRequestStatus.pending,
         actionSummary,
         payloadSummary,
@@ -108,7 +121,59 @@ export class ApprovalRequestService {
   async approve(input: ApprovalRequestDecisionInput): Promise<ApprovalRequestResponse> {
     ensureActorCanApprove(input.identityContext);
     const approvalRequest = await this.loadVisibleRequest(input.approvalRequestId, input.identityContext);
+
+    if (approvalRequest.status === ApprovalRequestStatus.approved) {
+      if (input.idempotencyKey && approvalRequest.idempotencyKey === input.idempotencyKey) {
+        const duplicateResult = await this.sideEffectGuard.execute({
+          requestId: input.requestId,
+          sessionId: approvalRequest.sessionId,
+          messageId: approvalRequest.messageId,
+          identityContext: input.identityContext,
+          sourceType: 'approval_request',
+          sourceId: approvalRequest.id,
+          requesterActorId: approvalRequest.requesterActorId,
+          approverActorId: approvalRequest.approverActorId,
+          toolName: extractActionString(approvalRequest.actionSummary, 'toolName') ?? 'unknown',
+          resource: extractActionString(approvalRequest.actionSummary, 'resource') ?? 'unknown',
+          operation: requireActionToolOperation(approvalRequest.actionSummary),
+          riskLevel: approvalRequest.riskLevel,
+          expectedToolContract: extractToolContract(approvalRequest.actionSummary),
+          entityId: extractActionString(approvalRequest.actionSummary, 'entityId'),
+          idempotencyKey: input.idempotencyKey,
+          requiresConfirmation: false,
+          requiresApproval: true
+        });
+        return {
+          ...toApprovalRequestResponse(approvalRequest),
+          duplicateSafe: duplicateResult.duplicateSafe,
+          executionStatus: duplicateResult.executionStatus
+        };
+      }
+
+      throw new ConflictException(`Approval request cannot be approved from ${approvalRequest.status} status.`);
+    }
+
     ensurePendingAndFresh(approvalRequest, 'approved');
+
+    const execution = await this.sideEffectGuard.execute({
+      requestId: input.requestId,
+      sessionId: approvalRequest.sessionId,
+      messageId: approvalRequest.messageId,
+      identityContext: input.identityContext,
+      sourceType: 'approval_request',
+      sourceId: approvalRequest.id,
+      requesterActorId: approvalRequest.requesterActorId,
+      approverActorId: input.identityContext.actor.actorId,
+      toolName: extractActionString(approvalRequest.actionSummary, 'toolName') ?? 'unknown',
+      resource: extractActionString(approvalRequest.actionSummary, 'resource') ?? 'unknown',
+      operation: requireActionToolOperation(approvalRequest.actionSummary),
+      riskLevel: approvalRequest.riskLevel,
+      expectedToolContract: extractToolContract(approvalRequest.actionSummary),
+      entityId: extractActionString(approvalRequest.actionSummary, 'entityId'),
+      idempotencyKey: input.idempotencyKey,
+      requiresConfirmation: false,
+      requiresApproval: true
+    });
 
     const updated = await this.prisma.db.approvalRequest.update({
       where: { id: approvalRequest.id },
@@ -133,7 +198,10 @@ export class ApprovalRequestService {
       })
     });
 
-    return toApprovalRequestResponse(updated);
+    return {
+      ...toApprovalRequestResponse(updated),
+      executionStatus: execution.executionStatus
+    };
   }
 
   async reject(input: ApprovalRequestDecisionInput): Promise<ApprovalRequestResponse> {
@@ -245,12 +313,12 @@ export class ApprovalRequestService {
   }
 }
 
-function buildApprovalPreview(input: CreateApprovalRequestInput): ApprovalRequestPreview {
+function buildApprovalPreview(input: CreateApprovalRequestInput, tool: { key: string; operation: ToolOperation }): ApprovalRequestPreview {
   const entityRef = getPageEntityRef(input.pageContext);
   return {
-    toolName: firstToolName(input.executionPlan.candidateTools),
+    toolName: tool.key,
     resource: input.pageContext?.module ?? entityRef.entityType ?? 'unknown',
-    operation: ToolOperation.update,
+    operation: tool.operation,
     entityType: entityRef.entityType ?? null,
     entityId: entityRef.entityId ?? null
   };
@@ -400,17 +468,48 @@ function toApprovalRequestResponse(approvalRequest: {
   };
 }
 
-function firstToolName(candidateTools: Prisma.JsonValue): string {
-  if (!Array.isArray(candidateTools) || candidateTools.length === 0) {
-    return 'mock.orders.status.lookup';
+function extractActionString(actionSummary: Prisma.JsonValue, field: string): string | undefined {
+  if (!actionSummary || typeof actionSummary !== 'object' || Array.isArray(actionSummary)) {
+    return undefined;
   }
 
-  const tool = candidateTools[0];
-  if (tool && typeof tool === 'object' && 'key' in tool && typeof tool.key === 'string') {
-    return tool.key;
+  const value = actionSummary[field];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function extractToolContract(value: Prisma.JsonValue) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
   }
 
-  return 'mock.orders.status.lookup';
+  const contract = value.toolContract;
+  if (!contract || typeof contract !== 'object' || Array.isArray(contract)) {
+    return undefined;
+  }
+
+  return {
+    toolDefinitionId: typeof contract.toolDefinitionId === 'string' ? contract.toolDefinitionId : undefined,
+    toolName: typeof contract.toolName === 'string' ? contract.toolName : undefined,
+    toolVersion: typeof contract.toolVersion === 'string' ? contract.toolVersion : undefined,
+    operation: Object.values(ToolOperation).find((operation) => operation === contract.operation),
+    riskLevel: Object.values(RiskLevel).find((riskLevel) => riskLevel === contract.riskLevel),
+    hasSideEffect: typeof contract.hasSideEffect === 'boolean' ? contract.hasSideEffect : undefined,
+    requiresConfirmation: typeof contract.requiresConfirmation === 'boolean' ? contract.requiresConfirmation : undefined,
+    requiresApproval: typeof contract.requiresApproval === 'boolean' ? contract.requiresApproval : undefined
+  };
+}
+
+function toToolOperation(value: string | undefined): ToolOperation | undefined {
+  return Object.values(ToolOperation).find((operation) => operation === value);
+}
+
+function requireActionToolOperation(actionSummary: Prisma.JsonValue): ToolOperation {
+  const operation = toToolOperation(extractActionString(actionSummary, 'operation'));
+  if (!operation) {
+    throw new ForbiddenException('Approval request side-effect tool contract mismatch.');
+  }
+
+  return operation;
 }
 
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {

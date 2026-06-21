@@ -21,15 +21,24 @@ export class ToolRegistryService {
     return result.tool;
   }
 
+  async resolveRegisteredTool(toolKey: string): Promise<ToolRegistryResolveResult> {
+    const tool = await this.findLatestTool(toolKey);
+
+    if (!tool) {
+      return { deniedReason: 'tool_not_registered' };
+    }
+
+    if (!tool.isActive) {
+      return { deniedReason: 'tool_inactive' };
+    }
+
+    return {
+      tool: normalizeToolDefinition(tool)
+    };
+  }
+
   async resolveExecutableTool(toolKey: string): Promise<ToolRegistryResolveResult> {
-    const tool = await this.prisma.db.toolDefinition.findFirst({
-      where: {
-        name: toolKey
-      },
-      orderBy: {
-        updatedAt: 'desc'
-      }
-    });
+    const tool = await this.findLatestTool(toolKey);
 
     if (!tool) {
       return { deniedReason: 'tool_not_registered' };
@@ -48,6 +57,17 @@ export class ToolRegistryService {
     };
   }
 
+  private findLatestTool(toolKey: string) {
+    return this.prisma.db.toolDefinition.findFirst({
+      where: {
+        name: toolKey
+      },
+      orderBy: {
+        updatedAt: 'desc'
+      }
+    });
+  }
+
   validateInput(tool: RegisteredToolDefinition, input: Record<string, unknown>): ToolValidationResult {
     return validateRequiredStringFields(tool.inputSchema, input);
   }
@@ -59,6 +79,7 @@ export class ToolRegistryService {
 
 function normalizeToolDefinition(tool: ToolDefinition): RegisteredToolDefinition {
   return {
+    id: tool.id,
     key: tool.name,
     name: tool.name,
     version: tool.version,
@@ -69,7 +90,10 @@ function normalizeToolDefinition(tool: ToolDefinition): RegisteredToolDefinition
     connectorKey: tool.connectorKey,
     requiredPermissionScopes: [...tool.requiredPermissions],
     inputSchema: normalizeJsonSchema(tool.inputSchema),
-    outputSchema: normalizeJsonSchema(tool.outputSchema)
+    outputSchema: normalizeJsonSchema(tool.outputSchema),
+    hasSideEffect: tool.hasSideEffect,
+    requiresConfirmation: tool.requiresConfirmation,
+    requiresApproval: tool.requiresApproval
   };
 }
 

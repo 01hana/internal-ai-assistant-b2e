@@ -135,6 +135,62 @@ const MOCK_TOOL_DEFINITIONS = [
     isActive: true
   },
   {
+    name: 'mock.orders.status.update',
+    version: '1.0.0',
+    description: 'Mock order status update side effect for internal assistant development.',
+    resource: 'orders',
+    operation: ToolOperation.update,
+    inputSchema: baseInputSchema,
+    outputSchema: {
+      type: 'object',
+      required: ['orderId', 'status'],
+      properties: {
+        orderId: { type: 'string' },
+        status: { type: 'string' }
+      }
+    },
+    requiredPermissions: ['orders:update'],
+    riskLevel: RiskLevel.medium,
+    hasSideEffect: true,
+    requiresConfirmation: true,
+    requiresApproval: false,
+    connectorKey: 'mock',
+    timeoutMs: 3000,
+    auditBehavior: {
+      summarizeInput: true,
+      summarizeOutput: true
+    },
+    isActive: true
+  },
+  {
+    name: 'mock.orders.cancel',
+    version: '1.0.0',
+    description: 'Mock order cancellation side effect for internal assistant development.',
+    resource: 'orders',
+    operation: ToolOperation.update,
+    inputSchema: baseInputSchema,
+    outputSchema: {
+      type: 'object',
+      required: ['orderId', 'status'],
+      properties: {
+        orderId: { type: 'string' },
+        status: { type: 'string' }
+      }
+    },
+    requiredPermissions: ['orders:approve'],
+    riskLevel: RiskLevel.high,
+    hasSideEffect: true,
+    requiresConfirmation: false,
+    requiresApproval: true,
+    connectorKey: 'mock',
+    timeoutMs: 3000,
+    auditBehavior: {
+      summarizeInput: true,
+      summarizeOutput: true
+    },
+    isActive: true
+  },
+  {
     name: 'mock.work-orders.progress.lookup',
     version: '1.0.0',
     description: 'Lookup mock work order progress for internal assistant development.',

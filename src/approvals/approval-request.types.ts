@@ -50,6 +50,8 @@ export interface ApprovalRequestResponse {
   messageId: string | null;
   decisionReason?: string | null;
   decidedAt?: string | null;
+  duplicateSafe?: boolean;
+  executionStatus?: string;
 }
 
 export interface ApprovalRequestPreview {

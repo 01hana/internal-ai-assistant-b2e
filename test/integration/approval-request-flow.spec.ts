@@ -57,6 +57,30 @@ describe('US3 approval request baseline', () => {
         approvalRequestId: expect.any(String)
       })
     );
+    const createdApprovalRequest = state.approvalRequests.find(
+      (approvalRequest) => approvalRequest.id === finalEvent?.data?.data?.approvalRequestId
+    );
+    expect(createdApprovalRequest?.actionSummary).toEqual(
+      expect.objectContaining({
+        toolName: 'mock.orders.cancel',
+        toolDefinitionId: 'tool-definition-orders-cancel-001',
+        toolVersion: '1.0.0',
+        operation: 'update',
+        hasSideEffect: true,
+        requiresConfirmation: false,
+        requiresApproval: true,
+        toolContract: expect.objectContaining({
+          toolDefinitionId: 'tool-definition-orders-cancel-001',
+          toolName: 'mock.orders.cancel',
+          toolVersion: '1.0.0',
+          operation: 'update',
+          riskLevel: 'high',
+          hasSideEffect: true,
+          requiresConfirmation: false,
+          requiresApproval: true
+        })
+      })
+    );
     expect(newToolCalls).toHaveLength(0);
     expect(newAuditEvents).toEqual(
       expect.arrayContaining([
@@ -68,7 +92,7 @@ describe('US3 approval request baseline', () => {
             riskLevel: 'high',
             requesterActorId: 'actor-001',
             approverActorId: null,
-            toolName: 'mock.orders.status.lookup',
+            toolName: 'mock.orders.cancel',
             resource: 'orders',
             operation: 'update',
             expiresAt: expect.any(String)

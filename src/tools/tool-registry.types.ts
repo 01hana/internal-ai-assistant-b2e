@@ -10,7 +10,9 @@ export type ToolPermissionDeniedReason =
   | 'organization_boundary'
   | 'tool_not_registered'
   | 'tool_inactive'
-  | 'schema_invalid';
+  | 'schema_invalid'
+  | 'tool_contract_mismatch'
+  | 'idempotency_required';
 
 export interface ToolJsonSchema {
   required: string[];
@@ -18,6 +20,7 @@ export interface ToolJsonSchema {
 }
 
 export interface RegisteredToolDefinition {
+  id: string;
   key: string;
   name: string;
   version: string;
@@ -29,6 +32,9 @@ export interface RegisteredToolDefinition {
   requiredPermissionScopes: string[];
   inputSchema: ToolJsonSchema;
   outputSchema: ToolJsonSchema;
+  hasSideEffect: boolean;
+  requiresConfirmation: boolean;
+  requiresApproval: boolean;
 }
 
 export interface ToolRegistryResolveResult {

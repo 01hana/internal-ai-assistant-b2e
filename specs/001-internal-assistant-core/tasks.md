@@ -308,11 +308,11 @@
   - 說明：需要資料 owner、系統管理員、產品維運或其他內部人員介入時，建立 escalation 而不是讓 AI 猜測處理。
   - 輸出：EscalationRequest model adapter、creation hooks、audit event integration。
   - 完成條件：escalation_required decision 可保存；關聯 session/message/requestId/evidence；不觸發 side-effect。
-- [ ] T086 [US3] 在 `src/tools/` 實作 side-effect execution 前的 idempotency key checks
+- [x] T086 [US3] 在 `src/tools/` 實作 side-effect execution 前的 idempotency key checks
   - 說明：前端重送、SSE 中斷、approval callback 重送或 worker retry 都不得造成重複副作用。
   - 輸出：idempotency guard、ToolCall lookup、duplicate-safe response helper。
   - 完成條件：相同 idempotencyKey 的成功或進行中操作不重複執行；重複建立/更新/匯出/通知/跨系統寫入被阻擋。
-- [ ] T087 [US3] 在 `src/approvals/` 實作 confirm/approve 時的 permission、organization boundary、tool active/version compatibility re-checks
+- [x] T087 [US3] 在 `src/approvals/` 實作 confirm/approve 時的 permission、organization boundary、tool active/version compatibility re-checks
   - 說明：確認或核准不代表可以直接信任先前狀態；執行 side-effect 前必須重新檢查 actor identity、organization boundary、permission scope、risk policy、tool contract、tool version、draft/request status 與 idempotencyKey。
   - 輸出：approval/action-draft execution guard、permission re-check logic、tool compatibility check、idempotency integration。
   - 完成條件：confirm/approve 前不得執行 side-effect；權限變更後會阻擋執行；相同 idempotencyKey 不會重複執行；所有 blocked / executed / failed 狀態皆寫入 AuditEvent。
