@@ -204,6 +204,19 @@ function inferRequiredEvidence(taskType: string, entities: QueryUnderstandingEnt
 }
 
 function inferRiskLevel(text: string): RiskLevel {
+  const hasCriticalSignal =
+    text.includes('升級') || text.includes('重大') || text.includes('緊急') || text.includes('人工介入');
+  const hasSideEffectIntent =
+    text.includes('刪除') ||
+    text.includes('取消') ||
+    text.includes('核准') ||
+    text.includes('更新') ||
+    text.includes('修改');
+
+  if (hasCriticalSignal && hasSideEffectIntent) {
+    return RiskLevel.critical;
+  }
+
   if (text.includes('刪除') || text.includes('取消') || text.includes('核准')) {
     return RiskLevel.high;
   }

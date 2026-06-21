@@ -304,7 +304,7 @@
   - 說明：high/critical risk action 必須由具審核權限者核准，不可由 requester 自行繞過。
   - 輸出：ApprovalRequest controller/service、approve/reject/cancel handlers、decision reason DTO。
   - 完成條件：approve 前不執行 side-effect；核准者身份/權限可驗證；requester/approver/risk/action/evidence/requestId 可追溯。
-- [ ] T085 [US3] 在 `src/approvals/` 實作 `EscalationRequest` persistence 與 creation hooks
+- [x] T085 [US3] 在 `src/approvals/` 實作 `EscalationRequest` persistence 與 creation hooks
   - 說明：需要資料 owner、系統管理員、產品維運或其他內部人員介入時，建立 escalation 而不是讓 AI 猜測處理。
   - 輸出：EscalationRequest model adapter、creation hooks、audit event integration。
   - 完成條件：escalation_required decision 可保存；關聯 session/message/requestId/evidence；不觸發 side-effect。
@@ -320,7 +320,7 @@
   - 說明：當 medium/high/critical risk 被判定時，SSE 必須清楚告知前端需要確認或審核，而不是繼續產生一般答案。
   - 輸出：confirmation/approval SSE event DTO、actionDraftId/approvalRequestId payload mapping。
   - 完成條件：event 含 requestId/sessionId/messageId/eventType/sequence；confirmation_required 含 actionDraftId/preview/expiresAt；approval_required 含 approvalRequestId/riskLevel/action summary。
-- [ ] T089 [US3] 在 `src/audit/` 寫入 action draft created/confirmed/cancelled/executed/failed 與 approval created/approved/rejected/expired/cancelled audit events
+- [x] T089 [US3] 在 `src/audit/` 寫入 action draft created/confirmed/cancelled/executed/failed 與 approval created/approved/rejected/expired/cancelled audit events
   - 說明：side-effect 相關狀態轉換必須 append-only audit，供日後審計與事故追查。
   - 輸出：approval/action audit event writers、decision metadata、redaction policy。
   - 完成條件：每個狀態轉換有 AuditEvent；包含 requester/approver/risk/idempotencyKey/requestId；不保存敏感 payload 明文。

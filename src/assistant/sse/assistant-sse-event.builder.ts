@@ -4,12 +4,54 @@ import { SseEventEnvelope } from '../../common/sse/sse-event.types';
 import {
   AssistantApprovalRequiredBuildInput,
   AssistantConfirmationRequiredBuildInput,
+  AssistantEscalationRequiredBuildInput,
   AssistantSseBuildInput,
   AssistantSseEventRecord
 } from './assistant-sse.types';
 
 @Injectable()
 export class AssistantSseEventBuilder {
+  buildEscalationRequiredEvents(input: AssistantEscalationRequiredBuildInput): AssistantSseEventRecord[] {
+    const sequence = new SseSequence();
+
+    return [
+      this.wrap(
+        createSseEvent({
+          requestId: input.requestId,
+          sessionId: input.sessionId,
+          messageId: input.messageId,
+          eventType: 'escalation_required',
+          sequence: sequence.next(),
+          data: {
+            escalationRequestId: input.escalationRequestId,
+            requestId: input.requestId,
+            messageId: input.messageId,
+            riskLevel: input.riskLevel,
+            reasonCode: input.reasonCode,
+            reasonSummary: input.reasonSummary,
+            actionSummary: input.actionSummary,
+            expiresAt: input.expiresAt
+          }
+        })
+      ),
+      this.wrap(
+        createSseEvent({
+          requestId: input.requestId,
+          sessionId: input.sessionId,
+          messageId: input.messageId,
+          eventType: 'final',
+          sequence: sequence.next(),
+          data: {
+            answerDecision: 'escalation_required',
+            answer: input.answer,
+            evidenceRefs: [],
+            escalationRequestId: input.escalationRequestId
+          }
+        })
+      )
+    ];
+  }
+
   buildApprovalRequiredEvents(input: AssistantApprovalRequiredBuildInput): AssistantSseEventRecord[] {
     const sequence = new SseSequence();
 

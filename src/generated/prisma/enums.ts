@@ -163,7 +163,8 @@ export type EscalationReason = (typeof EscalationReason)[keyof typeof Escalation
 export const EscalationStatus = {
   open: 'open',
   resolved: 'resolved',
-  cancelled: 'cancelled'
+  cancelled: 'cancelled',
+  expired: 'expired'
 } as const
 
 export type EscalationStatus = (typeof EscalationStatus)[keyof typeof EscalationStatus]

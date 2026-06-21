@@ -123,6 +123,7 @@ enum EscalationStatus {
   open
   resolved
   cancelled
+  expired
 }
 
 enum EscalationOwnerType {

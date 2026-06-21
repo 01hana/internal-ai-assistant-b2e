@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AuditWriterService } from '../../audit/audit-writer.service';
 import { ActionDraftService } from '../../approvals/action-draft.service';
 import { ApprovalRequestService } from '../../approvals/approval-request.service';
+import { EscalationRequestService } from '../../approvals/escalation-request.service';
 import { EvidenceRefService } from '../../evidence/evidence-ref.service';
 import { Prisma } from '../../generated/prisma/client';
 import { AnswerDecisionStatus, RiskLevel } from '../../generated/prisma/enums';
@@ -28,6 +29,7 @@ export class AssistantMessageService {
     private readonly contextStateService: AssistantContextStateService,
     private readonly actionDraftService: ActionDraftService,
     private readonly approvalRequestService: ApprovalRequestService,
+    private readonly escalationRequestService: EscalationRequestService,
     private readonly auditWriter: AuditWriterService,
     private readonly sseEventBuilder: AssistantSseEventBuilder
   ) {}
@@ -126,8 +128,70 @@ export class AssistantMessageService {
     }
 
     if (
-      planningResult.executionPlan.riskAssessment === RiskLevel.high ||
       planningResult.executionPlan.riskAssessment === RiskLevel.critical
+    ) {
+      const escalationRequest = await this.escalationRequestService.createForCriticalRisk({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        identityContext: input.identityContext,
+        executionPlan: planningResult.executionPlan,
+        pageContext: input.pageContext
+      });
+      const summary = toEscalationSummaryObject(escalationRequest.summary);
+      const answerText = '這項重大風險操作需要升級由人工處理；升級完成前系統不會執行任何變更。';
+
+      await this.messageRepository.completeAssistantMessage({
+        messageId: assistantMessage.id,
+        content: answerText,
+        answerDecision: AnswerDecisionStatus.escalation_required
+      });
+
+      await this.contextStateService.markWaitingEscalation({
+        sessionId: session.id,
+        pageContext: input.pageContext,
+        planningResult,
+        toolCallIds: [],
+        evidenceRefIds: [],
+        pendingEscalationRequestId: escalationRequest.escalationRequestId
+      });
+
+      await this.auditWriter.append({
+        requestId: input.requestId,
+        organizationId: input.identityContext.company.organizationId,
+        hostApp: input.identityContext.hostApp.hostApp,
+        actorId: input.identityContext.actor.actorId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        eventType: 'answer_generated',
+        decision: AnswerDecisionStatus.escalation_required,
+        metadata: toJsonInput({
+          escalationRequestId: escalationRequest.escalationRequestId,
+          riskLevel: planningResult.executionPlan.riskAssessment,
+          reasonCode: summary.reasonCode,
+          actionSummary: summary.actionSummary,
+          pageContext: toPageContextAuditMetadata(input.pageContext)
+        })
+      });
+
+      return this.sseEventBuilder.buildEscalationRequiredEvents({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        escalationRequestId: escalationRequest.escalationRequestId,
+        riskLevel: escalationRequest.summary && typeof escalationRequest.summary === 'object' && !Array.isArray(escalationRequest.summary)
+          ? (summary.riskLevel as RiskLevel)
+          : planningResult.executionPlan.riskAssessment,
+        reasonCode: typeof summary.reasonCode === 'string' ? summary.reasonCode : 'policy_required',
+        reasonSummary: typeof summary.reasonSummary === 'string' ? summary.reasonSummary : 'Critical-risk action requires manual escalation.',
+        actionSummary: summary.actionSummary,
+        expiresAt: typeof summary.expiresAt === 'string' ? summary.expiresAt : null,
+        answer: answerText
+      });
+    }
+
+    if (
+      planningResult.executionPlan.riskAssessment === RiskLevel.high
     ) {
       const approvalRequest = await this.approvalRequestService.createForHighRisk({
         requestId: input.requestId,
@@ -338,4 +402,12 @@ export class AssistantMessageService {
 
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
+}
+
+function toEscalationSummaryObject(value: Prisma.JsonValue): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  return value as Record<string, unknown>;
 }

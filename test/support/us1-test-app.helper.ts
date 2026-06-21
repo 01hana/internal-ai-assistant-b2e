@@ -6,6 +6,9 @@ import {
   AssistantTaskState,
   ActionDraftStatus,
   ApprovalRequestStatus,
+  EscalationOwnerType,
+  EscalationReason,
+  EscalationStatus,
   EvidenceSourceType,
   ExecutionDecision,
   RiskLevel,
@@ -140,6 +143,19 @@ type ApprovalRequestRecord = {
   decidedAt: Date | null;
 };
 
+type EscalationRequestRecord = {
+  id: string;
+  requestId: string;
+  sessionId: string;
+  messageId: string | null;
+  reason: EscalationReason;
+  status: EscalationStatus;
+  ownerType: EscalationOwnerType;
+  summary: unknown;
+  createdAt: Date;
+  resolvedAt: Date | null;
+};
+
 type EvidenceRefRecord = {
   id: string;
   requestId: string | null;
@@ -240,6 +256,7 @@ type MockState = {
   toolDefinitions: ToolDefinitionRecord[];
   actionDrafts: ActionDraftRecord[];
   approvalRequests: ApprovalRequestRecord[];
+  escalationRequests: EscalationRequestRecord[];
   toolCalls: ToolCallRecord[];
   evidenceRefs: EvidenceRefRecord[];
   auditEvents: AuditEventRecord[];
@@ -743,6 +760,69 @@ function createPrismaMock(state: MockState) {
         return approvalRequest;
       })
     },
+    escalationRequest: {
+      create: jest.fn(async ({ data }: { data: Partial<EscalationRequestRecord> }) => {
+        const record: EscalationRequestRecord = {
+          id: `escalation-request-created-${state.escalationRequests.length + 1}`,
+          requestId: data.requestId ?? 'req-generated',
+          sessionId: data.sessionId ?? 'session-owned-001',
+          messageId: (data.messageId as string | null | undefined) ?? null,
+          reason: (data.reason as EscalationReason) ?? EscalationReason.policy_required,
+          status: (data.status as EscalationStatus) ?? EscalationStatus.open,
+          ownerType: (data.ownerType as EscalationOwnerType) ?? EscalationOwnerType.approver,
+          summary: data.summary ?? {},
+          createdAt: nextDate(),
+          resolvedAt: (data.resolvedAt as Date | null | undefined) ?? null
+        };
+        state.escalationRequests.push(record);
+        return record;
+      }),
+      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.escalationRequests.find((item) => item.id === where.id) ?? null),
+      findFirst: jest.fn(
+        async ({
+          where
+        }: {
+          where: {
+            id?: string;
+            sessionId?: string;
+            status?: EscalationStatus;
+          };
+        }) =>
+          state.escalationRequests.find(
+            (item) =>
+              (!where.id || item.id === where.id) &&
+              (!where.sessionId || item.sessionId === where.sessionId) &&
+              (!where.status || item.status === where.status)
+          ) ?? null
+      ),
+      findMany: jest.fn(
+        async ({
+          where,
+          orderBy
+        }: {
+          where?: {
+            status?: EscalationStatus;
+          };
+          orderBy?: { createdAt: 'asc' | 'desc' };
+        } = {}) =>
+          state.escalationRequests
+            .filter((item) => !where?.status || item.status === where.status)
+            .sort((left, right) =>
+              (orderBy?.createdAt ?? 'desc') === 'desc'
+                ? right.createdAt.getTime() - left.createdAt.getTime()
+                : left.createdAt.getTime() - right.createdAt.getTime()
+            )
+      ),
+      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<EscalationRequestRecord> }) => {
+        const escalationRequest = state.escalationRequests.find((item) => item.id === where.id);
+        if (!escalationRequest) {
+          throw new Error(`EscalationRequest ${where.id} not found.`);
+        }
+
+        Object.assign(escalationRequest, data);
+        return escalationRequest;
+      })
+    },
     toolCall: {
       create: jest.fn(async ({ data }: { data: Partial<ToolCallRecord> }) => {
         const record: ToolCallRecord = {
@@ -988,6 +1068,7 @@ function createInitialState(): MockState {
     toolDefinitions: createToolDefinitions(baseDate),
     actionDrafts: createActionDrafts(baseDate),
     approvalRequests: createApprovalRequests(baseDate),
+    escalationRequests: createEscalationRequests(baseDate),
     toolCalls: [
       {
         id: 'tool-call-owned-001',
@@ -1183,6 +1264,97 @@ function createApprovalRequests(baseDate: Date): ApprovalRequestRecord[] {
     {
       ...common,
       id: 'approval-request-pending-cancel-001'
+    }
+  ];
+}
+
+function createEscalationRequests(baseDate: Date): EscalationRequestRecord[] {
+  const common = {
+    requestId: 'req-us3-escalation-fixture',
+    sessionId: 'session-owned-001',
+    messageId: 'message-owned-assistant-001',
+    reason: EscalationReason.policy_required,
+    ownerType: EscalationOwnerType.approver,
+    summary: {
+      riskLevel: RiskLevel.critical,
+      reasonCode: EscalationReason.policy_required,
+      reasonSummary: 'Critical-risk action requires manual escalation before any system side effect.',
+      requesterActorId: 'actor-001',
+      assignedActorId: null,
+      status: EscalationStatus.open,
+      actionSummary: {
+        toolName: 'mock.orders.cancel',
+        resource: 'orders',
+        operation: ToolOperation.update,
+        entityType: 'order',
+        entityId: 'SO-10001'
+      },
+      contextSummary: {
+        module: 'orders',
+        entityType: 'order',
+        entityId: 'SO-10001',
+        visibleFieldCount: 2
+      },
+      expiresAt: '2026-12-31T00:00:00.000Z'
+    },
+    createdAt: new Date(baseDate),
+    resolvedAt: null
+  };
+
+  return [
+    {
+      ...common,
+      id: 'escalation-request-open-001',
+      status: EscalationStatus.open
+    },
+    {
+      ...common,
+      id: 'escalation-request-resolved-001',
+      status: EscalationStatus.resolved,
+      summary: {
+        ...common.summary,
+        status: EscalationStatus.resolved,
+        assignedActorId: 'approver-001',
+        reasonProvided: true
+      },
+      resolvedAt: new Date('2026-06-16T00:00:08.000Z')
+    },
+    {
+      ...common,
+      id: 'escalation-request-cancelled-001',
+      status: EscalationStatus.cancelled,
+      summary: {
+        ...common.summary,
+        status: EscalationStatus.cancelled,
+        reasonProvided: true
+      },
+      resolvedAt: new Date('2026-06-16T00:00:09.000Z')
+    },
+    {
+      ...common,
+      id: 'escalation-request-expired-001',
+      status: EscalationStatus.expired,
+      summary: {
+        ...common.summary,
+        status: EscalationStatus.expired,
+        expiresAt: '2026-01-01T00:00:00.000Z'
+      }
+    },
+    {
+      ...common,
+      id: 'escalation-request-hidden-actor-001',
+      sessionId: 'session-hidden-001',
+      status: EscalationStatus.open,
+      summary: {
+        ...common.summary,
+        requesterActorId: 'actor-002',
+        contextSummary: {
+          module: 'orders',
+          entityType: 'order',
+          entityId: 'SO-20002',
+          visibleFieldCount: 1
+        }
+      }
     }
   ];
 }

@@ -8,4 +8,5 @@ export interface UpdateAssistantContextStateInput {
   toolCallIds: string[];
   evidenceRefIds: string[];
   pendingApprovalRequestId?: string;
+  pendingEscalationRequestId?: string;
 }

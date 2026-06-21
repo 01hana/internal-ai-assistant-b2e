@@ -6,6 +6,7 @@ export type SseEventType =
   | 'evidence_attached'
   | 'approval_required'
   | 'confirmation_required'
+  | 'escalation_required'
   | 'answer_delta'
   | 'final'
   | 'error';

@@ -153,6 +153,47 @@ export class AssistantContextStateService {
 
     return this.loadLatest(input.sessionId);
   }
+
+  async markWaitingEscalation(input: UpdateAssistantContextStateInput) {
+    const entityRef = getPageEntityRef(input.pageContext);
+    const data = {
+      currentTask: input.planningResult.executionPlan.taskType,
+      currentModule: input.pageContext?.module,
+      currentPage: toPageContextPersistence(input.pageContext) ?? Prisma.JsonNull,
+      currentEntityType: entityRef.entityType,
+      currentEntityId: entityRef.entityId,
+      lastIntent: input.planningResult.queryUnderstanding.taskType,
+      lastEntities: toJsonInput(input.planningResult.queryUnderstanding.entityCandidates),
+      lastToolCallIds: input.toolCallIds,
+      lastEvidenceRefIds: input.evidenceRefIds,
+      pendingClarification: toJsonInput({
+        type: 'escalation_required',
+        escalationRequestId: input.pendingEscalationRequestId ?? null
+      }),
+      pendingApprovalRequestId: null,
+      taskState: AssistantTaskState.waiting_escalation
+    };
+
+    const updated = await this.prisma.db.assistantContextState.updateMany({
+      where: {
+        sessionId: input.sessionId
+      },
+      data
+    });
+
+    if (updated.count > 0) {
+      return this.loadLatest(input.sessionId);
+    }
+
+    await this.prisma.db.assistantContextState.create({
+      data: {
+        sessionId: input.sessionId,
+        ...data
+      }
+    });
+
+    return this.loadLatest(input.sessionId);
+  }
 }
 
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {
