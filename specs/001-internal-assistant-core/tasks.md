@@ -337,15 +337,15 @@
 
 ### User Story 4 測試任務
 
-- [ ] T090 [P] [US4] 在 `test/unit/chinese-tokenizer.spec.ts` 撰寫繁體中文斷句、斷詞、片語抽取 unit tests
+- [x] T090 [P] [US4] 在 `test/unit/chinese-tokenizer.spec.ts` 撰寫繁體中文斷句、斷詞、片語抽取 unit tests
   - 說明：驗證中文 query understanding 的基本解析能力，包含多句、多條件與業務片語。
   - 輸出：繁中斷句/斷詞/片語抽取測試資料。
   - 完成條件：常見 ERP/MES/WMS/SCM/CRM 詞句可被穩定切分；tokenizer 仍可替換，不綁死單一 package。
-- [ ] T091 [P] [US4] 在 `test/unit/query-normalization.spec.ts` 撰寫 domain term normalization 與 time range parsing unit tests
+- [x] T091 [P] [US4] 在 `test/unit/query-normalization.spec.ts` 撰寫 domain term normalization 與 time range parsing unit tests
   - 說明：驗證企業術語與時間語意 normalization，避免「工單/製令」「料號/品號」「上週/近三個月」解析不一致。
   - 輸出：normalization/time range parser unit specs。
   - 完成條件：同義詞映射與時間範圍可追溯；低信心或衝突會產生 clarificationNeeds。
-- [ ] T092 [P] [US4] 在 `test/unit/deixis-resolution.spec.ts` 撰寫缺少或具備足夠 `PageContext` 時的 deixis resolution unit tests
+- [x] T092 [P] [US4] 在 `test/unit/deixis-resolution.spec.ts` 撰寫缺少或具備足夠 `PageContext` 時的 deixis resolution unit tests
   - 說明：驗證「這筆」「這張」「目前」「剛剛選取」必須依 PageContext / AssistantContextState 解析，不足時不得猜測。
   - 輸出：deixis resolution unit specs、PageContext fixtures。
   - 完成條件：缺少 PageContext 時進入 clarification；多候選衝突時不直接選一筆。
@@ -362,27 +362,27 @@
 
 ### User Story 4 實作任務
 
-- [ ] T103 [US4] 在 `src/query-understanding/` 深化 `QueryUnderstandingPipeline` orchestration，沿用 Phase 2 input/output contract
+- [x] T103 [US4] 在 `src/query-understanding/` 深化 `QueryUnderstandingPipeline` orchestration，沿用 Phase 2 input/output contract
   - 說明：US4 深化既有 pipeline，不重新繞過 Phase 2 contract；結果必須可保存、debug、eval。
   - 輸出：pipeline orchestration、debug/eval metadata、result persistence integration。
   - 完成條件：query understanding 在 ExecutionPlan 前執行；output 包含 normalized terms、entity candidates、subTasks、confidence、clarificationNeeds。
-- [ ] T104 [US4] 在 `src/query-understanding/` 深化 `TokenizerAdapter` 預設 adapter placeholder，保持可替換，不綁定 jieba
+- [x] T104 [US4] 在 `src/query-understanding/` 深化 `TokenizerAdapter` 預設 adapter placeholder，保持可替換，不綁定 jieba
   - 說明：提供 MVP 可用 tokenizer placeholder，同時保留未來替換 jieba/CKIP/HanLP 的 adapter 邊界。
   - 輸出：default tokenizer adapter、adapter registration、測試 fake adapter。
   - 完成條件：沒有把產品能力綁死單一 package；adapter output 可被 phrase/entity/time/deixis 模組消費。
-- [ ] T105 [US4] 在 `src/query-understanding/` 實作 sentence splitting、phrase extraction、domain term normalization、time range parsing
+- [x] T105 [US4] 在 `src/query-understanding/` 實作 sentence splitting、phrase extraction、domain term normalization、time range parsing
   - 說明：將 raw message 轉成可規劃的語意結構，支援文件問題與 structured lookup 問題。
   - 輸出：sentence splitter、phrase extractor、domain lexicon normalizer、time range parser。
   - 完成條件：繁中 eval cases 通過；解析失敗或低信心會帶 clarificationNeeds；結果寫入 audit/debug metadata。
-- [ ] T106 [US4] 在 `src/query-understanding/` 實作使用 `PageContext` 與 `AssistantContextState` 的 deixis resolver
+- [x] T106 [US4] 在 `src/query-understanding/` 實作使用 `PageContext` 與 `AssistantContextState` 的 deixis resolver
   - 說明：解析指示詞時必須使用頁面狀態與上下文，不得自行猜測目前資料。
   - 輸出：deixis resolver、resolvedReferences DTO、conflict/insufficient-context handling。
   - 完成條件：PageContext 不足時 clarification；多 selectedRows 需明確候選；解析結果可被 ExecutionPlan 使用。
-- [ ] T107 [US4] 在 `src/query-understanding/` 實作 entity candidate extraction 與 multi-intent decomposition
+- [x] T107 [US4] 在 `src/query-understanding/` 實作 entity candidate extraction 與 multi-intent decomposition
   - 說明：抽取 orderId、workOrderId、itemNo、customerId、date range 等候選，並將複合問題拆成可執行子任務。
   - 輸出：entity extractor、query decomposer、subTask DTO。
   - 完成條件：多意圖不被塞成單一 tool call；衝突候選會要求澄清；結果可供 tool routing/eval。
-- [ ] T108 [US4] 在 `src/query-understanding/` 實作 confidence scoring 與 clarificationNeeds generation
+- [x] T108 [US4] 在 `src/query-understanding/` 實作 confidence scoring 與 clarificationNeeds generation
   - 說明：建立低信心與上下文不足時的安全閘門，避免因模糊問題產生假答案。
   - 輸出：confidence scorer、clarification need rules、threshold config。
   - 完成條件：low confidence、missing context、candidate conflict 會觸發 clarification；score/reason 可 audit/eval。

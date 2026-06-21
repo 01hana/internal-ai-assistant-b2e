@@ -1,7 +1,11 @@
 import { Prisma } from '../../generated/prisma/client';
 import { ExecutionDecision, RiskLevel } from '../../generated/prisma/enums';
 import { RequestIdentityContext } from '../../identity/identity-context.types';
-import { PersistedQueryUnderstandingResult, QueryUnderstandingOutput } from '../../query-understanding/query-understanding.types';
+import {
+  PersistedQueryUnderstandingResult,
+  QueryUnderstandingContextStateSnapshot,
+  QueryUnderstandingOutput
+} from '../../query-understanding/query-understanding.types';
 
 export interface AssistantPlanningInput {
   requestId: string;
@@ -10,6 +14,7 @@ export interface AssistantPlanningInput {
   text: string;
   identityContext: RequestIdentityContext;
   pageContext?: Prisma.InputJsonValue;
+  assistantContextState?: QueryUnderstandingContextStateSnapshot;
 }
 
 export interface AssistantPlanningResult {

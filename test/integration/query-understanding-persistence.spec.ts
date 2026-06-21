@@ -37,7 +37,15 @@ describe('query understanding persistence integration', () => {
         sentences: [{ index: 0, text: '查 SO-10001 訂單狀態' }],
         tokens: [],
         phrases: [],
-        normalizedTerms: ['so-10001'],
+        normalizedTerms: [
+          {
+            originalTerm: 'SO-10001',
+            normalizedTerm: 'SO-10001',
+            category: 'entity',
+            confidence: 0.98,
+            reason: 'identifier_pattern'
+          }
+        ],
         timeRanges: [],
         resolvedReferences: [],
         entityCandidates: [{ type: 'orderId', value: 'SO-10001', confidence: 0.95 }],

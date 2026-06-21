@@ -1,8 +1,8 @@
 import { RiskLevel } from '../../src/generated/prisma/enums';
-import { QueryUnderstandingPlaceholderService } from '../../src/query-understanding/query-understanding-placeholder.service';
+import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 
 describe('US2 tool risk classification and selection', () => {
-  const service = new QueryUnderstandingPlaceholderService();
+  const service = new RuleBasedQueryUnderstandingPipeline();
   const identityContext = {
     requestId: 'req-us2-tools',
     actor: {

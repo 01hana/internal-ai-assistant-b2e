@@ -56,13 +56,22 @@ export class AssistantMessageService {
       })
     });
 
+    const latestContextState = await this.contextStateService.loadLatest(session.id);
     const planningResult = await this.planningService.createPlan({
       requestId: input.requestId,
       sessionId: session.id,
       messageId: userMessage.id,
       text: input.message,
       identityContext: input.identityContext,
-      pageContext: toPageContextPersistence(input.pageContext)
+      pageContext: toPageContextPersistence(input.pageContext),
+      assistantContextState: latestContextState
+        ? {
+            currentModule: latestContextState.currentModule,
+            currentEntityType: latestContextState.currentEntityType,
+            currentEntityId: latestContextState.currentEntityId,
+            currentPage: latestContextState.currentPage
+          }
+        : undefined
     });
 
     const assistantMessage = await this.messageRepository.createPendingAssistantMessage({

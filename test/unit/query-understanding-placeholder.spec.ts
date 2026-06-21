@@ -1,8 +1,8 @@
 import { RiskLevel } from '../../src/generated/prisma/enums';
-import { QueryUnderstandingPlaceholderService } from '../../src/query-understanding/query-understanding-placeholder.service';
+import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 
-describe('QueryUnderstandingPlaceholderService', () => {
-  const service = new QueryUnderstandingPlaceholderService();
+describe('RuleBasedQueryUnderstandingPipeline', () => {
+  const service = new RuleBasedQueryUnderstandingPipeline();
   const identityContext = {
     requestId: 'req-qu-001',
     actor: {

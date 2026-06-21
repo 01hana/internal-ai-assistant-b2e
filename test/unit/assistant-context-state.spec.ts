@@ -1,8 +1,8 @@
 import { AssistantTaskState } from '../../src/generated/prisma/enums';
-import { QueryUnderstandingPlaceholderService } from '../../src/query-understanding/query-understanding-placeholder.service';
+import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 
 describe('assistant context state and page context parsing', () => {
-  const service = new QueryUnderstandingPlaceholderService();
+  const service = new RuleBasedQueryUnderstandingPipeline();
   const identityContext = {
     requestId: 'req-assistant-context',
     actor: {
@@ -84,7 +84,14 @@ describe('assistant context state and page context parsing', () => {
     });
 
     expect(result.resolvedReferences).toEqual(
-      expect.arrayContaining(['module', 'screenId', 'entityType', 'entityId', 'visibleColumns'])
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: 'page_context',
+          entityType: 'order',
+          entityId: 'SO-10001',
+          needsClarification: false
+        })
+      ])
     );
   });
 
@@ -101,7 +108,7 @@ describe('assistant context state and page context parsing', () => {
     expect(result.clarificationNeeds).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          reason: expect.stringMatching(/low_confidence|missing_order_identifier/)
+          reason: expect.stringMatching(/missing_page_context|low_confidence|missing_order_identifier/)
         })
       ])
     );
