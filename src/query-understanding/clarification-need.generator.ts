@@ -14,6 +14,7 @@ export function generateClarificationNeeds(input: {
   entityCandidates: QueryUnderstandingEntityCandidate[];
   resolvedReferences: QueryUnderstandingResolvedReference[];
   candidateTools: QueryUnderstandingToolCandidate[];
+  allowNoToolCandidate?: boolean;
 }): QueryUnderstandingClarificationNeed[] {
   const needs: QueryUnderstandingClarificationNeed[] = [...input.timeClarifications];
 
@@ -48,7 +49,12 @@ export function generateClarificationNeeds(input: {
     });
   }
 
-  if (input.text.includes('訂單') && !hasEntity(input.entityCandidates, 'orderId') && !DEIXIS_PATTERN.test(input.text)) {
+  if (
+    !input.allowNoToolCandidate &&
+    input.text.includes('訂單') &&
+    !hasEntity(input.entityCandidates, 'orderId') &&
+    !DEIXIS_PATTERN.test(input.text)
+  ) {
     needs.push({
       type: 'entity',
       reason: 'missing_order_identifier',
@@ -57,7 +63,12 @@ export function generateClarificationNeeds(input: {
     });
   }
 
-  if (input.candidateTools.length === 0 && input.text.length > 0 && !isPunctuationOnly(input.text)) {
+  if (
+    !input.allowNoToolCandidate &&
+    input.candidateTools.length === 0 &&
+    input.text.length > 0 &&
+    !isPunctuationOnly(input.text)
+  ) {
     needs.push({
       type: 'intent',
       reason: 'low_confidence_intent',

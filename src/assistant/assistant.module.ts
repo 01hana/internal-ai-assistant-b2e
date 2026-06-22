@@ -8,6 +8,7 @@ import { MockConnectorModule } from '../connectors/mock/mock-connector.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { QueryUnderstandingModule } from '../query-understanding/query-understanding.module';
+import { RetrievalModule } from '../retrieval/retrieval.module';
 import { ToolsModule } from '../tools/tools.module';
 import { AnswerDecisionService } from './answer/answer-decision.service';
 import { ClarificationQuestionService } from './answer/clarification-question.service';
@@ -32,6 +33,7 @@ import { AssistantSseEventBuilder } from './sse/assistant-sse-event.builder';
     AuditModule,
     ApprovalsModule,
     QueryUnderstandingModule,
+    RetrievalModule,
     IdentityModule,
     EvidenceModule,
     FeedbackModule,

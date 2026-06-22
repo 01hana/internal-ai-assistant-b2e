@@ -18,6 +18,23 @@ export interface StructuredEvidenceInput<TRecord extends Record<string, unknown>
   visibleFields: string[];
 }
 
+export interface DocumentChunkEvidenceInput {
+  requestId: string;
+  sessionId: string;
+  messageId: string;
+  identityContext: RequestIdentityContext;
+  retrievalRunId: string;
+  retrievalCandidateId: string;
+  documentId: string;
+  chunkId: string;
+  sourceKey: string;
+  documentTitle: string;
+  heading?: string | null;
+  snippet: string;
+  score: number;
+  rank: number;
+}
+
 export interface AttachedEvidence<TSummary extends Record<string, unknown> = Record<string, unknown>> {
   id: string;
   sourceType: EvidenceSourceType;
@@ -87,8 +104,71 @@ export class EvidenceRefService {
       summary: sanitizedSummary
     };
   }
+
+  async attachDocumentChunkEvidence(
+    input: DocumentChunkEvidenceInput
+  ): Promise<AttachedEvidence<Record<string, unknown>>> {
+    const snippet = toBoundedSnippet(input.snippet);
+    const summary = {
+      documentTitle: input.documentTitle,
+      sourceKey: input.sourceKey,
+      heading: input.heading ?? null,
+      snippet,
+      score: input.score,
+      rank: input.rank
+    };
+    const evidenceRef = await this.prisma.db.evidenceRef.create({
+      data: {
+        requestId: input.requestId,
+        messageId: input.messageId,
+        sourceType: EvidenceSourceType.document_chunk,
+        sourceId: input.chunkId,
+        documentId: input.documentId,
+        chunkId: input.chunkId,
+        fieldPaths: [],
+        permissionSnapshot: toJsonInput({
+          retrievalRunId: input.retrievalRunId,
+          retrievalCandidateId: input.retrievalCandidateId
+        }),
+        summary: toJsonInput(summary)
+      }
+    });
+
+    await this.auditWriter.append({
+      requestId: input.requestId,
+      organizationId: input.identityContext.company.organizationId,
+      hostApp: input.identityContext.hostApp.hostApp,
+      actorId: input.identityContext.actor.actorId,
+      sessionId: input.sessionId,
+      messageId: input.messageId,
+      eventType: 'evidence_attached',
+      evidenceRefIds: [evidenceRef.id],
+      metadata: toJsonInput({
+        evidenceRefId: evidenceRef.id,
+        sourceType: evidenceRef.sourceType,
+        documentId: input.documentId,
+        chunkId: input.chunkId,
+        sourceKey: input.sourceKey,
+        score: input.score,
+        rank: input.rank
+      })
+    });
+
+    return {
+      id: evidenceRef.id,
+      sourceType: evidenceRef.sourceType,
+      sourceId: evidenceRef.sourceId,
+      fieldPaths: evidenceRef.fieldPaths,
+      summary
+    };
+  }
 }
 
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
+}
+
+function toBoundedSnippet(value: string): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  return normalized.length > 220 ? `${normalized.slice(0, 220)}...` : normalized;
 }

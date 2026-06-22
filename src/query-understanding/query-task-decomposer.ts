@@ -22,6 +22,10 @@ export function inferCandidateTools(
     return [];
   }
 
+  if (isDocumentKnowledgeQuery(text)) {
+    return [];
+  }
+
   const tools: QueryUnderstandingToolCandidate[] = [];
   if (hasEntity(entities, 'orderId') || hasNormalized(normalizedTerms, 'order')) {
     tools.push({ key: 'mock.orders.status.lookup', reason: 'order status query' });
@@ -48,6 +52,13 @@ export function inferTaskType(text: string, candidateTools: QueryUnderstandingTo
     return 'multi_intent_lookup';
   }
 
+  if (isDocumentKnowledgeQuery(text)) {
+    if (text.includes('欄位')) return 'field_explanation_lookup';
+    if (text.includes('政策')) return 'policy_lookup';
+    if (text.includes('錯誤代碼')) return 'error_code_lookup';
+    return 'document_knowledge_lookup';
+  }
+
   const firstTool = candidateTools[0]?.key ?? '';
   if (firstTool.includes('orders')) return 'order_status_lookup';
   if (firstTool.includes('work-orders')) return 'work_order_progress_lookup';
@@ -70,6 +81,10 @@ export function inferRequiredEvidence(
 
   if (taskType === 'general_lookup') {
     evidence.push('manual_review');
+  }
+
+  if (isDocumentTaskType(taskType)) {
+    evidence.push('document_chunk');
   }
 
   return evidence;
@@ -120,6 +135,27 @@ export function decomposeSubTasks(
 
 export function isPunctuationOnly(text: string): boolean {
   return /^[\s,，。！？!?;；:：-]+$/.test(text);
+}
+
+export function isDocumentKnowledgeQuery(text: string): boolean {
+  return (
+    /\bSOP\b/i.test(text) ||
+    text.includes('作業規範') ||
+    text.includes('操作流程') ||
+    text.includes('流程') ||
+    text.includes('欄位說明') ||
+    text.includes('欄位') ||
+    text.includes('政策') ||
+    text.includes('規則') ||
+    text.includes('手冊') ||
+    text.includes('manual') ||
+    text.includes('field guide') ||
+    text.includes('錯誤代碼')
+  );
+}
+
+export function isDocumentTaskType(taskType: string): boolean {
+  return ['document_knowledge_lookup', 'field_explanation_lookup', 'policy_lookup', 'error_code_lookup'].includes(taskType);
 }
 
 function hasNormalized(terms: QueryUnderstandingNormalizedTerm[], normalizedTerm: string): boolean {

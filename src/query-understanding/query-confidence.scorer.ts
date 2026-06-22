@@ -12,6 +12,7 @@ export function scoreQueryUnderstandingConfidence(input: {
   candidateTools: QueryUnderstandingToolCandidate[];
   resolvedReferences: QueryUnderstandingResolvedReference[];
   clarificationNeeds: QueryUnderstandingClarificationNeed[];
+  hasDocumentEvidenceRequirement?: boolean;
 }): number {
   if (input.text.length === 0 || isPunctuationOnly(input.text)) {
     return 0;
@@ -19,6 +20,7 @@ export function scoreQueryUnderstandingConfidence(input: {
 
   let confidence = 0.25;
   if (input.candidateTools.length > 0) confidence += 0.2;
+  if (input.hasDocumentEvidenceRequirement) confidence += 0.35;
   if (input.entityCandidates.length > 0) confidence += 0.3;
   if (input.resolvedReferences.some((reference) => !reference.needsClarification)) confidence += 0.2;
   if (input.text.length > 12) confidence += 0.1;

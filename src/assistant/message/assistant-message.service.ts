@@ -3,10 +3,11 @@ import { AuditWriterService } from '../../audit/audit-writer.service';
 import { ActionDraftService } from '../../approvals/action-draft.service';
 import { ApprovalRequestService } from '../../approvals/approval-request.service';
 import { EscalationRequestService } from '../../approvals/escalation-request.service';
-import { EvidenceRefService } from '../../evidence/evidence-ref.service';
+import { AttachedEvidence, EvidenceRefService } from '../../evidence/evidence-ref.service';
 import { Prisma } from '../../generated/prisma/client';
-import { AnswerDecisionStatus, RiskLevel } from '../../generated/prisma/enums';
+import { AnswerDecisionStatus, NoAnswerReason, RiskLevel } from '../../generated/prisma/enums';
 import { ReviewItemService } from '../../feedback/review-item.service';
+import { RetrievalService } from '../../retrieval/retrieval.service';
 import { AnswerDecisionService } from '../answer/answer-decision.service';
 import { ClarificationQuestionService } from '../answer/clarification-question.service';
 import { EvidenceConflictDetectorService, NormalizedEvidenceFact } from '../answer/evidence-conflict-detector.service';
@@ -28,6 +29,7 @@ export class AssistantMessageService {
     private readonly messageRepository: AssistantMessageRepository,
     private readonly planningService: AssistantPlanningService,
     private readonly readonlyRuntimeService: AssistantReadonlyRuntimeService,
+    private readonly retrievalService: RetrievalService,
     private readonly evidenceRefService: EvidenceRefService,
     private readonly answerDecisionService: AnswerDecisionService,
     private readonly noAnswerGateService: NoAnswerGateService,
@@ -348,6 +350,186 @@ export class AssistantMessageService {
         actionSummary: approvalRequest.actionSummary,
         expiresAt: approvalRequest.expiresAt,
         answer: answerText
+      });
+    }
+
+    if (requiresDocumentChunkEvidence(planningResult.executionPlan.requiredEvidence)) {
+      const retrievalResult = await this.retrievalService.runDocumentRetrieval({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        identityContext: input.identityContext,
+        query: input.message,
+        normalizedQuery: planningResult.queryUnderstanding.tokens.map((token) => token.normalizedValue).join(' '),
+        limit: 2
+      });
+
+      if (retrievalResult.selectedCandidates.length === 0) {
+        const answerDecision = await this.answerDecisionService.recordSafeDecision({
+          requestId: input.requestId,
+          messageId: assistantMessage.id,
+          status: AnswerDecisionStatus.no_answer,
+          noAnswerReason: NoAnswerReason.no_evidence,
+          answer: {
+            text: '目前沒有找到足夠的文件 evidence 可以回答這個問題。',
+            delta: '目前沒有找到足夠的文件 evidence 可以回答'
+          },
+          metadata: toJsonInput({
+            retrievalRunId: retrievalResult.retrievalRunId,
+            provider: retrievalResult.provider,
+            candidateCount: retrievalResult.candidates.length,
+            noAnswerReason: NoAnswerReason.no_evidence
+          })
+        });
+
+        const reviewItem = await this.reviewItemService.createFromAssistantOutcome({
+          requestId: input.requestId,
+          sessionId: session.id,
+          messageId: assistantMessage.id,
+          identityContext: input.identityContext,
+          answerDecisionId: answerDecision.answerDecisionId,
+          answerDecision: answerDecision.status,
+          noAnswerReason: NoAnswerReason.no_evidence,
+          evidenceRefCount: 0
+        });
+
+        await this.messageRepository.completeAssistantMessage({
+          messageId: assistantMessage.id,
+          content: answerDecision.answer.text,
+          answerDecision: answerDecision.status
+        });
+
+        await this.contextStateService.updateAfterMessageFlow({
+          sessionId: session.id,
+          pageContext: input.pageContext,
+          planningResult,
+          toolCallIds: [],
+          evidenceRefIds: []
+        });
+
+        await this.auditWriter.append({
+          requestId: input.requestId,
+          organizationId: input.identityContext.company.organizationId,
+          hostApp: input.identityContext.hostApp.hostApp,
+          actorId: input.identityContext.actor.actorId,
+          sessionId: session.id,
+          messageId: assistantMessage.id,
+          eventType: 'answer_generated',
+          decision: answerDecision.status,
+          evidenceRefIds: [],
+          metadata: toJsonInput({
+            retrievalRunId: retrievalResult.retrievalRunId,
+            provider: retrievalResult.provider,
+            candidateCount: retrievalResult.candidates.length,
+            noAnswerReason: NoAnswerReason.no_evidence,
+            reviewItemId: reviewItem.id,
+            answerDecisionId: answerDecision.answerDecisionId,
+            groundingCheckId: answerDecision.groundingCheckId
+          })
+        });
+
+        return this.sseEventBuilder.buildAnswerOnlyEvents({
+          requestId: input.requestId,
+          sessionId: session.id,
+          messageId: assistantMessage.id,
+          answerDelta: answerDecision.answer.delta,
+          finalData: {
+            answerDecision: answerDecision.status,
+            answer: answerDecision.answer.text,
+            noAnswerReason: NoAnswerReason.no_evidence,
+            evidenceRefs: []
+          }
+        });
+      }
+
+      const documentEvidenceRefs: AttachedEvidence<Record<string, unknown>>[] = [];
+      for (const candidate of retrievalResult.selectedCandidates) {
+        const documentId = stringFromMetadata(candidate.metadata.documentId);
+        const sourceKey = stringFromMetadata(candidate.metadata.sourceKey) ?? candidate.sourceId;
+        if (!candidate.chunkId || !documentId) {
+          continue;
+        }
+
+        documentEvidenceRefs.push(
+          await this.evidenceRefService.attachDocumentChunkEvidence({
+            requestId: input.requestId,
+            sessionId: session.id,
+            messageId: assistantMessage.id,
+            identityContext: input.identityContext,
+            retrievalRunId: retrievalResult.retrievalRunId,
+            retrievalCandidateId: candidate.id,
+            documentId,
+            chunkId: candidate.chunkId,
+            sourceKey,
+            documentTitle: candidate.title ?? sourceKey,
+            heading: stringFromMetadata(candidate.metadata.heading),
+            snippet: candidate.content,
+            score: candidate.score,
+            rank: candidate.rank
+          })
+        );
+      }
+
+      await this.retrievalService.markSelectedEvidence({
+        retrievalRunId: retrievalResult.retrievalRunId,
+        evidenceRefIds: documentEvidenceRefs.map((evidence) => evidence.id)
+      });
+
+      const answerDecision = await this.answerDecisionService.decide({
+        requestId: input.requestId,
+        messageId: assistantMessage.id,
+        executionPlan: planningResult.executionPlan,
+        evidenceRefs: documentEvidenceRefs.map((evidence) => ({
+          id: evidence.id,
+          summary: evidence.summary
+        }))
+      });
+
+      await this.messageRepository.completeAssistantMessage({
+        messageId: assistantMessage.id,
+        content: answerDecision.answer.text,
+        answerDecision: answerDecision.status
+      });
+
+      await this.contextStateService.updateAfterMessageFlow({
+        sessionId: session.id,
+        pageContext: input.pageContext,
+        planningResult,
+        toolCallIds: [],
+        evidenceRefIds: documentEvidenceRefs.map((evidence) => evidence.id)
+      });
+
+      await this.auditWriter.append({
+        requestId: input.requestId,
+        organizationId: input.identityContext.company.organizationId,
+        hostApp: input.identityContext.hostApp.hostApp,
+        actorId: input.identityContext.actor.actorId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        eventType: 'answer_generated',
+        decision: answerDecision.status,
+        evidenceRefIds: documentEvidenceRefs.map((evidence) => evidence.id),
+        metadata: toJsonInput({
+          retrievalRunId: retrievalResult.retrievalRunId,
+          provider: retrievalResult.provider,
+          selectedChunkIds: retrievalResult.selectedCandidates.map((candidate) => candidate.chunkId),
+          selectedDocumentIds: retrievalResult.selectedCandidates.map((candidate) => stringFromMetadata(candidate.metadata.documentId)),
+          evidenceRefIds: documentEvidenceRefs.map((evidence) => evidence.id),
+          answerDecisionId: answerDecision.answerDecisionId,
+          groundingCheckId: answerDecision.groundingCheckId
+        })
+      });
+
+      return this.sseEventBuilder.buildAnswerOnlyEvents({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        answerDelta: answerDecision.answer.delta,
+        finalData: {
+          answerDecision: answerDecision.status,
+          answer: answerDecision.answer.text,
+          evidenceRefs: documentEvidenceRefs.map((evidence) => evidence.id)
+        }
       });
     }
 
@@ -790,4 +972,12 @@ function normalizeEvidenceValue(value: unknown): string {
   }
 
   return JSON.stringify(value);
+}
+
+function requiresDocumentChunkEvidence(requiredEvidence: Prisma.JsonValue): boolean {
+  return Array.isArray(requiredEvidence) && requiredEvidence.includes('document_chunk');
+}
+
+function stringFromMetadata(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
 }

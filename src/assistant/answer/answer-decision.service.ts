@@ -140,9 +140,7 @@ export class AnswerDecisionService {
       };
     }
 
-    const allowedClaims = input.evidenceRefs.flatMap((evidence) =>
-      Object.entries(evidence.summary).map(([field, value]) => `${field}:${String(value)}`)
-    );
+    const allowedClaims = input.evidenceRefs.flatMap((evidence) => toAllowedClaims(evidence.summary));
 
     return {
       answerType: 'grounded_text',
@@ -203,6 +201,9 @@ export class AnswerDecisionService {
         if (field === 'allocatedQuantity') {
           return `已配置數量為${value}`;
         }
+        if (field === 'documentSnippet') {
+          return value;
+        }
         return undefined;
       })
       .filter((value): value is string => Boolean(value));
@@ -213,6 +214,16 @@ export class AnswerDecisionService {
       text
     };
   }
+}
+
+function toAllowedClaims(summary: Record<string, unknown>): string[] {
+  if (typeof summary.snippet === 'string') {
+    const title = typeof summary.documentTitle === 'string' ? summary.documentTitle : '文件';
+    const heading = typeof summary.heading === 'string' && summary.heading.length > 0 ? `（${summary.heading}）` : '';
+    return [`documentSnippet:根據「${title}」${heading}，${summary.snippet}`];
+  }
+
+  return Object.entries(summary).map(([field, value]) => `${field}:${String(value)}`);
 }
 
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {

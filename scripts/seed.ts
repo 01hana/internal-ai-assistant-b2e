@@ -5,81 +5,122 @@ import { createPrismaClient } from '../src/prisma/prisma-client.factory';
 
 export async function seedCoreData(prisma: PrismaClient) {
   await seedToolDefinitions(prisma);
+  await seedKnowledgeDocuments(prisma);
+}
 
-  const existingDocument = await prisma.knowledgeDocument.findUnique({
-    where: {
-      sourceKey_version: {
-        sourceKey: 'internal-assistant-sop',
-        version: '1.0.0'
-      }
-    }
-  });
-
-  if (!existingDocument) {
-    await prisma.knowledgeDocument.create({
-      data: {
-        title: 'Internal Assistant SOP',
-        sourceType: 'sop',
-        sourceKey: 'internal-assistant-sop',
-        version: '1.0.0',
-        language: 'zh-TW',
-        status: 'active',
-        metadata: {
-          fixture: true
-        },
-        chunks: {
-          create: {
-            chunkIndex: 0,
-            heading: '權限與資料邊界',
-            content: '內部後台 AI 助理必須先檢查身份、組織邊界與權限，再查詢資料或呼叫工具。',
-            tokenCount: 32,
-            metadata: {
-              fixture: true
-            }
-          }
+async function seedKnowledgeDocuments(prisma: PrismaClient) {
+  for (const document of KNOWLEDGE_DOCUMENT_FIXTURES) {
+    const existingDocument = await prisma.knowledgeDocument.findUnique({
+      where: {
+        sourceKey_version: {
+          sourceKey: document.sourceKey,
+          version: document.version
         }
       }
     });
-    return;
+
+    const knowledgeDocument = existingDocument
+      ? await prisma.knowledgeDocument.update({
+          where: { id: existingDocument.id },
+          data: {
+            title: document.title,
+            sourceType: document.sourceType,
+            sourceKey: document.sourceKey,
+            version: document.version,
+            language: document.language,
+            status: document.status,
+            metadata: document.metadata
+          }
+        })
+      : await prisma.knowledgeDocument.create({
+          data: {
+            title: document.title,
+            sourceType: document.sourceType,
+            sourceKey: document.sourceKey,
+            version: document.version,
+            language: document.language,
+            status: document.status,
+            metadata: document.metadata
+          }
+        });
+
+    await prisma.knowledgeChunk.deleteMany({
+      where: {
+        documentId: knowledgeDocument.id
+      }
+    });
+
+    for (const chunk of document.chunks) {
+      await prisma.knowledgeChunk.create({
+        data: {
+          documentId: knowledgeDocument.id,
+          chunkIndex: chunk.chunkIndex,
+          heading: chunk.heading,
+          content: chunk.content,
+          tokenCount: chunk.tokenCount,
+          metadata: {
+            fixture: true,
+            sourceKey: document.sourceKey
+          }
+        }
+      });
+    }
   }
-
-  await prisma.knowledgeDocument.update({
-    where: {
-      id: existingDocument.id
-    },
-    data: {
-      title: 'Internal Assistant SOP',
-      sourceType: 'sop',
-      sourceKey: 'internal-assistant-sop',
-      version: '1.0.0',
-      language: 'zh-TW',
-      status: 'active',
-      metadata: {
-        fixture: true
-      }
-    }
-  });
-
-  await prisma.knowledgeChunk.deleteMany({
-    where: {
-      documentId: existingDocument.id,
-      chunkIndex: 0
-    }
-  });
-
-  await prisma.knowledgeChunk.create({
-    data: {
-      documentId: existingDocument.id,
-      chunkIndex: 0,
-      heading: '權限與資料邊界',
-      content: '內部後台 AI 助理必須先檢查身份、組織邊界與權限，再查詢資料或呼叫工具。',
-      tokenCount: 32,
-      metadata: {
-        fixture: true
-      }
-    }
-  });
 }
+
+const KNOWLEDGE_DOCUMENT_FIXTURES = [
+  {
+    title: 'Internal Assistant SOP',
+    sourceType: 'sop' as const,
+    sourceKey: 'internal-assistant-sop',
+    version: '1.0.0',
+    language: 'zh-TW',
+    status: 'active' as const,
+    metadata: { fixture: true },
+    chunks: [
+      {
+        chunkIndex: 0,
+        heading: '權限與資料邊界',
+        content: '內部後台 AI 助理必須先檢查身份、組織邊界與權限，再查詢資料或呼叫工具。',
+        tokenCount: 32
+      }
+    ]
+  },
+  {
+    title: '退貨處理 SOP',
+    sourceType: 'sop' as const,
+    sourceKey: 'sop-return-process',
+    version: '1.0.0',
+    language: 'zh-TW',
+    status: 'active' as const,
+    metadata: { fixture: true, domain: 'orders' },
+    chunks: [
+      {
+        chunkIndex: 0,
+        heading: '退貨流程',
+        content: '退貨流程須先確認訂單狀態與收貨紀錄，再依 SOP 建立退貨申請；未完成收貨前不得直接退款。',
+        tokenCount: 43
+      }
+    ]
+  },
+  {
+    title: '訂單狀態欄位說明',
+    sourceType: 'field_guide' as const,
+    sourceKey: 'field-order-status',
+    version: '1.0.0',
+    language: 'zh-TW',
+    status: 'active' as const,
+    metadata: { fixture: true, domain: 'orders' },
+    chunks: [
+      {
+        chunkIndex: 0,
+        heading: 'status 欄位',
+        content: 'status 欄位代表訂單目前處理階段，例如 draft、confirmed、shipped 或 cancelled；它不是庫存數量欄位。',
+        tokenCount: 49
+      }
+    ]
+  }
+];
 
 async function seedToolDefinitions(prisma: PrismaClient) {
   for (const tool of MOCK_TOOL_DEFINITIONS) {

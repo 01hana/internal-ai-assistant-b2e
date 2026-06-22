@@ -14,7 +14,7 @@ export interface RetrievalInput {
 
 export interface RetrievalCandidate {
   id: string;
-  sourceType: 'knowledge_chunk' | 'tool_result' | 'history' | 'page_context';
+  sourceType: 'document_chunk' | 'tool_result' | 'history' | 'page_context';
   sourceId: string;
   title?: string;
   content: string;

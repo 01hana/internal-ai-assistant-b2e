@@ -356,9 +356,9 @@
 - [ ] T097 [P] [US4] 在 `test/contract/feedback.contract.spec.ts` 撰寫 `POST /assistant/messages/:messageId/feedback` contract test，驗證 requestId、rating、reason、comment、messageId、response envelope、錯誤格式
 - [ ] T098 [P] [US4] 在 `test/contract/review-items.contract.spec.ts` 撰寫 `GET /assistant/review-items` contract test，驗證 list/filter/status、requestId、response envelope
 - [ ] T099 [P] [US4] 在 `test/integration/feedback-review-linkage.spec.ts` 撰寫負評建立 `FeedbackEvent` 並關聯 requestId、messageId、toolCallIds、evidenceRefIds、answerDecision、`AuditEvent` 的 integration test
-- [ ] T100 [P] [US4] 在 `test/integration/rag-sop-field-explanation.spec.ts` 撰寫 SOP / 欄位說明查詢使用 `KnowledgeDocument` / `KnowledgeChunk` retrieval 並回傳 `EvidenceRef` 的 integration test
-- [ ] T101 [P] [US4] 在 `test/unit/knowledge-chunking.spec.ts` 撰寫 `KnowledgeDocument` chunking placeholder unit test
-- [ ] T102 [P] [US4] 在 `test/integration/retrieval-run-candidates.spec.ts` 撰寫 `RetrievalRun` / `RetrievalCandidate` 或等價 `AuditEvent.metadata` 的 observability test
+- [X] T100 [P] [US4] 在 `test/integration/rag-sop-field-explanation.spec.ts` 撰寫 SOP / 欄位說明查詢使用 `KnowledgeDocument` / `KnowledgeChunk` retrieval 並回傳 `EvidenceRef` 的 integration test
+- [X] T101 [P] [US4] 在 `test/unit/knowledge-chunking.spec.ts` 撰寫 `KnowledgeDocument` chunking placeholder unit test
+- [X] T102 [P] [US4] 在 `test/integration/retrieval-run-candidates.spec.ts` 撰寫 `RetrievalRun` / `RetrievalCandidate` 或等價 `AuditEvent.metadata` 的 observability test
 
 ### User Story 4 實作任務
 
@@ -390,27 +390,27 @@
   - 說明：無 evidence、low confidence、tool failure、permission denied、evidence conflict 或 unsupported scope 時不得編造答案。
   - 輸出：no-answer gate、ClarificationQuestion persistence、AnswerDecision mapping。
   - 完成條件：no-answer/clarification integration tests 通過；NoAnswerReason 可追溯；必要時建立 ReviewItem。
-- [ ] T110 [US4] 在 `src/retrieval/` 實作 `RetrievalProvider` interface 與 MVP retrieval service shell
+- [X] T110 [US4] 在 `src/retrieval/` 實作 `RetrievalProvider` interface 與 MVP retrieval service shell
   - 說明：文件型知識走 RAG/document retrieval，live business data 仍走 structured lookup / connector。
   - 輸出：retrieval service shell、provider adapter、strategy enum。
   - 完成條件：RAG 與 connector 路徑清楚分離；無 retrieval result 時可產生 noAnswerReason；可記錄 RetrievalRun。
-- [ ] T111 [US4] 在 `src/retrieval/` 實作 `KnowledgeDocument` / `KnowledgeChunk` seed fixtures，至少支援 SOP、policy、field_guide 或 manual 類文件
+- [X] T111 [US4] 在 `src/retrieval/` 實作 `KnowledgeDocument` / `KnowledgeChunk` seed fixtures，至少支援 SOP、policy、field_guide 或 manual 類文件
   - 說明：MVP 不需正式 vector DB，但必須有文件知識可進入 retrieval 最小閉環。
   - 輸出：seed fixtures、document/chunk sample data、eval labels。
   - 完成條件：SOP/field explanation 測試可命中文件 chunk；fixtures 不包含 live business transaction data。
-- [ ] T112 [US4] 在 `src/retrieval/` 實作 MVP chunking placeholder，能從 seed document 產生 `KnowledgeChunk`
+- [X] T112 [US4] 在 `src/retrieval/` 實作 MVP chunking placeholder，能從 seed document 產生 `KnowledgeChunk`
   - 說明：沒有 ingestion/chunking/indexing，RAG 表只是空殼；MVP 至少要 deterministic chunking。
   - 輸出：chunking placeholder、chunk metadata、chunkIndex/tokenCount handling。
   - 完成條件：seed document 可產生 chunk；re-run 不產生不可控重複；chunk 可成為 EvidenceRef source。
-- [ ] T113 [US4] 在 `src/retrieval/` 實作 keyword、mock-vector 或 deterministic fixture retrieval，讓文件型問題可取得 chunk-level `EvidenceRef`
+- [X] T113 [US4] 在 `src/retrieval/` 實作 keyword、mock-vector 或 deterministic fixture retrieval，讓文件型問題可取得 chunk-level `EvidenceRef`
   - 說明：先用 keyword/mock-vector/deterministic retrieval 驗證 evidence pipeline，不要求正式向量資料庫。
   - 輸出：MVP retrieval implementation、ranking/selection reason、chunk-level evidence mapping。
   - 完成條件：SOP/欄位說明問題回傳 document_chunk EvidenceRef；no result 進 no-answer；不可用 RAG 回答 live business data。
-- [ ] T114 [US4] 在 `src/retrieval/` 實作 `RetrievalRun` / `RetrievalCandidate` persistence，或明確使用等價 `AuditEvent.metadata`
+- [X] T114 [US4] 在 `src/retrieval/` 實作 `RetrievalRun` / `RetrievalCandidate` persistence，或明確使用等價 `AuditEvent.metadata`
   - 說明：retrieval 可觀測性是 debug、eval、review item 的必要資料。
   - 輸出：RetrievalRun/Candidate persistence 或 audit metadata schema、selected/rejected candidate reasons。
   - 完成條件：query、normalizedQuery、filters、strategy、scores、rank、selectedEvidenceRefIds、noAnswerReason、durationMs 可追溯。
-- [ ] T115 [US4] 在 `src/evidence/` 串接 document_chunk `EvidenceRef` normalization
+- [X] T115 [US4] 在 `src/evidence/` 串接 document_chunk `EvidenceRef` normalization
   - 說明：RAG retrieval result 必須轉成標準 EvidenceRef，讓 AnswerPlan/GroundingCheck/audit 使用同一格式。
   - 輸出：document_chunk evidence normalizer、source metadata mapper。
   - 完成條件：EvidenceRef 可追溯 documentId/chunkId/sourceType/rank；未授權或 disabled chunk 不可附加。

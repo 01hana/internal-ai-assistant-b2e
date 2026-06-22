@@ -16,9 +16,12 @@ import {
   ReviewPriority,
   ReviewSourceType,
   RiskLevel,
+  KnowledgeDocumentStatus,
+  KnowledgeSourceType,
   ToolCallStatus,
   ToolExecutionStatus,
-  ToolOperation
+  ToolOperation,
+  RetrievalStrategy
 } from '../../src/generated/prisma/enums';
 import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.filter';
 import { RequestIdInterceptor } from '../../src/common/request-id/request-id.interceptor';
@@ -261,6 +264,60 @@ type ReviewItemRecord = {
   resolvedAt: Date | null;
 };
 
+type KnowledgeDocumentRecord = {
+  id: string;
+  title: string;
+  sourceType: KnowledgeSourceType;
+  sourceKey: string;
+  version: string;
+  language: string;
+  status: KnowledgeDocumentStatus;
+  metadata: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type KnowledgeChunkRecord = {
+  id: string;
+  documentId: string;
+  chunkIndex: number;
+  heading: string | null;
+  content: string;
+  tokenCount: number;
+  metadata: unknown;
+  embeddingRef: string | null;
+  vectorId: string | null;
+  enabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type RetrievalRunRecord = {
+  id: string;
+  requestId: string;
+  messageId: string | null;
+  query: string;
+  normalizedQuery: string | null;
+  filters: unknown;
+  strategy: RetrievalStrategy;
+  selectedEvidenceRefIds: string[];
+  noAnswerReason: string | null;
+  durationMs: number | null;
+  createdAt: Date;
+};
+
+type RetrievalCandidateRecord = {
+  id: string;
+  retrievalRunId: string;
+  chunkId: string | null;
+  sourceId: string;
+  sourceType: EvidenceSourceType;
+  score: number;
+  rank: number;
+  selected: boolean;
+  reason: string | null;
+};
+
 type ExecutionPlanRecord = {
   id: string;
   sessionId: string;
@@ -294,6 +351,10 @@ type MockState = {
   answerDecisions: AnswerDecisionRecord[];
   clarificationQuestions: ClarificationQuestionRecord[];
   reviewItems: ReviewItemRecord[];
+  knowledgeDocuments: KnowledgeDocumentRecord[];
+  knowledgeChunks: KnowledgeChunkRecord[];
+  retrievalRuns: RetrievalRunRecord[];
+  retrievalCandidates: RetrievalCandidateRecord[];
 };
 
 export type Us1TestState = MockState;
@@ -1049,6 +1110,157 @@ function createPrismaMock(state: MockState) {
               (!where?.sourceId || item.sourceId === where.sourceId)
           ) ?? null
       )
+    },
+    knowledgeDocument: {
+      findMany: jest.fn(
+        async ({ where }: { where?: { status?: KnowledgeDocumentStatus; sourceType?: KnowledgeSourceType } } = {}) =>
+          state.knowledgeDocuments.filter(
+            (item) =>
+              (!where?.status || item.status === where.status) &&
+              (!where?.sourceType || item.sourceType === where.sourceType)
+          )
+      ),
+      create: jest.fn(async ({ data }: { data: Partial<KnowledgeDocumentRecord> }) => {
+        const record: KnowledgeDocumentRecord = {
+          id: data.id ?? `knowledge-document-${state.knowledgeDocuments.length + 1}`,
+          title: data.title ?? 'Knowledge document',
+          sourceType: (data.sourceType as KnowledgeSourceType | undefined) ?? KnowledgeSourceType.sop,
+          sourceKey: data.sourceKey ?? `knowledge-source-${state.knowledgeDocuments.length + 1}`,
+          version: data.version ?? '1.0.0',
+          language: data.language ?? 'zh-TW',
+          status: (data.status as KnowledgeDocumentStatus | undefined) ?? KnowledgeDocumentStatus.active,
+          metadata: data.metadata ?? null,
+          createdAt: nextDate(),
+          updatedAt: nextDate()
+        };
+        state.knowledgeDocuments.push(record);
+        return record;
+      })
+    },
+    knowledgeChunk: {
+      findMany: jest.fn(
+        async ({
+          where,
+          include,
+          orderBy
+        }: {
+          where?: {
+            enabled?: boolean;
+            document?: { status?: KnowledgeDocumentStatus };
+          };
+          include?: { document?: boolean };
+          orderBy?: Array<{ documentId?: 'asc' | 'desc'; chunkIndex?: 'asc' | 'desc' }>;
+        } = {}) => {
+          const chunks = state.knowledgeChunks
+            .filter((item) => where?.enabled === undefined || item.enabled === where.enabled)
+            .filter((item) => {
+              if (!where?.document?.status) {
+                return true;
+              }
+              const document = state.knowledgeDocuments.find((doc) => doc.id === item.documentId);
+              return document?.status === where.document.status;
+            })
+            .sort((left, right) => {
+              for (const order of orderBy ?? []) {
+                if (order.documentId) {
+                  const comparison = left.documentId.localeCompare(right.documentId);
+                  if (comparison !== 0) return order.documentId === 'asc' ? comparison : -comparison;
+                }
+                if (order.chunkIndex) {
+                  const comparison = left.chunkIndex - right.chunkIndex;
+                  if (comparison !== 0) return order.chunkIndex === 'asc' ? comparison : -comparison;
+                }
+              }
+              return left.chunkIndex - right.chunkIndex;
+            });
+
+          if (!include?.document) {
+            return chunks;
+          }
+
+          return chunks.map((chunk) => ({
+            ...chunk,
+            document: state.knowledgeDocuments.find((document) => document.id === chunk.documentId) ?? null
+          }));
+        }
+      ),
+      create: jest.fn(async ({ data }: { data: Partial<KnowledgeChunkRecord> }) => {
+        const record: KnowledgeChunkRecord = {
+          id: data.id ?? `knowledge-chunk-${state.knowledgeChunks.length + 1}`,
+          documentId: data.documentId ?? 'knowledge-document-sop-return-001',
+          chunkIndex: data.chunkIndex ?? state.knowledgeChunks.length,
+          heading: (data.heading as string | null | undefined) ?? null,
+          content: data.content ?? '',
+          tokenCount: data.tokenCount ?? 0,
+          metadata: data.metadata ?? null,
+          embeddingRef: (data.embeddingRef as string | null | undefined) ?? null,
+          vectorId: (data.vectorId as string | null | undefined) ?? null,
+          enabled: data.enabled ?? true,
+          createdAt: nextDate(),
+          updatedAt: nextDate()
+        };
+        state.knowledgeChunks.push(record);
+        return record;
+      })
+    },
+    retrievalRun: {
+      create: jest.fn(async ({ data }: { data: Partial<RetrievalRunRecord> }) => {
+        const record: RetrievalRunRecord = {
+          id: `retrieval-run-${state.retrievalRuns.length + 1}`,
+          requestId: data.requestId ?? 'req-generated',
+          messageId: (data.messageId as string | null | undefined) ?? null,
+          query: data.query ?? '',
+          normalizedQuery: (data.normalizedQuery as string | null | undefined) ?? null,
+          filters: data.filters ?? null,
+          strategy: (data.strategy as RetrievalStrategy | undefined) ?? RetrievalStrategy.keyword,
+          selectedEvidenceRefIds: (data.selectedEvidenceRefIds as string[] | undefined) ?? [],
+          noAnswerReason: (data.noAnswerReason as string | null | undefined) ?? null,
+          durationMs: (data.durationMs as number | null | undefined) ?? null,
+          createdAt: nextDate()
+        };
+        state.retrievalRuns.push(record);
+        return record;
+      }),
+      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<RetrievalRunRecord> }) => {
+        const retrievalRun = state.retrievalRuns.find((item) => item.id === where.id);
+        if (!retrievalRun) {
+          throw new Error(`RetrievalRun ${where.id} not found.`);
+        }
+
+        Object.assign(retrievalRun, data);
+        return retrievalRun;
+      }),
+      findMany: jest.fn(async ({ where }: { where?: { requestId?: string; messageId?: string } } = {}) =>
+        state.retrievalRuns.filter(
+          (item) =>
+            (!where?.requestId || item.requestId === where.requestId) &&
+            (!where?.messageId || item.messageId === where.messageId)
+        )
+      )
+    },
+    retrievalCandidate: {
+      create: jest.fn(async ({ data }: { data: Partial<RetrievalCandidateRecord> }) => {
+        const record: RetrievalCandidateRecord = {
+          id: `retrieval-candidate-${state.retrievalCandidates.length + 1}`,
+          retrievalRunId: data.retrievalRunId ?? 'retrieval-run-1',
+          chunkId: (data.chunkId as string | null | undefined) ?? null,
+          sourceId: data.sourceId ?? 'source-001',
+          sourceType: (data.sourceType as EvidenceSourceType | undefined) ?? EvidenceSourceType.document_chunk,
+          score: data.score ?? 0,
+          rank: data.rank ?? state.retrievalCandidates.length + 1,
+          selected: data.selected ?? false,
+          reason: (data.reason as string | null | undefined) ?? null
+        };
+        state.retrievalCandidates.push(record);
+        return record;
+      }),
+      findMany: jest.fn(async ({ where }: { where?: { retrievalRunId?: string; selected?: boolean } } = {}) =>
+        state.retrievalCandidates.filter(
+          (item) =>
+            (!where?.retrievalRunId || item.retrievalRunId === where.retrievalRunId) &&
+            (where?.selected === undefined || item.selected === where.selected)
+        )
+      )
     }
   };
 }
@@ -1213,8 +1425,108 @@ function createInitialState(): MockState {
     groundingChecks: [],
     answerDecisions: [],
     clarificationQuestions: [],
-    reviewItems: []
+    reviewItems: [],
+    knowledgeDocuments: createKnowledgeDocuments(baseDate),
+    knowledgeChunks: createKnowledgeChunks(baseDate),
+    retrievalRuns: [],
+    retrievalCandidates: []
   };
+}
+
+function createKnowledgeDocuments(baseDate: Date): KnowledgeDocumentRecord[] {
+  return [
+    {
+      id: 'knowledge-document-sop-return-001',
+      title: '退貨處理 SOP',
+      sourceType: KnowledgeSourceType.sop,
+      sourceKey: 'sop-return-process',
+      version: '1.0.0',
+      language: 'zh-TW',
+      status: KnowledgeDocumentStatus.active,
+      metadata: {
+        domain: 'orders'
+      },
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-document-field-order-status-001',
+      title: '訂單狀態欄位說明',
+      sourceType: KnowledgeSourceType.field_guide,
+      sourceKey: 'field-order-status',
+      version: '1.0.0',
+      language: 'zh-TW',
+      status: KnowledgeDocumentStatus.active,
+      metadata: {
+        domain: 'orders'
+      },
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-document-archived-001',
+      title: '封存文件',
+      sourceType: KnowledgeSourceType.manual,
+      sourceKey: 'archived-manual',
+      version: '1.0.0',
+      language: 'zh-TW',
+      status: KnowledgeDocumentStatus.archived,
+      metadata: null,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    }
+  ];
+}
+
+function createKnowledgeChunks(baseDate: Date): KnowledgeChunkRecord[] {
+  return [
+    {
+      id: 'knowledge-chunk-sop-return-001',
+      documentId: 'knowledge-document-sop-return-001',
+      chunkIndex: 0,
+      heading: '退貨流程',
+      content: '退貨流程須先確認訂單狀態與收貨紀錄，再依 SOP 建立退貨申請；未完成收貨前不得直接退款。',
+      tokenCount: 43,
+      metadata: {
+        sourceKey: 'sop-return-process'
+      },
+      embeddingRef: null,
+      vectorId: null,
+      enabled: true,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-chunk-field-order-status-001',
+      documentId: 'knowledge-document-field-order-status-001',
+      chunkIndex: 0,
+      heading: 'status 欄位',
+      content: 'status 欄位代表訂單目前處理階段，例如 draft、confirmed、shipped 或 cancelled；它不是庫存數量欄位。',
+      tokenCount: 49,
+      metadata: {
+        sourceKey: 'field-order-status'
+      },
+      embeddingRef: null,
+      vectorId: null,
+      enabled: true,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-chunk-archived-001',
+      documentId: 'knowledge-document-archived-001',
+      chunkIndex: 0,
+      heading: '封存',
+      content: '這段封存內容不應被 retrieval 使用。',
+      tokenCount: 15,
+      metadata: null,
+      embeddingRef: null,
+      vectorId: null,
+      enabled: true,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    }
+  ];
 }
 
 function createActionDrafts(baseDate: Date): ActionDraftRecord[] {

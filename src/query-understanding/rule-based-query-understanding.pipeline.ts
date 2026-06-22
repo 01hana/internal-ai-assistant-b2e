@@ -12,6 +12,7 @@ import {
   inferCandidateTools,
   inferRequiredEvidence,
   inferRiskLevel,
+  isDocumentTaskType,
   inferTaskType
 } from './query-task-decomposer';
 import { resolveDeixisReferences } from './deixis-resolver';
@@ -59,14 +60,16 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
       timeClarifications: timeRangeResult.clarificationNeeds,
       entityCandidates,
       resolvedReferences,
-      candidateTools
+      candidateTools,
+      allowNoToolCandidate: isDocumentTaskType(taskType)
     });
     const confidence = scoreQueryUnderstandingConfidence({
       text: normalizedText,
       entityCandidates,
       candidateTools,
       resolvedReferences,
-      clarificationNeeds
+      clarificationNeeds,
+      hasDocumentEvidenceRequirement: requiredEvidence.includes('document_chunk')
     });
 
     return {
