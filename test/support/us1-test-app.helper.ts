@@ -2032,5 +2032,5 @@ let mockTick = 0;
 
 function nextDate() {
   mockTick += 1;
-  return new Date(`2026-06-16T00:00:${String(10 + mockTick).padStart(2, '0')}.000Z`);
+  return new Date(Date.UTC(2026, 5, 16, 0, 0, 10 + mockTick));
 }

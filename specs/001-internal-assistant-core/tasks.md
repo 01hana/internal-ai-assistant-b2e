@@ -352,7 +352,7 @@
 - [X] T093 [P] [US4] 在 `test/integration/clarification-required.spec.ts` 撰寫 ambiguous query clarification integration test
 - [X] T094 [P] [US4] 在 `test/integration/no-answer-review-item.spec.ts` 撰寫 no evidence/no-answer 與 ReviewItem creation integration test
 - [X] T095 [P] [US4] 在 `test/integration/tool-failure-safe-response.spec.ts` 撰寫 tool failure safe response integration test
-- [ ] T096 [P] [US4] 在 `test/eval/internal-assistant-core.eval.spec.ts` 撰寫 tool routing accuracy、no-answer precision、entity extraction、evidence coverage eval tests
+- [X] T096 [P] [US4] 在 `test/eval/internal-assistant-core.eval.spec.ts` 撰寫 tool routing accuracy、no-answer precision、entity extraction、evidence coverage eval tests
 - [X] T097 [P] [US4] 在 `test/contract/feedback.contract.spec.ts` 撰寫 `POST /assistant/messages/:messageId/feedback` contract test，驗證 requestId、rating、reason、comment、messageId、response envelope、錯誤格式
 - [X] T098 [P] [US4] 在 `test/contract/review-items.contract.spec.ts` 撰寫 `GET /assistant/review-items` contract test，驗證 list/filter/status、requestId、response envelope
 - [X] T099 [P] [US4] 在 `test/integration/feedback-review-linkage.spec.ts` 撰寫負評建立 `FeedbackEvent` 並關聯 requestId、messageId、toolCallIds、evidenceRefIds、answerDecision、`AuditEvent` 的 integration test
