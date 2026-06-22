@@ -2,7 +2,7 @@ export interface MockOrderStatus {
   orderId: string;
   organizationId: string;
   customerCode: string;
-  status: 'confirmed' | 'picking' | 'shipped' | 'delayed';
+  status: 'confirmed' | 'picking' | 'shipped' | 'delayed' | 'cancelled' | Array<'confirmed' | 'cancelled'>;
   requestedShipDate: string;
   committedShipDate: string;
   lineCount: number;
@@ -28,5 +28,14 @@ export const mockOrderStatuses: MockOrderStatus[] = [
     committedShipDate: '2026-06-20',
     lineCount: 2,
     holdReason: 'Awaiting replenishment for demo item SKU-DEMO-RED'
+  },
+  {
+    orderId: 'SO-10003',
+    organizationId: 'org-demo',
+    customerCode: 'CUST-DEMO-03',
+    status: ['confirmed', 'cancelled'],
+    requestedShipDate: '2026-06-19',
+    committedShipDate: '2026-06-19',
+    lineCount: 1
   }
 ];

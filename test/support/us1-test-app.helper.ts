@@ -11,6 +11,10 @@ import {
   EscalationStatus,
   EvidenceSourceType,
   ExecutionDecision,
+  ClarificationQuestionStatus,
+  ReviewItemStatus,
+  ReviewPriority,
+  ReviewSourceType,
   RiskLevel,
   ToolCallStatus,
   ToolExecutionStatus,
@@ -233,6 +237,30 @@ type AnswerDecisionRecord = {
   createdAt: Date;
 };
 
+type ClarificationQuestionRecord = {
+  id: string;
+  requestId: string;
+  messageId: string;
+  question: string;
+  reason: string | null;
+  status: ClarificationQuestionStatus;
+  metadata: unknown;
+  createdAt: Date;
+  answeredAt: Date | null;
+};
+
+type ReviewItemRecord = {
+  id: string;
+  sourceType: ReviewSourceType;
+  sourceId: string;
+  status: ReviewItemStatus;
+  priority: ReviewPriority;
+  summary: string;
+  suggestedImprovement: unknown;
+  createdAt: Date;
+  resolvedAt: Date | null;
+};
+
 type ExecutionPlanRecord = {
   id: string;
   sessionId: string;
@@ -264,6 +292,8 @@ type MockState = {
   executionPlans: ExecutionPlanRecord[];
   groundingChecks: GroundingCheckRecord[];
   answerDecisions: AnswerDecisionRecord[];
+  clarificationQuestions: ClarificationQuestionRecord[];
+  reviewItems: ReviewItemRecord[];
 };
 
 export type Us1TestState = MockState;
@@ -950,6 +980,75 @@ function createPrismaMock(state: MockState) {
         state.answerDecisions.push(record);
         return record;
       })
+    },
+    clarificationQuestion: {
+      create: jest.fn(async ({ data }: { data: Partial<ClarificationQuestionRecord> }) => {
+        const record: ClarificationQuestionRecord = {
+          id: `clarification-question-${state.clarificationQuestions.length + 1}`,
+          requestId: data.requestId ?? 'req-generated',
+          messageId: data.messageId ?? 'message-generated',
+          question: data.question ?? '請補充查詢目標。',
+          reason: (data.reason as string | null | undefined) ?? null,
+          status: (data.status as ClarificationQuestionStatus | undefined) ?? ClarificationQuestionStatus.pending,
+          metadata: data.metadata ?? null,
+          createdAt: nextDate(),
+          answeredAt: (data.answeredAt as Date | null | undefined) ?? null
+        };
+        state.clarificationQuestions.push(record);
+        return record;
+      }),
+      findMany: jest.fn(
+        async ({ where }: { where?: { requestId?: string; messageId?: string; status?: ClarificationQuestionStatus } } = {}) =>
+          state.clarificationQuestions.filter(
+            (item) =>
+              (!where?.requestId || item.requestId === where.requestId) &&
+              (!where?.messageId || item.messageId === where.messageId) &&
+              (!where?.status || item.status === where.status)
+          )
+      ),
+      findFirst: jest.fn(
+        async ({ where }: { where?: { id?: string; requestId?: string; messageId?: string } } = {}) =>
+          state.clarificationQuestions.find(
+            (item) =>
+              (!where?.id || item.id === where.id) &&
+              (!where?.requestId || item.requestId === where.requestId) &&
+              (!where?.messageId || item.messageId === where.messageId)
+          ) ?? null
+      )
+    },
+    reviewItem: {
+      create: jest.fn(async ({ data }: { data: Partial<ReviewItemRecord> }) => {
+        const record: ReviewItemRecord = {
+          id: `review-item-${state.reviewItems.length + 1}`,
+          sourceType: (data.sourceType as ReviewSourceType | undefined) ?? ReviewSourceType.no_answer,
+          sourceId: data.sourceId ?? 'source-generated',
+          status: (data.status as ReviewItemStatus | undefined) ?? ReviewItemStatus.open,
+          priority: (data.priority as ReviewPriority | undefined) ?? ReviewPriority.medium,
+          summary: data.summary ?? 'Review required.',
+          suggestedImprovement: data.suggestedImprovement ?? null,
+          createdAt: nextDate(),
+          resolvedAt: (data.resolvedAt as Date | null | undefined) ?? null
+        };
+        state.reviewItems.push(record);
+        return record;
+      }),
+      findMany: jest.fn(
+        async ({ where }: { where?: { sourceType?: ReviewSourceType; sourceId?: string; status?: ReviewItemStatus } } = {}) =>
+          state.reviewItems.filter(
+            (item) =>
+              (!where?.sourceType || item.sourceType === where.sourceType) &&
+              (!where?.sourceId || item.sourceId === where.sourceId) &&
+              (!where?.status || item.status === where.status)
+          )
+      ),
+      findFirst: jest.fn(
+        async ({ where }: { where?: { sourceType?: ReviewSourceType; sourceId?: string } } = {}) =>
+          state.reviewItems.find(
+            (item) =>
+              (!where?.sourceType || item.sourceType === where.sourceType) &&
+              (!where?.sourceId || item.sourceId === where.sourceId)
+          ) ?? null
+      )
     }
   };
 }
@@ -1112,7 +1211,9 @@ function createInitialState(): MockState {
     queryUnderstandingResults: [],
     executionPlans: [],
     groundingChecks: [],
-    answerDecisions: []
+    answerDecisions: [],
+    clarificationQuestions: [],
+    reviewItems: []
   };
 }
 
