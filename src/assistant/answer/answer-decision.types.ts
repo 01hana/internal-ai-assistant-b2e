@@ -1,4 +1,5 @@
-import { AnswerDecisionStatus } from '../../generated/prisma/enums';
+import { Prisma } from '../../generated/prisma/client';
+import { AnswerDecisionStatus, NoAnswerReason } from '../../generated/prisma/enums';
 import { PersistedExecutionPlan } from '../planning/assistant-planning.types';
 
 export interface AnswerPlan {
@@ -18,6 +19,26 @@ export interface BuildAnswerDecisionInput {
     id: string;
     summary: Record<string, unknown>;
   }>;
+}
+
+export interface RecordSafeAnswerDecisionInput {
+  requestId: string;
+  messageId: string;
+  status: AnswerDecisionStatus;
+  noAnswerReason?: NoAnswerReason;
+  clarificationQuestionId?: string;
+  metadata?: Prisma.InputJsonValue;
+  answer: {
+    text: string;
+    delta: string;
+  };
+  grounding?: {
+    covered: boolean;
+    checkedClaimCount?: number;
+    unsupportedClaimCount?: number;
+    evidenceRefIds?: string[];
+    metadata?: Prisma.InputJsonValue;
+  };
 }
 
 export interface PersistedAnswerDecisionResult {

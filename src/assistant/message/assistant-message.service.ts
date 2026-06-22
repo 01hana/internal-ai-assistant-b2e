@@ -6,7 +6,11 @@ import { EscalationRequestService } from '../../approvals/escalation-request.ser
 import { EvidenceRefService } from '../../evidence/evidence-ref.service';
 import { Prisma } from '../../generated/prisma/client';
 import { AnswerDecisionStatus, RiskLevel } from '../../generated/prisma/enums';
+import { ReviewItemService } from '../../feedback/review-item.service';
 import { AnswerDecisionService } from '../answer/answer-decision.service';
+import { ClarificationQuestionService } from '../answer/clarification-question.service';
+import { EvidenceConflictDetectorService, NormalizedEvidenceFact } from '../answer/evidence-conflict-detector.service';
+import { NoAnswerGateService } from '../answer/no-answer-gate.service';
 import { AssistantContextStateService } from '../context/assistant-context-state.service';
 import { toPageContextAuditMetadata, toPageContextPersistence } from '../page-context/page-context.mapper';
 import { AssistantPlanningService } from '../planning/assistant-planning.service';
@@ -26,6 +30,10 @@ export class AssistantMessageService {
     private readonly readonlyRuntimeService: AssistantReadonlyRuntimeService,
     private readonly evidenceRefService: EvidenceRefService,
     private readonly answerDecisionService: AnswerDecisionService,
+    private readonly noAnswerGateService: NoAnswerGateService,
+    private readonly evidenceConflictDetector: EvidenceConflictDetectorService,
+    private readonly clarificationQuestionService: ClarificationQuestionService,
+    private readonly reviewItemService: ReviewItemService,
     private readonly contextStateService: AssistantContextStateService,
     private readonly actionDraftService: ActionDraftService,
     private readonly approvalRequestService: ApprovalRequestService,
@@ -78,6 +86,92 @@ export class AssistantMessageService {
       sessionId: session.id,
       requestId: input.requestId
     });
+
+    const preRuntimeGate = this.noAnswerGateService.evaluatePreRuntime(planningResult);
+    if (
+      preRuntimeGate?.kind === 'clarification' &&
+      shouldApplyPreRuntimeClarificationGate(planningResult.executionPlan.riskAssessment, input.pageContext, preRuntimeGate.clarificationReason)
+    ) {
+      const clarificationQuestion = await this.clarificationQuestionService.create({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        identityContext: input.identityContext,
+        question: preRuntimeGate.question,
+        reason: preRuntimeGate.clarificationReason,
+        candidateRefs: preRuntimeGate.candidateRefs,
+        blocking: preRuntimeGate.blocking,
+        confidence: planningResult.queryUnderstanding.confidence
+      });
+
+      const answerDecision = await this.answerDecisionService.recordSafeDecision({
+        requestId: input.requestId,
+        messageId: assistantMessage.id,
+        status: AnswerDecisionStatus.clarification_required,
+        clarificationQuestionId: clarificationQuestion.id,
+        answer: {
+          text: preRuntimeGate.question,
+          delta: preRuntimeGate.question
+        },
+        metadata: toJsonInput({
+          clarificationQuestionId: clarificationQuestion.id,
+          reason: preRuntimeGate.clarificationReason,
+          candidateRefCount: preRuntimeGate.candidateRefs.length,
+          confidence: planningResult.queryUnderstanding.confidence
+        })
+      });
+
+      await this.messageRepository.completeAssistantMessage({
+        messageId: assistantMessage.id,
+        content: answerDecision.answer.text,
+        answerDecision: answerDecision.status
+      });
+
+      await this.contextStateService.markWaitingClarification({
+        sessionId: session.id,
+        pageContext: input.pageContext,
+        planningResult,
+        toolCallIds: [],
+        evidenceRefIds: [],
+        clarificationQuestionId: clarificationQuestion.id,
+        reason: preRuntimeGate.clarificationReason,
+        question: preRuntimeGate.question,
+        candidateRefs: preRuntimeGate.candidateRefs,
+        blocking: preRuntimeGate.blocking
+      });
+
+      await this.auditWriter.append({
+        requestId: input.requestId,
+        organizationId: input.identityContext.company.organizationId,
+        hostApp: input.identityContext.hostApp.hostApp,
+        actorId: input.identityContext.actor.actorId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        eventType: 'answer_generated',
+        decision: answerDecision.status,
+        evidenceRefIds: [],
+        metadata: toJsonInput({
+          answerDecisionId: answerDecision.answerDecisionId,
+          clarificationQuestionId: clarificationQuestion.id,
+          reason: preRuntimeGate.clarificationReason,
+          candidateRefCount: preRuntimeGate.candidateRefs.length,
+          groundingCheckId: answerDecision.groundingCheckId
+        })
+      });
+
+      return this.sseEventBuilder.buildAnswerOnlyEvents({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        answerDelta: answerDecision.answer.delta,
+        finalData: {
+          answerDecision: answerDecision.status,
+          answer: answerDecision.answer.text,
+          clarificationQuestionId: clarificationQuestion.id,
+          evidenceRefs: []
+        }
+      });
+    }
 
     if (planningResult.executionPlan.riskAssessment === RiskLevel.medium) {
       const actionDraft = await this.actionDraftService.createForMediumRisk({
@@ -267,12 +361,45 @@ export class AssistantMessageService {
     });
 
     if (runtimeResult.toolLifecycle !== 'completed') {
-      const answerDecision = await this.answerDecisionService.decide({
+      const gateDecision = this.noAnswerGateService.evaluatePostRuntime({
+        runtimeResult,
+        evidenceRefCount: 0
+      });
+      const answerDecision = await this.answerDecisionService.recordSafeDecision({
         requestId: input.requestId,
         messageId: assistantMessage.id,
-        executionPlan: planningResult.executionPlan,
-        evidenceRefs: []
+        status: gateDecision?.kind === 'no_answer' ? gateDecision.status : AnswerDecisionStatus.no_answer,
+        noAnswerReason: gateDecision?.kind === 'no_answer' ? gateDecision.noAnswerReason : undefined,
+        answer: {
+          text: gateDecision?.kind === 'no_answer' ? gateDecision.answer : '目前沒有足夠 evidence 可以回答這個問題。',
+          delta: gateDecision?.kind === 'no_answer' ? gateDecision.delta : '目前沒有足夠 evidence 可以回答'
+        },
+        metadata: toJsonInput({
+          toolName: runtimeResult.toolName,
+          toolCallId: runtimeResult.toolCallId ?? null,
+          toolLifecycle: runtimeResult.toolLifecycle,
+          deniedReason: runtimeResult.deniedReason ?? null,
+          errorCode: runtimeResult.connectorErrorCode ?? null,
+          noAnswerReason: gateDecision?.kind === 'no_answer' ? gateDecision.noAnswerReason : null
+        })
       });
+
+      const reviewItem = gateDecision?.kind === 'no_answer'
+        ? await this.reviewItemService.createFromAssistantOutcome({
+            requestId: input.requestId,
+            sessionId: session.id,
+            messageId: assistantMessage.id,
+            identityContext: input.identityContext,
+            answerDecisionId: answerDecision.answerDecisionId,
+            answerDecision: answerDecision.status,
+            noAnswerReason: gateDecision.noAnswerReason,
+            toolName: runtimeResult.toolName,
+            toolCallId: runtimeResult.toolCallId,
+            evidenceRefCount: 0,
+            permissionDeniedReason: gateDecision.permissionDeniedReason,
+            toolFailureReason: gateDecision.toolFailureReason
+          })
+        : undefined;
 
       await this.messageRepository.completeAssistantMessage({
         messageId: assistantMessage.id,
@@ -303,6 +430,8 @@ export class AssistantMessageService {
           toolName: runtimeResult.toolName,
           deniedReason: runtimeResult.deniedReason,
           errorCode: runtimeResult.connectorErrorCode,
+          noAnswerReason: gateDecision?.kind === 'no_answer' ? gateDecision.noAnswerReason : null,
+          reviewItemId: reviewItem?.id ?? null,
           answerDecisionId: answerDecision.answerDecisionId,
           groundingCheckId: answerDecision.groundingCheckId
         })
@@ -322,6 +451,8 @@ export class AssistantMessageService {
         finalData: {
           answerDecision: answerDecision.status,
           answer: answerDecision.answer.text,
+          noAnswerReason: gateDecision?.kind === 'no_answer' ? gateDecision.noAnswerReason : undefined,
+          errorCode: runtimeResult.connectorErrorCode,
           evidenceRefs: []
         }
       });
@@ -340,6 +471,191 @@ export class AssistantMessageService {
           visibleFields: Object.keys(runtimeResult.sanitizedResult)
         })
       : undefined;
+
+    const noEvidenceGate = this.noAnswerGateService.evaluatePostRuntime({
+      runtimeResult,
+      evidenceRefCount: evidenceRef ? 1 : 0
+    });
+
+    if (noEvidenceGate?.kind === 'no_answer') {
+      const answerDecision = await this.answerDecisionService.recordSafeDecision({
+        requestId: input.requestId,
+        messageId: assistantMessage.id,
+        status: noEvidenceGate.status,
+        noAnswerReason: noEvidenceGate.noAnswerReason,
+        answer: {
+          text: noEvidenceGate.answer,
+          delta: noEvidenceGate.delta
+        },
+        metadata: toJsonInput({
+          toolName: runtimeResult.toolName,
+          toolCallId: runtimeResult.toolCallId ?? null,
+          toolLifecycle: runtimeResult.toolLifecycle,
+          noAnswerReason: noEvidenceGate.noAnswerReason
+        })
+      });
+
+      const reviewItem = await this.reviewItemService.createFromAssistantOutcome({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        identityContext: input.identityContext,
+        answerDecisionId: answerDecision.answerDecisionId,
+        answerDecision: answerDecision.status,
+        noAnswerReason: noEvidenceGate.noAnswerReason,
+        toolName: runtimeResult.toolName,
+        toolCallId: runtimeResult.toolCallId,
+        evidenceRefCount: 0
+      });
+
+      await this.messageRepository.completeAssistantMessage({
+        messageId: assistantMessage.id,
+        content: answerDecision.answer.text,
+        answerDecision: answerDecision.status
+      });
+
+      await this.contextStateService.updateAfterMessageFlow({
+        sessionId: session.id,
+        pageContext: input.pageContext,
+        planningResult,
+        toolCallIds: runtimeResult.toolCallId ? [runtimeResult.toolCallId] : [],
+        evidenceRefIds: []
+      });
+
+      await this.auditWriter.append({
+        requestId: input.requestId,
+        organizationId: input.identityContext.company.organizationId,
+        hostApp: input.identityContext.hostApp.hostApp,
+        actorId: input.identityContext.actor.actorId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        toolCallId: runtimeResult.toolCallId,
+        eventType: 'answer_generated',
+        decision: answerDecision.status,
+        evidenceRefIds: [],
+        metadata: toJsonInput({
+          toolName: runtimeResult.toolName,
+          noAnswerReason: noEvidenceGate.noAnswerReason,
+          reviewItemId: reviewItem.id,
+          answerDecisionId: answerDecision.answerDecisionId,
+          groundingCheckId: answerDecision.groundingCheckId
+        })
+      });
+
+      return this.sseEventBuilder.buildMessageEvents({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        toolCallId: runtimeResult.toolCallId ?? 'not-executed',
+        toolName: runtimeResult.toolName,
+        toolLifecycle: runtimeResult.toolLifecycle,
+        evidenceRefIds: [],
+        answerDelta: answerDecision.answer.delta,
+        finalData: {
+          answerDecision: answerDecision.status,
+          answer: answerDecision.answer.text,
+          noAnswerReason: noEvidenceGate.noAnswerReason,
+          evidenceRefs: []
+        }
+      });
+    }
+
+    const conflict = this.evidenceConflictDetector.detect(evidenceRef ? toNormalizedEvidenceFacts(evidenceRef) : []);
+    const conflictGate = this.noAnswerGateService.evaluateEvidenceConflict(conflict);
+
+    if (conflictGate?.kind === 'no_answer') {
+      const answerDecision = await this.answerDecisionService.recordSafeDecision({
+        requestId: input.requestId,
+        messageId: assistantMessage.id,
+        status: conflictGate.status,
+        noAnswerReason: conflictGate.noAnswerReason,
+        answer: {
+          text: conflictGate.answer,
+          delta: conflictGate.delta
+        },
+        metadata: toJsonInput({
+          toolName: runtimeResult.toolName,
+          toolCallId: runtimeResult.toolCallId ?? null,
+          toolLifecycle: runtimeResult.toolLifecycle,
+          noAnswerReason: conflictGate.noAnswerReason,
+          conflictReason: conflictGate.conflictReason ?? null,
+          conflictFieldPaths: conflictGate.conflictFieldPaths ?? [],
+          evidenceRefCount: conflict.evidenceRefCount,
+          evidenceRefIds: conflict.evidenceRefIds
+        })
+      });
+
+      const reviewItem = await this.reviewItemService.createFromAssistantOutcome({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        identityContext: input.identityContext,
+        answerDecisionId: answerDecision.answerDecisionId,
+        answerDecision: answerDecision.status,
+        noAnswerReason: conflictGate.noAnswerReason,
+        toolName: runtimeResult.toolName,
+        toolCallId: runtimeResult.toolCallId,
+        evidenceRefCount: conflict.evidenceRefCount,
+        conflictReason: conflictGate.conflictReason,
+        conflictFieldPaths: conflictGate.conflictFieldPaths,
+        evidenceRefIds: conflict.evidenceRefIds
+      });
+
+      await this.messageRepository.completeAssistantMessage({
+        messageId: assistantMessage.id,
+        content: answerDecision.answer.text,
+        answerDecision: answerDecision.status
+      });
+
+      await this.contextStateService.updateAfterMessageFlow({
+        sessionId: session.id,
+        pageContext: input.pageContext,
+        planningResult,
+        toolCallIds: runtimeResult.toolCallId ? [runtimeResult.toolCallId] : [],
+        evidenceRefIds: []
+      });
+
+      await this.auditWriter.append({
+        requestId: input.requestId,
+        organizationId: input.identityContext.company.organizationId,
+        hostApp: input.identityContext.hostApp.hostApp,
+        actorId: input.identityContext.actor.actorId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        toolCallId: runtimeResult.toolCallId,
+        eventType: 'answer_generated',
+        decision: answerDecision.status,
+        evidenceRefIds: [],
+        metadata: toJsonInput({
+          toolName: runtimeResult.toolName,
+          noAnswerReason: conflictGate.noAnswerReason,
+          conflictReason: conflictGate.conflictReason ?? null,
+          conflictFieldPaths: conflictGate.conflictFieldPaths ?? [],
+          evidenceRefCount: conflict.evidenceRefCount,
+          evidenceRefIds: conflict.evidenceRefIds,
+          reviewItemId: reviewItem.id,
+          answerDecisionId: answerDecision.answerDecisionId,
+          groundingCheckId: answerDecision.groundingCheckId
+        })
+      });
+
+      return this.sseEventBuilder.buildMessageEvents({
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: assistantMessage.id,
+        toolCallId: runtimeResult.toolCallId ?? 'not-executed',
+        toolName: runtimeResult.toolName,
+        toolLifecycle: runtimeResult.toolLifecycle,
+        evidenceRefIds: [],
+        answerDelta: answerDecision.answer.delta,
+        finalData: {
+          answerDecision: answerDecision.status,
+          answer: answerDecision.answer.text,
+          noAnswerReason: conflictGate.noAnswerReason,
+          evidenceRefs: []
+        }
+      });
+    }
 
     const answerDecision = await this.answerDecisionService.decide({
       requestId: input.requestId,
@@ -419,4 +735,59 @@ function toEscalationSummaryObject(value: Prisma.JsonValue): Record<string, unkn
   }
 
   return value as Record<string, unknown>;
+}
+
+function shouldApplyPreRuntimeClarificationGate(
+  riskAssessment: RiskLevel,
+  pageContext: SendAssistantMessageInput['pageContext'],
+  reason: string
+) {
+  if (riskAssessment === RiskLevel.low) {
+    return true;
+  }
+
+  if (!['missing_page_context', 'multiple_candidates', 'ambiguous_reference', 'entity_conflict'].includes(reason)) {
+    return false;
+  }
+
+  if (!pageContext?.entityId) {
+    return true;
+  }
+
+  return (pageContext.selectedRows?.length ?? 0) > 1;
+}
+
+function toNormalizedEvidenceFacts(evidence: {
+  id: string;
+  sourceType: string;
+  entityType?: string;
+  entityId?: string;
+  summary: Record<string, unknown>;
+}): NormalizedEvidenceFact[] {
+  if (!evidence.entityType || !evidence.entityId) {
+    return [];
+  }
+
+  return Object.entries(evidence.summary).flatMap(([fieldPath, value]) => {
+    const values = Array.isArray(value) ? value : [value];
+    return values.map((item) => ({
+      evidenceRefId: evidence.id,
+      sourceType: 'structured_record' as const,
+      entityType: evidence.entityType as string,
+      entityId: evidence.entityId as string,
+      fieldPath,
+      normalizedValue: normalizeEvidenceValue(item)
+    }));
+  });
+}
+
+function normalizeEvidenceValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value).trim().toLowerCase();
+  }
+
+  return JSON.stringify(value);
 }

@@ -3,7 +3,7 @@ import { Prisma } from '../../generated/prisma/client';
 import { AssistantTaskState, ExecutionDecision } from '../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import { getPageEntityRef, toPageContextPersistence } from '../page-context/page-context.mapper';
-import { UpdateAssistantContextStateInput } from './assistant-context-state.types';
+import { MarkWaitingClarificationInput, UpdateAssistantContextStateInput } from './assistant-context-state.types';
 
 @Injectable()
 export class AssistantContextStateService {
@@ -56,6 +56,50 @@ export class AssistantContextStateService {
         input.planningResult.executionPlan.decision === ExecutionDecision.clarify
           ? AssistantTaskState.waiting_clarification
           : AssistantTaskState.completed
+    };
+
+    const updated = await this.prisma.db.assistantContextState.updateMany({
+      where: {
+        sessionId: input.sessionId
+      },
+      data
+    });
+
+    if (updated.count > 0) {
+      return this.loadLatest(input.sessionId);
+    }
+
+    await this.prisma.db.assistantContextState.create({
+      data: {
+        sessionId: input.sessionId,
+        ...data
+      }
+    });
+
+    return this.loadLatest(input.sessionId);
+  }
+
+  async markWaitingClarification(input: MarkWaitingClarificationInput) {
+    const entityRef = getPageEntityRef(input.pageContext);
+    const data = {
+      currentTask: input.planningResult.executionPlan.taskType,
+      currentModule: input.pageContext?.module,
+      currentPage: toPageContextPersistence(input.pageContext) ?? Prisma.JsonNull,
+      currentEntityType: entityRef.entityType,
+      currentEntityId: entityRef.entityId,
+      lastIntent: input.planningResult.queryUnderstanding.taskType,
+      lastEntities: toJsonInput(input.planningResult.queryUnderstanding.entityCandidates),
+      lastToolCallIds: input.toolCallIds,
+      lastEvidenceRefIds: input.evidenceRefIds,
+      pendingClarification: toJsonInput({
+        clarificationQuestionId: input.clarificationQuestionId,
+        reason: input.reason,
+        question: input.question,
+        candidateRefs: input.candidateRefs,
+        blocking: input.blocking
+      }),
+      pendingApprovalRequestId: null,
+      taskState: AssistantTaskState.waiting_clarification
     };
 
     const updated = await this.prisma.db.assistantContextState.updateMany({

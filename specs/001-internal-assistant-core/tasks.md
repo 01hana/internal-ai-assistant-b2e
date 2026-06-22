@@ -349,9 +349,9 @@
   - 說明：驗證「這筆」「這張」「目前」「剛剛選取」必須依 PageContext / AssistantContextState 解析，不足時不得猜測。
   - 輸出：deixis resolution unit specs、PageContext fixtures。
   - 完成條件：缺少 PageContext 時進入 clarification；多候選衝突時不直接選一筆。
-- [ ] T093 [P] [US4] 在 `test/integration/clarification-required.spec.ts` 撰寫 ambiguous query clarification integration test
-- [ ] T094 [P] [US4] 在 `test/integration/no-answer-review-item.spec.ts` 撰寫 no evidence/no-answer 與 ReviewItem creation integration test
-- [ ] T095 [P] [US4] 在 `test/integration/tool-failure-safe-response.spec.ts` 撰寫 tool failure safe response integration test
+- [X] T093 [P] [US4] 在 `test/integration/clarification-required.spec.ts` 撰寫 ambiguous query clarification integration test
+- [X] T094 [P] [US4] 在 `test/integration/no-answer-review-item.spec.ts` 撰寫 no evidence/no-answer 與 ReviewItem creation integration test
+- [X] T095 [P] [US4] 在 `test/integration/tool-failure-safe-response.spec.ts` 撰寫 tool failure safe response integration test
 - [ ] T096 [P] [US4] 在 `test/eval/internal-assistant-core.eval.spec.ts` 撰寫 tool routing accuracy、no-answer precision、entity extraction、evidence coverage eval tests
 - [ ] T097 [P] [US4] 在 `test/contract/feedback.contract.spec.ts` 撰寫 `POST /assistant/messages/:messageId/feedback` contract test，驗證 requestId、rating、reason、comment、messageId、response envelope、錯誤格式
 - [ ] T098 [P] [US4] 在 `test/contract/review-items.contract.spec.ts` 撰寫 `GET /assistant/review-items` contract test，驗證 list/filter/status、requestId、response envelope
@@ -386,7 +386,7 @@
   - 說明：建立低信心與上下文不足時的安全閘門，避免因模糊問題產生假答案。
   - 輸出：confidence scorer、clarification need rules、threshold config。
   - 完成條件：low confidence、missing context、candidate conflict 會觸發 clarification；score/reason 可 audit/eval。
-- [ ] T109 [US4] 在 `src/assistant/` 實作 no-answer / clarification gate 與 `ClarificationQuestion` persistence
+- [X] T109 [US4] 在 `src/assistant/` 實作 no-answer / clarification gate 與 `ClarificationQuestion` persistence
   - 說明：無 evidence、low confidence、tool failure、permission denied、evidence conflict 或 unsupported scope 時不得編造答案。
   - 輸出：no-answer gate、ClarificationQuestion persistence、AnswerDecision mapping。
   - 完成條件：no-answer/clarification integration tests 通過；NoAnswerReason 可追溯；必要時建立 ReviewItem。
@@ -426,7 +426,7 @@
   - 說明：把負評或可行動回饋轉成可追蹤改善項目，支援後續產品化改善 loop。
   - 輸出：review creation policy、linkage mapper、audit writer integration。
   - 完成條件：negative/actionable feedback 會建立 ReviewItem；ReviewItem 關聯 requestId/messageId/toolCallIds/evidenceRefIds/answerDecision/AuditEvent。
-- [ ] T119 [US4] 在 `src/feedback/` 實作從 failed query、no-answer、tool failure、missing evidence、bad routing、permission mapping issue、evidence conflict 建立 `ReviewItem`
+- [X] T119 [US4] 在 `src/feedback/` 實作從 failed query、no-answer、tool failure、missing evidence、bad routing、permission mapping issue、evidence conflict 建立 `ReviewItem`
   - 說明：系統失敗或不確定狀態應可進入改善佇列，而不是靜默消失。
   - 輸出：ReviewItem creation hooks、failure reason mapping、dedupe policy。
   - 完成條件：no-answer/tool failure/evidence conflict cases 可建立 ReviewItem；不建立重複噪音；audit 可追溯來源。

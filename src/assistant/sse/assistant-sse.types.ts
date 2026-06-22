@@ -20,6 +20,24 @@ export interface AssistantSseBuildInput {
     answer: string;
     evidenceRefs: string[];
     actionDraftId?: string;
+    noAnswerReason?: string;
+    errorCode?: string;
+    clarificationQuestionId?: string;
+  };
+}
+
+export interface AssistantAnswerOnlyBuildInput {
+  requestId: string;
+  sessionId: string;
+  messageId: string;
+  answerDelta: string;
+  finalData: {
+    answerDecision: AnswerDecisionStatus;
+    answer: string;
+    evidenceRefs: string[];
+    noAnswerReason?: string;
+    clarificationQuestionId?: string;
+    errorCode?: string;
   };
 }
 

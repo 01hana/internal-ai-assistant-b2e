@@ -10,3 +10,11 @@ export interface UpdateAssistantContextStateInput {
   pendingApprovalRequestId?: string;
   pendingEscalationRequestId?: string;
 }
+
+export interface MarkWaitingClarificationInput extends UpdateAssistantContextStateInput {
+  clarificationQuestionId: string;
+  reason: string;
+  question: string;
+  candidateRefs: unknown[];
+  blocking: boolean;
+}

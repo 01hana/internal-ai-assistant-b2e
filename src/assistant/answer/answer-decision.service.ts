@@ -2,7 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { AnswerDecisionStatus, ExecutionDecision, NoAnswerReason } from '../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AnswerPlan, BuildAnswerDecisionInput, PersistedAnswerDecisionResult } from './answer-decision.types';
+import {
+  AnswerPlan,
+  BuildAnswerDecisionInput,
+  PersistedAnswerDecisionResult,
+  RecordSafeAnswerDecisionInput
+} from './answer-decision.types';
 
 @Injectable()
 export class AnswerDecisionService {
@@ -47,6 +52,65 @@ export class AnswerDecisionService {
       status,
       answerPlan,
       answer,
+      groundingCheckId: groundingCheck.id,
+      answerDecisionId: answerDecision.id
+    };
+  }
+
+  async recordSafeDecision(input: RecordSafeAnswerDecisionInput): Promise<PersistedAnswerDecisionResult> {
+    const groundingCheck = await this.prisma.db.groundingCheck.create({
+      data: {
+        requestId: input.requestId,
+        messageId: input.messageId,
+        covered: input.grounding?.covered ?? false,
+        checkedClaimCount: input.grounding?.checkedClaimCount ?? 0,
+        unsupportedClaimCount: input.grounding?.unsupportedClaimCount ?? 0,
+        evidenceRefIds: input.grounding?.evidenceRefIds ?? [],
+        metadata: toJsonInput({
+          ...(toRecord(input.grounding?.metadata) ?? {}),
+          safeDecision: true,
+          status: input.status,
+          noAnswerReason: input.noAnswerReason ?? null
+        })
+      }
+    });
+
+    const answerDecision = await this.prisma.db.answerDecision.create({
+      data: {
+        requestId: input.requestId,
+        messageId: input.messageId,
+        status: input.status,
+        noAnswerReason: input.noAnswerReason,
+        clarificationQuestionId: input.clarificationQuestionId,
+        groundingCheckId: groundingCheck.id,
+        metadata: toJsonInput({
+          ...(toRecord(input.metadata) ?? {}),
+          answerType:
+            input.status === AnswerDecisionStatus.clarification_required
+              ? 'clarification'
+              : input.status === AnswerDecisionStatus.answered
+                ? 'grounded_text'
+                : 'no_answer'
+        })
+      }
+    });
+
+    return {
+      status: input.status,
+      answerPlan: {
+        answerType:
+          input.status === AnswerDecisionStatus.clarification_required
+            ? 'clarification'
+            : input.status === AnswerDecisionStatus.answered
+              ? 'grounded_text'
+              : 'no_answer',
+        expectedAnswerShape: null,
+        selectedEvidenceRefs: input.grounding?.evidenceRefIds ?? [],
+        allowedClaims: [],
+        disallowedClaims: [],
+        missingInformation: input.noAnswerReason ? [input.noAnswerReason] : []
+      },
+      answer: input.answer,
       groundingCheckId: groundingCheck.id,
       answerDecisionId: answerDecision.id
     };
@@ -153,4 +217,12 @@ export class AnswerDecisionService {
 
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
+}
+
+function toRecord(value: Prisma.InputJsonValue | undefined): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value as Record<string, unknown>;
 }

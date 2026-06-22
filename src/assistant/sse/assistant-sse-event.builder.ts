@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createSseEvent, SseSequence } from '../../common/sse/sse-event.helper';
 import { SseEventEnvelope } from '../../common/sse/sse-event.types';
 import {
+  AssistantAnswerOnlyBuildInput,
   AssistantApprovalRequiredBuildInput,
   AssistantConfirmationRequiredBuildInput,
   AssistantEscalationRequiredBuildInput,
@@ -243,6 +244,35 @@ export class AssistantSseEventBuilder {
     );
 
     return events;
+  }
+
+  buildAnswerOnlyEvents(input: AssistantAnswerOnlyBuildInput): AssistantSseEventRecord[] {
+    const sequence = new SseSequence();
+
+    return [
+      this.wrap(
+        createSseEvent({
+          requestId: input.requestId,
+          sessionId: input.sessionId,
+          messageId: input.messageId,
+          eventType: 'answer_delta',
+          sequence: sequence.next(),
+          data: {
+            delta: input.answerDelta
+          }
+        })
+      ),
+      this.wrap(
+        createSseEvent({
+          requestId: input.requestId,
+          sessionId: input.sessionId,
+          messageId: input.messageId,
+          eventType: 'final',
+          sequence: sequence.next(),
+          data: input.finalData
+        })
+      )
+    ];
   }
 
   buildErrorEvent(input: { requestId: string; sessionId: string; code: string; message: string }): AssistantSseEventRecord {
