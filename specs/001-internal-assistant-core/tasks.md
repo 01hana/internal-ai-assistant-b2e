@@ -443,11 +443,11 @@
 
 **目的**：補齊品質門檻、文件與非功能驗證。
 
-- [ ] T121 [P] 在 `test/contract/health-readiness.contract.spec.ts` 撰寫 health/readiness/dependency status contract test，驗證 database、LLM、retrieval、connector、approval workflow、degraded status reason、requestId / response envelope、錯誤格式
+- [X] T121 [P] 在 `test/contract/health-readiness.contract.spec.ts` 撰寫 health/readiness/dependency status contract test，驗證 database、LLM、retrieval、connector、approval workflow、degraded status reason、requestId / response envelope、錯誤格式
   - 說明：鎖定 health/readiness API contract，讓 local Docker 與後續部署都能判斷依賴狀態。
   - 輸出：health/readiness contract spec、dependency status fixtures、degraded/error response assertions。
   - 完成條件：dependency status 至少包含 database、LLM、retrieval、connector、approval workflow；degraded 有 reason；response envelope/requestId 一致。
-- [ ] T122 [P] 在 `src/observability/` 新增 LLM、retrieval、database、connector、approval workflow 的 health/readiness/dependency status endpoints
+- [X] T122 [P] 在 `src/observability/` 新增 LLM、retrieval、database、connector、approval workflow 的 health/readiness/dependency status endpoints
   - 說明：提供 dependency health 的 runtime 查詢，不暴露 secret 或過度詳細內部設定。
   - 輸出：health/readiness controller/service、dependency probes、safe degradation mapper。
   - 完成條件：DB/LLM/retrieval/connector/approval workflow 可各自回報 healthy/degraded/unavailable；錯誤不含 secret；可供 Docker smoke test 使用。

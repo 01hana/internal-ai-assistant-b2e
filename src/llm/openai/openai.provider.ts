@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { EnvironmentVariables } from '../../common/config/env.validation';
@@ -28,6 +28,7 @@ export class OpenAiProvider implements LlmProvider {
 
   constructor(
     private readonly configService: ConfigService<EnvironmentVariables, true>,
+    @Optional()
     client?: OpenAiResponsesClient
   ) {
     this.client = client ?? createOpenAiClient(this.configService.get('OPENAI_API_KEY', { infer: true }));

@@ -448,6 +448,7 @@ export function parseSseResponse(text: string) {
 
 function createPrismaMock(state: MockState) {
   return {
+    $queryRaw: jest.fn(async () => [{ result: 1 }]),
     assistantSession: {
       create: jest.fn(async ({ data }: { data: Partial<SessionRecord> }) => {
         const now = nextDate();
