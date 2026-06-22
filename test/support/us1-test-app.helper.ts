@@ -15,6 +15,7 @@ import {
   ReviewItemStatus,
   ReviewPriority,
   ReviewSourceType,
+  FeedbackRating,
   RiskLevel,
   KnowledgeDocumentStatus,
   KnowledgeSourceType,
@@ -264,6 +265,20 @@ type ReviewItemRecord = {
   resolvedAt: Date | null;
 };
 
+type FeedbackEventRecord = {
+  id: string;
+  requestId: string;
+  messageId: string;
+  rating: FeedbackRating;
+  reason: string | null;
+  comment: string | null;
+  intent: string | null;
+  toolCallIds: string[];
+  evidenceRefIds: string[];
+  answerDecision: string | null;
+  createdAt: Date;
+};
+
 type KnowledgeDocumentRecord = {
   id: string;
   title: string;
@@ -351,6 +366,7 @@ type MockState = {
   answerDecisions: AnswerDecisionRecord[];
   clarificationQuestions: ClarificationQuestionRecord[];
   reviewItems: ReviewItemRecord[];
+  feedbackEvents: FeedbackEventRecord[];
   knowledgeDocuments: KnowledgeDocumentRecord[];
   knowledgeChunks: KnowledgeChunkRecord[];
   retrievalRuns: RetrievalRunRecord[];
@@ -643,7 +659,10 @@ function createPrismaMock(state: MockState) {
 
         Object.assign(message, data);
         return message;
-      })
+      }),
+      findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>
+        state.messages.find((item) => item.id === where.id) ?? null
+      )
     },
     queryUnderstandingResult: {
       upsert: jest.fn(async ({ where, create, update }: { where: { messageId: string }; create: Partial<QueryUnderstandingRecord>; update: Partial<QueryUnderstandingRecord> }) => {
@@ -947,9 +966,9 @@ function createPrismaMock(state: MockState) {
         Object.assign(toolCall, data);
         return toolCall;
       }),
-      findMany: jest.fn(async ({ where }: { where: { sessionId: string } }) =>
+      findMany: jest.fn(async ({ where }: { where: { sessionId?: string; messageId?: string } }) =>
         state.toolCalls
-          .filter((item) => item.sessionId === where.sessionId)
+          .filter((item) => (!where.sessionId || item.sessionId === where.sessionId) && (!where.messageId || item.messageId === where.messageId))
           .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
       ),
       findFirst: jest.fn(
@@ -1094,12 +1113,13 @@ function createPrismaMock(state: MockState) {
         return record;
       }),
       findMany: jest.fn(
-        async ({ where }: { where?: { sourceType?: ReviewSourceType; sourceId?: string; status?: ReviewItemStatus } } = {}) =>
+        async ({ where }: { where?: { sourceType?: ReviewSourceType; sourceId?: string; status?: ReviewItemStatus; priority?: ReviewPriority } } = {}) =>
           state.reviewItems.filter(
             (item) =>
               (!where?.sourceType || item.sourceType === where.sourceType) &&
               (!where?.sourceId || item.sourceId === where.sourceId) &&
-              (!where?.status || item.status === where.status)
+              (!where?.status || item.status === where.status) &&
+              (!where?.priority || item.priority === where.priority)
           )
       ),
       findFirst: jest.fn(
@@ -1109,6 +1129,51 @@ function createPrismaMock(state: MockState) {
               (!where?.sourceType || item.sourceType === where.sourceType) &&
               (!where?.sourceId || item.sourceId === where.sourceId)
           ) ?? null
+      ),
+      findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>
+        state.reviewItems.find((item) => item.id === where.id) ?? null
+      ),
+      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ReviewItemRecord> }) => {
+        const reviewItem = state.reviewItems.find((item) => item.id === where.id);
+        if (!reviewItem) {
+          throw new Error(`ReviewItem ${where.id} not found.`);
+        }
+
+        Object.assign(reviewItem, data);
+        return reviewItem;
+      })
+    },
+    feedbackEvent: {
+      create: jest.fn(async ({ data }: { data: Partial<FeedbackEventRecord> }) => {
+        const record: FeedbackEventRecord = {
+          id: `feedback-event-${state.feedbackEvents.length + 1}`,
+          requestId: data.requestId ?? 'req-generated',
+          messageId: data.messageId ?? 'message-owned-assistant-001',
+          rating: (data.rating as FeedbackRating | undefined) ?? FeedbackRating.positive,
+          reason: (data.reason as string | null | undefined) ?? null,
+          comment: (data.comment as string | null | undefined) ?? null,
+          intent: (data.intent as string | null | undefined) ?? null,
+          toolCallIds: (data.toolCallIds as string[] | undefined) ?? [],
+          evidenceRefIds: (data.evidenceRefIds as string[] | undefined) ?? [],
+          answerDecision: (data.answerDecision as string | null | undefined) ?? null,
+          createdAt: nextDate()
+        };
+        state.feedbackEvents.push(record);
+        return record;
+      }),
+      findMany: jest.fn(async ({ where }: { where?: { messageId?: string; rating?: FeedbackRating } } = {}) =>
+        state.feedbackEvents.filter(
+          (item) =>
+            (!where?.messageId || item.messageId === where.messageId) &&
+            (!where?.rating || item.rating === where.rating)
+        )
+      ),
+      findFirst: jest.fn(async ({ where }: { where?: { id?: string; messageId?: string } } = {}) =>
+        state.feedbackEvents.find(
+          (item) =>
+            (!where?.id || item.id === where.id) &&
+            (!where?.messageId || item.messageId === where.messageId)
+        ) ?? null
       )
     },
     knowledgeDocument: {
@@ -1425,12 +1490,87 @@ function createInitialState(): MockState {
     groundingChecks: [],
     answerDecisions: [],
     clarificationQuestions: [],
-    reviewItems: [],
+    reviewItems: createReviewItems(baseDate),
+    feedbackEvents: [],
     knowledgeDocuments: createKnowledgeDocuments(baseDate),
     knowledgeChunks: createKnowledgeChunks(baseDate),
     retrievalRuns: [],
     retrievalCandidates: []
   };
+}
+
+function createReviewItems(baseDate: Date): ReviewItemRecord[] {
+  return [
+    {
+      id: 'review-item-open-feedback-001',
+      sourceType: ReviewSourceType.negative_feedback,
+      sourceId: 'feedback-event-seed-001',
+      status: ReviewItemStatus.open,
+      priority: ReviewPriority.medium,
+      summary: 'not_helpful: feedback requires review',
+      suggestedImprovement: {
+        organizationId: 'org-001',
+        hostApp: 'erp',
+        requestId: 'req-history-seed-001',
+        messageId: 'message-owned-assistant-001',
+        feedbackEventId: 'feedback-event-seed-001',
+        answerDecision: 'answered',
+        toolCallIds: ['tool-call-owned-001'],
+        evidenceRefIds: ['evidence-owned-001'],
+        rating: 'negative',
+        intent: 'not_helpful',
+        reasonProvided: true,
+        commentProvided: false
+      },
+      createdAt: new Date(baseDate),
+      resolvedAt: null
+    },
+    {
+      id: 'review-item-hidden-org-001',
+      sourceType: ReviewSourceType.negative_feedback,
+      sourceId: 'feedback-event-hidden-001',
+      status: ReviewItemStatus.open,
+      priority: ReviewPriority.high,
+      summary: 'hidden review item',
+      suggestedImprovement: {
+        organizationId: 'org-hidden',
+        hostApp: 'erp',
+        requestId: 'req-hidden',
+        messageId: 'message-hidden',
+        feedbackEventId: 'feedback-event-hidden-001',
+        rating: 'negative',
+        intent: 'unsafe',
+        reasonProvided: true,
+        commentProvided: false
+      },
+      createdAt: new Date(baseDate),
+      resolvedAt: null
+    },
+    {
+      id: 'review-item-open-feedback-002',
+      sourceType: ReviewSourceType.missing_evidence,
+      sourceId: 'feedback-event-seed-002',
+      status: ReviewItemStatus.open,
+      priority: ReviewPriority.high,
+      summary: 'missing_evidence: feedback requires review',
+      suggestedImprovement: {
+        organizationId: 'org-001',
+        hostApp: 'erp',
+        requestId: 'req-history-seed-001',
+        messageId: 'message-owned-assistant-001',
+        feedbackEventId: 'feedback-event-seed-002',
+        answerDecision: 'answered',
+        toolCallIds: ['tool-call-owned-001'],
+        evidenceRefIds: ['evidence-owned-001'],
+        rating: 'negative',
+        intent: 'missing_evidence',
+        reasonProvided: true,
+        commentProvided: false
+      },
+      createdAt: new Date(baseDate),
+      resolvedAt: null
+    }
+  ];
 }
 
 function createKnowledgeDocuments(baseDate: Date): KnowledgeDocumentRecord[] {

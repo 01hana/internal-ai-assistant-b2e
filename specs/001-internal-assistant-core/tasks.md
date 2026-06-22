@@ -353,9 +353,9 @@
 - [X] T094 [P] [US4] 在 `test/integration/no-answer-review-item.spec.ts` 撰寫 no evidence/no-answer 與 ReviewItem creation integration test
 - [X] T095 [P] [US4] 在 `test/integration/tool-failure-safe-response.spec.ts` 撰寫 tool failure safe response integration test
 - [ ] T096 [P] [US4] 在 `test/eval/internal-assistant-core.eval.spec.ts` 撰寫 tool routing accuracy、no-answer precision、entity extraction、evidence coverage eval tests
-- [ ] T097 [P] [US4] 在 `test/contract/feedback.contract.spec.ts` 撰寫 `POST /assistant/messages/:messageId/feedback` contract test，驗證 requestId、rating、reason、comment、messageId、response envelope、錯誤格式
-- [ ] T098 [P] [US4] 在 `test/contract/review-items.contract.spec.ts` 撰寫 `GET /assistant/review-items` contract test，驗證 list/filter/status、requestId、response envelope
-- [ ] T099 [P] [US4] 在 `test/integration/feedback-review-linkage.spec.ts` 撰寫負評建立 `FeedbackEvent` 並關聯 requestId、messageId、toolCallIds、evidenceRefIds、answerDecision、`AuditEvent` 的 integration test
+- [X] T097 [P] [US4] 在 `test/contract/feedback.contract.spec.ts` 撰寫 `POST /assistant/messages/:messageId/feedback` contract test，驗證 requestId、rating、reason、comment、messageId、response envelope、錯誤格式
+- [X] T098 [P] [US4] 在 `test/contract/review-items.contract.spec.ts` 撰寫 `GET /assistant/review-items` contract test，驗證 list/filter/status、requestId、response envelope
+- [X] T099 [P] [US4] 在 `test/integration/feedback-review-linkage.spec.ts` 撰寫負評建立 `FeedbackEvent` 並關聯 requestId、messageId、toolCallIds、evidenceRefIds、answerDecision、`AuditEvent` 的 integration test
 - [X] T100 [P] [US4] 在 `test/integration/rag-sop-field-explanation.spec.ts` 撰寫 SOP / 欄位說明查詢使用 `KnowledgeDocument` / `KnowledgeChunk` retrieval 並回傳 `EvidenceRef` 的 integration test
 - [X] T101 [P] [US4] 在 `test/unit/knowledge-chunking.spec.ts` 撰寫 `KnowledgeDocument` chunking placeholder unit test
 - [X] T102 [P] [US4] 在 `test/integration/retrieval-run-candidates.spec.ts` 撰寫 `RetrievalRun` / `RetrievalCandidate` 或等價 `AuditEvent.metadata` 的 observability test
@@ -414,15 +414,15 @@
   - 說明：RAG retrieval result 必須轉成標準 EvidenceRef，讓 AnswerPlan/GroundingCheck/audit 使用同一格式。
   - 輸出：document_chunk evidence normalizer、source metadata mapper。
   - 完成條件：EvidenceRef 可追溯 documentId/chunkId/sourceType/rank；未授權或 disabled chunk 不可附加。
-- [ ] T116 [US4] 在 `src/feedback/` 實作 `FeedbackEvent` service/controller，提供 `POST /assistant/messages/:messageId/feedback`
+- [X] T116 [US4] 在 `src/feedback/` 實作 `FeedbackEvent` service/controller，提供 `POST /assistant/messages/:messageId/feedback`
   - 說明：message-level feedback 必須關聯 requestId、messageId、answerDecision、tool/evidence/audit context。
   - 輸出：feedback controller/service、FeedbackEvent DTO、access control checks。
   - 完成條件：feedback contract test 通過；不可對不可見 message 留 feedback；feedback_received audit event 已寫入。
-- [ ] T117 [US4] 在 `src/feedback/` 實作 `ReviewItem` query service/controller，提供 `GET /assistant/review-items`
+- [X] T117 [US4] 在 `src/feedback/` 實作 `ReviewItem` query service/controller，提供 `GET /assistant/review-items`
   - 說明：提供 MVP runtime review raw data 查詢 contract，不是完整後台管理 UI/CRUD。
   - 輸出：ReviewItem query controller/service、filter/status DTO、response envelope。
   - 完成條件：review item contract test 通過；查詢受 identity/organization boundary 限制；response 不外洩敏感 evidence/tool payload。
-- [ ] T118 [US4] 在 `src/feedback/` 實作 `FeedbackEvent` → `ReviewItem` creation policy：negative 或 actionable feedback 可建立 `ReviewItem`
+- [X] T118 [US4] 在 `src/feedback/` 實作 `FeedbackEvent` → `ReviewItem` creation policy：negative 或 actionable feedback 可建立 `ReviewItem`
   - 說明：把負評或可行動回饋轉成可追蹤改善項目，支援後續產品化改善 loop。
   - 輸出：review creation policy、linkage mapper、audit writer integration。
   - 完成條件：negative/actionable feedback 會建立 ReviewItem；ReviewItem 關聯 requestId/messageId/toolCallIds/evidenceRefIds/answerDecision/AuditEvent。
@@ -430,7 +430,7 @@
   - 說明：系統失敗或不確定狀態應可進入改善佇列，而不是靜默消失。
   - 輸出：ReviewItem creation hooks、failure reason mapping、dedupe policy。
   - 完成條件：no-answer/tool failure/evidence conflict cases 可建立 ReviewItem；不建立重複噪音；audit 可追溯來源。
-- [ ] T120 [US4] 在 `src/audit/` 寫入 `feedback_received`、`review_item_created`、`review_item_resolved` audit events
+- [X] T120 [US4] 在 `src/audit/` 寫入 `feedback_received`、`review_item_created`、`review_item_resolved` audit events
   - 說明：feedback/review lifecycle 必須可追溯，且不得保存未遮罩敏感內容。
   - 輸出：feedback/review audit event writers、metadata minimization rules。
   - 完成條件：feedback/review 狀態變更皆有 AuditEvent；metadata 關聯原始 request/message/tool/evidence；secret 與敏感 payload 不進 audit。
