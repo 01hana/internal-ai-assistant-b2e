@@ -8,7 +8,7 @@
 
 ## Summary
 
-本計畫定義 `ai-assistant.com` v1 內部後台 AI 助理核心後端的實作方向。v1 目標是建立可嵌入 ERP / MES / WMS / SCM / CRM 的核心 API 與 domain pipeline，支援 session/message、SSE 即時回覆、`PageContext`、`AssistantContextState`、繁體中文 query understanding、`ExecutionPlan`、tool-first 查詢、RAG/evidence、permission filtering、medium-risk confirmation、high-risk approval、append-only audit、feedback/review loop。
+本計畫定義 `internal-ai-assistant.com` v1 內部後台 AI 助理核心後端的實作方向。v1 目標是建立可嵌入 ERP / MES / WMS / SCM / CRM 的核心 API 與 domain pipeline，支援 session/message、SSE 即時回覆、`PageContext`、`AssistantContextState`、繁體中文 query understanding、`ExecutionPlan`、tool-first 查詢、RAG/evidence、permission filtering、medium-risk confirmation、high-risk approval、append-only audit、feedback/review loop。
 
 本計畫不實作完整後台管理 domain、管理 UI、taxonomy/settings CRUD、analytics dashboard、完整營運報表、真實 ERP / MES / WMS / SCM / CRM connector 或前端 SDK/widget UI。v1 使用 mock connector 驗證核心流程；LLM 預設 provider 為 `openai` / `OpenAiProvider`，實作位置為 `src/llm/openai/`，並透過 `LLM_PROVIDER`、可替換 `LlmProvider`、`RetrievalProvider`、`TokenizerAdapter`、`ConnectorAdapter` 保留產品化擴充空間。
 

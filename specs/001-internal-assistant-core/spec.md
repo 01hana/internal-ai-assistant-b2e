@@ -10,7 +10,7 @@
 
 ## Internal Assistant Context *(mandatory by Constitution)*
 
-本功能定義 `ai-assistant.com` 的第一個核心能力：可嵌入企業內部系統的 AI 工作助理。它不是對外客服 chatbot，也不處理匿名訪客、公眾知識庫、留資或客服轉接假設。使用者是具備身份、角色與權限的企業內部人員。
+本功能定義 `internal-ai-assistant.com` 的第一個核心能力：可嵌入企業內部系統的 AI 工作助理。它不是對外客服 chatbot，也不處理匿名訪客、公眾知識庫、留資或客服轉接假設。使用者是具備身份、角色與權限的企業內部人員。
 
 每次請求都必須限制在單一公司/組織邊界內，並依據宿主系統傳入的 host app、actor、role、permission scope 執行查詢、工具調用與回答生成。第一版不綁定特定 ERP / MES / WMS / SCM / CRM 的資料模型，而是先建立可被不同宿主系統接入的 assistant core、tool contract、evidence contract、approval workflow 與 audit trail。
 

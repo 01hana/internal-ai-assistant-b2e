@@ -34,7 +34,7 @@ Follow-up TODOs: 後續可再執行 template sync，讓 speckit 產出的 plan/s
 
 ## 1. 文件目的
 
-本文件為 `ai-assistant.com` 內部後台 AI 助理產品的開發憲章，作為所有 `spec.md`、`design.md`、`plan.md`、`tasks.md` 與程式實作的最高約束依據。
+本文件為 `internal-ai-assistant.com` 內部後台 AI 助理產品的開發憲章，作為所有 `spec.md`、`design.md`、`plan.md`、`tasks.md` 與程式實作的最高約束依據。
 
 本憲章規範可嵌入企業內部系統的 AI 工作助理後端、SDK/API、工具調用、資料查詢、審核流程與稽核要求。任何下層文件若與本憲章衝突，以本憲章為準，並必須先修正下層文件後才能進入實作。
 

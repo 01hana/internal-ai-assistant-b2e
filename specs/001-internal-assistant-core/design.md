@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-本設計文件定義 `ai-assistant.com` 的 v1 核心後端設計：一個可嵌入 ERP / MES / WMS / SCM / CRM 等企業內部系統的 AI 工作助理。它不是對外客服 chatbot，也不處理匿名訪客、公眾知識庫、留資或客服轉接假設。
+本設計文件定義 `internal-ai-assistant.com` 的 v1 核心後端設計：一個可嵌入 ERP / MES / WMS / SCM / CRM 等企業內部系統的 AI 工作助理。它不是對外客服 chatbot，也不處理匿名訪客、公眾知識庫、留資或客服轉接假設。
 
 v1 目標是建立可被不同宿主系統接入的核心後端 API、domain model、tool/connector abstraction、RAG/evidence pipeline、approval/escalation/review workflow、audit trail 與 feedback/improvement loop。
 
