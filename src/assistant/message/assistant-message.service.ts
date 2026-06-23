@@ -15,6 +15,7 @@ import { NoAnswerGateService } from '../answer/no-answer-gate.service';
 import { AssistantContextStateService } from '../context/assistant-context-state.service';
 import { toPageContextAuditMetadata, toPageContextPersistence } from '../page-context/page-context.mapper';
 import { AssistantPlanningService } from '../planning/assistant-planning.service';
+import { AssistantPlanningResult } from '../planning/assistant-planning.types';
 import { AssistantReadonlyRuntimeService } from '../runtime/assistant-readonly-runtime.service';
 import { AssistantSessionService } from '../session/assistant-session.service';
 import { AssistantSseEventBuilder } from '../sse/assistant-sse-event.builder';
@@ -354,15 +355,27 @@ export class AssistantMessageService {
     }
 
     if (requiresDocumentChunkEvidence(planningResult.executionPlan.requiredEvidence)) {
-      const retrievalResult = await this.retrievalService.runDocumentRetrieval({
-        requestId: input.requestId,
-        sessionId: session.id,
-        messageId: assistantMessage.id,
-        identityContext: input.identityContext,
-        query: input.message,
-        normalizedQuery: planningResult.queryUnderstanding.tokens.map((token) => token.normalizedValue).join(' '),
-        limit: 2
-      });
+      let retrievalResult;
+      try {
+        retrievalResult = await this.retrievalService.runDocumentRetrieval({
+          requestId: input.requestId,
+          sessionId: session.id,
+          messageId: assistantMessage.id,
+          identityContext: input.identityContext,
+          query: input.message,
+          normalizedQuery: planningResult.queryUnderstanding.tokens.map((token) => token.normalizedValue).join(' '),
+          limit: 2
+        });
+      } catch {
+        return this.completeRetrievalFailure({
+          requestId: input.requestId,
+          sessionId: session.id,
+          messageId: assistantMessage.id,
+          identityContext: input.identityContext,
+          pageContext: input.pageContext,
+          planningResult
+        });
+      }
 
       if (retrievalResult.selectedCandidates.length === 0) {
         const answerDecision = await this.answerDecisionService.recordSafeDecision({
@@ -904,6 +917,89 @@ export class AssistantMessageService {
 
   createErrorEvent(input: { requestId: string; sessionId: string; code: string; message: string }) {
     return this.sseEventBuilder.buildErrorEvent(input);
+  }
+
+  private async completeRetrievalFailure(input: {
+    requestId: string;
+    sessionId: string;
+    messageId: string;
+    identityContext: SendAssistantMessageInput['identityContext'];
+    pageContext: SendAssistantMessageInput['pageContext'];
+    planningResult: AssistantPlanningResult;
+  }): Promise<AssistantSseEventRecord[]> {
+    const retrievalFailureReason = 'retrieval_unavailable';
+    const answerDecision = await this.answerDecisionService.recordSafeDecision({
+      requestId: input.requestId,
+      messageId: input.messageId,
+      status: AnswerDecisionStatus.no_answer,
+      noAnswerReason: NoAnswerReason.tool_failure,
+      answer: {
+        text: '目前無法取得文件 evidence，請稍後再試。',
+        delta: '目前無法取得文件 evidence'
+      },
+      metadata: toJsonInput({
+        retrievalFailureReason,
+        noAnswerReason: NoAnswerReason.tool_failure
+      })
+    });
+
+    const reviewItem = await this.reviewItemService.createFromAssistantOutcome({
+      requestId: input.requestId,
+      sessionId: input.sessionId,
+      messageId: input.messageId,
+      identityContext: input.identityContext,
+      answerDecisionId: answerDecision.answerDecisionId,
+      answerDecision: answerDecision.status,
+      noAnswerReason: NoAnswerReason.tool_failure,
+      evidenceRefCount: 0,
+      toolFailureReason: retrievalFailureReason
+    });
+
+    await this.messageRepository.completeAssistantMessage({
+      messageId: input.messageId,
+      content: answerDecision.answer.text,
+      answerDecision: answerDecision.status
+    });
+
+    await this.contextStateService.updateAfterMessageFlow({
+      sessionId: input.sessionId,
+      pageContext: input.pageContext,
+      planningResult: input.planningResult,
+      toolCallIds: [],
+      evidenceRefIds: []
+    });
+
+    await this.auditWriter.append({
+      requestId: input.requestId,
+      organizationId: input.identityContext.company.organizationId,
+      hostApp: input.identityContext.hostApp.hostApp,
+      actorId: input.identityContext.actor.actorId,
+      sessionId: input.sessionId,
+      messageId: input.messageId,
+      eventType: 'answer_generated',
+      decision: answerDecision.status,
+      evidenceRefIds: [],
+      metadata: toJsonInput({
+        retrievalFailureReason,
+        noAnswerReason: NoAnswerReason.tool_failure,
+        reviewItemId: reviewItem.id,
+        answerDecisionId: answerDecision.answerDecisionId,
+        groundingCheckId: answerDecision.groundingCheckId
+      })
+    });
+
+    return this.sseEventBuilder.buildAnswerOnlyEvents({
+      requestId: input.requestId,
+      sessionId: input.sessionId,
+      messageId: input.messageId,
+      answerDelta: answerDecision.answer.delta,
+      finalData: {
+        answerDecision: answerDecision.status,
+        answer: answerDecision.answer.text,
+        noAnswerReason: NoAnswerReason.tool_failure,
+        evidenceRefs: []
+      }
+    });
   }
 }
 

@@ -455,7 +455,7 @@
   - 說明：MVP 不做 dashboard，但必須先保存可分析原始事件，避免後續產品化重構核心 runtime 紀錄。
   - 輸出：raw event integration spec、event completeness assertions、metadata redaction checks。
   - 完成條件：所有核心 raw records 可透過 requestId/messageId/toolCallId/evidenceRefId 關聯；duration/reason/status 欄位完整；無敏感 payload 明文。
-- [ ] T124 [P] 在 `test/e2e/non-functional.e2e-spec.ts` 新增 dependency degradation、SSE timeout/interruption、bounded retry、queue/backpressure assumptions 的 non-functional tests
+- [X] T124 [P] 在 `test/e2e/non-functional.e2e-spec.ts` 新增 dependency degradation、SSE timeout/interruption、bounded retry、queue/backpressure assumptions 的 non-functional tests
   - 說明：驗證依賴失敗、串流中斷與重試不會造成不安全回答或重複 side-effect。
   - 輸出：non-functional e2e spec、degradation fixtures、SSE interruption fixtures。
   - 完成條件：SSE timeout/interruption 有安全 error/final 行為；bounded retry 不重複 side-effect；queue/backpressure 假設有測試或明確文件。
