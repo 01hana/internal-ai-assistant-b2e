@@ -451,7 +451,7 @@
   - 說明：提供 dependency health 的 runtime 查詢，不暴露 secret 或過度詳細內部設定。
   - 輸出：health/readiness controller/service、dependency probes、safe degradation mapper。
   - 完成條件：DB/LLM/retrieval/connector/approval workflow 可各自回報 healthy/degraded/unavailable；錯誤不含 secret；可供 Docker smoke test 使用。
-- [ ] T123 [P] 在 `test/integration/analytics-ready-raw-events.spec.ts` 新增 analytics-ready raw event validation，涵蓋 `AuditEvent`、`ToolCall`、`ExecutionPlan`、`AnswerDecision`、`EvidenceRef`、`FeedbackEvent`、`ReviewItem`、`ApprovalRequest`、`ActionDraft`、`RetrievalRun` / `RetrievalCandidate`
+- [X] T123 [P] 在 `test/integration/analytics-ready-raw-events.spec.ts` 新增 analytics-ready raw event validation，涵蓋 `AuditEvent`、`ToolCall`、`ExecutionPlan`、`AnswerDecision`、`EvidenceRef`、`FeedbackEvent`、`ReviewItem`、`ApprovalRequest`、`ActionDraft`、`RetrievalRun` / `RetrievalCandidate`
   - 說明：MVP 不做 dashboard，但必須先保存可分析原始事件，避免後續產品化重構核心 runtime 紀錄。
   - 輸出：raw event integration spec、event completeness assertions、metadata redaction checks。
   - 完成條件：所有核心 raw records 可透過 requestId/messageId/toolCallId/evidenceRefId 關聯；duration/reason/status 欄位完整；無敏感 payload 明文。
