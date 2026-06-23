@@ -459,16 +459,16 @@
   - 說明：驗證依賴失敗、串流中斷與重試不會造成不安全回答或重複 side-effect。
   - 輸出：non-functional e2e spec、degradation fixtures、SSE interruption fixtures。
   - 完成條件：SSE timeout/interruption 有安全 error/final 行為；bounded retry 不重複 side-effect；queue/backpressure 假設有測試或明確文件。
-- [ ] T125 [P] 在 `README.md` 新增 local mock connector、RAG seed fixtures 與 SSE smoke testing 的 quickstart-style instructions
-- [ ] T126 [P] 在 `test/e2e/docker-local-dev.e2e-spec.ts` 或 README smoke checklist 新增 Docker local dev 驗證：`docker compose up` 可啟動 app dependencies、app 可連線 database、health/readiness 可回報 database dependency status、SSE smoke test 可在 local Docker baseline 下執行
+- [X] T125 [P] 在 `README.md` 新增 local mock connector、RAG seed fixtures 與 SSE smoke testing 的 quickstart-style instructions
+- [X] T126 [P] 在 `test/e2e/docker-local-dev.e2e-spec.ts` 或 README smoke checklist 新增 Docker local dev 驗證：`docker compose up` 可啟動 app dependencies、app 可連線 database、health/readiness 可回報 database dependency status、SSE smoke test 可在 local Docker baseline 下執行
   - 說明：Docker Compose 只驗證 local dev/test baseline，不延伸成 production deployment 設計。
   - 輸出：Docker smoke e2e 或 README checklist、Prisma migration/test DB init command、SSE smoke steps。
   - 完成條件：`docker compose up` 可啟動 app/postgres；app 可連 DB；health/readiness 回報 database；SSE smoke 可執行；Redis 仍為 optional/profile-based。
-- [ ] T127 [P] 在 `specs/001-internal-assistant-core/tasks.md` 新增 regression checklist，確認 v1 範圍不包含完整 admin UI/CRUD、taxonomy/settings management UI、真實 ERP/MES/WMS/SCM/CRM connector、frontend SDK/widget、active session auto-resolve 完整產品化策略、production deployment / Kubernetes / Helm / CI/CD
+- [X] T127 [P] 在 `docs/regression-scope-checklist.md` 新增 regression checklist，確認 v1 範圍不包含完整 admin UI/CRUD、taxonomy/settings management UI、真實 ERP/MES/WMS/SCM/CRM connector、frontend SDK/widget、active session auto-resolve 完整產品化策略、production deployment / Kubernetes / Helm / CI/CD
   - 說明：防止 MVP scope creep，確保核心 runtime、安全閉環、mock connector validation 優先。
   - 輸出：regression/scope checklist。
   - 完成條件：每次交付前可檢查未新增 out-of-scope feature；runtime records/query contracts 不被誤刪。
-- [ ] T128 依專案 scripts 執行完整驗證：unit、integration、contract、e2e、eval、lint/build/typecheck
+- [X] T128 依專案 scripts 執行完整驗證：unit、integration、contract、e2e、eval、lint/build/typecheck
   - 說明：最後驗證必須覆蓋功能、合約、安全、eval 與非功能門檻。
   - 輸出：final validation script 或 checklist、migration/seed/test DB 執行紀錄、測試執行紀錄。
   - 完成條件：Prisma migration、seed、test DB reset 可執行；unit/integration/contract/e2e/eval/lint/build/typecheck 可執行；若有環境限制需標註原因；不得略過安全、SSE、RAG、approval、audit、history、feedback/review 測試。

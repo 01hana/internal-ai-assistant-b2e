@@ -6,6 +6,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
@@ -40,10 +42,13 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.23",
     "@nestjs/testing": "^11.1.26",
+    "@eslint/js": "^9.39.4",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.9.3",
     "@types/supertest": "^7.2.0",
+    "eslint": "^9.39.4",
+    "globals": "^16.5.0",
     "jest": "^30.4.2",
     "prisma": "^7.8.0",
     "supertest": "^7.2.2",
@@ -51,6 +56,7 @@
     "ts-loader": "^9.6.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "typescript-eslint": "^8.57.0",
     "typescript": "^6.0.3"
   }
 }
