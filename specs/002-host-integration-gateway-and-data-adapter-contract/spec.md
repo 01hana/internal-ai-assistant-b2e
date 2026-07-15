@@ -1,4 +1,4 @@
-# Feature Specification: Host Integration Gateway and Data Adapter Contract
+# Feature Specification: Host App Capability Governance and Reference Integration
 
 **Feature Branch**: `002-host-integration-gateway-and-data-adapter-contract`
 
@@ -10,112 +10,140 @@
 
 ## Feature Summary
 
-本 feature 建立 backend host integration gateway 與 data adapter contract，讓既有 internal assistant core 能安全接收來自不同 host app 的 identity、permission scopes、PageContext、session scope 與 connector routing hints，並以 Admin / Orders / Inventory 作為第一個 reference host integration。
+Backend 002 是 Backend 001 `internal-assistant-core` 的增量能力層，不是新的 Host Integration foundation，也不是新的 assistant runtime。Backend 001 已提供 host-aware assistant core，包括 assistant public API、SSE、identity、PageContext、AssistantContextState、Query Understanding、ExecutionPlan、Connector / Tool runtime、permission、EvidenceRef、AnswerDecision、audit 與 observability foundation。
 
-本 feature 的目標不是重做 assistant core，而是在 `001-internal-assistant-core` 之上建立可產品化的 host integration backend layer，讓既有 assistant core 可以被 Admin / ERP / MES / WMS / SCM / CRM 等 host system 以一致且安全的方式接入，同時不破壞既有 chat API、session API、SSE contract、feedback/approval 行為與 evidence pipeline。
+Backend 002 的核心目標是在這些既有能力上新增 Host App capability governance、host-specific PageContext policy、backend-owned source selection，以及 `admin` Orders / Inventory reference integration。此 feature 要讓 backend 能以 static HostApp capability 限制每個 host app 支援的 screen、entity、interaction 與 connector / tool eligibility，並用固定、安全、可回歸的 reference cases 驗證多 Host App 產品化方向。
+
+Backend 002 不得重做 Backend 001 的 identity、PageContext public contract、query planning、connector runtime、permission pipeline、EvidenceRef pipeline、AnswerDecision mapping、audit writer 或 observability framework。
 
 ## Product Context
 
-本產品的產品化方向是一份 assistant backend core 支援多個 host app。不同 host app 透過統一的 Host Integration Context 與 Data Adapter Contract 接入，將宿主系統自己的身份、權限、頁面脈絡與資料來源差異，限制在 host integration layer 與 adapter layer。
+本產品方向是一份 Backend 001 assistant core 服務多個 host app。Backend 001 負責共同 runtime 與 public contract；Backend 002 負責把不同 host app 的能力邊界產品化，讓 backend 在既有 assistant request flow 中知道某個 `hostApp` 在特定 `screenId`、`entityType` 與 interaction 下，哪些 connector / tool / evidence capability 是 eligible。
 
-`admin` 是第一個 reference host app，用來驗證 Orders 與 Inventory 的最小可行整合路徑，但不代表產品只支援 Admin。未來 MES / WMS / SCM / CRM 都應該有自己的 host app registration、capability declaration 與 data adapter，並沿用本 feature 定義的安全邊界、evidence contract 與 audit expectations。
+`admin` 是 Backend 002 的第一個正式 reference host app，用來驗證 Orders 與 Inventory 在既有 connector / tool / permission / evidence pipeline 中如何安全回答。`mes`、`wms`、`scm`、`crm`、`custom` 只保留 identifier 與 extension boundary，不在本 feature 實作 production connector。
 
-本 feature 也承接 frontend 002 的整合方向：Frontend 第一版採 npm package / SDK mode，由 host app 掛載 ChatWidget 並實作 `AssistantHostContextProvider`。因此 backend 必須能接收並驗證 provider 所傳入的 identity headers、PageContext、session scope 與 connector routing hints，但不實作 frontend package 本身。
+Frontend 002 可以透過 npm package / SDK mode 掛載 widget，但 Backend 002 不實作 frontend SDK，也不要求新的 backend request mode。Frontend 只沿用 Backend 001 既有 identity headers 與 top-level `pageContext`，不得傳 raw entity payload、routing authority、approval navigation metadata 或 backend-required session scope。
+
+## Backend 001 Reuse Baseline
+
+Backend 002 必須直接重用下列 Backend 001 能力，不重新定義、不重新實作，也不得建立第二套 authority、registry、runtime、mapper 或 writer：
+
+- 既有 assistant session / message / history API。
+- SSE event contract 與 `final.data.answerDecision`。
+- `RequestIdentityContext`。
+- identity extraction 與 validation。
+- actor / hostApp / organization / role / permission scopes / requestId contract。
+- 既有 top-level `pageContext` public request 欄位。
+- PageContext DTO 與基本 schema validation。
+- `AssistantContextState`。
+- context resolution 與 clarification flow。
+- Query Understanding。
+- `ExecutionPlan`。
+- Tool Registry。
+- `ConnectorAdapter`。
+- structured lookup 與既有 runtime orchestration。
+- permission pre-check。
+- organization boundary、permission pre-check、field masking 與 row-level permission extension points。
+- field masking。
+- LLM input sanitization。
+- `EvidenceRef`。
+- `AnswerDecision`。
+- degraded / timeout / tool failure 的既有 safe mapping。
+- append-only audit writer。
+- observability 與 dependency health foundation。
+
+Backend 002 可以新增 host-specific policy、capability metadata、allowlist 與 reference acceptance，但必須接在上述 Backend 001 能力之上。Backend 002 只補上 `admin` reference integration 所需的 selectedRows 逐筆 organization / row-level revalidation，不建立第二套 permission engine。
 
 ## Scope / Non-goals
 
 ### In Scope
 
-- 建立 Host Integration Context 的標準化定義與驗證需求。
-- 建立 PageContext normalization 與 minimization 規則。
-- 建立 HostApp Registry 的 capability declaration 規格。
-- 建立 Data Adapter Contract v1 與 evidence-safe result 規格。
-- 定義 connector routing hints 如何影響 candidate tools、required evidence、context resolution、risk assessment、clarification needs 與 expected answer shape。
-- 以 `admin` 作為第一個 reference host app，並以 Orders / Inventory 作為第一個 reference adapter scope。
-- 定義 integration smoke / golden questions，驗證 host context aware retrieval 與 grounded answer flow。
-- 定義 audit、observability 與 degraded behavior 的最小規格要求。
+- 定義 static HostApp capability registry 與 capability declaration。
+- 定義 host / screen / entity / interaction eligibility。
+- 定義 host-specific PageContext policy validation、allowlist、minimization 與 selectedRows policy。
+- 定義 backend-derived `sourceSystem` 作為 internal routing / evidence metadata。
+- 定義 capability-aware connector / tool eligibility，並要求沿用 Backend 001 planning、tool routing、permission、masking 與 evidence flow。
+- 定義 `admin` Orders / Inventory reference integration 的產品 acceptance。
+- 定義 deterministic synthetic fixtures、golden questions、eval smoke、privacy 與 regression guardrails。
+- 定義 host-specific audit / observability metadata。
 
 ### Out of Scope
 
 - 不實作 frontend widget / frontend SDK / npm package。
-- 不重做 001 assistant session / message / SSE / feedback / approval API。
-- 不一次實作完整 MES / WMS / SCM / CRM connector。
-- 不做完整 admin UI / CRUD。
-- 不做 approval management UI。
-- 不做 production deployment / Kubernetes / Helm。
-- 不繞過既有 identity / permission / audit / evidence pipeline。
-- 不允許 host app 直接傳 raw full data 給 LLM 作回答依據。
-- 不允許 PageContext 取代 permission check。
-- 不允許 connector 回傳 raw secret / credential / full sensitive payload。
+- 不新增 public chat API。
+- 不建立 Backend 001 Compatibility Mode 與 Backend 002 Mode 兩套 backend request contract。
+- 不新增 nested `hostContext`。
+- 不建立第二個 PageContext request 位置。
+- 不建立第二套 identity authority。
+- 不建立第二套 Query Understanding、ExecutionPlan 或 routing runtime。
+- 不建立第二套 ConnectorAdapter、Tool Registry 或 adapter registry runtime。
+- 不建立第二套 permission engine、EvidenceRef conversion framework、AnswerDecision mapper、audit writer 或 observability framework。
+- 不把 `sessionScope` 加入 Backend 002 public request contract；`sessionScope` 屬於 Frontend 002 session ownership / namespace / fallback 管理。
+- 不接收 approval navigation metadata；Host App 導航屬於 Frontend 002 callback responsibility。
+- 不新增 public diagnostic endpoint。
+- 不一次實作完整 ERP / MES / WMS / SCM / CRM connector。
+- 不做完整 Admin backend domain、generic SQL connector、admin UI / CRUD、approval management UI、production deployment / Kubernetes / Helm。
+- 不允許 frontend / host app 傳 raw entity data 給 LLM。
+- 不允許 PageContext、visibleColumns、selectedRows 或 userVisibleState 取代 permission check。
+- 不允許 connector / adapter 回傳 raw secret、credential、token 或 full sensitive payload 到 response、log、audit metadata 或 LLM input。
+
+## Public API / Transport Contract
+
+Backend 002 必須沿用 Backend 001 既有 Assistant public API 與 transport contract。Backend 002 不重新定義 route path、global prefix 或 route parameter naming；精確 public path、global prefix 與 `:id` 等 parameter 命名，以 Backend 001 實際 controller、bootstrap global prefix、Swagger / OpenAPI 產出與 contract tests 為唯一來源。
+
+Backend 002 沿用 Backend 001 現有 assistant session、message、history、feedback、approval、action draft 與 escalation public routes。
+
+Backend 002 的 public contract decisions：
+
+- request validation 仍透過既有 assistant request path 進入，不建立平行 host integration chat endpoint。
+- message request body 繼續使用 Backend 001 既有 top-level `pageContext`。
+- 不新增 nested `hostContext`。
+- identity、organization、role、permission scopes 與 requestId 完全繼承 Backend 001 現有 validator 與 contract tests。
+- Backend 002 不重新決定 `role` 是否 required；此規則直接繼承 Backend 001 實際 contract。
+- Backend 002 不建立 body 中的第二套 identity authority。
+- `sessionScope` 不加入 Backend 002 public request contract。
+- Backend 002 不接收 approval navigation metadata。
+- SSE final state 維持 Backend 001 既有 `AnswerDecision`、`noAnswerReason` 與 final-state semantics。
+- `EvidenceRef` output 必須保持 frontend-safe，不暴露 raw connector payload。
 
 ## Frontend Integration Dependency
 
-Frontend 002 第一版採 npm package / SDK mode。Host app 會透過 ChatWidget package 掛載 widget，並實作 `AssistantHostContextProvider`。Backend 002 不實作 frontend SDK，但必須能接收該 provider 送出的 identity headers、PageContext、session scope 與 approval detail related metadata。
+Frontend 002 可以用 npm package / SDK mode 取得 host app 畫面脈絡，但 Backend 002 只接受 Backend 001 已定義的 backend contract：
 
-Frontend 不應傳 raw entity data。Frontend 只傳 sanitized PageContext 與必要 request metadata；完整資料查詢仍由 backend 依據 Host Integration Context、permission scopes、Data Adapter / Connector 與 evidence pipeline 完成。Frontend 送來的畫面狀態可以作為 context hint，但不得被視為資料真值來源或權限依據。
+- 既有 trusted identity headers。
+- 既有 top-level sanitized `pageContext`。
+- 既有 assistant session / message / SSE transport。
+
+Frontend 不得傳 raw entity payload，也不得傳 connector、connectorId、adapter、adapterId、`sourceSystem`、dataSource、candidateTool、candidateTools、permission result 或 final evidence source 作為 backend routing authority。
+
+Frontend session ownership、session namespace、fallback recovery 與 host app navigation callback 屬於 Frontend 002 responsibility，不是 Backend 002 required request contract。
 
 ## Core Concepts
 
-### Host Integration Context
+### HostApp Capability Registry
 
-`Host Integration Context` 是 backend 用來判定 request 來源、資料邊界、權限邊界與 context resolution 的標準化上下文。它至少包含以下欄位：
+`HostApp Capability Registry` 是 Backend 002 的核心功能。v1 採 static code-based registration，不建立 dynamic database registration、self-service onboarding API 或 admin CRUD。
 
-- `hostApp`
-- `actorId`
-- `organizationId`
-- `role`
-- `permissionScopes`
-- `requestId`
-- `pageContext`
-- `sessionScope`
-- `sourceSystem`
-
-此上下文必須在 assistant request 進入 retrieval、tool execution、adapter routing 或 LLM answer generation 前完成驗證與標準化。若缺少 `hostApp`、`actorId`、`organizationId`、`permissionScopes` 或 `requestId`，系統必須 fail closed，不得進入 retrieval、tool 或 LLM 路徑。
-
-`sourceSystem` 可以保留在標準化後的 internal context 中，但不一定由 frontend 或 host app 每次直接提供。backend 可以根據 `hostApp`、`entityType`、`screenId`、selected adapter 或 HostApp capability 推導 `sourceSystem`。frontend 只需提供 sanitized PageContext、identity headers、session scope 與必要 metadata；最終資料來源選擇與 adapter routing 必須由 backend 控制，frontend 不得決定 `sourceSystem`、connector 或任意 data source。
-
-### PageContext Normalization
-
-`PageContext` 代表 host app 提供的宿主畫面脈絡，可能包含：
-
-- `route`
-- `screenId`
-- `hostModule`
-- `entityType`
-- `entityId`
-- `selectedRows`
-- `activeFilters`
-- `visibleColumns`
-- `userVisibleState`
-
-PageContext normalization 必須遵守下列規則：
-
-1. backend 必須 validate 與 normalize `PageContext`。
-2. `route` 的 query string 與 hash 不得被當成可信資料來源。
-3. `selectedRows` 只接受 id 或安全 summary，不接受 raw row payload。
-4. `activeFilters` 只接受 allowlisted field。
-5. `visibleColumns` 只作為 field-level visibility hint，不可取代 permission check。
-6. `userVisibleState` 只能作為 context hint，不可作為權限依據。
-7. 遇到敏感、未 allowlist 或過度詳細的欄位時，normalization 必須移除或遮罩。
-8. 問題若依賴 PageContext 但缺少必要上下文，系統必須回到 `clarification_required`，不得猜測 entity。
-
-### HostApp Registry
-
-`HostApp Registry` 用來定義 host app registration 與 capability declaration。第一版採 static code-based registration，不要求 dynamic database registration。每個 host app capability 宣告至少包含：
+每個 `HostAppCapability` 至少描述：
 
 - `hostAppId`
 - `displayName`
-- `supportedEntityTypes`
-- `supportedScreens`
-- `supportedDataAdapters`
-- `defaultPermissionScopeMapping`
-- `degradedBehavior`
+- supported entity types
+- supported screens
+- supported interactions
+- eligible connector / tool 或 evidence capabilities
+- PageContext allowlist
+- selectedRows policy
+- active filter allowlist
+- field visibility / exposure policy
+- default permission-scope mapping interpretation
+- degraded / unsupported behavior
 
-第一版 reference host app 為：
+v1 正式註冊：
 
 - `admin`
 
-未來保留但不在本 feature 實作：
+Future reserved identifiers，非本 feature deliverable：
 
 - `mes`
 - `wms`
@@ -123,400 +151,592 @@ PageContext normalization 必須遵守下列規則：
 - `crm`
 - `custom`
 
-若 request 帶入尚未註冊的 host app，或 host app 不支援目前 `entityType` / `screenId`，系統必須回傳一致的 safe path，例如 `unsupported host app`、`no_answer`、`clarification_required` 或 `degraded`，不得誤用其他 host app 的 adapter。
+Capability rules:
 
-### Data Adapter Contract v1
+1. 未註冊 host app 不得 fallback 到 `admin`。
+2. unsupported entity 不得猜測最接近的 entity。
+3. unsupported screen 不得套用其他 screen 的 capability。
+4. unsupported interaction 不得執行 connector / tool。
+5. 某 entity type 存在，不代表所有 screen 與 interaction 都允許使用該 entity 的 connector / tool。
+6. capability eligibility 必須發生在既有 tool / connector 執行前。
+7. HostApp capability 與 `defaultPermissionScopeMapping` 只能解讀、限制或縮小 Backend 001 已驗證的 permission scopes 與 eligible capability，不得生成、補齊、合併、替換或提升使用者權限。
+8. `role` 名稱、persona 名稱、`visibleColumns`、screen capability 與 PageContext 都不得授予或提升 permission。
+9. 若 HostApp capability declaration 與 Backend 001 permission 結果衝突，必須採用較嚴格的限制。
 
-`Data Adapter Contract v1` 是 backend-side data adapter 的統一規格，用來讓不同 host app 與 source system 透過相同模式提供 evidence-safe 資料給既有 assistant core。概念上必須支援：
+### Host-specific PageContext Policy
 
-- `sourceSystem`
-- `supportedHostApps`
-- `supportedEntityTypes`
-- `canHandle(context)`
-- `resolveContext(context)`
-- `fetchEvidence(query)`
-- `healthCheck()`
+Backend 002 不新增 public PageContext DTO，也不新增第二個 PageContext request 位置。Backend 002 在 Backend 001 既有 PageContext DTO、mapper、AssistantContextState、Query Understanding 與 clarification flow 上，新增 host-specific policy validation 與 minimization。
 
-此處的 `sourceSystem` 代表 backend 在 routing 後實際選定的 evidence source，而不是 frontend 指定的 connector target 或資料來源。
+Backend 002 新增的 PageContext policy 範圍：
 
-Adapter 回傳結果不得是 raw system payload，而必須是 evidence-safe structure。建議 evidence shape 至少包含：
+- 根據 HostApp capability 驗證 `screenId`。
+- 根據 HostApp capability 驗證 `entityType`。
+- 根據 screen / entity 驗證 interaction。
+- PageContext 欄位 allowlist。
+- activeFilters allowlist。
+- field visibility / exposure policy。
+- selectedRows 上限與 interaction eligibility。
+- host-specific 敏感欄位移除或遮罩。
+- capability decision 與 minimization 結果的 audit metadata。
 
-- `sourceSystem`
-- `sourceType`
-- `sourceId`
-- `title`
-- `snippet`
-- `fieldsSummary`
-- `permissionResult`
-- `retrievedAt`
-- `toolCallId?`
-- `metadata?`
+PageContext policy rules:
 
-Data Adapter Contract v1 必須遵守以下規則：
+1. `route` query string 與 hash 不得作為可信資料來源。
+2. `visibleColumns` 不得取代 permission。
+3. `userVisibleState` 不得作為 permission authority。
+4. PageContext 不足時沿用 Backend 001 既有 clarification path。
+5. Backend 002 不建立第二套 deixis resolution、clarification pipeline 或 AssistantContextState。
+6. raw PageContext 不得直接交給 LLM。
 
-1. adapter 不得回傳 credential / secret。
-2. adapter 不得把 raw full payload 直接交給 LLM。
-3. adapter 必須在資料進入 LLM 前完成 permission masking 與 data minimization。
-4. adapter result 必須可轉成 `EvidenceRef`。
-5. adapter failure 或 dependency degraded 只能走既有 public contract 可理解的 safe path，例如 `tool_failure`、`no_answer`、safe error envelope 或等價的既有 unavailable/degraded UI flow；`degraded` 在本 spec 中代表 internal dependency state / safe path，而不是新的 public answer enum。
-6. permission check 必須在 adapter execution 前與 evidence exposure 前都成立。
+### selectedRows Policy
 
-### Connector Routing Hints
+`selectedRows` 只作 request-scoped comparison / bulk context，不作 session identity，也不得擴大查詢範圍。
 
-本 feature 不要求完整重寫 planner，但必須定義下列因素如何影響 routing 決策：
+Backend 002 固定 selectedRows 規則：
 
+1. 只接受 Backend 001 既有 PageContext contract 允許的 ID 或 safe summary。
+2. Frontend 與 Backend 都必須獨立驗證最多 20 筆。
+3. Backend 不得只信任 Frontend 驗證結果。
+4. 超過 20 筆時整體拒絕，不得截斷為前 20 筆。
+5. 上限檢查必須針對 client 原始輸入數量執行，不得先 deduplicate 後才判斷是否超限。
+6. `entityId` 與 `selectedRows` 指向互相衝突的 target 時，不得任意選擇其中一方。
+7. 任一 selected row 跨 organization 或未通過 row-level permission 時，整個 comparison request 回 `permission_denied`。
+8. 不得只處理合法 subset。
+9. 不得在 response 中揭露是哪一個 ID 未授權。
+10. Audit metadata 必須最小化，不記錄未授權 row 的 raw payload。
+11. 每個 selected row 都必須在取得或暴露完整資料前重新套用 Backend 001 既有 organization boundary 與 row-level permission extension point。
+12. frontend 傳入的 row ID、safe summary 或畫面上可見狀態都不得視為 authorization proof。
+
+### Backend-owned `sourceSystem`
+
+`sourceSystem` 是 backend-owned internal routing / evidence metadata，不是 frontend 或 host app 可指定的欄位。
+
+Backend 可以根據下列可信資訊推導 `sourceSystem`：
+
+- trusted `hostApp`
+- HostApp capability
+- normalized `screenId`
+- normalized `entityType`
+- eligible existing connector / tool
+- backend-selected adapter specialization
+- existing `ExecutionPlan`
+
+`sourceSystem` 推導結果必須與實際選用的 connector / tool / adapter specialization 一致。推導與選擇結果必須寫入既有 audit / observability pipeline。Client 傳入的 `sourceSystem` 必須視為 routing-control injection，而不是可信 routing input。
+
+### Connector / Tool / Data Adapter Boundary
+
+`DataAdapter` 可以保留為概念，但它不是第二套 runtime。若後續設計保留 `DataAdapter`，它必須是既有 Connector / Tool domain 中的 read-oriented evidence specialization。
+
+Backend 002 必須遵守：
+
+1. DataAdapter 若存在，必須由既有 Connector / Tool domain 管理。
+2. 不建立獨立於 Tool Registry / ConnectorAdapter 的第二套 registry。
+3. 不建立第二套 routing runtime。
+4. 不建立第二套 health model。
+5. 不建立第二套 timeout policy。
+6. 不建立第二套 permission engine。
+7. 不建立第二套 EvidenceRef conversion framework。
+8. 不建立第二套 degraded / public outcome mapper。
+9. 不建立第二套 audit writer 或 observability framework。
+10. adapter eligibility 由 HostApp capability 與既有 planning / tool routing 共同約束。
+11. adapter 執行仍走 Backend 001 既有 permission pre-check。
+12. adapter evidence 仍走 Backend 001 既有 masking、LLM sanitization 與 EvidenceRef pipeline。
+13. timeout / unavailable / tool failure 仍映射到 Backend 001 既有 `tool_failure` safe mapping。
+14. `degraded` 不得成為新的 public `AnswerDecision`。
+15. adapter 不得建立 adapter-specific permission engine；Admin selectedRows 逐筆 revalidation 必須擴充既有 permission policy 與 row-level extension point。
+
+本 spec 不強制保留獨立的 `DataAdapterRegistryService` 技術設計；後續技術設計若提及 registry，必須與既有 Tool Registry / ConnectorAdapter domain 對齊，不得成為獨立產品 surface。
+
+### Public Safe Outcome Mapping
+
+Backend 002 必須讓相同情境只有一個公開結果，並沿用 Backend 001 既有 public enum、error envelope 與 safe mapping：
+
+| 情境 | 固定 public outcome |
+| --- | --- |
+| query 依賴「這筆」、「這張」、「目前這個」、缺少必要 entity reference、`entityId` 與 `selectedRows` target 衝突，或存在多個無法安全選擇的 entity candidate | `clarification_required` |
+| client payload 包含 connector、connectorId、adapter、adapterId、`sourceSystem`、dataSource、candidateTool、candidateTools、permission result 或 final evidence source 等 routing-control 欄位 | Backend 001 既有 request validation / integration error envelope；不以 `AnswerDecision` 作為主要拒絕結果 |
+| 未註冊 Host App | Backend 001 既有 request / integration error envelope；不 fallback 到 `admin`，不進入 connector / tool routing |
+| 已註冊 Host App 但 screen、entity 或 interaction 不支援 | `no_answer`，搭配 Backend 001 可容納的 internal `noAnswerReason`；不新增 public enum |
+| 純 restricted-field 問題、mixed unauthorized selectedRows、row-level permission 失敗或 operation permission 失敗 | `permission_denied` |
+| tool / adapter timeout、unavailable 或 tool failure | Backend 001 既有 `tool_failure` safe mapping；適用時為 `no_answer` + `noAnswerReason=tool_failure` |
+| 混合授權 / restricted-field 問題，且授權欄位可形成不誤導 partial answer | 回答授權部分，restricted 部分明確表示無權限提供，不暴露 restricted value 或存在性 |
+| 混合授權 / restricted-field 問題，但 partial answer 會誤導 | `permission_denied` |
+
+Backend 002 不新增 public `AnswerDecision`、不新增第二套 error model，也不把 `degraded` 暴露成 public answer decision。
+
+### Routing Authority
+
+Backend 可使用的 routing inputs 包含：
+
+- existing trusted identity context
 - `hostApp`
-- `entityType`
-- `screenId`
-- `permissionScopes`
-- `query intent`
+- normalized `screenId`
+- normalized `entityType`
+- normalized entity reference
+- normalized selectedRows
+- allowlisted filters
+- permission scopes
+- query intent
+- HostApp capability
+- existing Query Understanding / ExecutionPlan result
 
-上述 routing hints 必須能影響：
+上述資訊只能影響：
 
-- `candidateTools`
-- `requiredEvidence`
-- `contextResolution`
-- `riskAssessment`
-- `clarificationNeeds`
-- `expectedAnswerShape`
+- eligible candidate tools / connectors
+- required evidence
+- context resolution
+- clarification requirement
+- expected answer shape
+- backend-owned source selection
 
-frontend 提供的 context 可以影響 backend 的 resolution 與 routing 判斷，但不能指定任意 connector、任意 data source 或最終 `sourceSystem`。資料來源選擇、adapter selection 與 evidence routing 必須由 backend 根據 capability、permission 與 safety rules 決定。
+Client / frontend 不得指定：
 
-### Admin / Orders / Inventory Reference Adapter
+- connector
+- connectorId
+- adapter
+- adapterId
+- `sourceSystem`
+- dataSource
+- candidateTool
+- candidateTools
+- permission result
+- final evidence source
 
-第一版 reference adapter 限定為 `admin` host app 下的 Orders / Inventory 範圍，只驗證最小資料查詢與 grounded answer flow。建議最小支援範圍如下：
+若 client-controlled payload 傳入上述 routing-control 欄位，Backend 必須拒絕該 request，不進入 retrieval、tool、adapter 或 LLM，並寫入最小化 audit。Audit 只記錄欄位名稱、requestId、hostApp、organization 與拒絕原因，不記錄 client 傳入的完整 routing target 值或 raw request body。
 
-- `Admin Orders`
-- `Admin Inventory`
+### Admin Orders / Inventory Reference Integration
 
-第一版可支援的問答類型：
+Backend 001 已存在 generic mock connector、generic Orders / Inventory lookup、tool execution、permission、evidence 與 safe response。Backend 002 不取代這些能力。
+
+Backend 002 新增的 `admin` reference integration acceptance 包含：
+
+- `hostApp=admin` 正式 capability registration。
+- Orders / Inventory supported screens。
+- Orders / Inventory supported entity types。
+- supported interactions。
+- selectedRows comparison eligibility。
+- backend-derived source selection。
+- deterministic synthetic reference fixtures。
+- fixed personas 與 restricted field acceptance。
+- host capability-aware routing 驗收。
+- golden questions / eval cases。
+
+Reference integration 必須支援下列 acceptance questions：
 
 - order status lookup
 - order summary
 - selected orders comparison
 - inventory availability lookup
 - inventory summary
+- restricted cost permission behavior
+- unsupported host / screen / entity / interaction
+- adapter unavailable / timeout safe path
 
-超出範圍或無法安全回答時，系統必須只回傳：
+Reference integration 不得演變成完整 ERP connector、generic SQL connector、完整 Admin backend domain，也不得取代 Backend 001 既有 mock fixtures 或 connector runtime。
 
-- `no_answer`
-- `clarification_required`
-- `permission_denied`
-- `tool_failure`
-- `degraded`
+### Restricted Field Behavior
+
+純 restricted-field 問題，例如使用者只問無權限的 `cost`：
+
+- 回 `permission_denied`。
+- restricted value 不得進入 LLM input。
+- restricted value 不得進入 EvidenceRef。
+- restricted value 不得出現在 response、log 或 audit metadata。
+
+混合授權 / 受限欄位問題，例如同時詢問 status 與 cost：
+
+- 只有在授權欄位本身能形成真實、有用且不誤導的 partial answer 時，才回答授權部分。
+- 受限部分必須省略、遮罩或明確表示無權限提供。
+- 不得透露受限值。
+- 不得透露受限值是否為 null、是否存在、是否超過某個門檻。
+- 若 partial answer 會造成誤導，則整體回 `permission_denied`。
+- 必須沿用 Backend 001 既有 permission、masking 與 EvidenceRef pipeline。
+- `finance_user` 只有在 Backend 001 可信 permission scopes 實際包含 restricted `cost` permission 時，才可讀取 `cost`；persona 名稱或 `role` 名稱本身不得授予 `cost` 權限。
+- `defaultPermissionScopeMapping` 不得將 `role` 自動轉換成額外 permission scope，也不得把未授權欄位加入 LLM input 或 EvidenceRef。
+
+### Audit / Observability
+
+Backend 002 只新增 host-specific audit metadata，不建立第二套 audit 或 observability framework。
+
+可新增 metadata：
+
+- HostApp capability lookup result
+- unsupported host / screen / entity / interaction reason
+- PageContext policy decision
+- selectedRows policy rejection
+- eligible connector / tool set
+- final backend-selected connector / tool / adapter specialization
+- backend-derived `sourceSystem`
+- adapter dependency status
+- host-specific minimization summary
+
+必須沿用：
+
+- Backend 001 `AuditWriter`
+- requestId correlation
+- existing structured logger
+- redaction policy
+- existing observability metadata
+- dependency health model
+- timeout / failure reason
+- existing safe mapping defined by Backend 001 AnswerDecision / noAnswerReason behavior
+
+不得記錄：
+
+- raw PageContext
+- raw selected rows
+- 完整 entity record
+- unauthorized field value
+- credential
+- token
+- secret
+- raw connector payload
+- raw exception object
+
+### Approval / Diagnostic / Future Host Apps
+
+Approval:
+
+- Backend 002 不接收 approval navigation metadata。
+- Backend 002 不新增 approval-specific Host Integration Context。
+- 沿用 Backend 001 既有 `ApprovalRequest`、`ActionDraft`、`EscalationRequest` 與 public API。
+- Host App 導航屬於 Frontend 002 callback responsibility。
+
+Diagnostic:
+
+- v1 不新增 public diagnostic endpoint。
+- 沿用 Backend 001 既有 health、readiness、audit 與 observability。
+- HostApp Registry inspection 或 adapter diagnostic 延後至後續 feature。
+
+Future Host Apps:
+
+- `mes`
+- `wms`
+- `scm`
+- `crm`
+- `custom`
+
+本 feature 只保留 identifier 與 extension boundary，不決定優先序，也不實作 production connector。
 
 ## User Personas
 
-- **admin_operator**：可查看 order 與 inventory 基本資料的營運使用者。
-- **finance_user**：除基本資料外，也具備成本相關欄位權限的使用者。
-- **limited_user**：能使用 assistant，但不具備敏感欄位或成本欄位權限的使用者。
-- **host system integrator**：負責在 host app 內整合 frontend SDK 與 backend headers/context handoff 的工程人員。
-- **product / platform owner**：負責審查 host app registration、adapter capability 與 degraded behavior 的產品或平台角色。
+- **admin_operator**: 可查看 order 與 inventory 基本資料的營運使用者，但不因角色名稱自動取得 restricted `cost` 欄位。
+- **finance_user**: 具備 order / inventory 基本 read permission；只有當 Backend 001 可信 permission scopes 實際包含 restricted `cost` permission 時，才可讀取 `cost`。
+- **limited_user**: 能使用 assistant 並可讀基本欄位，但不具備 restricted `cost` permission。
+- **host system integrator**: 負責在 host app 中提供既有 identity headers 與 top-level sanitized `pageContext` 的工程人員。
+- **product / platform owner**: 負責審查 HostApp capability、unsupported behavior、reference acceptance 與 future host app extension boundary。
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Validate Host Integration Context (Priority: P1)
+### User Story 1 - Use Existing Identity and PageContext to Resolve HostApp Capability (Priority: P1)
 
-backend 必須接收並驗證 host app 傳來的 identity、permission scopes、hostApp、organization boundary 與 PageContext，並把這些資訊轉成可供 assistant core 與 `ExecutionPlan` 使用的標準化請求上下文。
+Backend 使用 Backend 001 既有 `RequestIdentityContext` 與 top-level `pageContext`，查詢 static HostApp capability，判定目前 host / screen / entity / interaction 是否受支援。
 
-**Why this priority**: 若無法先建立可信的 request context，後續 retrieval、tool routing、evidence 或 answer 全部不可信，也違反既有安全與權限邊界。
-
-**Independent Test**: 使用帶有完整 headers 與 host metadata 的 assistant request 即可獨立驗證 context validation，不必先實作 reference adapter。
+**Independent Test**: 以既有 assistant request contract 傳入完整 identity headers 與 top-level `pageContext`，驗證 `hostApp=admin` 可取得 capability；未註冊 host 使用 Backend 001 既有 request / integration error envelope。
 
 **Acceptance Scenarios**:
 
-1. **Given** request 帶完整 identity、`hostApp`、`organizationId`、`permissionScopes` 與 `requestId`，**When** backend 建立 assistant request context，**Then** context 會被標準化並可供 `ExecutionPlan` 使用。
-2. **Given** request 缺少 `actorId`、`organizationId`、`hostApp`、`permissionScopes` 或 `requestId`，**When** backend 收到 request，**Then** 系統 fail closed，回傳一致 safe error，且不進入 retrieval、tool 或 LLM。
-3. **Given** `hostApp` 未註冊，**When** request 進入 backend，**Then** 系統回傳 unsupported host app safe error 或 `no_answer` / `degraded`，不得猜測 connector。
+1. **Given** request 使用 Backend 001 既有 identity headers 且 `hostApp=admin`，**When** backend 評估 capability，**Then** 取得 `admin` HostApp capability。
+2. **Given** request 帶未註冊 host app，**When** backend 評估 capability，**Then** 沿用 Backend 001 既有 request / integration error envelope，不得 fallback 到 `admin`。
+3. **Given** request 缺少 Backend 001 required identity field，**When** backend 收到 request，**Then** 沿用 Backend 001 identity validation fail closed，不進入 capability、retrieval、tool 或 LLM。
 
----
+### User Story 2 - Restrict Eligible Connector / Tool by Host Capability (Priority: P1)
 
-### User Story 2 - Normalize PageContext and Resolve Current Entity (Priority: P1)
+Backend 根據 HostApp capability、normalized screen/entity/interaction 與既有 ExecutionPlan，限制 eligible connector / tool。
 
-backend 能把 host app 的 PageContext 轉成可稽核、可權限檢查、可供 `ExecutionPlan` 使用的 normalized context，並在必要時解析目前頁面實體或 selected rows。
-
-**Why this priority**: host app 的頁面資料格式不一致，若沒有 normalization，assistant core 無法安全理解「這筆」、「目前這張」或「剛剛選取的幾筆」。
-
-**Independent Test**: 僅需輸入不同形狀的 PageContext 與對應 query，即可驗證 normalized context 與 clarification 邏輯。
+**Independent Test**: 不需要實作完整 Admin adapter，可用 capability fixtures 驗證 unsupported host、screen、entity 或 interaction 不產生 eligible connector / tool。
 
 **Acceptance Scenarios**:
 
-1. **Given** PageContext 包含 `entityType` 與 `entityId`，**When** 使用者問「這筆」或「目前這張」，**Then** backend 能解析 current entity candidate。
-2. **Given** PageContext 只有 `selectedRows`，**When** 使用者問「剛剛選取的幾筆」，**Then** backend 能解析 selected row candidates。
-3. **Given** 問題依賴 PageContext 但 context 不足，**When** backend 判斷無法安全解析目標，**Then** 回傳 `clarification_required`，不得使用上一個不可靠 context。
-4. **Given** PageContext 含敏感或未 allowlist 欄位，**When** backend 執行 normalization，**Then** 該欄位會被移除或遮罩，並在 audit 中記錄 minimization。
+1. **Given** `admin` capability 支援 order detail status lookup，**When** 使用者詢問訂單狀態，**Then** eligible tools 只能包含 capability 與 permission compatible 的 Orders evidence path。
+2. **Given** screen 不支援 selectedRows comparison，**When** 使用者要求比較 selected rows，**Then** backend 不得選取 comparison connector / tool。
+3. **Given** entity type unsupported，**When** backend 建立 routing decision，**Then** public outcome 為 `no_answer`，並搭配 Backend 001 可容納的 internal `noAnswerReason`。
 
----
+### User Story 3 - Apply Host-specific PageContext Policy and selectedRows Safety (Priority: P1)
 
-### User Story 3 - Register HostApp Capabilities (Priority: P1)
+Backend 在既有 PageContext contract 上套用 host-specific allowlist、selectedRows policy 與 minimization，並沿用 Backend 001 clarification path。
 
-backend 有 HostApp Registry，可描述 host app 支援哪些 `entityType`、`screenId`、`data adapter` 與 degraded behavior，並可讓 assistant core 在 routing 前先理解宿主能力邊界。
-
-**Why this priority**: assistant core 必須知道某個 host app 能做什麼、不能做什麼，才能避免把 admin adapter 誤套到其他系統。
-
-**Independent Test**: 可單獨測 registry lookup 與 unsupported capability path，不依賴 reference adapter 內容。
+**Independent Test**: 以不同 PageContext shape 驗證 allowlist、selectedRows 20 筆上限、entityId / selectedRows conflict 與 minimization metadata。
 
 **Acceptance Scenarios**:
 
-1. **Given** `hostApp=admin`，**When** request 進入 backend，**Then** backend 可取得 `admin` capabilities。
-2. **Given** `hostApp=mes/wms/scm/crm` 但尚未實作 adapter，**When** request 進入 backend，**Then** backend 以 unsupported capability safe path 回應，不得誤用 `admin` adapter。
-3. **Given** host app capability 不支援該 `entityType`，**When** backend 進行 routing，**Then** 回傳 `no_answer` 或 `clarification_required`，並記錄 audit。
+1. **Given** PageContext `screenId` 不在 `admin` capability 中，**When** request 進入 backend，**Then** public outcome 為 `no_answer`，不套用其他 screen capability。
+2. **Given** `selectedRows` 超過 20 筆，**When** backend 執行 policy validation，**Then** 整體拒絕，不截斷、不 deduplicate 後再接受。
+3. **Given** `entityId` 與 `selectedRows` 指向不同 target，**When** 使用者要求查詢或比較，**Then** public outcome 為 `clarification_required`，不任意選一方。
+4. **Given** selectedRows 任一 row 跨 organization 或未授權，**When** backend 執行 row-level permission，**Then** 整個 comparison request 回 `permission_denied`，不處理合法 subset。
 
----
+### User Story 4 - Derive Backend-owned `sourceSystem` (Priority: P1)
 
-### User Story 4 - Define Data Adapter Contract v1 (Priority: P1)
+Backend 根據 trusted identity、HostApp capability、normalized PageContext、eligible connector / tool 與 ExecutionPlan 推導 `sourceSystem`。
 
-建立 backend Data Adapter Contract v1，使未來 MES / WMS / SCM / CRM 能依相同 interface 接入 assistant core，並確保 adapter result 只以 evidence-safe 形式流入後續回答流程。
-
-**Why this priority**: 若沒有穩定的 adapter contract，host integration 只能逐案硬接，無法產品化，也無法確保資料最小化與 permission-safe evidence。
-
-**Independent Test**: 可透過 mock adapter 測試 `canHandle`、`resolveContext`、`fetchEvidence` 與 minimization，不需要真實 host connector。
+**Independent Test**: 使用 fixed capability 與 request fixtures 驗證 `sourceSystem` 與實際 selected connector / tool / adapter specialization 一致，且 frontend 指定 `sourceSystem` 會被拒絕。
 
 **Acceptance Scenarios**:
 
-1. **Given** 已註冊 adapter 支援某個 `entityType`，**When** `ExecutionPlan` 需要 structured evidence，**Then** backend 可呼叫 adapter 並取得 evidence-safe result。
-2. **Given** adapter 嘗試回傳 raw payload，**When** result 進入 evidence pipeline，**Then** raw payload 必須被 minimization 或 masking，且不得直接進入 LLM input。
-3. **Given** adapter unavailable，**When** backend 嘗試查詢資料，**Then** 回傳 `tool_failure`、`no_answer` 或 `degraded` safe path，並記錄 audit。
+1. **Given** `admin` Orders detail lookup，**When** backend 選定 Orders evidence path，**Then** `sourceSystem` 由 backend 推導並寫入最小化 audit metadata。
+2. **Given** client payload 嘗試傳入 `sourceSystem`，**When** backend 驗證 request，**Then** request 被拒絕，不進入 retrieval、tool、adapter 或 LLM。
+3. **Given** backend-selected connector / tool 改變，**When** source metadata 被記錄，**Then** `sourceSystem` 必須與實際 evidence source 一致。
 
----
+### User Story 5 - Complete Admin Orders Queries Through Existing Pipeline (Priority: P2)
 
-### User Story 5 - Admin Orders / Inventory Reference Adapter (Priority: P2)
+Backend 使用既有 Connector / Tool / permission / masking / EvidenceRef / AnswerDecision pipeline 完成 `admin` Orders reference queries。
 
-使用 Admin / Orders / Inventory 建立第一個 reference adapter，驗證 host integration gateway 與 data adapter contract 能實際串起 assistant core、`ExecutionPlan`、evidence pipeline 與 grounded answer。
-
-**Why this priority**: 需要第一個受控且可測試的 reference integration，證明這條產品化路徑可行，但不把 002 擴成完整 ERP/CRM project。
-
-**Independent Test**: 只需 `admin` host app 與 deterministic synthetic fixtures，即可驗證 detail page、selected rows 與權限遮罩行為。
+**Independent Test**: 使用 deterministic synthetic fixtures 驗證 order status、order summary、selected orders comparison 與 restricted cost behavior。
 
 **Acceptance Scenarios**:
 
-1. **Given** admin order detail PageContext，**When** 使用者問「這張訂單目前狀態是什麼」，**Then** backend 使用 admin orders adapter 取得 evidence，並回傳 grounded answer。
-2. **Given** admin inventory detail PageContext，**When** 使用者問「這個品項可用庫存是多少」，**Then** backend 使用 inventory adapter 取得 evidence，並回傳 grounded answer。
-3. **Given** `selectedRows` 包含多筆 orders，**When** 使用者要求比較，**Then** backend 只針對 `selectedRows` 查詢，不擴大查詢範圍。
-4. **Given** 使用者沒有成本欄位權限，**When** 問成本或毛利，**Then** 回傳 `permission_denied` 或只回答可見欄位。
+1. **Given** admin order detail PageContext，**When** 使用者問「這張訂單目前狀態是什麼」，**Then** backend 使用 existing connector / tool / evidence path 回傳 grounded answer。
+2. **Given** selectedRows comparison request，**When** 所有 rows 都在 organization boundary 且具 read permission，**Then** 查詢範圍只限 selectedRows。
+3. **Given** limited_user 只問 `cost`，**When** backend 處理 request，**Then** final public outcome 是 `permission_denied`，restricted value 不進 LLM、EvidenceRef、response、log 或 audit。
 
----
+### User Story 6 - Complete Admin Inventory Queries Through Existing Pipeline (Priority: P2)
 
-### User Story 6 - Integration Golden Questions and Eval Smoke (Priority: P2)
+Backend 使用既有 pipeline 完成 `admin` Inventory reference queries，並套用 HostApp capability 與 restricted field policy。
 
-建立最小 golden question set 與 eval smoke，驗證 host context aware retrieval、adapter routing、權限控制與安全狀態是否順暢。
-
-**Why this priority**: 沒有固定 smoke cases，就無法穩定驗證 host integration 是否仍維持 grounded、permission-safe 與 frontend-compatible。
-
-**Independent Test**: 可以固定 synthetic fixtures 與 question set 直接驗證，不依賴完整 end-to-end 環境。
+**Independent Test**: 使用 deterministic synthetic fixtures 驗證 inventory availability、inventory summary 與 restricted cost behavior。
 
 **Acceptance Scenarios**:
 
-1. **Given** order status detail page question，**When** eval smoke 執行，**Then** expected evidence source 必須是 order。
-2. **Given** selected orders comparison question，**When** eval smoke 執行，**Then** 查詢範圍只限於 `selectedRows`。
-3. **Given** inventory availability question，**When** eval smoke 執行，**Then** expected evidence source 必須是 inventory。
-4. **Given** missing PageContext case，**When** eval smoke 執行，**Then** final answer decision 必須是 `clarification_required`。
-5. **Given** unauthorized field case，**When** eval smoke 執行，**Then** final answer decision 必須是 `permission_denied` 或 masked answer。
-6. **Given** unsupported host/entity 或 adapter degraded case，**When** eval smoke 執行，**Then** final public outcome 必須映射到 001 既有 safe response，例如 `no_answer`、`tool_failure` 或 safe error envelope，而不是新增 `degraded` answer decision。
+1. **Given** admin inventory detail PageContext，**When** 使用者問可用庫存，**Then** backend 回傳 grounded answer 且 evidence source 是 inventory。
+2. **Given** unsupported inventory screen，**When** 使用者詢問 inventory data，**Then** backend 不得套用其他 screen capability。
+3. **Given** mixed status + cost question，**When** 使用者無 cost permission，**Then** 只有在授權欄位能形成不誤導 partial answer 時才回答授權部分；若 partial answer 會誤導，public outcome 為 `permission_denied`。
 
----
+### User Story 7 - Safely Reject Unsupported Host / Screen / Entity / Interaction (Priority: P2)
 
-### User Story 7 - Audit, Observability, and Degraded Behavior (Priority: P2)
+Backend 對 unsupported capability case 使用固定 public outcome，不猜測、不 fallback、不暴露 routing detail。
 
-host integration decisions、adapter routing、permission masking、adapter failures 都必須可稽核、可觀測，且對 frontend 001 的 response shape 維持安全狀態。
-
-**Why this priority**: 本 feature 是產品化整合層，沒有 audit 與 degraded behavior，就無法安全上線或追查整合失敗原因。
-
-**Independent Test**: 可透過 audit metadata、safe errors 與 SSE final state 驗證，不必等所有 host app 實作完成。
+**Independent Test**: 使用 unsupported host、screen、entity、interaction fixtures 驗證固定 public outcome、audit metadata 與 no fallback。
 
 **Acceptance Scenarios**:
 
-1. **Given** 任一次 HostApp capability decision，**When** request 完成，**Then** 系統有對應 audit event 或 audit metadata。
-2. **Given** 任一次 PageContext normalization / minimization，**When** request 完成，**Then** 系統有可追蹤 metadata。
-3. **Given** 任一次 adapter selection 或 adapter failure，**When** request 完成，**Then** 系統有對應 audit event。
-4. **Given** connector degraded 或 adapter timeout，**When** backend 回應，**Then** response 不得洩漏 raw error、stack、secret 或 credential。
-5. **Given** request 最終進入安全狀態，**When** frontend 接收結果，**Then** response 必須仍對齊 frontend 001 的 `AnswerDecision`、`noAnswerReason` 與 SSE contract。
+1. **Given** `hostApp=mes` 但 v1 未註冊 production capability，**When** request 進入 backend，**Then** 沿用 Backend 001 既有 request / integration error envelope，不使用 `admin` capability。
+2. **Given** `admin` 不支援某 interaction，**When** 使用者要求該 interaction，**Then** public outcome 為 `no_answer`，backend 不選 connector / tool。
+3. **Given** client 指定 candidate tool，**When** backend 驗證 request，**Then** request 被拒絕並寫入最小化 audit。
+
+### User Story 8 - Golden Questions / Eval / Privacy / Regression (Priority: P2)
+
+建立固定 golden questions、eval smoke、privacy 與 architecture regression，證明 Backend 002 的增量能力不破壞 Backend 001。
+
+**Independent Test**: 使用 synthetic fixtures 與固定 expected outcomes，驗證 public contract、source selection、permission behavior 與 Public Safe Outcome Mapping。
+
+**Acceptance Scenarios**:
+
+1. **Given** order status golden question，**When** eval 執行，**Then** expected evidence source 是 order，且 public response 符合 Backend 001 AnswerDecision contract。
+2. **Given** inventory availability golden question，**When** eval 執行，**Then** expected evidence source 是 inventory。
+3. **Given** adapter timeout 或 unavailable，**When** backend 回應，**Then** final public outcome 沿用 Backend 001 `tool_failure` safe mapping，不出現 public `answerDecision = "degraded"`。
+4. **Given** Backend 002 Admin capability path以外的既有Backend 001流程，**When** 002 capability code 存在，**Then** 既有 Backend 001 行為不被改變。
 
 ### Edge Cases
 
-- host app 傳入 `selectedRows`，但其中包含未授權資料或超出目前 organization boundary 的 id。
-- 使用者詢問「這張訂單」時，PageContext 同時存在 `entityId` 與 `selectedRows`，且兩者指向不同 target。
-- `visibleColumns` 表示某欄位目前可見，但 permission scope 不允許 backend 曝露該欄位。
-- `activeFilters` 含有未 allowlist 欄位、敏感欄位或推導出敏感資訊的條件。
-- adapter health check 正常，但實際 `fetchEvidence` 因來源系統 timeout 進入 degraded path。
-- host app capability 支援 `entityType`，但不支援當前 `screenId` 或 selected rows interaction pattern。
-- frontend 重送同一 request，而 backend 必須維持一致 safe outcome 並避免不必要的擴大查詢。
+- unregistered host app 嘗試使用 `admin` Orders / Inventory capability。
+- unsupported screen 但 entity type 支援。
+- unsupported interaction 但 entity type 與 screen 支援。
+- client 傳入 connector / adapter / `sourceSystem` / candidateTools / permission result。
+- `selectedRows` 超過 20 筆。
+- `selectedRows` 原始輸入超過 20 筆但 deduplicate 後小於 20 筆。
+- selectedRows 包含跨 organization 或未授權 row。
+- `entityId` 與 `selectedRows` target 衝突。
+- `visibleColumns` 顯示 restricted field，但 permission scope 不允許 backend 曝露該欄位。
+- `activeFilters` 含未 allowlist 或敏感條件。
+- adapter health 正常但 actual lookup timeout。
+- repeated request / retry 不得造成 scope drift、adapter drift、permission drift 或 evidence expansion。
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: 系統必須定義 Host Integration Context 的標準欄位與驗證要求，至少涵蓋 `hostApp`、`actorId`、`organizationId`、`role`、`permissionScopes`、`requestId`、`pageContext`、`sessionScope` 與 `sourceSystem`；其中 `sourceSystem` 屬於標準化後的 internal context，可由 backend 推導，不得被視為 frontend 必填或 frontend 可任意指定的資料來源選擇器。
-- **FR-002**: 系統必須對缺少 `actorId`、`organizationId`、`hostApp`、`permissionScopes` 或 `requestId` 的 request fail closed，且不得進入 retrieval、tool 或 LLM。
-- **FR-003**: 系統必須接受 `x-permission-scopes` CSV header 作為 v1 外部 permission scope transport，並在 backend 內部 normalize 成一致格式供 assistant core 使用。
-- **FR-004**: 系統必須驗證 `hostApp` 是否已註冊於 HostApp Registry；未註冊時不得猜測或 fallback 到其他 host app adapter。
-- **FR-005**: 系統必須支援 HostApp Registry 的 capability declaration，至少能描述 `hostAppId`、`displayName`、`supportedEntityTypes`、`supportedScreens`、`supportedDataAdapters`、`defaultPermissionScopeMapping` 與 `degradedBehavior`。
-- **FR-006**: HostApp Registry v1 必須採 static code-based registration，並以 `admin` 作為第一個 reference host app。
-- **FR-007**: 系統必須 validate 與 normalize `PageContext`，並確保 `route` query/hash 不被視為可信資料來源。
-- **FR-008**: `selectedRows` 只可接受 id 或安全 summary，不得接受 raw row payload。
-- **FR-009**: `activeFilters` 只可接受 allowlisted field；未 allowlist 欄位必須被忽略、移除或遮罩。
-- **FR-010**: `visibleColumns` 只可作為 field-level visibility hint，不得取代 permission check。
-- **FR-011**: `userVisibleState` 只可作為 context hint，不得被視為權限、資料真值或 evidence。
-- **FR-012**: 當問題依賴 PageContext，但缺少可安全解析 current entity 或 selected rows 的必要資訊時，系統必須回傳 `clarification_required`。
-- **FR-013**: 系統必須根據 `hostApp`、`entityType`、`screenId`、`permissionScopes` 與 query intent 形成 connector routing hints，並影響 `candidateTools`、`requiredEvidence`、`contextResolution`、`riskAssessment`、`clarificationNeeds` 與 `expectedAnswerShape`。
-- **FR-013a**: frontend 或 host app 不得決定任意 connector、任意 data source 或最終 `sourceSystem`；frontend 提供的 metadata 只能作為 routing hint，最終 adapter 與資料來源選擇必須由 backend 控制。
-- **FR-014**: 系統必須定義 Data Adapter Contract v1，支援 `sourceSystem`、`supportedHostApps`、`supportedEntityTypes`、`canHandle(context)`、`resolveContext(context)`、`fetchEvidence(query)` 與 `healthCheck()`。
-- **FR-015**: Data Adapter 回傳必須是 evidence-safe structure，不得回傳 raw full payload、secret、credential 或 token。
-- **FR-016**: adapter result 在進入 LLM 前必須完成 permission-aware masking 與 data minimization。
-- **FR-017**: adapter result 必須可轉換成 frontend-safe 的 `EvidenceRef` 或等價 evidence reference。
-- **FR-018**: permission check 必須在 adapter execution 前執行一次，並在 evidence exposure 前再次確保輸出欄位安全。
-- **FR-019**: adapter unavailable、timeout、health check failed 或 source degraded 時，系統必須映射到 001 已存在的 public safe outcome，例如 `no_answer` 搭配既有 `noAnswerReason`、`tool_failure` 對應的 safe response，或既有 safe error envelope；不得新增 public `AnswerDecision` 值 `degraded`。
-- **FR-020**: adapter timeout policy v1 必須沿用既有 tool timeout policy，不另定一套獨立 timeout framework，但可在 registry 或 adapter metadata 中宣告 degraded behavior。
-- **FR-021**: 系統必須提供 `admin` reference adapter，至少支援 Orders / Inventory 的最小查詢能力。
-- **FR-022**: `admin` orders reference flow 至少支援 order status lookup、order summary 與 selected orders comparison。
-- **FR-023**: `admin` inventory reference flow 至少支援 inventory availability lookup 與 inventory summary。
-- **FR-024**: 當問題超出 reference adapter 範圍、超出 host capability、缺 context、權限不足或 adapter degraded 時，系統只能回傳安全狀態，不得生成超範圍答案。
-- **FR-025**: 本 feature 必須沿用 001 既有 assistant public API 與 session/message/SSE contract，不得新增另一套 chat API。
-- **FR-026**: 允許新增 backend internal module / service contract，例如 `HostIntegrationModule`、`HostAppRegistry`、`PageContextNormalizer`、`DataAdapterRegistry`、`AdminOrdersAdapter`、`AdminInventoryAdapter`，但這些是 backend internal contract，不是新的 frontend public API。
-- **FR-027**: 若需要管理或 diagnostic endpoint，必須明確標示為 internal/admin diagnostic，且不得破壞 frontend 001 widget API contract。
-- **FR-028**: 本 feature 不得要求 frontend 傳 raw entity data；frontend 只能傳 sanitized PageContext、identity headers、session scope 與必要 metadata。
-- **FR-029**: backend 必須透過 Data Adapter / Connector 根據權限查詢完整資料，不得把 PageContext 視為完整資料來源。
-- **FR-030**: PageContext 不得繞過 row-level、field-level、operation-level 或 adapter-side permission check。
-- **FR-031**: 每次 HostApp capability decision、PageContext normalization、masking/minimization、adapter selection 與 adapter failure 都必須可稽核。
-- **FR-032**: degraded response、`tool_failure`、`permission_denied`、`clarification_required` 與 `no_answer` 都必須維持與 001 `AnswerDecision`、`noAnswerReason` 與 SSE final state 相容；本 feature 不得新增 `answerDecision = "degraded"`、`final.data.answerDecision = "degraded"` 或任何等價的新 public final-state enum。
-- **FR-033**: integration smoke / golden questions 必須固定 expected answer decision 與 expected evidence source，以驗證 host context aware retrieval 是否正確。
-- **FR-034**: 測試與 eval fixtures 必須是 synthetic / de-identified，不得使用真實客戶、真實訂單、真實庫存、真實金額或真實 secret。
-- **FR-035**: 安全與隱私要求必須明確禁止 raw connector payload 出現在 response、audit metadata、general logs 或 LLM input。
-- **FR-036**: connector、adapter 與 routing failure 的 safe path 必須保留可觀測 metadata，但不得暴露 stack trace、raw error detail 或 secret。
-- **FR-037**: 本 feature 必須保留未來接入 MES / WMS / SCM / CRM / custom host app 的擴充空間，但不得把這些 future adapters 視為本 feature 的 deliverable。
-
-### API / Contract Requirements
-
-本 feature 原則上不新增新的 public chat API，應延續 001 既有 assistant API，例如：
-
-- `POST /api/v1/assistant/sessions`
-- `POST /api/v1/assistant/sessions/:sessionId/messages`
-- `GET /api/v1/assistant/sessions/:sessionId/messages`
-- `GET /api/v1/assistant/approval-requests/:id`
-
-API / contract 必須遵守：
-
-- request validation 仍透過既有 assistant request path 進入，不建立平行的 host integration chat endpoint。
-- SSE final state 必須維持 001 既有 `AnswerDecision`、`noAnswerReason` 與相關 final-state semantics，不得新增 public `degraded` answer decision value。
-- response/error/requestId contract 必須保持與 001 相容。
-- `EvidenceRef` 或等價 evidence output 必須保持 frontend-safe，不暴露 raw connector payload。
-- adapter degraded、timeout 或 unavailable 必須映射到既有 safe response，例如 `no_answer` 搭配既有理由、`tool_failure` 對應 safe response、safe error envelope，或既有 unavailable/degraded UI flow 所能理解的狀態；不得在 public contract 暴露 `answerDecision = "degraded"`。
-- 任何新增 internal/admin diagnostic endpoint 都不得影響前端 widget 契約或要求前端改用不同傳輸模式。
-
-### Data Adapter Contract Requirements
-
-Data Adapter Contract v1 的規格目標是讓未來 host app 可以以一致模式接入 assistant core，而不是把每個 connector 特性硬耦合到 assistant runtime。後續 design/plan 必須至少保留以下要求：
-
-- adapter 必須宣告可服務的 `sourceSystem`、`supportedHostApps` 與 `supportedEntityTypes`。
-- adapter 必須能根據 normalized Host Integration Context 判斷 `canHandle(context)`。
-- adapter 必須能把 host-specific context 轉成較一致的 internal resolution result。
-- adapter 必須只回傳 evidence-safe result，而非 raw connector payload。
-- adapter 必須提供 health check 或等價 degraded signal，讓 assistant 能決定 safe fallback；此 degraded signal 屬於 internal dependency / observability 狀態，不得直接變成新的 public `AnswerDecision`。
-- adapter contract 必須支援 future host apps 擴充，但 v1 不要求 dynamic registry 或 self-service adapter onboarding。
-
-## Testing Requirements
-
-### Unit Tests
-
-- `PageContextNormalizer`
-- `HostAppRegistry`
-- `DataAdapterRegistry`
-- permission-aware field masking
-- adapter result minimization
-
-### Integration Tests
-
-- full request context validation
-- unsupported host app
-- missing PageContext clarification
-- admin order detail evidence answer
-- selectedRows scoped lookup
-- unauthorized field `permission_denied`
-- adapter unavailable safe `degraded` / `tool_failure`
-
-### Contract Tests
-
-- existing assistant message API does not change
-- SSE final state remains `AnswerDecision`-based
-- no new frontend-breaking response shape
-- `EvidenceRef` remains frontend-safe
-
-### E2E / Eval Smoke
-
-- golden questions for Admin Orders / Inventory
-- expected `answerDecision`
-- expected evidence source
-- `no_answer` / `permission_denied` / `degraded` cases
-
-### Security / Privacy Tests
-
-- no raw payload to LLM
-- no secret in logs / audit metadata / response
-- PageContext cannot bypass permission check
+- **FR-001**: Backend 002 必須重用 Backend 001 既有 `RequestIdentityContext`、identity extraction、identity validation 與 required identity fields，不得建立第二套 identity authority。
+- **FR-002**: Backend 002 必須沿用 Backend 001 既有 assistant public API、SSE、top-level `pageContext` 與 requestId / error envelope contract，不得新增 public chat endpoint、nested `hostContext` 或第二套 backend request mode。
+- **FR-003**: Backend 002 不得把 `sessionScope` 加入 backend public request contract；session ownership / namespace / fallback 屬於 Frontend 002 concern。
+- **FR-004**: Backend 002 不得接收 approval navigation metadata，並必須沿用 Backend 001 既有 approval / action draft / escalation APIs。
+- **FR-005**: 系統必須提供 static HostApp Capability Registry v1，正式註冊 `admin`，並保留 `mes`、`wms`、`scm`、`crm`、`custom` identifiers 作為 future extension boundary。
+- **FR-006**: `HostAppCapability` 至少必須描述 hostAppId、displayName、supported entity types、supported screens、supported interactions、eligible connector / tool 或 evidence capabilities、PageContext allowlist、selectedRows policy、active filter allowlist、field exposure policy、permission-scope mapping interpretation 與 degraded / unsupported behavior。
+- **FR-007**: 未註冊 host 必須沿用 Backend 001 既有 request / integration error envelope；unsupported screen、unsupported entity 或 unsupported interaction 的 public outcome 必須為 `no_answer` 並搭配 Backend 001 可容納的 internal `noAnswerReason`。所有情況皆不得 fallback 到 `admin` 或其他 capability。
+- **FR-008**: Capability eligibility 必須在既有 connector / tool execution 前完成，且必須與 Backend 001 Query Understanding / ExecutionPlan / Tool Registry 結果共同約束 eligible candidate tools。
+- **FR-008a**: HostApp capability 與 permission-scope mapping 只能縮小 eligible connector、eligible tool、visible field 與 supported operation，不得生成、補齊、合併、替換或提升 Backend 001 已驗證的 permission scopes，也不得擴大 organization boundary、row scope、field permission、operation permission 或 evidence exposure。
+- **FR-009**: Backend 002 必須在 Backend 001 既有 PageContext DTO 與 mapper 之上套用 host-specific PageContext policy，不得新增 public PageContext DTO 或第二個 PageContext request 位置。
+- **FR-010**: PageContext policy 必須支援 screenId validation、entityType validation、screen/entity/interaction validation、PageContext allowlist、activeFilters allowlist、field visibility / exposure policy、selectedRows 上限與 host-specific sensitive field minimization。
+- **FR-011**: `route` query string 與 hash 不得作為可信資料來源。
+- **FR-012**: `visibleColumns`、`userVisibleState`、selectedRows safe summary 與 PageContext 不得作為 permission authority。
+- **FR-013**: PageContext 不足、缺少必要 entity reference、target 衝突或存在多個無法安全選擇的 candidate 時，public outcome 必須為 `clarification_required`，且不得建立第二套 clarification pipeline。
+- **FR-014**: `selectedRows` 最多 20 筆，且 Backend 必須針對 client 原始輸入數量獨立檢查；超過 20 筆時整體拒絕，不得截斷或先 deduplicate 後接受。
+- **FR-015**: `selectedRows` 只作 request-scoped comparison / bulk context，不作 session identity，也不得擴大查詢範圍。
+- **FR-016**: 任一 selected row 跨 organization 或未通過 row-level permission 時，整個 comparison request 必須回 `permission_denied`，不得只處理合法 subset，也不得揭露哪個 ID 未授權。Backend 002 必須對每個 selected row 重新套用 Backend 001 既有 organization boundary 與 row-level permission extension point，不得將 frontend row ID、safe summary 或畫面可見狀態視為 authorization proof。
+- **FR-017**: Client / frontend 不得指定 connector、connectorId、adapter、adapterId、`sourceSystem`、dataSource、candidateTool、candidateTools、permission result 或 final evidence source。
+- **FR-018**: Client-controlled payload 若包含 routing-control 欄位，Backend 必須以 Backend 001 既有 request validation / integration error envelope 拒絕 request，不進入 retrieval、tool、adapter 或 LLM，不以 `AnswerDecision` 作為主要拒絕結果，並寫入只含欄位名稱、requestId、hostApp、organization 與拒絕原因的最小化 audit metadata。
+- **FR-019**: Backend 必須推導 backend-owned `sourceSystem`，且推導結果必須與實際選用的 connector / tool / adapter specialization 一致。
+- **FR-020**: `sourceSystem` 推導與 final backend-owned source selection 必須寫入既有 audit / observability pipeline。
+- **FR-021**: 若保留 DataAdapter 概念，它必須是既有 Connector / Tool domain 中的 read-oriented evidence specialization，不得成為獨立 runtime、registry、health model、timeout policy、permission engine、EvidenceRef conversion framework、public outcome mapper、audit writer 或 observability framework。
+- **FR-022**: adapter / connector execution 仍必須走 Backend 001 既有 permission pre-check、row-level permission extension point、masking、LLM sanitization、EvidenceRef 與 AnswerDecision pipeline；Backend 002 不得建立 adapter-specific permission engine。
+- **FR-023**: timeout、unavailable、tool failure 或 degraded dependency 必須映射到 Backend 001 既有 `tool_failure` safe mapping；適用時為 `no_answer` + `noAnswerReason=tool_failure`。不得新增 public `answerDecision = "degraded"` 或 `final.data.answerDecision = "degraded"`。
+- **FR-024**: Backend 002 必須提供 `hostApp=admin` reference capability registration，並定義 Orders / Inventory supported screens、entity types、interactions、selectedRows comparison eligibility 與 evidence capabilities。
+- **FR-025**: Admin Orders reference acceptance 至少涵蓋 order status lookup、order summary、selected orders comparison 與 restricted cost permission behavior。
+- **FR-026**: Admin Inventory reference acceptance 至少涵蓋 inventory availability lookup、inventory summary 與 restricted cost permission behavior。
+- **FR-027**: 純 restricted-field 問題必須回 `permission_denied`，restricted value 不得進入 LLM input、EvidenceRef、response、log 或 audit metadata。
+- **FR-028**: 混合授權 / 受限欄位問題只有在授權欄位能形成真實、有用且不誤導 partial answer 時才可回答授權部分；受限值不得洩漏存在性、null 狀態或門檻資訊。若 partial answer 會誤導，public outcome 必須為 `permission_denied`。
+- **FR-029**: Backend 002 只新增 host-specific audit metadata，必須沿用 Backend 001 append-only audit writer、redaction policy、observability metadata 與 dependency health model。
+- **FR-030**: Audit / observability 不得記錄 raw PageContext、raw selected rows、完整 entity record、unauthorized field value、credential、token、secret、raw connector payload 或 raw exception object。
+- **FR-031**: Backend 002 必須提供 deterministic synthetic fixtures、golden questions、eval smoke、privacy tests、contract tests 與 architecture guards，驗證 002 增量能力不破壞 Backend 001。
+- **FR-032**: Backend 002 不得實作 full ERP connector、generic SQL connector、完整 Admin backend domain、MES / WMS / SCM / CRM production connector 或 public diagnostic endpoint。
 
 ## Data / Fixtures
 
-本 feature 的 deterministic test fixtures 至少包含：
+Backend 002 deterministic test fixtures 必須是 synthetic / de-identified，且不得取代 Backend 001 既有 mock connector runtime。Backend 002 reference fixtures 必須放在獨立 reference namespace，不得修改、覆蓋或重新定義 Backend 001 既有 fixture key 與 value；retry、seed 與 fixture loading 順序不得改變同一 ID 的資料結果。
 
 ### Admin order fixture
 
-- `orderId: SO-10001`
+- `orderId: ADMIN-SO-10001`
 - `status: confirmed`
 - `customerName: synthetic customer`
 - `cost: restricted field`
 
 ### Admin inventory fixture
 
-- `itemNo: SKU-001`
+- `itemNo: ADMIN-SKU-001`
 - `availableQty: 320`
 - `reservedQty: 40`
 - `cost: restricted field`
 
-### Users
+### Personas
 
-- `admin_operator` with read order/inventory permission
-- `finance_user` with cost permission
-- `limited_user` without cost permission
+- `admin_operator`: 可讀 order / inventory 基本欄位，不因角色名稱自動取得 restricted `cost`。
+- `finance_user`: 具備 order / inventory 基本 read permission；只有當 Backend 001 可信 permission scopes 實際包含 restricted `cost` permission 時，才可讀取 `cost`。
+- `limited_user`: 可使用 assistant 並讀基本欄位，但沒有 restricted `cost` permission。
 
-所有 fixtures 都必須是 synthetic / de-identified，且不得使用真實客戶、真實訂單、真實庫存、真實金額或真實 secret。
+## Testing Requirements
+
+### Contract Tests
+
+- Backend 001 assistant message API unchanged。
+- SSE final remains `AnswerDecision`-based。
+- no public `answerDecision = "degraded"`。
+- top-level `pageContext` remains public request location。
+- no nested `hostContext`。
+- no backend-required `sessionScope`。
+- no public diagnostic endpoint。
+
+### Unit Tests
+
+- HostApp capability registry。
+- Host / screen / entity / interaction eligibility。
+- HostApp capability 與 permission-scope mapping 只能縮小 capability，不得提升 Backend 001 verified permission scopes。
+- PageContext allowlist / minimization policy。
+- selectedRows max 20 policy。
+- routing-control field rejection。
+- backend-derived `sourceSystem` derivation。
+- DataAdapter / ConnectorAdapter no-split architecture guard。
+
+### Integration Tests
+
+- `admin` capability lookup。
+- unregistered host cannot use `admin` capability。
+- unsupported screen / entity / interaction cannot select connector / tool。
+- Admin Orders reference questions use existing connector / tool / permission / evidence path。
+- Admin Inventory reference questions use existing connector / tool / permission / evidence path。
+- selectedRows over 20 rejected as whole request。
+- mixed unauthorized selectedRows return `permission_denied` as whole request。
+- every selected row is revalidated through Backend 001 organization boundary and row-level permission extension point before full data retrieval or exposure。
+- client-supplied routing-control fields rejected before retrieval / tool / adapter / LLM。
+- unregistered host uses Backend 001 existing request / integration error envelope and does not route connector / tool。
+- unsupported screen / entity / interaction returns `no_answer` without connector / tool selection。
+- adapter unavailable / timeout uses Backend 001 `tool_failure` safe mapping。
+
+### Security / Privacy Tests
+
+- raw PageContext does not enter LLM input。
+- raw selectedRows does not enter LLM input, response, log, audit or observability。
+- restricted values do not enter LLM input, EvidenceRef, response, log or audit metadata。
+- frontend cannot specify `sourceSystem`、connector、adapter、candidate tool、permission result or final evidence source。
+- visibleColumns / userVisibleState / selectedRows safe summary cannot bypass permission。
+- `finance_user` role / persona name without trusted restricted `cost` permission scope cannot access `cost`。
+- capability mapping cannot add unauthorized fields to LLM input or EvidenceRef。
+
+### Eval / Golden Questions
+
+- order status lookup。
+- order summary。
+- selected orders comparison。
+- inventory availability lookup。
+- inventory summary。
+- unauthorized cost。
+- unsupported host / screen / entity / interaction。
+- adapter unavailable / timeout。
+- repeated request / retry scope stability。
+
+### Backend 001 Regression
+
+- Backend 002 Admin capability path以外的既有Backend 001流程 remains unchanged。
+- Existing assistant API / SSE / AnswerDecision / EvidenceRef / audit tests remain compatible。
 
 ## Security / Privacy / Audit Requirements
 
-- 缺少 identity、organization、hostApp、permissionScopes 或 requestId 時必須 fail closed。
-- data minimization 必須在資料進入 LLM 前完成。
-- permission check 必須在 adapter execution 前與 evidence exposure 前都成立。
-- adapter timeout 或 degraded 時必須回到安全 fallback。
-- frontend 不得指定任意 connector、任意 data source 或最終 `sourceSystem`；這些只能由 backend 根據 capability、permission 與 routing rules 決定。
-- routing decision、masking/minimization 與 degraded path 都必須產生 audit event 或等價 audit metadata。
-- response、general logs 與 audit metadata 都不得包含 raw connector payload。
-- response、general logs 與 audit metadata 都不得包含 secret、credential 或 token。
-- PageContext 只能作為 context hint，不得取代 permission 或資料授權。
-- `degraded` 屬於 internal dependency state、availability signal 或 safe path metadata，應記錄於 audit / observability；對前端 public response 仍必須維持 001 既有 `AnswerDecision`、`noAnswerReason`、safe error envelope 與 SSE final state。
-- degraded、`tool_failure`、`permission_denied` 與 `clarification_required` 必須對前端回傳安全、穩定、可解釋的狀態，而非底層錯誤細節。
+- Backend 002 必須沿用 Backend 001 identity、permission、masking、EvidenceRef、AnswerDecision、audit 與 observability foundation。
+- 缺少 Backend 001 required identity context 時，必須沿用 Backend 001 fail-closed behavior。
+- HostApp capability rejection、PageContext policy rejection、selectedRows rejection、routing-control rejection 與 source selection 都必須產生最小化 audit metadata。
+- selectedRows 超過 20 筆必須整體拒絕。
+- mixed unauthorized rows 必須整體回 `permission_denied`。
+- 每個 selected row 都必須在取得或暴露完整資料前重新套用 Backend 001 既有 organization boundary 與 row-level permission extension point。
+- HostApp capability 只能縮小 Backend 001 已驗證的 permission scopes、eligible capability 與 evidence exposure，不得提升權限。
+- restricted field value 不得出現在 LLM input、EvidenceRef、response、log、audit metadata 或 observability metadata。
+- client-supplied routing-control 欄位必須安全拒絕並 audit。
+- frontend 不得指定 `sourceSystem`。
+- `degraded` 只可作 internal dependency / availability metadata，不得成為 public `AnswerDecision`。
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: backend 可驗證 Host Integration Context，且 100% 缺少必要 identity / organization / hostApp / permissionScopes / requestId 的測試案例都 fail closed。
-- **SC-002**: backend 可 normalize PageContext，且 100% 缺少必要 context 的指示詞查詢都回到 `clarification_required`。
-- **SC-003**: backend 可根據 `hostApp` / `entityType` 選擇 reference data adapter，且不會在 unsupported host/entity 情況下誤用其他 adapter。
-- **SC-004**: backend 可用 Admin Orders / Inventory reference adapter 回答 grounded answer，且成功案例都能指出對應 evidence source。
-- **SC-005**: backend 對缺 context、無權限、unsupported host、adapter degraded 都走安全狀態，不產生 raw data leakage。
-- **SC-006**: 本 feature 不破壞 001 frontend widget API / SSE contract，所有 contract tests 維持既有 response shape、`AnswerDecision`-based final state，且不得出現 public `answerDecision = "degraded"`。
-- **SC-007**: audit / observability 可追蹤 host integration decision、normalization、masking、adapter routing 與 degraded path。
-- **SC-008**: 所有 test fixtures 都是 synthetic / de-identified，且 security/privacy tests 證明沒有 raw payload 或 secret exposure。
+- **SC-001**: Backend 001 既有 public API / SSE / `AnswerDecision` contract 無 breaking change。
+- **SC-002**: Backend 002 沒有建立第二套 identity、PageContext、planner、permission、evidence、audit、observability 或 connector runtime。
+- **SC-003**: `admin` 可取得明確 HostApp capability。
+- **SC-004**: 未註冊 host app 100% 不得使用 `admin` capability。
+- **SC-005**: unsupported screen / entity / interaction 100% 不得選取 connector / tool。
+- **SC-006**: Backend 能推導並 audit 最終 backend-owned `sourceSystem`，且與實際 selected connector / tool / adapter specialization 一致。
+- **SC-007**: Admin Orders / Inventory reference questions 使用 Backend 001 既有 connector / tool / permission / evidence path。
+- **SC-008**: selectedRows 超過 20 筆的測試案例 100% 整體拒絕。
+- **SC-009**: mixed unauthorized rows 的 comparison 測試案例 100% 整體回 `permission_denied`。
+- **SC-010**: restricted values 100% 不進 LLM input、EvidenceRef、response、log 或 audit metadata。
+- **SC-011**: client 傳入 routing-control 欄位時 100% 安全拒絕並產生最小化 audit metadata。
+- **SC-012**: adapter unavailable / timeout 100% 沿用 Backend 001 `tool_failure` safe mapping。
+- **SC-013**: public response 中 0 cases 出現 `answerDecision = "degraded"` 或 `final.data.answerDecision = "degraded"`。
+- **SC-014**: Backend 002 Admin capability path以外的既有Backend 001流程，其 public behavior、routing、permission、EvidenceRef、AnswerDecision 與 audit 結果不得因 Backend 002 capability code 而改變。
+- **SC-015**: 所有 fixtures 都是 synthetic / de-identified。
+- **SC-016**: HostApp capability / permission-scope mapping 0 cases 提升 Backend 001 已驗證的 permission scopes、organization boundary、row scope、field permission、operation permission 或 evidence exposure。
 
-## Assumptions
+## Assumptions / Decisions
 
-- `001-internal-assistant-core` 已存在並提供既有 assistant chat/session/SSE/evidence/audit contract，本 feature 只建立其上的 host integration layer。
-- HostApp Registry v1 先採 static code-based registration，不在本 feature 建立 dynamic DB registration。
-- permission scope transport v1 先沿用 `x-permission-scopes` CSV header，backend 內部再 normalize。
-- adapter timeout policy v1 沿用既有 tool timeout policy，而不是另立一套 adapter timeout framework。
-- 第一個 reference host app 為 `admin`，reference entity scope 為 Orders 與 Inventory。
-- frontend 002 只會傳 sanitized PageContext，不會傳 raw entity payload。
+- Backend 001 host-aware foundation 已存在，且是唯一 core runtime。
+- Backend 002 直接重用 Backend 001 public API 與 context contract。
+- top-level `pageContext` 維持不變。
+- 不新增 nested `hostContext`。
+- 不新增 Backend request mode。
+- `sessionScope` 不進 Backend public contract。
+- role / permission / requestId 規則繼承 Backend 001，且 `role` 名稱不得自動授予額外 permission。
+- DataAdapter 若存在，只是 existing connector domain specialization。
+- 不建立獨立 DataAdapter registry / runtime。
+- v1 HostApp Registry 採 static code-based registration。
+- reference host 為 `admin`。
+- reference domain 為 Orders / Inventory。
+- v1 不新增 public diagnostic endpoint。
+- Future Host App 優先序延後至後續 feature。
+
+## Deferred Work / Future Considerations
+
+- Full MES connector。
+- Full WMS connector。
+- Full SCM connector。
+- Full CRM connector。
+- `custom` host app onboarding。
+- dynamic HostApp registry / DB registration。
+- self-service adapter onboarding。
+- frontend SDK implementation。
+- Web Component / iframe mode。
+- full admin connector platform。
+- admin UI / CRUD。
+- approval management UI。
+- production deployment / Kubernetes / Helm。
+- HostApp Registry inspection 或 adapter diagnostic endpoint。
 
 ## Open Questions
 
-1. 若未來需要非 `admin` host app onboarding，第一個要擴充的 reference host 是 `MES`、`WMS`、`SCM` 還是 `CRM`，應依哪個產品優先序拆出下一份 feature spec？
-2. 對於 internal/admin diagnostic endpoint，第一版是否需要只讀的 adapter health / registry inspection contract，還是先完全依賴既有 observability 與 audit 查核？
+目前沒有阻塞本 spec 的 Open Questions。Future host app 優先序、diagnostic endpoint 與 dynamic onboarding 都已延後至 Deferred Work / Future Considerations。
