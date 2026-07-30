@@ -8,7 +8,10 @@ const validEnv = {
   LLM_PROVIDER: 'openai',
   LLM_MODEL: 'local-placeholder-model',
   OPENAI_API_KEY: 'placeholder-openai-api-key',
-  NODE_ENV: 'test'
+  NODE_ENV: 'test',
+  INTERNAL_IDENTITY_JWT_ISSUER: 'https://gateway.test.internal',
+  INTERNAL_IDENTITY_JWT_AUDIENCE: 'internal-ai-assistant',
+  INTERNAL_IDENTITY_JWKS_URI: 'https://gateway.test.internal/.well-known/jwks.json'
 };
 
 describe('validateEnvironment', () => {

@@ -2,6 +2,44 @@
 
 NestJS + TypeScript backend service for the v1 internal assistant core.
 
+## Gateway Integration Boundary
+
+`apps/gateway` is a separately deployable NestJS service in this monorepo. It
+validates the customer-system JWT, derives `hostApp` only from its configured
+`azp`/`client_id` registry, signs a five-minute internal identity JWT, and
+proxies the unchanged `/api/v1/*` request to Backend 001. It never returns the
+internal JWT to the browser.
+
+The customer system should expose a same-origin reverse-proxy route such as
+`/api/internal-assistant/*` to Gateway's `/api/v1/*`. The SDK should call the
+customer-relative route, not Backend 001 or Gateway's public hostname.
+
+Gateway requires the customer token claims `sub`, `org_id`, `role`, a non-empty
+`scope` string (or `permission_scopes` string array), and `azp` or `client_id`.
+`GATEWAY_CLIENT_REGISTRY_JSON` maps that verified client identifier to the only
+permitted `hostApp` value.
+
+Generate a development-only Gateway signing key, then store its base64 PKCS#8
+value in your untracked `.env`:
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out gateway-private.pem
+base64 < gateway-private.pem | tr -d '\n'
+```
+
+For Compose, start the Gateway profile after configuring the `GATEWAY_*` values.
+Backend 001 must use the matching values below:
+
+```env
+INTERNAL_IDENTITY_JWT_ISSUER=http://gateway:4000
+INTERNAL_IDENTITY_JWT_AUDIENCE=internal-ai-assistant
+INTERNAL_IDENTITY_JWKS_URI=http://gateway:4000/.well-known/jwks.json
+```
+
+```sh
+docker compose --profile gateway up --build -d
+```
+
 ## Local Quickstart
 
 ### Prerequisites
@@ -90,17 +128,21 @@ dependency errors.
 
 ## Assistant SSE Smoke
 
-All assistant routes require identity headers. The examples below use local
-mock identities and must not be copied into a production integration.
+All assistant routes require a Gateway-signed internal identity JWT. The
+browser/frontend sends the customer-system access token only to Gateway;
+Gateway validates it, removes any client-provided identity headers, maps its
+trusted claims to the contract below, and forwards a short-lived RS256 token
+as `Authorization`. Do not send the customer-system JWT directly to Backend.
+
+The internal JWT must have the configured `iss` and `aud`, be signed with a
+key published by `INTERNAL_IDENTITY_JWKS_URI`, and include `sub`, `org_id`,
+`role`, `permission_scopes` (non-empty string array), `host_app`, `jti`,
+`iat`, and `exp`. Gateway derives `host_app` from its verified
+`azp`/`client_id` allowlist; the frontend never supplies it.
 
 ```sh
-ASSISTANT_HEADERS=(
-  -H 'x-actor-id: actor-001'
-  -H 'x-host-app: erp'
-  -H 'x-organization-id: org-001'
-  -H 'x-role: planner'
-  -H 'x-permission-scopes: orders:read'
-)
+export INTERNAL_IDENTITY_JWT='<Gateway-signed internal JWT>'
+ASSISTANT_AUTH=(-H "Authorization: Bearer ${INTERNAL_IDENTITY_JWT}")
 ```
 
 Create a session with the page context required for a structured order lookup.
@@ -110,7 +152,7 @@ Copy the returned `data.sessionId` into `SESSION_ID`.
 curl -sS -X POST http://localhost:3000/api/v1/assistant/sessions \
   -H 'content-type: application/json' \
   -H 'x-request-id: req-smoke-session-orders' \
-  "${ASSISTANT_HEADERS[@]}" \
+  "${ASSISTANT_AUTH[@]}" \
   --data '{
     "pageContext": {
       "module": "orders",
@@ -129,7 +171,7 @@ export SESSION_ID='<data.sessionId>'
 curl -N -X POST "http://localhost:3000/api/v1/assistant/sessions/${SESSION_ID}/messages" \
   -H 'content-type: application/json' \
   -H 'x-request-id: req-smoke-order-lookup' \
-  "${ASSISTANT_HEADERS[@]}" \
+  "${ASSISTANT_AUTH[@]}" \
   --data '{"message":"請查 SO-10001 訂單狀態"}'
 ```
 
@@ -147,7 +189,7 @@ returned `data.sessionId` into `DOCUMENT_SESSION_ID`:
 curl -sS -X POST http://localhost:3000/api/v1/assistant/sessions \
   -H 'content-type: application/json' \
   -H 'x-request-id: req-smoke-session-documents' \
-  "${ASSISTANT_HEADERS[@]}" \
+  "${ASSISTANT_AUTH[@]}" \
   --data '{}'
 
 export DOCUMENT_SESSION_ID='<data.sessionId>'
@@ -159,7 +201,7 @@ Then send the SOP question:
 curl -N -X POST "http://localhost:3000/api/v1/assistant/sessions/${DOCUMENT_SESSION_ID}/messages" \
   -H 'content-type: application/json' \
   -H 'x-request-id: req-smoke-return-sop' \
-  "${ASSISTANT_HEADERS[@]}" \
+  "${ASSISTANT_AUTH[@]}" \
   --data '{"message":"退貨流程 SOP 怎麼說？"}'
 ```
 
@@ -173,7 +215,7 @@ contains `document_chunk` evidence.
 curl -N -X POST "http://localhost:3000/api/v1/assistant/sessions/${SESSION_ID}/messages" \
   -H 'content-type: application/json' \
   -H 'x-request-id: req-smoke-order-missing' \
-  "${ASSISTANT_HEADERS[@]}" \
+  "${ASSISTANT_AUTH[@]}" \
   --data '{"message":"請查 SO-99999 訂單狀態"}'
 ```
 

@@ -1,5 +1,5 @@
 import { plainToInstance, Transform } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Min, validateSync } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Matches, Min, validateSync } from 'class-validator';
 
 const allowedRuntimeEnvironments = ['development', 'test', 'production'] as const;
 const allowedLlmProviders = ['openai'] as const;
@@ -65,6 +65,29 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   @Matches(/^[A-Za-z0-9][A-Za-z0-9/_-]*$/)
   SWAGGER_PATH = 'docs';
+
+  @IsString()
+  @IsNotEmpty()
+  INTERNAL_IDENTITY_JWT_ISSUER!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  INTERNAL_IDENTITY_JWT_AUDIENCE!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsUrl({ require_tld: false })
+  INTERNAL_IDENTITY_JWKS_URI!: string;
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(0)
+  INTERNAL_IDENTITY_JWT_CLOCK_TOLERANCE_SECONDS = 0;
+
+  @IsOptional()
+  @IsString()
+  CORS_ALLOWED_ORIGINS = '';
 }
 
 export function validateEnvironment(config: Record<string, unknown>) {

@@ -385,11 +385,15 @@ export async function createUs1TestAppWithState(): Promise<{ app: INestApplicati
   process.env.OPENAI_API_KEY = 'placeholder-openai-api-key';
   process.env.ENABLE_SWAGGER_DOCS = 'false';
   process.env.SWAGGER_PATH = 'docs';
+  process.env.INTERNAL_IDENTITY_JWT_ISSUER = 'https://gateway.test.internal';
+  process.env.INTERNAL_IDENTITY_JWT_AUDIENCE = 'internal-ai-assistant';
+  process.env.INTERNAL_IDENTITY_JWKS_URI = 'https://gateway.test.internal/.well-known/jwks.json';
 
   const state = createInitialState();
   const prismaMock = createPrismaMock(state);
 
   const { AppModule } = await import('../../src/app.module');
+  const { INTERNAL_IDENTITY_TOKEN_VERIFIER } = await import('../../src/identity/internal-identity-token-verifier');
   const { PrismaService } = await import('../../src/prisma/prisma.service');
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule]
@@ -399,6 +403,10 @@ export async function createUs1TestAppWithState(): Promise<{ app: INestApplicati
       onModuleInit: jest.fn(),
       onModuleDestroy: jest.fn(),
       db: prismaMock
+    })
+    .overrideProvider(INTERNAL_IDENTITY_TOKEN_VERIFIER)
+    .useValue({
+      verify: jest.fn(async (token: string) => decodeTestIdentityToken(token))
     })
     .compile();
 
@@ -418,7 +426,7 @@ export async function createUs1TestApp(): Promise<INestApplication> {
 }
 
 export function createIdentityHeaders(overrides?: Partial<Record<string, string>>) {
-  return {
+  const legacyIdentity = {
     'x-request-id': 'req-us1-default',
     'x-actor-id': 'actor-001',
     'x-host-app': 'erp',
@@ -427,6 +435,38 @@ export function createIdentityHeaders(overrides?: Partial<Record<string, string>
     'x-permission-scopes': 'orders:read,inventory:read',
     ...overrides
   };
+
+  return {
+    'x-request-id': legacyIdentity['x-request-id'] ?? 'req-us1-default',
+    authorization: `Bearer test.${toBase64Url({
+      subject: legacyIdentity['x-actor-id'] ?? 'actor-001',
+      organizationId: legacyIdentity['x-organization-id'] ?? 'org-001',
+      role: legacyIdentity['x-role'] ?? 'planner',
+      permissionScopes: (legacyIdentity['x-permission-scopes'] ?? '').split(',').map((scope) => scope.trim()).filter(Boolean),
+      hostApp: legacyIdentity['x-host-app'] ?? 'erp',
+      tokenId: 'test-token-id'
+    })}`
+  };
+}
+
+function decodeTestIdentityToken(token: string) {
+  const match = token.match(/^test\.([A-Za-z0-9_-]+)$/);
+  if (!match) {
+    throw new Error('Invalid test internal token.');
+  }
+
+  return JSON.parse(Buffer.from(match[1], 'base64url').toString('utf8')) as {
+    subject: string;
+    organizationId: string;
+    role: string;
+    permissionScopes: string[];
+    hostApp: string;
+    tokenId: string;
+  };
+}
+
+function toBase64Url(value: unknown) {
+  return Buffer.from(JSON.stringify(value)).toString('base64url');
 }
 
 export function parseSseResponse(text: string) {

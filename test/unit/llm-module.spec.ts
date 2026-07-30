@@ -61,6 +61,11 @@ function createConfigValues(): EnvironmentVariables {
     ENABLE_RUNTIME_DEBUG: false,
     ENABLE_REDIS: false,
     ENABLE_SWAGGER_DOCS: false,
-    SWAGGER_PATH: 'docs'
+    SWAGGER_PATH: 'docs',
+    INTERNAL_IDENTITY_JWT_ISSUER: 'https://gateway.test.internal',
+    INTERNAL_IDENTITY_JWT_AUDIENCE: 'internal-ai-assistant',
+    INTERNAL_IDENTITY_JWKS_URI: 'https://gateway.test.internal/.well-known/jwks.json',
+    INTERNAL_IDENTITY_JWT_CLOCK_TOLERANCE_SECONDS: 0,
+    CORS_ALLOWED_ORIGINS: ''
   };
 }

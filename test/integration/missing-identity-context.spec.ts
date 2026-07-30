@@ -10,9 +10,19 @@ import { IdentityGuard } from '../../src/identity/identity.guard';
 
 describe('missing identity context integration', () => {
   const extractor = new IdentityContextExtractor();
-  const guard = new IdentityGuard(extractor);
+  const tokenVerifier = {
+    verify: jest.fn(async () => ({
+      subject: 'actor-001',
+      organizationId: 'org-001',
+      role: 'planner',
+      permissionScopes: ['orders:read', 'inventory:read'],
+      hostApp: 'erp',
+      tokenId: 'token-001'
+    }))
+  };
+  const guard = new IdentityGuard(extractor, tokenVerifier);
 
-  it('rejects requests that do not include required identity headers through the shared error envelope', () => {
+  it('rejects requests that do not include a bearer token through the shared error envelope', async () => {
     const request = createIdentityRequest({
       requestId: 'req-missing-identity',
       headers: {}
@@ -23,37 +33,38 @@ describe('missing identity context integration', () => {
     };
 
     try {
-      guard.canActivate(createExecutionContext(request));
+      await guard.canActivate(createExecutionContext(request));
       throw new Error('Expected guard to reject missing identity.');
     } catch (error) {
       new GlobalExceptionFilter().catch(error, createArgumentsHost(request, response));
     }
 
-    expect(response.status).toHaveBeenCalledWith(400);
+    expect(response.status).toHaveBeenCalledWith(401);
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({
         requestId: 'req-missing-identity',
         error: expect.objectContaining({
-          code: 'IDENTITY_CONTEXT_INVALID',
-          message: 'Missing or invalid identity context.'
+          code: 'IDENTITY_TOKEN_INVALID',
+          message: 'Missing or invalid identity token.'
         })
       })
     );
   });
 
-  it('accepts requests with complete identity headers and stores the context on the request', () => {
+  it('accepts a verified token and ignores client-supplied identity headers', async () => {
     const request = createIdentityRequest({
       requestId: 'req-valid-identity',
       headers: {
+        authorization: 'Bearer trusted-token',
         'x-actor-id': 'actor-001',
-        'x-host-app': 'erp',
-        'x-organization-id': 'org-001',
-        'x-role': 'planner',
-        'x-permission-scopes': 'orders:read,inventory:read'
+        'x-host-app': 'attacker-app',
+        'x-organization-id': 'attacker-org',
+        'x-role': 'admin',
+        'x-permission-scopes': 'everything:read'
       }
     });
 
-    expect(guard.canActivate(createExecutionContext(request))).toBe(true);
+    await expect(guard.canActivate(createExecutionContext(request))).resolves.toBe(true);
     expect(getIdentityContext(request)).toMatchObject({
       requestId: 'req-valid-identity',
       actor: {

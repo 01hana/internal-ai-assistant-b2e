@@ -2,6 +2,9 @@
   "name": "ai-assistant-core",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
   "description": "Internal backend AI assistant core service.",
   "license": "UNLICENSED",
   "scripts": {
@@ -11,6 +14,9 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
+    "gateway:build": "npm run build --workspace=@internal-ai-assistant/gateway",
+    "gateway:start": "npm run start --workspace=@internal-ai-assistant/gateway",
+    "gateway:start:dev": "npm run start:dev --workspace=@internal-ai-assistant/gateway",
     "test": "jest --config jest.config.ts",
     "test:unit": "jest --config jest.config.ts --testMatch '<rootDir>/test/unit/**/*.spec.ts'",
     "test:integration": "jest --config jest.config.ts --testMatch '<rootDir>/test/integration/**/*.spec.ts' --passWithNoTests",
@@ -34,15 +40,16 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^17.4.2",
+    "jose": "^5.10.0",
     "openai": "^6.43.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@nestjs/cli": "^11.0.23",
     "@nestjs/testing": "^11.1.26",
-    "@eslint/js": "^9.39.4",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.9.3",
@@ -56,7 +63,7 @@
     "ts-loader": "^9.6.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript-eslint": "^8.57.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.57.0"
   }
 }

@@ -19,6 +19,9 @@ describe('App bootstrap', () => {
     process.env.OPENAI_API_KEY = 'placeholder-openai-api-key';
     process.env.ENABLE_SWAGGER_DOCS = String(enableSwaggerDocs);
     process.env.SWAGGER_PATH = 'docs';
+    process.env.INTERNAL_IDENTITY_JWT_ISSUER = 'https://gateway.test.internal';
+    process.env.INTERNAL_IDENTITY_JWT_AUDIENCE = 'internal-ai-assistant';
+    process.env.INTERNAL_IDENTITY_JWKS_URI = 'https://gateway.test.internal/.well-known/jwks.json';
 
     const { AppModule } = await import('../../src/app.module');
     const { setupSwagger } = await import('../../src/common/docs/swagger.setup');

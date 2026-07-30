@@ -11,7 +11,16 @@ import { ResponseEnvelopeInterceptor } from "./common/response/response-envelope
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
-  app.enableCors();
+  const configService = app.get<ConfigService<EnvironmentVariables>>(ConfigService);
+  const corsAllowedOrigins = configService
+    .get<string>('CORS_ALLOWED_ORIGINS', '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  app.enableCors({
+    origin: corsAllowedOrigins,
+    allowedHeaders: ['authorization', 'content-type', 'x-request-id']
+  });
   app.setGlobalPrefix("api/v1");
   app.useGlobalPipes(
     new ValidationPipe({
@@ -26,8 +35,6 @@ async function bootstrap() {
     new ResponseEnvelopeInterceptor(),
   );
 
-  const configService =
-    app.get<ConfigService<EnvironmentVariables>>(ConfigService);
   const enableSwaggerDocs = configService.get<boolean>(
     "ENABLE_SWAGGER_DOCS",
     false,

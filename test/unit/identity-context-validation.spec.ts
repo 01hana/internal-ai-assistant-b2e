@@ -1,5 +1,4 @@
 import { IdentityContextException } from '../../src/identity/identity.errors';
-import { parsePermissionScopes } from '../../src/identity/identity-context.extractor';
 import {
   assertSameCompanyBoundary,
   validateRequestIdentityContext
@@ -46,14 +45,6 @@ describe('identity context validation', () => {
     expect(() => validateRequestIdentityContext({ ...validHeaders, requestId: undefined })).toThrow(
       IdentityContextException
     );
-  });
-
-  it('parses comma-separated permission scopes from headers', () => {
-    expect(parsePermissionScopes('orders:read, inventory:read,, tools:execute')).toEqual([
-      'orders:read',
-      'inventory:read',
-      'tools:execute'
-    ]);
   });
 
   it('rejects cross organization or host app resources before data use', () => {
