@@ -1,0 +1,85 @@
+schema_version: "1.0"
+workflow:
+  id: "agentic-sdd-local"
+  name: "本機 Agentic SDD 閉環"
+  version: "1.0.0"
+  author: "internal-ai-assistant.com"
+  description: "以 Spec Kit command、人工審查 Gate 與確定性 Quality Gate 協調本機 SDD。"
+
+requires:
+  speckit_version: ">=0.14.4"
+  integrations:
+    any: ["codex"]
+
+inputs:
+  spec:
+    type: string
+    required: true
+    prompt: "描述要建立的功能"
+  scope:
+    type: string
+    default: "full"
+    enum: ["full", "backend-only"]
+  integration:
+    type: string
+    default: "auto"
+    prompt: "使用 auto 以採用專案的 codex integration"
+
+steps:
+  - id: specify
+    command: speckit.specify
+    integration: "{{ inputs.integration }}"
+    input: { args: "{{ inputs.spec }}" }
+  - id: clarify
+    command: speckit.clarify
+    integration: "{{ inputs.integration }}"
+    input: { args: "{{ inputs.spec }}" }
+  - id: spec-review
+    type: gate
+    message: "請以 artifact-reviewer 審查 spec；PASS 才選 approve。REVISE 或 HUMAN_REQUIRED 選 reject，修正或取得人工決策後以同一 run ID resume。每一類審查最多三輪。"
+    options: [approve, reject]
+    on_reject: retry
+  - id: design
+    type: gate
+    message: "請確認已建立或更新 design.md，且可追溯至已核准 spec；完成後選 approve。"
+    options: [approve, reject]
+    on_reject: retry
+  - id: plan
+    command: speckit.plan
+    integration: "{{ inputs.integration }}"
+    input: { args: "{{ inputs.spec }}" }
+  - id: checklist
+    command: speckit.checklist
+    integration: "{{ inputs.integration }}"
+    input: { args: "{{ inputs.spec }}" }
+  - id: tasks
+    command: speckit.tasks
+    integration: "{{ inputs.integration }}"
+    input: { args: "{{ inputs.spec }}" }
+  - id: analyze
+    command: speckit.analyze
+    integration: "{{ inputs.integration }}"
+    input: { args: "{{ inputs.spec }}" }
+  - id: analyze-review
+    type: gate
+    message: "確認 analyze 沒有 blocking finding；若有，修正來源產物後選 reject 並 resume。最多三輪，逾限為 HUMAN_REQUIRED。"
+    options: [approve, reject]
+    on_reject: retry
+  - id: implement
+    command: speckit.implement
+    integration: "{{ inputs.integration }}"
+    input: { args: "{{ inputs.spec }}" }
+  - id: quality-gate
+    type: shell
+    run: "scripts/quality-gate.sh"
+    timeout: 1800
+  - id: quality-repair-review
+    type: gate
+    message: "Quality Gate 若失敗，先修正根因；每次 repair 後以同一 run ID resume。最多三輪，逾限為 HUMAN_REQUIRED。通過才選 approve。"
+    options: [approve, reject]
+    on_reject: retry
+  - id: converge
+    type: gate
+    message: "請由 sdd-orchestrator 確認任務已收斂且沒有新增未追溯需求。若 converge 追加 tasks，選 reject，完成 implement → quality gate 後 resume；否則 approve 結束。"
+    options: [approve, reject]
+    on_reject: retry
