@@ -15,10 +15,10 @@
 
 ## Phase 1: Setup, Baseline Inventory, and Safety Net
 
-- [ ] T001 Create `specs/002-customer-scoped-assistant-core/implementation-inventory.md` from `src/identity/**`, `src/assistant/**`, `src/retrieval/**`, `src/tools/**`, `src/approvals/**`, `src/feedback/**`, `src/audit/**`, and `prisma/schema.prisma`; record header reads, legacy identity assumptions, bare global-ID queries, global unique keys, idempotency paths, global RAG chunk queries, and follow-up task IDs.
-- [ ] T002 Record Feature 001 regression commands and suites in `specs/002-customer-scoped-assistant-core/implementation-inventory.md`, using `package.json`, `README.md`, and `test/{unit,integration,contract,e2e,eval}/**`.
-- [ ] T003 [P] Create the retained-data mapping contract and enforcement preflight runbook at `specs/002-customer-scoped-assistant-core/migration-runbook.md`; require approved mappings to an existing Customer root and prohibit inference from organization, HostApp, actor, roles, permission scopes, or metadata.
-- [ ] T004 Verify the reset/seed safety workflow from `scripts/test-db-init.ts`, `scripts/test-db-safety.ts`, `scripts/seed.ts`, `package.json`, and `README.md`; record repeatable commands and guards in `implementation-inventory.md`.
+- [x] T001 Create `specs/002-customer-scoped-assistant-core/implementation-inventory.md` from `src/identity/**`, `src/assistant/**`, `src/retrieval/**`, `src/tools/**`, `src/approvals/**`, `src/feedback/**`, `src/audit/**`, and `prisma/schema.prisma`; record header reads, legacy identity assumptions, bare global-ID queries, global unique keys, idempotency paths, global RAG chunk queries, and follow-up task IDs.
+- [x] T002 Record Feature 001 regression commands and suites in `specs/002-customer-scoped-assistant-core/implementation-inventory.md`, using `package.json`, `README.md`, and `test/{unit,integration,contract,e2e,eval}/**`.
+- [x] T003 [P] Create the retained-data mapping contract and enforcement preflight runbook at `specs/002-customer-scoped-assistant-core/migration-runbook.md`; require approved mappings to an existing Customer root and prohibit inference from organization, HostApp, actor, roles, permission scopes, or metadata.
+- [x] T004 Verify the reset/seed safety workflow from `scripts/test-db-init.ts`, `scripts/test-db-safety.ts`, `scripts/seed.ts`, `package.json`, and `README.md`; record repeatable commands and guards in `implementation-inventory.md`.
 
 ---
 
