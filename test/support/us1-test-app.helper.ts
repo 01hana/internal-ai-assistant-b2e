@@ -27,6 +27,15 @@ import {
 import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.filter';
 import { RequestIdInterceptor } from '../../src/common/request-id/request-id.interceptor';
 import { ResponseEnvelopeInterceptor } from '../../src/common/response/response-envelope.interceptor';
+import {
+  InternalTokenClaims,
+  TestJwtFixture
+} from './internal-identity-jwt.helper';
+import {
+  createInternalIdentityTestConfig,
+  INTERNAL_IDENTITY_TEST_CONFIG,
+  InternalIdentityTestConfig
+} from './internal-identity-test-module.helper';
 
 type SessionRecord = {
   id: string;
@@ -371,11 +380,24 @@ type MockState = {
   knowledgeChunks: KnowledgeChunkRecord[];
   retrievalRuns: RetrievalRunRecord[];
   retrievalCandidates: RetrievalCandidateRecord[];
+  internalIdentity?: InternalIdentityTestConfig;
+  orchestration: {
+    sendMessage: jest.Mock;
+    sseEventBuilds: jest.Mock;
+  };
 };
 
 export type Us1TestState = MockState;
 
-export async function createUs1TestAppWithState(): Promise<{ app: INestApplication; state: Us1TestState }> {
+export type { InternalIdentityTestConfig } from './internal-identity-test-module.helper';
+
+export type Us1TestAppOptions = {
+  internalIdentity?: InternalIdentityTestConfig;
+};
+
+export async function createUs1TestAppWithState(
+  options: Us1TestAppOptions = {}
+): Promise<{ app: INestApplication; state: Us1TestState }> {
   process.env.DATABASE_URL = 'postgresql://assistant:assistant_dev_password@localhost:5432/assistant_dev';
   process.env.POSTGRES_USER = 'assistant';
   process.env.POSTGRES_PASSWORD = 'assistant_dev_password';
@@ -383,17 +405,41 @@ export async function createUs1TestAppWithState(): Promise<{ app: INestApplicati
   process.env.LLM_PROVIDER = 'openai';
   process.env.LLM_MODEL = 'local-placeholder-model';
   process.env.OPENAI_API_KEY = 'placeholder-openai-api-key';
+  process.env.INTERNAL_IDENTITY_JWT_ISSUER = options.internalIdentity?.issuer ?? 'https://gateway.test.internal';
+  process.env.INTERNAL_IDENTITY_JWT_AUDIENCE = options.internalIdentity?.audience ?? 'internal-assistant-core-test';
+  process.env.INTERNAL_IDENTITY_JWKS_URI = 'https://gateway.test.internal/.well-known/jwks.json';
   process.env.ENABLE_SWAGGER_DOCS = 'false';
   process.env.SWAGGER_PATH = 'docs';
 
   const state = createInitialState();
   const prismaMock = createPrismaMock(state);
+  const internalIdentity = options.internalIdentity
+    ? createInternalIdentityTestConfig(options.internalIdentity)
+    : undefined;
 
   const { AppModule } = await import('../../src/app.module');
+  const { createStaticInternalIdentityTokenVerifier } = await import('../../src/identity/internal-identity-token-verifier');
+  const { INTERNAL_IDENTITY_CONFIG, INTERNAL_IDENTITY_TOKEN_VERIFIER } = await import('../../src/identity/identity-token.types');
   const { PrismaService } = await import('../../src/prisma/prisma.service');
   const moduleRef = await Test.createTestingModule({
-    imports: [AppModule]
+    imports: [AppModule],
+    providers: internalIdentity
+      ? [{ provide: INTERNAL_IDENTITY_TEST_CONFIG, useValue: internalIdentity }]
+      : []
   })
+    .overrideProvider(INTERNAL_IDENTITY_CONFIG)
+    .useValue({
+      issuer: internalIdentity?.issuer ?? process.env.INTERNAL_IDENTITY_JWT_ISSUER,
+      audience: internalIdentity?.audience ?? process.env.INTERNAL_IDENTITY_JWT_AUDIENCE,
+      jwksUri: process.env.INTERNAL_IDENTITY_JWKS_URI,
+      clockToleranceSeconds: 0
+    })
+    .overrideProvider(INTERNAL_IDENTITY_TOKEN_VERIFIER)
+    .useValue(
+      internalIdentity
+        ? createStaticInternalIdentityTokenVerifier(internalIdentity)
+        : { verify: async () => Promise.reject(new Error('No internal identity fixture configured.')) }
+    )
     .overrideProvider(PrismaService)
     .useValue({
       onModuleInit: jest.fn(),
@@ -401,6 +447,23 @@ export async function createUs1TestAppWithState(): Promise<{ app: INestApplicati
       db: prismaMock
     })
     .compile();
+
+  const { AssistantMessageService } = await import('../../src/assistant/message/assistant-message.service');
+  const { AssistantSseEventBuilder } = await import('../../src/assistant/sse/assistant-sse-event.builder');
+  const assistantMessageService = moduleRef.get(AssistantMessageService);
+  const originalSendMessage = assistantMessageService.sendMessage.bind(assistantMessageService);
+  jest.spyOn(assistantMessageService, 'sendMessage').mockImplementation(async (input) => {
+    state.orchestration.sendMessage(input);
+    return originalSendMessage(input);
+  });
+  const sseEventBuilder = moduleRef.get(AssistantSseEventBuilder);
+  const originalBuildMessageEvents = sseEventBuilder.buildMessageEvents.bind(sseEventBuilder);
+  jest.spyOn(sseEventBuilder, 'buildMessageEvents').mockImplementation((input) => {
+    state.orchestration.sseEventBuilds(input);
+    return originalBuildMessageEvents(input);
+  });
+
+  state.internalIdentity = internalIdentity;
 
   const app = moduleRef.createNestApplication();
   app.setGlobalPrefix('api/v1');
@@ -426,6 +489,43 @@ export function createIdentityHeaders(overrides?: Partial<Record<string, string>
     'x-role': 'planner',
     'x-permission-scopes': 'orders:read,inventory:read',
     ...overrides
+  };
+}
+
+export function createAuthorizedInternalIdentityHeaders(
+  fixture: TestJwtFixture,
+  options: {
+    claims?: Partial<InternalTokenClaims>;
+    requestId?: string;
+  } = {}
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    authorization: `Bearer ${fixture.sign({ claims: options.claims })}`
+  };
+
+  if (options.requestId !== undefined) {
+    headers['x-request-id'] = options.requestId;
+  }
+
+  return headers;
+}
+
+export function createLegacyPublicIdentityHeaders(
+  overrides: Partial<Record<string, string>> = {}
+): Record<string, string> {
+  const nonAuthorizationOverrides = Object.fromEntries(
+    Object.entries(overrides).filter(([name]) => name.toLowerCase() !== 'authorization')
+  );
+
+  return {
+    'x-request-id': 'req-legacy-public-identity',
+    'x-customer-id': 'customer-header',
+    'x-actor-id': 'actor-header',
+    'x-role': 'planner',
+    'x-organization-id': 'org-header',
+    'x-host-app': 'erp',
+    'x-permission-scopes': 'orders:read',
+    ...nonAuthorizationOverrides
   };
 }
 
@@ -1496,7 +1596,11 @@ function createInitialState(): MockState {
     knowledgeDocuments: createKnowledgeDocuments(baseDate),
     knowledgeChunks: createKnowledgeChunks(baseDate),
     retrievalRuns: [],
-    retrievalCandidates: []
+    retrievalCandidates: [],
+    orchestration: {
+      sendMessage: jest.fn(),
+      sseEventBuilds: jest.fn()
+    }
   };
 }
 

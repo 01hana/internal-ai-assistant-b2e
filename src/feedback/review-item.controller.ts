@@ -80,7 +80,7 @@ function getRequiredReviewerIdentity(request: IdentityRequest) {
   }
 
   if (
-    identityContext.actor.role !== 'admin' &&
+    !identityContext.actor.roles.includes('admin') &&
     !identityContext.actor.permissionScopes.includes('assistant:review')
   ) {
     throw new ForbiddenException('Review item access denied');

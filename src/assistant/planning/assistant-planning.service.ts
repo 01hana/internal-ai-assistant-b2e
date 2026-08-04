@@ -25,7 +25,7 @@ export class AssistantPlanningService {
 
     await this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
@@ -76,7 +76,7 @@ function toExecutionPlanCreateInput(
     candidateTools: toJsonInput(output.candidateTools),
     permissionChecks: toJsonInput([
       {
-        organizationId: input.identityContext.company.organizationId,
+        organizationId: input.identityContext.organization.organizationId,
         hostApp: input.identityContext.hostApp.hostApp,
         actorId: input.identityContext.actor.actorId,
         scopes: input.identityContext.actor.permissionScopes

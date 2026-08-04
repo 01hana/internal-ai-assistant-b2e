@@ -8,6 +8,7 @@ import {
   withPermissionDeniedReason,
   withToolFailureReason
 } from '../../src/observability/observability-metadata.helper';
+import { createInternalIdentityJwtFixture } from '../support/internal-identity-jwt.helper';
 
 describe('observability metadata helpers', () => {
   it('creates stable duration metadata', () => {
@@ -48,5 +49,20 @@ describe('observability metadata helpers', () => {
       approvalDecisionStatus: 'pending',
       confirmationDecisionStatus: 'waiting_confirmation'
     });
+  });
+
+  it('redacts Authorization and signed-token material from observability metadata', () => {
+    const token = createInternalIdentityJwtFixture().sign();
+    const metadata = createRuntimeDecisionMetadata({
+      authorization: {
+        bearer: `Bearer ${token}`,
+        jwtSignature: token.split('.')[2],
+        jwksPrivateMaterial: 'must-not-be-observable'
+      }
+    } as never);
+
+    expect(JSON.stringify(metadata)).not.toContain(token);
+    expect(JSON.stringify(metadata)).not.toContain(token.split('.')[2]);
+    expect(JSON.stringify(metadata)).not.toContain('must-not-be-observable');
   });
 });

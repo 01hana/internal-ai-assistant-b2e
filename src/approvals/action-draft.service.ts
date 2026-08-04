@@ -240,7 +240,7 @@ export class ActionDraftService {
     const session = await this.prisma.db.assistantSession.findFirst({
       where: {
         id: draft.sessionId,
-        organizationId: identityContext.company.organizationId,
+        organizationId: identityContext.organization.organizationId,
         hostApp: identityContext.hostApp.hostApp,
         actorId: identityContext.actor.actorId
       }
@@ -262,7 +262,7 @@ export class ActionDraftService {
   }) {
     return this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,

@@ -1,81 +1,167 @@
 import { ExecutionContext } from '@nestjs/common';
-import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.filter';
+import { TestingModule } from '@nestjs/testing';
 import { REQUEST_ID_PROPERTY } from '../../src/common/request-id/request-id.constants';
+import { RequestIdMiddleware } from '../../src/common/request-id/request-id.middleware';
 import {
-  IdentityContextExtractor,
-  IdentityRequest,
-  getIdentityContext
+  getIdentityContext,
+  IdentityRequest
 } from '../../src/identity/identity-context.extractor';
 import { IdentityGuard } from '../../src/identity/identity.guard';
+import {
+  createInternalIdentityJwtFixture,
+  InternalTokenClaims,
+  TEST_BACKEND_AUDIENCE,
+  TEST_GATEWAY_ISSUER
+} from '../support/internal-identity-jwt.helper';
+import {
+  createInternalIdentityTestingModule,
+  INTERNAL_IDENTITY_TEST_CONFIG
+} from '../support/internal-identity-test-module.helper';
+import {
+  createAuthorizedInternalIdentityHeaders,
+  createLegacyPublicIdentityHeaders
+} from '../support/us1-test-app.helper';
 
-describe('missing identity context integration', () => {
-  const extractor = new IdentityContextExtractor();
-  const guard = new IdentityGuard(extractor);
+describe('internal identity boundary integration (T009 contract)', () => {
+  const fixture = createInternalIdentityJwtFixture();
+  const canonicalClaims: Partial<InternalTokenClaims> = {
+    customer_id: 'customer-a',
+    integration_id: 'integration-erp',
+    sub: 'actor-shared',
+    org_id: 'org-shared',
+    host_app: 'erp'
+  };
+  let moduleRef: TestingModule;
+  let guard: IdentityGuard;
 
-  it('rejects requests that do not include required identity headers through the shared error envelope', () => {
-    const request = createIdentityRequest({
-      requestId: 'req-missing-identity',
-      headers: {}
+  beforeAll(async () => {
+    const testModule = await createInternalIdentityTestingModule({
+      issuer: TEST_GATEWAY_ISSUER,
+      audience: TEST_BACKEND_AUDIENCE,
+      jwks: fixture.jwks
     });
-    const response = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn()
-    };
-
-    try {
-      guard.canActivate(createExecutionContext(request));
-      throw new Error('Expected guard to reject missing identity.');
-    } catch (error) {
-      new GlobalExceptionFilter().catch(error, createArgumentsHost(request, response));
-    }
-
-    expect(response.status).toHaveBeenCalledWith(400);
-    expect(response.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        requestId: 'req-missing-identity',
-        error: expect.objectContaining({
-          code: 'IDENTITY_CONTEXT_INVALID',
-          message: 'Missing or invalid identity context.'
-        })
-      })
-    );
+    moduleRef = testModule.moduleRef;
+    guard = moduleRef.get(IdentityGuard);
+    expect(testModule.internalIdentity).toEqual({
+      issuer: TEST_GATEWAY_ISSUER,
+      audience: TEST_BACKEND_AUDIENCE,
+      jwks: fixture.jwks
+    });
+    expect(moduleRef.get(INTERNAL_IDENTITY_TEST_CONFIG)).toBe(testModule.internalIdentity);
   });
 
-  it('accepts requests with complete identity headers and stores the context on the request', () => {
+  afterAll(async () => {
+    await moduleRef.close();
+  });
+
+  it('rejects complete public identity headers when no internal JWT exists', async () => {
     const request = createIdentityRequest({
-      requestId: 'req-valid-identity',
+      headers: createLegacyPublicIdentityHeaders()
+    });
+
+    await expect(evaluateGuard(guard, request)).rejects.toMatchObject({
+      status: 401,
+      code: 'IDENTITY_TOKEN_INVALID'
+    });
+    expect(getIdentityContext(request)).toBeUndefined();
+  });
+
+  it('does not fall back to public headers when a JWT has an invalid signature', async () => {
+    const invalidToken = fixture.tamper(fixture.sign({ claims: canonicalClaims }));
+    const request = createIdentityRequest({
       headers: {
-        'x-actor-id': 'actor-001',
-        'x-host-app': 'erp',
-        'x-organization-id': 'org-001',
-        'x-role': 'planner',
-        'x-permission-scopes': 'orders:read,inventory:read'
+        ...createLegacyPublicIdentityHeaders(),
+        authorization: `Bearer ${invalidToken}`
       }
     });
 
-    expect(guard.canActivate(createExecutionContext(request))).toBe(true);
-    expect(getIdentityContext(request)).toMatchObject({
-      requestId: 'req-valid-identity',
-      actor: {
-        actorId: 'actor-001',
-        permissionScopes: ['orders:read', 'inventory:read']
-      },
-      hostApp: {
-        hostApp: 'erp'
-      },
-      company: {
-        organizationId: 'org-001'
+    await expect(evaluateGuard(guard, request)).rejects.toMatchObject({
+      status: 401,
+      code: 'IDENTITY_TOKEN_INVALID'
+    });
+    expect(getIdentityContext(request)).toBeUndefined();
+  });
+
+  it('ignores public identity headers rather than letting them supplement or override signed claims', async () => {
+    const request = createIdentityRequest({
+      requestId: 'req-header-conflict',
+      headers: {
+        ...createLegacyPublicIdentityHeaders({
+          'x-customer-id': 'customer-header-conflict',
+          'x-actor-id': 'actor-header-conflict',
+          'x-role': 'admin',
+          'x-organization-id': 'org-header-conflict',
+          'x-host-app': 'host-header-conflict',
+          'x-permission-scopes': 'all:read'
+        }),
+        authorization: `Bearer ${fixture.sign({ claims: canonicalClaims })}`
       }
     });
+
+    await expect(evaluateGuard(guard, request)).resolves.toBe(true);
+    expect(getIdentityContext(request)).toMatchObject({
+      customer: { customerId: 'customer-a', integrationId: 'integration-erp' },
+      organization: { organizationId: 'org-shared' },
+      hostApp: { hostApp: 'erp' },
+      actor: { actorId: 'actor-shared', roles: ['planner'], permissionScopes: ['orders:read'] }
+    });
+  });
+
+  it('accepts a valid JWT without x-request-id and keeps normalized requestId out of canonical claims', async () => {
+    const request = createIdentityRequest({
+      headers: {
+        authorization: `Bearer ${fixture.sign({ claims: canonicalClaims })}`
+      }
+    });
+    normalizeRequestId(request);
+
+    await expect(evaluateGuard(guard, request)).resolves.toBe(true);
+    expect(request[REQUEST_ID_PROPERTY]).toEqual(expect.any(String));
+    expect(getIdentityContext(request)).toMatchObject({
+      requestId: request[REQUEST_ID_PROPERTY],
+      customer: { customerId: 'customer-a' },
+      organization: { organizationId: 'org-shared' },
+      actor: { actorId: 'actor-shared' }
+    });
+  });
+
+  it('keeps authorized and legacy test header helpers mutually exclusive', () => {
+    const authorized = createAuthorizedInternalIdentityHeaders(fixture, {
+      claims: canonicalClaims,
+      requestId: 'req-authorized-only'
+    });
+    const legacy = createLegacyPublicIdentityHeaders({
+      Authorization: 'Bearer must-be-discarded'
+    });
+
+    expect(Object.keys(authorized).map((name) => name.toLowerCase()).sort()).toEqual([
+      'authorization',
+      'x-request-id'
+    ]);
+    expect(authorized.authorization).toMatch(/^Bearer [^.]+\.[^.]+\.[^.]+$/);
+    expect(Object.keys(legacy).map((name) => name.toLowerCase())).not.toContain('authorization');
   });
 });
 
-function createIdentityRequest(input: { requestId: string; headers: Record<string, string> }): IdentityRequest {
-  const normalizedHeaders = new Map(Object.entries(input.headers).map(([key, value]) => [key.toLowerCase(), value]));
+function createIdentityRequest(input: {
+  requestId?: string;
+  headers: Record<string, string>;
+}): IdentityRequest {
+  const normalizedHeaders = new Map(
+    Object.entries(input.headers).map(([key, value]) => [key.toLowerCase(), value])
+  );
   return {
     [REQUEST_ID_PROPERTY]: input.requestId,
     header: (name: string) => normalizedHeaders.get(name.toLowerCase())
   } as IdentityRequest;
+}
+
+function normalizeRequestId(request: IdentityRequest) {
+  new RequestIdMiddleware().use(
+    request,
+    { setHeader: jest.fn() } as never,
+    jest.fn()
+  );
 }
 
 function createExecutionContext(request: IdentityRequest): ExecutionContext {
@@ -86,11 +172,6 @@ function createExecutionContext(request: IdentityRequest): ExecutionContext {
   } as ExecutionContext;
 }
 
-function createArgumentsHost(request: IdentityRequest, response: { status: jest.Mock; json: jest.Mock }) {
-  return {
-    switchToHttp: () => ({
-      getRequest: () => request,
-      getResponse: () => response
-    })
-  } as never;
+function evaluateGuard(guard: IdentityGuard, request: IdentityRequest): Promise<boolean> {
+  return Promise.resolve().then(() => guard.canActivate(createExecutionContext(request)));
 }

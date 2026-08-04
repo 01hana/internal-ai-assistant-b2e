@@ -62,7 +62,7 @@ export class ReviewItemService {
         priority: toReviewPriority(input.noAnswerReason),
         summary: `${input.noAnswerReason}: assistant answer requires review`,
         suggestedImprovement: toJsonInput({
-          organizationId: input.identityContext.company.organizationId,
+          organizationId: input.identityContext.organization.organizationId,
           hostApp: input.identityContext.hostApp.hostApp,
           requestId: input.requestId,
           messageId: input.messageId,
@@ -82,7 +82,7 @@ export class ReviewItemService {
 
     await this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
@@ -124,7 +124,7 @@ export class ReviewItemService {
         priority: toFeedbackReviewPriority(input),
         summary: `${input.intent}: feedback requires review`,
         suggestedImprovement: toJsonInput({
-          organizationId: input.identityContext.company.organizationId,
+          organizationId: input.identityContext.organization.organizationId,
           hostApp: input.identityContext.hostApp.hostApp,
           requestId: input.requestId,
           messageId: input.messageId,
@@ -142,7 +142,7 @@ export class ReviewItemService {
 
     await this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
@@ -179,7 +179,7 @@ export class ReviewItemService {
       candidates.find((item) => {
         const metadata = toRecord(item.suggestedImprovement);
         return (
-          metadata.organizationId === input.identityContext.company.organizationId &&
+          metadata.organizationId === input.identityContext.organization.organizationId &&
           metadata.hostApp === input.identityContext.hostApp.hostApp &&
           metadata.messageId === input.messageId &&
           metadata.answerDecision === input.answerDecision &&
@@ -265,7 +265,7 @@ export class ReviewItemService {
 
     await this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       eventType: input.eventType,
@@ -326,7 +326,7 @@ function toFeedbackReviewPriority(input: { rating: FeedbackRating; intent: strin
 function isVisibleReviewItem(item: { suggestedImprovement: Prisma.JsonValue }, identityContext: RequestIdentityContext): boolean {
   const metadata = toRecord(item.suggestedImprovement);
   return (
-    metadata.organizationId === identityContext.company.organizationId &&
+    metadata.organizationId === identityContext.organization.organizationId &&
     metadata.hostApp === identityContext.hostApp.hostApp
   );
 }

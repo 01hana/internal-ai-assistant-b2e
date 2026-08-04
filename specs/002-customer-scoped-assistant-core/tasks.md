@@ -28,21 +28,21 @@
 
 ### Tests first
 
-- [ ] T005 Add reusable RS256 test-token, JWKS, and canonical Customer identity fixtures in `test/support/internal-identity-jwt.helper.ts`; fixtures include Customer A/B with equal organizationId, actorId, and HostApp.
-- [ ] T006 [P] Add missing/malformed Bearer, invalid signature, unknown `kid`, wrong issuer/audience, invalid `iat`/`exp`/`nbf`, and RS256-only tests in `test/unit/internal-identity-token-verifier.spec.ts`; assert `401 IDENTITY_TOKEN_INVALID` before claim mapping.
-- [ ] T007 [P] Add verified-token canonical-claim tests in `test/unit/identity-context-validation.spec.ts` for required Customer claims, blank string claims, blank array elements, valid empty `roles`/`permissionScopes`, and `403 IDENTITY_CONTEXT_INVALID`.
-- [ ] T008 [P] Add protected-endpoint identity contract tests in `test/contract/assistant-sessions.contract.spec.ts` and `test/contract/assistant-messages-sse.contract.spec.ts` for 401/403 envelopes and JSON rejection before SSE work begins.
-- [ ] T009 [P] Add header non-authority, claim/header conflict, requestId separation, and token-redaction tests in `test/integration/missing-identity-context.spec.ts`, `test/unit/logger-redaction.spec.ts`, and `test/unit/observability-metadata.spec.ts`.
+- [x] T005 Add reusable RS256 test-token, JWKS, and canonical Customer identity fixtures in `test/support/internal-identity-jwt.helper.ts`; fixtures include Customer A/B with equal organizationId, actorId, and HostApp.
+- [x] T006 [P] Add missing/malformed Bearer, invalid signature, unknown `kid`, wrong issuer/audience, invalid `iat`/`exp`/`nbf`, and RS256-only tests in `test/unit/internal-identity-token-verifier.spec.ts`; assert `401 IDENTITY_TOKEN_INVALID` before claim mapping.
+- [x] T007 [P] Add verified-token canonical-claim tests in `test/unit/identity-context-validation.spec.ts` for required Customer claims, blank string claims, blank array elements, valid empty `roles`/`permissionScopes`, and `403 IDENTITY_CONTEXT_INVALID`.
+- [x] T008 [P] Add protected-endpoint identity contract tests in `test/contract/assistant-sessions.contract.spec.ts` and `test/contract/assistant-messages-sse.contract.spec.ts` for 401/403 envelopes and JSON rejection before SSE work begins.
+- [x] T009 [P] Add header non-authority, claim/header conflict, requestId separation, and token-redaction tests in `test/integration/missing-identity-context.spec.ts`, `test/unit/logger-redaction.spec.ts`, and `test/unit/observability-metadata.spec.ts`.
 
 ### Identity implementation
 
-- [ ] T010 Add the RS256 verification dependency and typed internal-identity configuration in `package.json`, `src/common/config/env.validation.ts`, and `.env.example`; require issuer, audience, and JWKS URI without logging token material.
-- [ ] T011 Implement Bearer parsing and verifier abstraction in `src/identity/internal-identity-token-verifier.ts` and `src/identity/identity-token.types.ts`; use `backup/gateway-identity-jwt-prototype:src/identity/internal-identity-token-verifier.ts` only as read-only verifier mechanics reference.
-- [ ] T012 Implement Remote JWKS RS256 verification, `kid` rotation, issuer/audience/time validation, and 401 mapping in `src/identity/internal-identity-token-verifier.ts` and `src/identity/identity.errors.ts`; do not copy prototype single-role, non-empty-scope, header-era, or Gateway-runtime assumptions.
-- [ ] T013 Replace legacy header-era types with canonical Customer-aware context and request-scoped storage in `src/identity/identity-context.types.ts`, `src/identity/identity-context.accessor.ts`, and `src/identity/identity.module.ts`.
-- [ ] T014 Implement post-verification claim validation in `src/identity/identity-context.validator.ts`; require canonical claims and non-blank array elements, allow empty authorization arrays, and map only verified-context failure to `403 IDENTITY_CONTEXT_INVALID`.
-- [ ] T015 Refactor `src/identity/identity.guard.ts` and retire identity-header authority in `src/identity/identity-context.extractor.ts`; headers must never create, supplement, override, or fall back for identity.
-- [ ] T016 Update canonical-context consumers in `src/assistant/assistant.controller.ts`, `src/permissions/tool-permission-precheck.service.ts`, `src/retrieval/retrieval.service.ts`, and `src/audit/audit-writer.service.ts`; retain `src/common/request-id/**` as tracing-only.
+- [x] T010 Add the RS256 verification dependency and typed internal-identity configuration in `package.json`, `src/common/config/env.validation.ts`, and `.env.example`; require issuer, audience, and JWKS URI without logging token material.
+- [x] T011 Implement Bearer parsing and verifier abstraction in `src/identity/internal-identity-token-verifier.ts` and `src/identity/identity-token.types.ts`; use `backup/gateway-identity-jwt-prototype:src/identity/internal-identity-token-verifier.ts` only as read-only verifier mechanics reference.
+- [x] T012 Implement Remote JWKS RS256 verification, `kid` rotation, issuer/audience/time validation, and 401 mapping in `src/identity/internal-identity-token-verifier.ts` and `src/identity/identity.errors.ts`; do not copy prototype single-role, non-empty-scope, header-era, or Gateway-runtime assumptions.
+- [x] T013 Replace legacy header-era types with canonical Customer-aware context and request-scoped storage in `src/identity/identity-context.types.ts`, `src/identity/identity-context.accessor.ts`, and `src/identity/identity.module.ts`.
+- [x] T014 Implement post-verification claim validation in `src/identity/identity-context.validator.ts`; require canonical claims and non-blank array elements, allow empty authorization arrays, and map only verified-context failure to `403 IDENTITY_CONTEXT_INVALID`.
+- [x] T015 Refactor `src/identity/identity.guard.ts` and retire identity-header authority in `src/identity/identity-context.extractor.ts`; headers must never create, supplement, override, or fall back for identity.
+- [x] T016 Update canonical-context consumers in `src/assistant/assistant.controller.ts`, `src/permissions/tool-permission-precheck.service.ts`, `src/retrieval/retrieval.service.ts`, and `src/audit/audit-writer.service.ts`; retain `src/common/request-id/**` as tracing-only.
 
 ### CustomerScope tests first
 

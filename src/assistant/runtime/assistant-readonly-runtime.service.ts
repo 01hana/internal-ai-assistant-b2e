@@ -154,7 +154,7 @@ export class AssistantReadonlyRuntimeService {
     });
     const connectorResult = await this.mockConnector.execute({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       actorId: input.identityContext.actor.actorId,
       toolKey: tool.key,
       arguments: toolInput

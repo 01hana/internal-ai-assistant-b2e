@@ -54,7 +54,7 @@ export class RetrievalService {
     const startedAt = Date.now();
     const providerResult = await this.provider.retrieve({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       query: input.query,
       limit: input.limit
     });
@@ -116,7 +116,7 @@ export class RetrievalService {
 
     await this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
@@ -138,7 +138,7 @@ export class RetrievalService {
     for (const candidate of persistedCandidates.filter((item) => item.selected)) {
       await this.auditWriter.append({
         requestId: input.requestId,
-        organizationId: input.identityContext.company.organizationId,
+        organizationId: input.identityContext.organization.organizationId,
         hostApp: input.identityContext.hostApp.hostApp,
         actorId: input.identityContext.actor.actorId,
         sessionId: input.sessionId,

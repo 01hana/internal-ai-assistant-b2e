@@ -128,7 +128,7 @@ export class SideEffectExecutionGuardService {
 
     const connectorResult = await this.mockConnector.execute({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       actorId: input.identityContext.actor.actorId,
       toolKey: tool.key,
       arguments: {
@@ -246,7 +246,7 @@ export class SideEffectExecutionGuardService {
   ) {
     return this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,

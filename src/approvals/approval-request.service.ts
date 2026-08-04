@@ -102,7 +102,7 @@ export class ApprovalRequestService {
       const session = await this.prisma.db.assistantSession.findFirst({
         where: {
           id: item.sessionId,
-          organizationId: input.identityContext.company.organizationId,
+          organizationId: input.identityContext.organization.organizationId,
           hostApp: input.identityContext.hostApp.hostApp,
           actorId: item.requesterActorId
         }
@@ -278,7 +278,7 @@ export class ApprovalRequestService {
     const session = await this.prisma.db.assistantSession.findFirst({
       where: {
         id: approvalRequest.sessionId,
-        organizationId: identityContext.company.organizationId,
+        organizationId: identityContext.organization.organizationId,
         hostApp: identityContext.hostApp.hostApp,
         actorId: approvalRequest.requesterActorId
       }
@@ -301,7 +301,7 @@ export class ApprovalRequestService {
   }) {
     return this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
@@ -431,7 +431,7 @@ function isApprovalVisibleToActor(
 
 function hasApprovalAuthority(identityContext: RequestIdentityContext) {
   return (
-    identityContext.actor.role === 'approver' ||
+    identityContext.actor.roles.includes( 'approver' ) ||
     identityContext.actor.permissionScopes.some((scope) => scope === 'orders:approve' || scope.endsWith(':approve'))
   );
 }

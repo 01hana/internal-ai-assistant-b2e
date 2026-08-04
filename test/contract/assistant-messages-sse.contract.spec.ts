@@ -1,12 +1,44 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestApp, parseSseResponse } from '../support/us1-test-app.helper';
+import {
+  createAuthorizedInternalIdentityHeaders,
+  createLegacyPublicIdentityHeaders,
+  createUs1TestAppWithState,
+  parseSseResponse,
+  Us1TestState
+} from '../support/us1-test-app.helper';
+import {
+  createInternalIdentityJwtFixture,
+  InternalTokenClaims,
+  TEST_BACKEND_AUDIENCE,
+  TEST_GATEWAY_ISSUER
+} from '../support/internal-identity-jwt.helper';
 
 describe('assistant message SSE contract', () => {
+  const identityFixture = createInternalIdentityJwtFixture();
+  const ownedClaims: Partial<InternalTokenClaims> = {
+    sub: 'actor-001',
+    org_id: 'org-001',
+    host_app: 'erp'
+  };
   let app: INestApplication;
+  let state: Us1TestState;
 
   beforeAll(async () => {
-    app = await createUs1TestApp();
+    const testApp = await createUs1TestAppWithState({
+      internalIdentity: {
+        issuer: TEST_GATEWAY_ISSUER,
+        audience: TEST_BACKEND_AUDIENCE,
+        jwks: identityFixture.jwks
+      }
+    });
+    app = testApp.app;
+    state = testApp.state;
+    expect(state.internalIdentity).toEqual({
+      issuer: TEST_GATEWAY_ISSUER,
+      audience: TEST_BACKEND_AUDIENCE,
+      jwks: identityFixture.jwks
+    });
   });
 
   afterAll(async () => {
@@ -16,7 +48,7 @@ describe('assistant message SSE contract', () => {
   it('streams the message flow as SSE events only, with the required event sequence and metadata envelope', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us1-sse-success' }))
+      .set(createAuthorizedInternalIdentityHeaders(identityFixture, { claims: ownedClaims, requestId: 'req-us1-sse-success' }))
       .send({
         message: '這張訂單目前狀態？',
         pageContext: {
@@ -66,9 +98,9 @@ describe('assistant message SSE contract', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-hidden-001/messages')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us1-sse-error',
-          'x-actor-id': 'actor-999'
+        createAuthorizedInternalIdentityHeaders(identityFixture, {
+          claims: { ...ownedClaims, sub: 'actor-999' },
+          requestId: 'req-us1-sse-error'
         })
       )
       .send({
@@ -95,5 +127,46 @@ describe('assistant message SSE contract', () => {
         })
       })
     ]);
+  });
+
+  it.each([
+    ['missing token', {}, 401, 'IDENTITY_TOKEN_INVALID'],
+    ['malformed token', { authorization: 'Bearer broken.token' }, 401, 'IDENTITY_TOKEN_INVALID'],
+    ['verified-token invalid canonical claims', createAuthorizedInternalIdentityHeaders(identityFixture, { claims: { org_id: ' ' } }), 403, 'IDENTITY_CONTEXT_INVALID']
+  ])('rejects %s as JSON before the SSE stream or message orchestration begins', async (_name, headers, status, code) => {
+    const beforeAuditCount = state.auditEvents.length;
+    const beforeMessageCount = state.messages.length;
+    const beforeToolCallCount = state.toolCalls.length;
+    const beforeEvidenceCount = state.evidenceRefs.length;
+    const beforeOrchestrationCount = state.orchestration.sendMessage.mock.calls.length;
+    const beforeSseEventBuildCount = state.orchestration.sseEventBuilds.mock.calls.length;
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/assistant/sessions/session-owned-001/messages')
+      .set(headers)
+      .send({ message: 'must not enter orchestration' });
+
+    expect(response.status).toBe(status);
+    expect(response.headers['content-type']).toContain('application/json');
+    expect(response.headers['content-type']).not.toContain('text/event-stream');
+    expect(response.body).toEqual(expect.objectContaining({ error: expect.objectContaining({ code }) }));
+    expect(state.auditEvents).toHaveLength(beforeAuditCount);
+    expect(state.messages).toHaveLength(beforeMessageCount);
+    expect(state.toolCalls).toHaveLength(beforeToolCallCount);
+    expect(state.evidenceRefs).toHaveLength(beforeEvidenceCount);
+    expect(state.orchestration.sendMessage).toHaveBeenCalledTimes(beforeOrchestrationCount);
+    expect(state.orchestration.sseEventBuilds).toHaveBeenCalledTimes(beforeSseEventBuildCount);
+    expect(JSON.stringify(response.body)).not.toContain('JWKS');
+    expect(JSON.stringify(response.body)).not.toContain('Bearer ');
+  });
+
+  it('does not let public headers start an SSE response without a verified JWT', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/assistant/sessions/session-owned-001/messages')
+      .set(createLegacyPublicIdentityHeaders({ 'x-request-id': 'req-sse-header-not-authority' }))
+      .send({ message: 'must not be streamed' });
+
+    expect(response.status).toBe(401);
+    expect(response.headers['content-type']).toContain('application/json');
+    expect(response.headers['content-type']).not.toContain('text/event-stream');
   });
 });

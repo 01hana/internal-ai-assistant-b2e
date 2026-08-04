@@ -40,7 +40,7 @@ export class FeedbackEventService {
     const session = await this.prisma.db.assistantSession.findFirst({
       where: {
         id: message.sessionId,
-        organizationId: input.identityContext.company.organizationId,
+        organizationId: input.identityContext.organization.organizationId,
         hostApp: input.identityContext.hostApp.hostApp,
         actorId: input.identityContext.actor.actorId
       }
@@ -75,7 +75,7 @@ export class FeedbackEventService {
 
     await this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       sessionId: message.sessionId,

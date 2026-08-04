@@ -19,7 +19,7 @@ export class AssistantSessionService {
     const session = await this.prisma.db.assistantSession.create({
       data: {
         hostApp: input.identityContext.hostApp.hostApp,
-        organizationId: input.identityContext.company.organizationId,
+        organizationId: input.identityContext.organization.organizationId,
         actorId: input.identityContext.actor.actorId,
         status: AssistantSessionStatus.active
       }
@@ -29,7 +29,7 @@ export class AssistantSessionService {
 
     await this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       sessionId: session.id,
@@ -55,7 +55,7 @@ export class AssistantSessionService {
 
     await this.auditWriter.append({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
+      organizationId: input.identityContext.organization.organizationId,
       hostApp: input.identityContext.hostApp.hostApp,
       actorId: input.identityContext.actor.actorId,
       sessionId: session.id,
@@ -86,7 +86,7 @@ export class AssistantSessionService {
     const session = await this.prisma.db.assistantSession.findFirst({
       where: {
         id: sessionId,
-        organizationId: identityContext.company.organizationId,
+        organizationId: identityContext.organization.organizationId,
         hostApp: identityContext.hostApp.hostApp,
         actorId: identityContext.actor.actorId
       }

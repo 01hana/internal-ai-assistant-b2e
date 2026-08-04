@@ -12,7 +12,6 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { Response } from "express";
-import { getRequestId } from "../common/request-id/request-id.util";
 import {
   getIdentityContext,
   IdentityRequest,
@@ -43,7 +42,7 @@ export class AssistantController {
   ) {
     const identityContext = getRequiredIdentityContext(request);
     return this.assistantSessionService.createSession({
-      requestId: getRequestId(request),
+      requestId: identityContext.requestId,
       identityContext,
       pageContext: body.pageContext,
     });
@@ -56,7 +55,7 @@ export class AssistantController {
   ) {
     const identityContext = getRequiredIdentityContext(request);
     return this.assistantSessionService.getVisibleSessionSummary({
-      requestId: getRequestId(request),
+      requestId: identityContext.requestId,
       sessionId,
       identityContext,
     });
@@ -70,12 +69,12 @@ export class AssistantController {
     @Body() body: SendAssistantMessageDto,
     @Res() response: Response,
   ) {
-    const requestId = getRequestId(request);
+    const identityContext = getRequiredIdentityContext(request);
+    const requestId = identityContext.requestId;
     response.status(HttpStatus.OK);
     response.setHeader("Content-Type", "text/event-stream; charset=utf-8");
 
     try {
-      const identityContext = getRequiredIdentityContext(request);
       const events = await this.assistantMessageService.sendMessage({
         requestId,
         sessionId,
@@ -114,7 +113,7 @@ export class AssistantController {
   ) {
     const identityContext = getRequiredIdentityContext(request);
     return this.assistantHistoryService.listMessages({
-      requestId: getRequestId(request),
+      requestId: identityContext.requestId,
       sessionId,
       identityContext,
       limit: query.limit ? Number(query.limit) : undefined,
