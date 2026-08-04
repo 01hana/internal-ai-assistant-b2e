@@ -46,13 +46,13 @@
 
 ### CustomerScope tests first
 
-- [ ] T017 [P] Add context-to-scope and request-payload non-authority tests in `test/unit/customer-scope.factory.spec.ts`; prove a payload cannot supply or override `customerId`.
-- [ ] T018 [P] Add Customer-first predicate contract tests in `test/unit/customer-scope-predicate.spec.ts`; reject predicates that omit Customer scope or begin from a bare global ID.
+- [x] T017 [P] Add context-to-scope and request-payload non-authority tests in `test/unit/customer-scope.factory.spec.ts`; prove a payload cannot supply or override `customerId`.
+- [x] T018 [P] Add Customer-first predicate contract tests in `test/unit/customer-scope-predicate.spec.ts`; reject predicates that omit Customer scope or begin from a bare global ID.
 
 ### CustomerScope implementation
 
-- [ ] T019 Implement `CustomerScope` and a canonical-context factory in `src/identity/customer-scope.types.ts` and `src/identity/customer-scope.factory.ts`; scope is derived only from verified `RequestIdentityContext`.
-- [ ] T020 Implement reusable Customer-first repository predicate helpers in `src/prisma/customer-scope.predicate.ts`; expose Customer-qualified ID, list, relation, and unique-key predicates for later domain repositories.
+- [x] T019 Implement `CustomerScope` and a canonical-context factory in `src/identity/customer-scope.types.ts` and `src/identity/customer-scope.factory.ts`; scope is derived only from verified `RequestIdentityContext`.
+- [x] T020 Implement reusable Customer-first repository predicate helpers in `src/prisma/customer-scope.predicate.ts`; expose Customer-qualified ID, list, relation, and unique-key predicates for later domain repositories.
 
 **Checkpoint**: All repository work depends on T019–T020; no Customer boundary may be reconstructed from request payloads or global IDs.
 
