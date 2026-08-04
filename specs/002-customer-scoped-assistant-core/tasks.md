@@ -62,10 +62,10 @@
 
 ### Tests first
 
-- [ ] T021 Add deterministic Customer A/B fixtures in `test/support/customer-scope-fixtures.ts` and fixture assertions in `test/integration/customer-seed.spec.ts`; share organizationId, actorId, HostApp, sourceKey/version, and idempotency key.
-- [ ] T022 [P] Add Customer-root/direct/parent/multi-parent ownership tests in `test/integration/customer-ownership-integrity.spec.ts`; assert `Customer.id` is the sole root identifier and no Customer self-reference exists.
-- [ ] T023 [P] Add database uniqueness and Customer-qualified relation tests in `test/integration/customer-persistence-constraints.spec.ts` for same-Customer collision, cross-Customer duplicate source/version and idempotency values, and rejected cross-Customer parent relations.
-- [ ] T024 [P] Add retained-data preflight tests in `test/integration/customer-migration-preflight.spec.ts` for unmapped/ambiguous Customer ownership, missing/invalid KnowledgeDocument policy, approved mappings to an existing Customer with valid policy, deny-before-retrieval, and enforcement blocking.
+- [x] T021 Add deterministic Customer A/B fixtures in `test/support/customer-scope-fixtures.ts` and fixture assertions in `test/integration/customer-seed.spec.ts`; share organizationId, actorId, HostApp, sourceKey/version, and idempotency key.
+- [x] T022 [P] Add Customer-root/direct/parent/multi-parent ownership tests in `test/integration/customer-ownership-integrity.spec.ts`; assert `Customer.id` is the sole root identifier and no Customer self-reference exists.
+- [x] T023 [P] Add database uniqueness and Customer-qualified relation tests in `test/integration/customer-persistence-constraints.spec.ts` for same-Customer collision, cross-Customer duplicate source/version and idempotency values, and rejected cross-Customer parent relations.
+- [x] T024 [P] Add retained-data preflight tests in `test/integration/customer-migration-preflight.spec.ts` for unmapped/ambiguous Customer ownership, missing/invalid KnowledgeDocument policy, approved mappings to an existing Customer with valid policy, deny-before-retrieval, and enforcement blocking.
 
 ### Schema, migration, and seed implementation
 
