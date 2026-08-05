@@ -26,6 +26,7 @@ export type AggregateExecutionPlan = {
 
 export type ExecutionPlanMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   sessionId: string | null
   messageId: string | null
   taskType: string | null
@@ -37,6 +38,7 @@ export type ExecutionPlanMinAggregateOutputType = {
 
 export type ExecutionPlanMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   sessionId: string | null
   messageId: string | null
   taskType: string | null
@@ -48,6 +50,7 @@ export type ExecutionPlanMaxAggregateOutputType = {
 
 export type ExecutionPlanCountAggregateOutputType = {
   id: number
+  customerId: number
   sessionId: number
   messageId: number
   taskType: number
@@ -66,6 +69,7 @@ export type ExecutionPlanCountAggregateOutputType = {
 
 export type ExecutionPlanMinAggregateInputType = {
   id?: true
+  customerId?: true
   sessionId?: true
   messageId?: true
   taskType?: true
@@ -77,6 +81,7 @@ export type ExecutionPlanMinAggregateInputType = {
 
 export type ExecutionPlanMaxAggregateInputType = {
   id?: true
+  customerId?: true
   sessionId?: true
   messageId?: true
   taskType?: true
@@ -88,6 +93,7 @@ export type ExecutionPlanMaxAggregateInputType = {
 
 export type ExecutionPlanCountAggregateInputType = {
   id?: true
+  customerId?: true
   sessionId?: true
   messageId?: true
   taskType?: true
@@ -177,6 +183,7 @@ export type ExecutionPlanGroupByArgs<ExtArgs extends runtime.Types.Extensions.In
 
 export type ExecutionPlanGroupByOutputType = {
   id: string
+  customerId: string
   sessionId: string
   messageId: string | null
   taskType: string
@@ -214,6 +221,7 @@ export type ExecutionPlanWhereInput = {
   OR?: Prisma.ExecutionPlanWhereInput[]
   NOT?: Prisma.ExecutionPlanWhereInput | Prisma.ExecutionPlanWhereInput[]
   id?: Prisma.StringFilter<"ExecutionPlan"> | string
+  customerId?: Prisma.StringFilter<"ExecutionPlan"> | string
   sessionId?: Prisma.StringFilter<"ExecutionPlan"> | string
   messageId?: Prisma.StringNullableFilter<"ExecutionPlan"> | string | null
   taskType?: Prisma.StringFilter<"ExecutionPlan"> | string
@@ -232,6 +240,7 @@ export type ExecutionPlanWhereInput = {
 
 export type ExecutionPlanOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrderInput | Prisma.SortOrder
   taskType?: Prisma.SortOrder
@@ -253,6 +262,7 @@ export type ExecutionPlanWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.ExecutionPlanWhereInput | Prisma.ExecutionPlanWhereInput[]
   OR?: Prisma.ExecutionPlanWhereInput[]
   NOT?: Prisma.ExecutionPlanWhereInput | Prisma.ExecutionPlanWhereInput[]
+  customerId?: Prisma.StringFilter<"ExecutionPlan"> | string
   sessionId?: Prisma.StringFilter<"ExecutionPlan"> | string
   messageId?: Prisma.StringNullableFilter<"ExecutionPlan"> | string | null
   taskType?: Prisma.StringFilter<"ExecutionPlan"> | string
@@ -271,6 +281,7 @@ export type ExecutionPlanWhereUniqueInput = Prisma.AtLeast<{
 
 export type ExecutionPlanOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrderInput | Prisma.SortOrder
   taskType?: Prisma.SortOrder
@@ -293,6 +304,7 @@ export type ExecutionPlanScalarWhereWithAggregatesInput = {
   OR?: Prisma.ExecutionPlanScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ExecutionPlanScalarWhereWithAggregatesInput | Prisma.ExecutionPlanScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"ExecutionPlan"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"ExecutionPlan"> | string
   sessionId?: Prisma.StringWithAggregatesFilter<"ExecutionPlan"> | string
   messageId?: Prisma.StringNullableWithAggregatesFilter<"ExecutionPlan"> | string | null
   taskType?: Prisma.StringWithAggregatesFilter<"ExecutionPlan"> | string
@@ -325,6 +337,7 @@ export type ExecutionPlanCreateInput = {
 
 export type ExecutionPlanUncheckedCreateInput = {
   id?: string
+  customerId: string
   sessionId: string
   messageId?: string | null
   taskType: string
@@ -357,6 +370,7 @@ export type ExecutionPlanUpdateInput = {
 
 export type ExecutionPlanUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   taskType?: Prisma.StringFieldUpdateOperationsInput | string
@@ -373,6 +387,7 @@ export type ExecutionPlanUncheckedUpdateInput = {
 
 export type ExecutionPlanCreateManyInput = {
   id?: string
+  customerId: string
   sessionId: string
   messageId?: string | null
   taskType: string
@@ -403,6 +418,7 @@ export type ExecutionPlanUpdateManyMutationInput = {
 
 export type ExecutionPlanUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   taskType?: Prisma.StringFieldUpdateOperationsInput | string
@@ -429,6 +445,7 @@ export type ExecutionPlanOrderByRelationAggregateInput = {
 
 export type ExecutionPlanCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   taskType?: Prisma.SortOrder
@@ -445,6 +462,7 @@ export type ExecutionPlanCountOrderByAggregateInput = {
 
 export type ExecutionPlanMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   taskType?: Prisma.SortOrder
@@ -456,6 +474,7 @@ export type ExecutionPlanMaxOrderByAggregateInput = {
 
 export type ExecutionPlanMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   taskType?: Prisma.SortOrder
@@ -622,6 +641,7 @@ export type ExecutionPlanScalarWhereInput = {
   OR?: Prisma.ExecutionPlanScalarWhereInput[]
   NOT?: Prisma.ExecutionPlanScalarWhereInput | Prisma.ExecutionPlanScalarWhereInput[]
   id?: Prisma.StringFilter<"ExecutionPlan"> | string
+  customerId?: Prisma.StringFilter<"ExecutionPlan"> | string
   sessionId?: Prisma.StringFilter<"ExecutionPlan"> | string
   messageId?: Prisma.StringNullableFilter<"ExecutionPlan"> | string | null
   taskType?: Prisma.StringFilter<"ExecutionPlan"> | string
@@ -816,6 +836,7 @@ export type ExecutionPlanUncheckedUpdateManyWithoutMessageInput = {
 
 export type ExecutionPlanSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   messageId?: boolean
   taskType?: boolean
@@ -834,6 +855,7 @@ export type ExecutionPlanSelect<ExtArgs extends runtime.Types.Extensions.Interna
 
 export type ExecutionPlanSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   messageId?: boolean
   taskType?: boolean
@@ -852,6 +874,7 @@ export type ExecutionPlanSelectCreateManyAndReturn<ExtArgs extends runtime.Types
 
 export type ExecutionPlanSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   messageId?: boolean
   taskType?: boolean
@@ -870,6 +893,7 @@ export type ExecutionPlanSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
 
 export type ExecutionPlanSelectScalar = {
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   messageId?: boolean
   taskType?: boolean
@@ -884,7 +908,7 @@ export type ExecutionPlanSelectScalar = {
   createdAt?: boolean
 }
 
-export type ExecutionPlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "sessionId" | "messageId" | "taskType" | "requiredEvidence" | "candidateTools" | "permissionChecks" | "riskAssessment" | "clarificationNeeds" | "expectedAnswerShape" | "requiresMultiStepToolUse" | "decision" | "createdAt", ExtArgs["result"]["executionPlan"]>
+export type ExecutionPlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "sessionId" | "messageId" | "taskType" | "requiredEvidence" | "candidateTools" | "permissionChecks" | "riskAssessment" | "clarificationNeeds" | "expectedAnswerShape" | "requiresMultiStepToolUse" | "decision" | "createdAt", ExtArgs["result"]["executionPlan"]>
 export type ExecutionPlanInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ExecutionPlan$messageArgs<ExtArgs>
@@ -906,6 +930,7 @@ export type $ExecutionPlanPayload<ExtArgs extends runtime.Types.Extensions.Inter
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     sessionId: string
     messageId: string | null
     taskType: string
@@ -1344,6 +1369,7 @@ export interface Prisma__ExecutionPlanClient<T, Null = never, ExtArgs extends ru
  */
 export interface ExecutionPlanFieldRefs {
   readonly id: Prisma.FieldRef<"ExecutionPlan", 'String'>
+  readonly customerId: Prisma.FieldRef<"ExecutionPlan", 'String'>
   readonly sessionId: Prisma.FieldRef<"ExecutionPlan", 'String'>
   readonly messageId: Prisma.FieldRef<"ExecutionPlan", 'String'>
   readonly taskType: Prisma.FieldRef<"ExecutionPlan", 'String'>

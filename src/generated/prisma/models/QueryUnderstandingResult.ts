@@ -36,6 +36,7 @@ export type QueryUnderstandingResultSumAggregateOutputType = {
 
 export type QueryUnderstandingResultMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   confidence: number | null
@@ -44,6 +45,7 @@ export type QueryUnderstandingResultMinAggregateOutputType = {
 
 export type QueryUnderstandingResultMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   confidence: number | null
@@ -52,6 +54,7 @@ export type QueryUnderstandingResultMaxAggregateOutputType = {
 
 export type QueryUnderstandingResultCountAggregateOutputType = {
   id: number
+  customerId: number
   requestId: number
   messageId: number
   sentences: number
@@ -79,6 +82,7 @@ export type QueryUnderstandingResultSumAggregateInputType = {
 
 export type QueryUnderstandingResultMinAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   confidence?: true
@@ -87,6 +91,7 @@ export type QueryUnderstandingResultMinAggregateInputType = {
 
 export type QueryUnderstandingResultMaxAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   confidence?: true
@@ -95,6 +100,7 @@ export type QueryUnderstandingResultMaxAggregateInputType = {
 
 export type QueryUnderstandingResultCountAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   sentences?: true
@@ -199,6 +205,7 @@ export type QueryUnderstandingResultGroupByArgs<ExtArgs extends runtime.Types.Ex
 
 export type QueryUnderstandingResultGroupByOutputType = {
   id: string
+  customerId: string
   requestId: string
   messageId: string
   sentences: runtime.JsonValue
@@ -239,6 +246,7 @@ export type QueryUnderstandingResultWhereInput = {
   OR?: Prisma.QueryUnderstandingResultWhereInput[]
   NOT?: Prisma.QueryUnderstandingResultWhereInput | Prisma.QueryUnderstandingResultWhereInput[]
   id?: Prisma.StringFilter<"QueryUnderstandingResult"> | string
+  customerId?: Prisma.StringFilter<"QueryUnderstandingResult"> | string
   requestId?: Prisma.StringFilter<"QueryUnderstandingResult"> | string
   messageId?: Prisma.StringFilter<"QueryUnderstandingResult"> | string
   sentences?: Prisma.JsonFilter<"QueryUnderstandingResult">
@@ -257,6 +265,7 @@ export type QueryUnderstandingResultWhereInput = {
 
 export type QueryUnderstandingResultOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   sentences?: Prisma.SortOrder
@@ -275,11 +284,13 @@ export type QueryUnderstandingResultOrderByWithRelationInput = {
 
 export type QueryUnderstandingResultWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  messageId?: string
+  customerId_messageId?: Prisma.QueryUnderstandingResultCustomerIdMessageIdCompoundUniqueInput
   AND?: Prisma.QueryUnderstandingResultWhereInput | Prisma.QueryUnderstandingResultWhereInput[]
   OR?: Prisma.QueryUnderstandingResultWhereInput[]
   NOT?: Prisma.QueryUnderstandingResultWhereInput | Prisma.QueryUnderstandingResultWhereInput[]
+  customerId?: Prisma.StringFilter<"QueryUnderstandingResult"> | string
   requestId?: Prisma.StringFilter<"QueryUnderstandingResult"> | string
+  messageId?: Prisma.StringFilter<"QueryUnderstandingResult"> | string
   sentences?: Prisma.JsonFilter<"QueryUnderstandingResult">
   tokens?: Prisma.JsonFilter<"QueryUnderstandingResult">
   phrases?: Prisma.JsonFilter<"QueryUnderstandingResult">
@@ -292,10 +303,11 @@ export type QueryUnderstandingResultWhereUniqueInput = Prisma.AtLeast<{
   clarificationNeeds?: Prisma.JsonNullableFilter<"QueryUnderstandingResult">
   createdAt?: Prisma.DateTimeFilter<"QueryUnderstandingResult"> | Date | string
   message?: Prisma.XOR<Prisma.AssistantMessageScalarRelationFilter, Prisma.AssistantMessageWhereInput>
-}, "id" | "messageId">
+}, "id" | "customerId_messageId">
 
 export type QueryUnderstandingResultOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   sentences?: Prisma.SortOrder
@@ -321,6 +333,7 @@ export type QueryUnderstandingResultScalarWhereWithAggregatesInput = {
   OR?: Prisma.QueryUnderstandingResultScalarWhereWithAggregatesInput[]
   NOT?: Prisma.QueryUnderstandingResultScalarWhereWithAggregatesInput | Prisma.QueryUnderstandingResultScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"QueryUnderstandingResult"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"QueryUnderstandingResult"> | string
   requestId?: Prisma.StringWithAggregatesFilter<"QueryUnderstandingResult"> | string
   messageId?: Prisma.StringWithAggregatesFilter<"QueryUnderstandingResult"> | string
   sentences?: Prisma.JsonWithAggregatesFilter<"QueryUnderstandingResult">
@@ -355,6 +368,7 @@ export type QueryUnderstandingResultCreateInput = {
 
 export type QueryUnderstandingResultUncheckedCreateInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   sentences: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -389,6 +403,7 @@ export type QueryUnderstandingResultUpdateInput = {
 
 export type QueryUnderstandingResultUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   sentences?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -406,6 +421,7 @@ export type QueryUnderstandingResultUncheckedUpdateInput = {
 
 export type QueryUnderstandingResultCreateManyInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   sentences: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -439,6 +455,7 @@ export type QueryUnderstandingResultUpdateManyMutationInput = {
 
 export type QueryUnderstandingResultUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   sentences?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -459,8 +476,14 @@ export type QueryUnderstandingResultNullableScalarRelationFilter = {
   isNot?: Prisma.QueryUnderstandingResultWhereInput | null
 }
 
+export type QueryUnderstandingResultCustomerIdMessageIdCompoundUniqueInput = {
+  customerId: string
+  messageId: string
+}
+
 export type QueryUnderstandingResultCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   sentences?: Prisma.SortOrder
@@ -482,6 +505,7 @@ export type QueryUnderstandingResultAvgOrderByAggregateInput = {
 
 export type QueryUnderstandingResultMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   confidence?: Prisma.SortOrder
@@ -490,6 +514,7 @@ export type QueryUnderstandingResultMaxOrderByAggregateInput = {
 
 export type QueryUnderstandingResultMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   confidence?: Prisma.SortOrder
@@ -624,6 +649,7 @@ export type QueryUnderstandingResultUncheckedUpdateWithoutMessageInput = {
 
 export type QueryUnderstandingResultSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   sentences?: boolean
@@ -642,6 +668,7 @@ export type QueryUnderstandingResultSelect<ExtArgs extends runtime.Types.Extensi
 
 export type QueryUnderstandingResultSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   sentences?: boolean
@@ -660,6 +687,7 @@ export type QueryUnderstandingResultSelectCreateManyAndReturn<ExtArgs extends ru
 
 export type QueryUnderstandingResultSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   sentences?: boolean
@@ -678,6 +706,7 @@ export type QueryUnderstandingResultSelectUpdateManyAndReturn<ExtArgs extends ru
 
 export type QueryUnderstandingResultSelectScalar = {
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   sentences?: boolean
@@ -693,7 +722,7 @@ export type QueryUnderstandingResultSelectScalar = {
   createdAt?: boolean
 }
 
-export type QueryUnderstandingResultOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "messageId" | "sentences" | "tokens" | "phrases" | "normalizedTerms" | "timeRanges" | "resolvedReferences" | "entityCandidates" | "subTasks" | "confidence" | "clarificationNeeds" | "createdAt", ExtArgs["result"]["queryUnderstandingResult"]>
+export type QueryUnderstandingResultOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "messageId" | "sentences" | "tokens" | "phrases" | "normalizedTerms" | "timeRanges" | "resolvedReferences" | "entityCandidates" | "subTasks" | "confidence" | "clarificationNeeds" | "createdAt", ExtArgs["result"]["queryUnderstandingResult"]>
 export type QueryUnderstandingResultInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
 }
@@ -711,6 +740,7 @@ export type $QueryUnderstandingResultPayload<ExtArgs extends runtime.Types.Exten
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     requestId: string
     messageId: string
     sentences: runtime.JsonValue
@@ -1149,6 +1179,7 @@ export interface Prisma__QueryUnderstandingResultClient<T, Null = never, ExtArgs
  */
 export interface QueryUnderstandingResultFieldRefs {
   readonly id: Prisma.FieldRef<"QueryUnderstandingResult", 'String'>
+  readonly customerId: Prisma.FieldRef<"QueryUnderstandingResult", 'String'>
   readonly requestId: Prisma.FieldRef<"QueryUnderstandingResult", 'String'>
   readonly messageId: Prisma.FieldRef<"QueryUnderstandingResult", 'String'>
   readonly sentences: Prisma.FieldRef<"QueryUnderstandingResult", 'Json'>

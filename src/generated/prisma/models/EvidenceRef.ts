@@ -26,6 +26,7 @@ export type AggregateEvidenceRef = {
 
 export type EvidenceRefMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   sourceType: $Enums.EvidenceSourceType | null
@@ -40,6 +41,7 @@ export type EvidenceRefMinAggregateOutputType = {
 
 export type EvidenceRefMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   sourceType: $Enums.EvidenceSourceType | null
@@ -54,6 +56,7 @@ export type EvidenceRefMaxAggregateOutputType = {
 
 export type EvidenceRefCountAggregateOutputType = {
   id: number
+  customerId: number
   requestId: number
   messageId: number
   sourceType: number
@@ -73,6 +76,7 @@ export type EvidenceRefCountAggregateOutputType = {
 
 export type EvidenceRefMinAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   sourceType?: true
@@ -87,6 +91,7 @@ export type EvidenceRefMinAggregateInputType = {
 
 export type EvidenceRefMaxAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   sourceType?: true
@@ -101,6 +106,7 @@ export type EvidenceRefMaxAggregateInputType = {
 
 export type EvidenceRefCountAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   sourceType?: true
@@ -191,6 +197,7 @@ export type EvidenceRefGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inte
 
 export type EvidenceRefGroupByOutputType = {
   id: string
+  customerId: string
   requestId: string | null
   messageId: string | null
   sourceType: $Enums.EvidenceSourceType
@@ -229,6 +236,7 @@ export type EvidenceRefWhereInput = {
   OR?: Prisma.EvidenceRefWhereInput[]
   NOT?: Prisma.EvidenceRefWhereInput | Prisma.EvidenceRefWhereInput[]
   id?: Prisma.StringFilter<"EvidenceRef"> | string
+  customerId?: Prisma.StringFilter<"EvidenceRef"> | string
   requestId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
   messageId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
   sourceType?: Prisma.EnumEvidenceSourceTypeFilter<"EvidenceRef"> | $Enums.EvidenceSourceType
@@ -242,6 +250,7 @@ export type EvidenceRefWhereInput = {
   timestamp?: Prisma.DateTimeFilter<"EvidenceRef"> | Date | string
   permissionSnapshot?: Prisma.JsonNullableFilter<"EvidenceRef">
   summary?: Prisma.JsonNullableFilter<"EvidenceRef">
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageNullableScalarRelationFilter, Prisma.AssistantMessageWhereInput> | null
   toolCall?: Prisma.XOR<Prisma.ToolCallNullableScalarRelationFilter, Prisma.ToolCallWhereInput> | null
   document?: Prisma.XOR<Prisma.KnowledgeDocumentNullableScalarRelationFilter, Prisma.KnowledgeDocumentWhereInput> | null
@@ -250,6 +259,7 @@ export type EvidenceRefWhereInput = {
 
 export type EvidenceRefOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrderInput | Prisma.SortOrder
   messageId?: Prisma.SortOrderInput | Prisma.SortOrder
   sourceType?: Prisma.SortOrder
@@ -263,6 +273,7 @@ export type EvidenceRefOrderByWithRelationInput = {
   timestamp?: Prisma.SortOrder
   permissionSnapshot?: Prisma.SortOrderInput | Prisma.SortOrder
   summary?: Prisma.SortOrderInput | Prisma.SortOrder
+  customer?: Prisma.CustomerOrderByWithRelationInput
   message?: Prisma.AssistantMessageOrderByWithRelationInput
   toolCall?: Prisma.ToolCallOrderByWithRelationInput
   document?: Prisma.KnowledgeDocumentOrderByWithRelationInput
@@ -271,9 +282,11 @@ export type EvidenceRefOrderByWithRelationInput = {
 
 export type EvidenceRefWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  customerId_id?: Prisma.EvidenceRefCustomerIdIdCompoundUniqueInput
   AND?: Prisma.EvidenceRefWhereInput | Prisma.EvidenceRefWhereInput[]
   OR?: Prisma.EvidenceRefWhereInput[]
   NOT?: Prisma.EvidenceRefWhereInput | Prisma.EvidenceRefWhereInput[]
+  customerId?: Prisma.StringFilter<"EvidenceRef"> | string
   requestId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
   messageId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
   sourceType?: Prisma.EnumEvidenceSourceTypeFilter<"EvidenceRef"> | $Enums.EvidenceSourceType
@@ -287,14 +300,16 @@ export type EvidenceRefWhereUniqueInput = Prisma.AtLeast<{
   timestamp?: Prisma.DateTimeFilter<"EvidenceRef"> | Date | string
   permissionSnapshot?: Prisma.JsonNullableFilter<"EvidenceRef">
   summary?: Prisma.JsonNullableFilter<"EvidenceRef">
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageNullableScalarRelationFilter, Prisma.AssistantMessageWhereInput> | null
   toolCall?: Prisma.XOR<Prisma.ToolCallNullableScalarRelationFilter, Prisma.ToolCallWhereInput> | null
   document?: Prisma.XOR<Prisma.KnowledgeDocumentNullableScalarRelationFilter, Prisma.KnowledgeDocumentWhereInput> | null
   chunk?: Prisma.XOR<Prisma.KnowledgeChunkNullableScalarRelationFilter, Prisma.KnowledgeChunkWhereInput> | null
-}, "id">
+}, "id" | "customerId_id">
 
 export type EvidenceRefOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrderInput | Prisma.SortOrder
   messageId?: Prisma.SortOrderInput | Prisma.SortOrder
   sourceType?: Prisma.SortOrder
@@ -318,6 +333,7 @@ export type EvidenceRefScalarWhereWithAggregatesInput = {
   OR?: Prisma.EvidenceRefScalarWhereWithAggregatesInput[]
   NOT?: Prisma.EvidenceRefScalarWhereWithAggregatesInput | Prisma.EvidenceRefScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"EvidenceRef"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"EvidenceRef"> | string
   requestId?: Prisma.StringNullableWithAggregatesFilter<"EvidenceRef"> | string | null
   messageId?: Prisma.StringNullableWithAggregatesFilter<"EvidenceRef"> | string | null
   sourceType?: Prisma.EnumEvidenceSourceTypeWithAggregatesFilter<"EvidenceRef"> | $Enums.EvidenceSourceType
@@ -344,6 +360,7 @@ export type EvidenceRefCreateInput = {
   timestamp?: Date | string
   permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  customer: Prisma.CustomerCreateNestedOneWithoutEvidenceRefsInput
   message?: Prisma.AssistantMessageCreateNestedOneWithoutEvidenceRefsInput
   toolCall?: Prisma.ToolCallCreateNestedOneWithoutEvidenceRefsInput
   document?: Prisma.KnowledgeDocumentCreateNestedOneWithoutEvidenceRefsInput
@@ -352,6 +369,7 @@ export type EvidenceRefCreateInput = {
 
 export type EvidenceRefUncheckedCreateInput = {
   id?: string
+  customerId: string
   requestId?: string | null
   messageId?: string | null
   sourceType: $Enums.EvidenceSourceType
@@ -378,6 +396,7 @@ export type EvidenceRefUpdateInput = {
   timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutEvidenceRefsNestedInput
   message?: Prisma.AssistantMessageUpdateOneWithoutEvidenceRefsNestedInput
   toolCall?: Prisma.ToolCallUpdateOneWithoutEvidenceRefsNestedInput
   document?: Prisma.KnowledgeDocumentUpdateOneWithoutEvidenceRefsNestedInput
@@ -386,6 +405,7 @@ export type EvidenceRefUpdateInput = {
 
 export type EvidenceRefUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sourceType?: Prisma.EnumEvidenceSourceTypeFieldUpdateOperationsInput | $Enums.EvidenceSourceType
@@ -403,6 +423,7 @@ export type EvidenceRefUncheckedUpdateInput = {
 
 export type EvidenceRefCreateManyInput = {
   id?: string
+  customerId: string
   requestId?: string | null
   messageId?: string | null
   sourceType: $Enums.EvidenceSourceType
@@ -433,6 +454,7 @@ export type EvidenceRefUpdateManyMutationInput = {
 
 export type EvidenceRefUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sourceType?: Prisma.EnumEvidenceSourceTypeFieldUpdateOperationsInput | $Enums.EvidenceSourceType
@@ -458,8 +480,14 @@ export type EvidenceRefOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type EvidenceRefCustomerIdIdCompoundUniqueInput = {
+  customerId: string
+  id: string
+}
+
 export type EvidenceRefCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   sourceType?: Prisma.SortOrder
@@ -477,6 +505,7 @@ export type EvidenceRefCountOrderByAggregateInput = {
 
 export type EvidenceRefMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   sourceType?: Prisma.SortOrder
@@ -491,6 +520,7 @@ export type EvidenceRefMaxOrderByAggregateInput = {
 
 export type EvidenceRefMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   sourceType?: Prisma.SortOrder
@@ -501,6 +531,48 @@ export type EvidenceRefMinOrderByAggregateInput = {
   entityType?: Prisma.SortOrder
   entityId?: Prisma.SortOrder
   timestamp?: Prisma.SortOrder
+}
+
+export type EvidenceRefCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.EvidenceRefCreateWithoutCustomerInput, Prisma.EvidenceRefUncheckedCreateWithoutCustomerInput> | Prisma.EvidenceRefCreateWithoutCustomerInput[] | Prisma.EvidenceRefUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.EvidenceRefCreateOrConnectWithoutCustomerInput | Prisma.EvidenceRefCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.EvidenceRefCreateManyCustomerInputEnvelope
+  connect?: Prisma.EvidenceRefWhereUniqueInput | Prisma.EvidenceRefWhereUniqueInput[]
+}
+
+export type EvidenceRefUncheckedCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.EvidenceRefCreateWithoutCustomerInput, Prisma.EvidenceRefUncheckedCreateWithoutCustomerInput> | Prisma.EvidenceRefCreateWithoutCustomerInput[] | Prisma.EvidenceRefUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.EvidenceRefCreateOrConnectWithoutCustomerInput | Prisma.EvidenceRefCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.EvidenceRefCreateManyCustomerInputEnvelope
+  connect?: Prisma.EvidenceRefWhereUniqueInput | Prisma.EvidenceRefWhereUniqueInput[]
+}
+
+export type EvidenceRefUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.EvidenceRefCreateWithoutCustomerInput, Prisma.EvidenceRefUncheckedCreateWithoutCustomerInput> | Prisma.EvidenceRefCreateWithoutCustomerInput[] | Prisma.EvidenceRefUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.EvidenceRefCreateOrConnectWithoutCustomerInput | Prisma.EvidenceRefCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.EvidenceRefUpsertWithWhereUniqueWithoutCustomerInput | Prisma.EvidenceRefUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.EvidenceRefCreateManyCustomerInputEnvelope
+  set?: Prisma.EvidenceRefWhereUniqueInput | Prisma.EvidenceRefWhereUniqueInput[]
+  disconnect?: Prisma.EvidenceRefWhereUniqueInput | Prisma.EvidenceRefWhereUniqueInput[]
+  delete?: Prisma.EvidenceRefWhereUniqueInput | Prisma.EvidenceRefWhereUniqueInput[]
+  connect?: Prisma.EvidenceRefWhereUniqueInput | Prisma.EvidenceRefWhereUniqueInput[]
+  update?: Prisma.EvidenceRefUpdateWithWhereUniqueWithoutCustomerInput | Prisma.EvidenceRefUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.EvidenceRefUpdateManyWithWhereWithoutCustomerInput | Prisma.EvidenceRefUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.EvidenceRefScalarWhereInput | Prisma.EvidenceRefScalarWhereInput[]
+}
+
+export type EvidenceRefUncheckedUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.EvidenceRefCreateWithoutCustomerInput, Prisma.EvidenceRefUncheckedCreateWithoutCustomerInput> | Prisma.EvidenceRefCreateWithoutCustomerInput[] | Prisma.EvidenceRefUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.EvidenceRefCreateOrConnectWithoutCustomerInput | Prisma.EvidenceRefCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.EvidenceRefUpsertWithWhereUniqueWithoutCustomerInput | Prisma.EvidenceRefUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.EvidenceRefCreateManyCustomerInputEnvelope
+  set?: Prisma.EvidenceRefWhereUniqueInput | Prisma.EvidenceRefWhereUniqueInput[]
+  disconnect?: Prisma.EvidenceRefWhereUniqueInput | Prisma.EvidenceRefWhereUniqueInput[]
+  delete?: Prisma.EvidenceRefWhereUniqueInput | Prisma.EvidenceRefWhereUniqueInput[]
+  connect?: Prisma.EvidenceRefWhereUniqueInput | Prisma.EvidenceRefWhereUniqueInput[]
+  update?: Prisma.EvidenceRefUpdateWithWhereUniqueWithoutCustomerInput | Prisma.EvidenceRefUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.EvidenceRefUpdateManyWithWhereWithoutCustomerInput | Prisma.EvidenceRefUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.EvidenceRefScalarWhereInput | Prisma.EvidenceRefScalarWhereInput[]
 }
 
 export type EvidenceRefCreateNestedManyWithoutMessageInput = {
@@ -684,6 +756,87 @@ export type EvidenceRefUncheckedUpdateManyWithoutChunkNestedInput = {
   deleteMany?: Prisma.EvidenceRefScalarWhereInput | Prisma.EvidenceRefScalarWhereInput[]
 }
 
+export type EvidenceRefCreateWithoutCustomerInput = {
+  id?: string
+  requestId?: string | null
+  sourceType: $Enums.EvidenceSourceType
+  sourceId: string
+  entityType?: string | null
+  entityId?: string | null
+  fieldPaths?: Prisma.EvidenceRefCreatefieldPathsInput | string[]
+  timestamp?: Date | string
+  permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  message?: Prisma.AssistantMessageCreateNestedOneWithoutEvidenceRefsInput
+  toolCall?: Prisma.ToolCallCreateNestedOneWithoutEvidenceRefsInput
+  document?: Prisma.KnowledgeDocumentCreateNestedOneWithoutEvidenceRefsInput
+  chunk?: Prisma.KnowledgeChunkCreateNestedOneWithoutEvidenceRefsInput
+}
+
+export type EvidenceRefUncheckedCreateWithoutCustomerInput = {
+  id?: string
+  requestId?: string | null
+  messageId?: string | null
+  sourceType: $Enums.EvidenceSourceType
+  sourceId: string
+  toolCallId?: string | null
+  documentId?: string | null
+  chunkId?: string | null
+  entityType?: string | null
+  entityId?: string | null
+  fieldPaths?: Prisma.EvidenceRefCreatefieldPathsInput | string[]
+  timestamp?: Date | string
+  permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type EvidenceRefCreateOrConnectWithoutCustomerInput = {
+  where: Prisma.EvidenceRefWhereUniqueInput
+  create: Prisma.XOR<Prisma.EvidenceRefCreateWithoutCustomerInput, Prisma.EvidenceRefUncheckedCreateWithoutCustomerInput>
+}
+
+export type EvidenceRefCreateManyCustomerInputEnvelope = {
+  data: Prisma.EvidenceRefCreateManyCustomerInput | Prisma.EvidenceRefCreateManyCustomerInput[]
+  skipDuplicates?: boolean
+}
+
+export type EvidenceRefUpsertWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.EvidenceRefWhereUniqueInput
+  update: Prisma.XOR<Prisma.EvidenceRefUpdateWithoutCustomerInput, Prisma.EvidenceRefUncheckedUpdateWithoutCustomerInput>
+  create: Prisma.XOR<Prisma.EvidenceRefCreateWithoutCustomerInput, Prisma.EvidenceRefUncheckedCreateWithoutCustomerInput>
+}
+
+export type EvidenceRefUpdateWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.EvidenceRefWhereUniqueInput
+  data: Prisma.XOR<Prisma.EvidenceRefUpdateWithoutCustomerInput, Prisma.EvidenceRefUncheckedUpdateWithoutCustomerInput>
+}
+
+export type EvidenceRefUpdateManyWithWhereWithoutCustomerInput = {
+  where: Prisma.EvidenceRefScalarWhereInput
+  data: Prisma.XOR<Prisma.EvidenceRefUpdateManyMutationInput, Prisma.EvidenceRefUncheckedUpdateManyWithoutCustomerInput>
+}
+
+export type EvidenceRefScalarWhereInput = {
+  AND?: Prisma.EvidenceRefScalarWhereInput | Prisma.EvidenceRefScalarWhereInput[]
+  OR?: Prisma.EvidenceRefScalarWhereInput[]
+  NOT?: Prisma.EvidenceRefScalarWhereInput | Prisma.EvidenceRefScalarWhereInput[]
+  id?: Prisma.StringFilter<"EvidenceRef"> | string
+  customerId?: Prisma.StringFilter<"EvidenceRef"> | string
+  requestId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
+  messageId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
+  sourceType?: Prisma.EnumEvidenceSourceTypeFilter<"EvidenceRef"> | $Enums.EvidenceSourceType
+  sourceId?: Prisma.StringFilter<"EvidenceRef"> | string
+  toolCallId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
+  documentId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
+  chunkId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
+  entityType?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
+  entityId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
+  fieldPaths?: Prisma.StringNullableListFilter<"EvidenceRef">
+  timestamp?: Prisma.DateTimeFilter<"EvidenceRef"> | Date | string
+  permissionSnapshot?: Prisma.JsonNullableFilter<"EvidenceRef">
+  summary?: Prisma.JsonNullableFilter<"EvidenceRef">
+}
+
 export type EvidenceRefCreateWithoutMessageInput = {
   id?: string
   requestId?: string | null
@@ -695,6 +848,7 @@ export type EvidenceRefCreateWithoutMessageInput = {
   timestamp?: Date | string
   permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  customer: Prisma.CustomerCreateNestedOneWithoutEvidenceRefsInput
   toolCall?: Prisma.ToolCallCreateNestedOneWithoutEvidenceRefsInput
   document?: Prisma.KnowledgeDocumentCreateNestedOneWithoutEvidenceRefsInput
   chunk?: Prisma.KnowledgeChunkCreateNestedOneWithoutEvidenceRefsInput
@@ -742,26 +896,6 @@ export type EvidenceRefUpdateManyWithWhereWithoutMessageInput = {
   data: Prisma.XOR<Prisma.EvidenceRefUpdateManyMutationInput, Prisma.EvidenceRefUncheckedUpdateManyWithoutMessageInput>
 }
 
-export type EvidenceRefScalarWhereInput = {
-  AND?: Prisma.EvidenceRefScalarWhereInput | Prisma.EvidenceRefScalarWhereInput[]
-  OR?: Prisma.EvidenceRefScalarWhereInput[]
-  NOT?: Prisma.EvidenceRefScalarWhereInput | Prisma.EvidenceRefScalarWhereInput[]
-  id?: Prisma.StringFilter<"EvidenceRef"> | string
-  requestId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
-  messageId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
-  sourceType?: Prisma.EnumEvidenceSourceTypeFilter<"EvidenceRef"> | $Enums.EvidenceSourceType
-  sourceId?: Prisma.StringFilter<"EvidenceRef"> | string
-  toolCallId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
-  documentId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
-  chunkId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
-  entityType?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
-  entityId?: Prisma.StringNullableFilter<"EvidenceRef"> | string | null
-  fieldPaths?: Prisma.StringNullableListFilter<"EvidenceRef">
-  timestamp?: Prisma.DateTimeFilter<"EvidenceRef"> | Date | string
-  permissionSnapshot?: Prisma.JsonNullableFilter<"EvidenceRef">
-  summary?: Prisma.JsonNullableFilter<"EvidenceRef">
-}
-
 export type EvidenceRefCreateWithoutToolCallInput = {
   id?: string
   requestId?: string | null
@@ -773,6 +907,7 @@ export type EvidenceRefCreateWithoutToolCallInput = {
   timestamp?: Date | string
   permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  customer: Prisma.CustomerCreateNestedOneWithoutEvidenceRefsInput
   message?: Prisma.AssistantMessageCreateNestedOneWithoutEvidenceRefsInput
   document?: Prisma.KnowledgeDocumentCreateNestedOneWithoutEvidenceRefsInput
   chunk?: Prisma.KnowledgeChunkCreateNestedOneWithoutEvidenceRefsInput
@@ -831,6 +966,7 @@ export type EvidenceRefCreateWithoutDocumentInput = {
   timestamp?: Date | string
   permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  customer: Prisma.CustomerCreateNestedOneWithoutEvidenceRefsInput
   message?: Prisma.AssistantMessageCreateNestedOneWithoutEvidenceRefsInput
   toolCall?: Prisma.ToolCallCreateNestedOneWithoutEvidenceRefsInput
   chunk?: Prisma.KnowledgeChunkCreateNestedOneWithoutEvidenceRefsInput
@@ -889,6 +1025,7 @@ export type EvidenceRefCreateWithoutChunkInput = {
   timestamp?: Date | string
   permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  customer: Prisma.CustomerCreateNestedOneWithoutEvidenceRefsInput
   message?: Prisma.AssistantMessageCreateNestedOneWithoutEvidenceRefsInput
   toolCall?: Prisma.ToolCallCreateNestedOneWithoutEvidenceRefsInput
   document?: Prisma.KnowledgeDocumentCreateNestedOneWithoutEvidenceRefsInput
@@ -936,6 +1073,74 @@ export type EvidenceRefUpdateManyWithWhereWithoutChunkInput = {
   data: Prisma.XOR<Prisma.EvidenceRefUpdateManyMutationInput, Prisma.EvidenceRefUncheckedUpdateManyWithoutChunkInput>
 }
 
+export type EvidenceRefCreateManyCustomerInput = {
+  id?: string
+  requestId?: string | null
+  messageId?: string | null
+  sourceType: $Enums.EvidenceSourceType
+  sourceId: string
+  toolCallId?: string | null
+  documentId?: string | null
+  chunkId?: string | null
+  entityType?: string | null
+  entityId?: string | null
+  fieldPaths?: Prisma.EvidenceRefCreatefieldPathsInput | string[]
+  timestamp?: Date | string
+  permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type EvidenceRefUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceType?: Prisma.EnumEvidenceSourceTypeFieldUpdateOperationsInput | $Enums.EvidenceSourceType
+  sourceId?: Prisma.StringFieldUpdateOperationsInput | string
+  entityType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fieldPaths?: Prisma.EvidenceRefUpdatefieldPathsInput | string[]
+  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  message?: Prisma.AssistantMessageUpdateOneWithoutEvidenceRefsNestedInput
+  toolCall?: Prisma.ToolCallUpdateOneWithoutEvidenceRefsNestedInput
+  document?: Prisma.KnowledgeDocumentUpdateOneWithoutEvidenceRefsNestedInput
+  chunk?: Prisma.KnowledgeChunkUpdateOneWithoutEvidenceRefsNestedInput
+}
+
+export type EvidenceRefUncheckedUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceType?: Prisma.EnumEvidenceSourceTypeFieldUpdateOperationsInput | $Enums.EvidenceSourceType
+  sourceId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  documentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chunkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fieldPaths?: Prisma.EvidenceRefUpdatefieldPathsInput | string[]
+  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type EvidenceRefUncheckedUpdateManyWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceType?: Prisma.EnumEvidenceSourceTypeFieldUpdateOperationsInput | $Enums.EvidenceSourceType
+  sourceId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  documentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chunkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fieldPaths?: Prisma.EvidenceRefUpdatefieldPathsInput | string[]
+  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
 export type EvidenceRefCreateManyMessageInput = {
   id?: string
   requestId?: string | null
@@ -963,6 +1168,7 @@ export type EvidenceRefUpdateWithoutMessageInput = {
   timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutEvidenceRefsNestedInput
   toolCall?: Prisma.ToolCallUpdateOneWithoutEvidenceRefsNestedInput
   document?: Prisma.KnowledgeDocumentUpdateOneWithoutEvidenceRefsNestedInput
   chunk?: Prisma.KnowledgeChunkUpdateOneWithoutEvidenceRefsNestedInput
@@ -1027,6 +1233,7 @@ export type EvidenceRefUpdateWithoutToolCallInput = {
   timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutEvidenceRefsNestedInput
   message?: Prisma.AssistantMessageUpdateOneWithoutEvidenceRefsNestedInput
   document?: Prisma.KnowledgeDocumentUpdateOneWithoutEvidenceRefsNestedInput
   chunk?: Prisma.KnowledgeChunkUpdateOneWithoutEvidenceRefsNestedInput
@@ -1091,6 +1298,7 @@ export type EvidenceRefUpdateWithoutDocumentInput = {
   timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutEvidenceRefsNestedInput
   message?: Prisma.AssistantMessageUpdateOneWithoutEvidenceRefsNestedInput
   toolCall?: Prisma.ToolCallUpdateOneWithoutEvidenceRefsNestedInput
   chunk?: Prisma.KnowledgeChunkUpdateOneWithoutEvidenceRefsNestedInput
@@ -1155,6 +1363,7 @@ export type EvidenceRefUpdateWithoutChunkInput = {
   timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   permissionSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   summary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutEvidenceRefsNestedInput
   message?: Prisma.AssistantMessageUpdateOneWithoutEvidenceRefsNestedInput
   toolCall?: Prisma.ToolCallUpdateOneWithoutEvidenceRefsNestedInput
   document?: Prisma.KnowledgeDocumentUpdateOneWithoutEvidenceRefsNestedInput
@@ -1196,6 +1405,7 @@ export type EvidenceRefUncheckedUpdateManyWithoutChunkInput = {
 
 export type EvidenceRefSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   sourceType?: boolean
@@ -1209,6 +1419,7 @@ export type EvidenceRefSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   timestamp?: boolean
   permissionSnapshot?: boolean
   summary?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EvidenceRef$messageArgs<ExtArgs>
   toolCall?: boolean | Prisma.EvidenceRef$toolCallArgs<ExtArgs>
   document?: boolean | Prisma.EvidenceRef$documentArgs<ExtArgs>
@@ -1217,6 +1428,7 @@ export type EvidenceRefSelect<ExtArgs extends runtime.Types.Extensions.InternalA
 
 export type EvidenceRefSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   sourceType?: boolean
@@ -1230,6 +1442,7 @@ export type EvidenceRefSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   timestamp?: boolean
   permissionSnapshot?: boolean
   summary?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EvidenceRef$messageArgs<ExtArgs>
   toolCall?: boolean | Prisma.EvidenceRef$toolCallArgs<ExtArgs>
   document?: boolean | Prisma.EvidenceRef$documentArgs<ExtArgs>
@@ -1238,6 +1451,7 @@ export type EvidenceRefSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
 
 export type EvidenceRefSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   sourceType?: boolean
@@ -1251,6 +1465,7 @@ export type EvidenceRefSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   timestamp?: boolean
   permissionSnapshot?: boolean
   summary?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EvidenceRef$messageArgs<ExtArgs>
   toolCall?: boolean | Prisma.EvidenceRef$toolCallArgs<ExtArgs>
   document?: boolean | Prisma.EvidenceRef$documentArgs<ExtArgs>
@@ -1259,6 +1474,7 @@ export type EvidenceRefSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
 
 export type EvidenceRefSelectScalar = {
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   sourceType?: boolean
@@ -1274,20 +1490,23 @@ export type EvidenceRefSelectScalar = {
   summary?: boolean
 }
 
-export type EvidenceRefOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "messageId" | "sourceType" | "sourceId" | "toolCallId" | "documentId" | "chunkId" | "entityType" | "entityId" | "fieldPaths" | "timestamp" | "permissionSnapshot" | "summary", ExtArgs["result"]["evidenceRef"]>
+export type EvidenceRefOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "messageId" | "sourceType" | "sourceId" | "toolCallId" | "documentId" | "chunkId" | "entityType" | "entityId" | "fieldPaths" | "timestamp" | "permissionSnapshot" | "summary", ExtArgs["result"]["evidenceRef"]>
 export type EvidenceRefInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EvidenceRef$messageArgs<ExtArgs>
   toolCall?: boolean | Prisma.EvidenceRef$toolCallArgs<ExtArgs>
   document?: boolean | Prisma.EvidenceRef$documentArgs<ExtArgs>
   chunk?: boolean | Prisma.EvidenceRef$chunkArgs<ExtArgs>
 }
 export type EvidenceRefIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EvidenceRef$messageArgs<ExtArgs>
   toolCall?: boolean | Prisma.EvidenceRef$toolCallArgs<ExtArgs>
   document?: boolean | Prisma.EvidenceRef$documentArgs<ExtArgs>
   chunk?: boolean | Prisma.EvidenceRef$chunkArgs<ExtArgs>
 }
 export type EvidenceRefIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EvidenceRef$messageArgs<ExtArgs>
   toolCall?: boolean | Prisma.EvidenceRef$toolCallArgs<ExtArgs>
   document?: boolean | Prisma.EvidenceRef$documentArgs<ExtArgs>
@@ -1297,6 +1516,7 @@ export type EvidenceRefIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.
 export type $EvidenceRefPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "EvidenceRef"
   objects: {
+    customer: Prisma.$CustomerPayload<ExtArgs>
     message: Prisma.$AssistantMessagePayload<ExtArgs> | null
     toolCall: Prisma.$ToolCallPayload<ExtArgs> | null
     document: Prisma.$KnowledgeDocumentPayload<ExtArgs> | null
@@ -1304,6 +1524,7 @@ export type $EvidenceRefPayload<ExtArgs extends runtime.Types.Extensions.Interna
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     requestId: string | null
     messageId: string | null
     sourceType: $Enums.EvidenceSourceType
@@ -1711,6 +1932,7 @@ readonly fields: EvidenceRefFieldRefs;
  */
 export interface Prisma__EvidenceRefClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   message<T extends Prisma.EvidenceRef$messageArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EvidenceRef$messageArgs<ExtArgs>>): Prisma.Prisma__AssistantMessageClient<runtime.Types.Result.GetResult<Prisma.$AssistantMessagePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   toolCall<T extends Prisma.EvidenceRef$toolCallArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EvidenceRef$toolCallArgs<ExtArgs>>): Prisma.Prisma__ToolCallClient<runtime.Types.Result.GetResult<Prisma.$ToolCallPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   document<T extends Prisma.EvidenceRef$documentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EvidenceRef$documentArgs<ExtArgs>>): Prisma.Prisma__KnowledgeDocumentClient<runtime.Types.Result.GetResult<Prisma.$KnowledgeDocumentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
@@ -1745,6 +1967,7 @@ export interface Prisma__EvidenceRefClient<T, Null = never, ExtArgs extends runt
  */
 export interface EvidenceRefFieldRefs {
   readonly id: Prisma.FieldRef<"EvidenceRef", 'String'>
+  readonly customerId: Prisma.FieldRef<"EvidenceRef", 'String'>
   readonly requestId: Prisma.FieldRef<"EvidenceRef", 'String'>
   readonly messageId: Prisma.FieldRef<"EvidenceRef", 'String'>
   readonly sourceType: Prisma.FieldRef<"EvidenceRef", 'EvidenceSourceType'>

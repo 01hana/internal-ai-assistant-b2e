@@ -3,8 +3,7 @@ import { RequestIdentityContext } from '../../src/identity/identity-context.type
 import { CustomerScope } from '../../src/identity/customer-scope.types';
 import {
   CanonicalIdentityClaims,
-  createInternalIdentityJwtFixture,
-  TestJwtFixture
+  createInternalIdentityJwtFixture
 } from './internal-identity-jwt.helper';
 
 export type KnowledgeAccessPolicyFixture = Readonly<{
@@ -16,6 +15,14 @@ export type KnowledgeAccessPolicyFixture = Readonly<{
 export type CustomerScopeFixtureCustomer = Readonly<{
   root: Readonly<{ id: string }>;
   integrationId: string;
+  seed: Readonly<{
+    sessionId: string;
+    userMessageId: string;
+    assistantMessageId: string;
+    knowledgeDocumentId: string;
+    knowledgeChunkId: string;
+    toolCallId: string;
+  }>;
 }>;
 
 export type CustomerScopeFixtureSet = Readonly<{
@@ -48,11 +55,27 @@ export const CUSTOMER_SCOPE_FIXTURES: CustomerScopeFixtureSet = deepFreeze({
   },
   customerA: {
     root: { id: canonicalClaimsFixture.canonicalClaims.customerA.customer_id },
-    integrationId: canonicalClaimsFixture.canonicalClaims.customerA.integration_id
+    integrationId: canonicalClaimsFixture.canonicalClaims.customerA.integration_id,
+    seed: {
+      sessionId: 'session-owned-001',
+      userMessageId: 'message-owned-user-001',
+      assistantMessageId: 'message-owned-assistant-001',
+      knowledgeDocumentId: 'knowledge-customer-a-shared-001',
+      knowledgeChunkId: 'knowledge-chunk-customer-a-shared-001',
+      toolCallId: 'tool-call-owned-001'
+    }
   },
   customerB: {
     root: { id: canonicalClaimsFixture.canonicalClaims.customerB.customer_id },
-    integrationId: canonicalClaimsFixture.canonicalClaims.customerB.integration_id
+    integrationId: canonicalClaimsFixture.canonicalClaims.customerB.integration_id,
+    seed: {
+      sessionId: 'session-hidden-001',
+      userMessageId: 'message-hidden-user-001',
+      assistantMessageId: 'message-hidden-assistant-001',
+      knowledgeDocumentId: 'knowledge-customer-b-shared-001',
+      knowledgeChunkId: 'knowledge-chunk-customer-b-shared-001',
+      toolCallId: 'tool-call-hidden-001'
+    }
   },
   knowledgePolicies: {
     customer: {

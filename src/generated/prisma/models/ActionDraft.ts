@@ -26,9 +26,11 @@ export type AggregateActionDraft = {
 
 export type ActionDraftMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   sessionId: string | null
   messageId: string | null
+  toolCallId: string | null
   actorId: string | null
   toolName: string | null
   resource: string | null
@@ -44,9 +46,11 @@ export type ActionDraftMinAggregateOutputType = {
 
 export type ActionDraftMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   sessionId: string | null
   messageId: string | null
+  toolCallId: string | null
   actorId: string | null
   toolName: string | null
   resource: string | null
@@ -62,9 +66,11 @@ export type ActionDraftMaxAggregateOutputType = {
 
 export type ActionDraftCountAggregateOutputType = {
   id: number
+  customerId: number
   requestId: number
   sessionId: number
   messageId: number
+  toolCallId: number
   actorId: number
   toolName: number
   resource: number
@@ -84,9 +90,11 @@ export type ActionDraftCountAggregateOutputType = {
 
 export type ActionDraftMinAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   sessionId?: true
   messageId?: true
+  toolCallId?: true
   actorId?: true
   toolName?: true
   resource?: true
@@ -102,9 +110,11 @@ export type ActionDraftMinAggregateInputType = {
 
 export type ActionDraftMaxAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   sessionId?: true
   messageId?: true
+  toolCallId?: true
   actorId?: true
   toolName?: true
   resource?: true
@@ -120,9 +130,11 @@ export type ActionDraftMaxAggregateInputType = {
 
 export type ActionDraftCountAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   sessionId?: true
   messageId?: true
+  toolCallId?: true
   actorId?: true
   toolName?: true
   resource?: true
@@ -213,9 +225,11 @@ export type ActionDraftGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inte
 
 export type ActionDraftGroupByOutputType = {
   id: string
+  customerId: string
   requestId: string
   sessionId: string
   messageId: string | null
+  toolCallId: string | null
   actorId: string
   toolName: string
   resource: string
@@ -254,9 +268,11 @@ export type ActionDraftWhereInput = {
   OR?: Prisma.ActionDraftWhereInput[]
   NOT?: Prisma.ActionDraftWhereInput | Prisma.ActionDraftWhereInput[]
   id?: Prisma.StringFilter<"ActionDraft"> | string
+  customerId?: Prisma.StringFilter<"ActionDraft"> | string
   requestId?: Prisma.StringFilter<"ActionDraft"> | string
   sessionId?: Prisma.StringFilter<"ActionDraft"> | string
   messageId?: Prisma.StringNullableFilter<"ActionDraft"> | string | null
+  toolCallId?: Prisma.StringNullableFilter<"ActionDraft"> | string | null
   actorId?: Prisma.StringFilter<"ActionDraft"> | string
   toolName?: Prisma.StringFilter<"ActionDraft"> | string
   resource?: Prisma.StringFilter<"ActionDraft"> | string
@@ -270,15 +286,19 @@ export type ActionDraftWhereInput = {
   confirmedAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
   executedAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
   expiresAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   session?: Prisma.XOR<Prisma.AssistantSessionScalarRelationFilter, Prisma.AssistantSessionWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageNullableScalarRelationFilter, Prisma.AssistantMessageWhereInput> | null
+  toolCall?: Prisma.XOR<Prisma.ToolCallNullableScalarRelationFilter, Prisma.ToolCallWhereInput> | null
 }
 
 export type ActionDraftOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrderInput | Prisma.SortOrder
+  toolCallId?: Prisma.SortOrderInput | Prisma.SortOrder
   actorId?: Prisma.SortOrder
   toolName?: Prisma.SortOrder
   resource?: Prisma.SortOrder
@@ -292,19 +312,24 @@ export type ActionDraftOrderByWithRelationInput = {
   confirmedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   executedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   expiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  customer?: Prisma.CustomerOrderByWithRelationInput
   session?: Prisma.AssistantSessionOrderByWithRelationInput
   message?: Prisma.AssistantMessageOrderByWithRelationInput
+  toolCall?: Prisma.ToolCallOrderByWithRelationInput
 }
 
 export type ActionDraftWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  idempotencyKey?: string
+  customerId_id?: Prisma.ActionDraftCustomerIdIdCompoundUniqueInput
+  customerId_idempotencyKey?: Prisma.ActionDraftCustomerIdIdempotencyKeyCompoundUniqueInput
   AND?: Prisma.ActionDraftWhereInput | Prisma.ActionDraftWhereInput[]
   OR?: Prisma.ActionDraftWhereInput[]
   NOT?: Prisma.ActionDraftWhereInput | Prisma.ActionDraftWhereInput[]
+  customerId?: Prisma.StringFilter<"ActionDraft"> | string
   requestId?: Prisma.StringFilter<"ActionDraft"> | string
   sessionId?: Prisma.StringFilter<"ActionDraft"> | string
   messageId?: Prisma.StringNullableFilter<"ActionDraft"> | string | null
+  toolCallId?: Prisma.StringNullableFilter<"ActionDraft"> | string | null
   actorId?: Prisma.StringFilter<"ActionDraft"> | string
   toolName?: Prisma.StringFilter<"ActionDraft"> | string
   resource?: Prisma.StringFilter<"ActionDraft"> | string
@@ -313,19 +338,24 @@ export type ActionDraftWhereUniqueInput = Prisma.AtLeast<{
   payloadSummary?: Prisma.JsonFilter<"ActionDraft">
   preview?: Prisma.JsonFilter<"ActionDraft">
   status?: Prisma.EnumActionDraftStatusFilter<"ActionDraft"> | $Enums.ActionDraftStatus
+  idempotencyKey?: Prisma.StringNullableFilter<"ActionDraft"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ActionDraft"> | Date | string
   confirmedAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
   executedAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
   expiresAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   session?: Prisma.XOR<Prisma.AssistantSessionScalarRelationFilter, Prisma.AssistantSessionWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageNullableScalarRelationFilter, Prisma.AssistantMessageWhereInput> | null
-}, "id" | "idempotencyKey">
+  toolCall?: Prisma.XOR<Prisma.ToolCallNullableScalarRelationFilter, Prisma.ToolCallWhereInput> | null
+}, "id" | "customerId_id" | "customerId_idempotencyKey">
 
 export type ActionDraftOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrderInput | Prisma.SortOrder
+  toolCallId?: Prisma.SortOrderInput | Prisma.SortOrder
   actorId?: Prisma.SortOrder
   toolName?: Prisma.SortOrder
   resource?: Prisma.SortOrder
@@ -349,9 +379,11 @@ export type ActionDraftScalarWhereWithAggregatesInput = {
   OR?: Prisma.ActionDraftScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ActionDraftScalarWhereWithAggregatesInput | Prisma.ActionDraftScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"ActionDraft"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"ActionDraft"> | string
   requestId?: Prisma.StringWithAggregatesFilter<"ActionDraft"> | string
   sessionId?: Prisma.StringWithAggregatesFilter<"ActionDraft"> | string
   messageId?: Prisma.StringNullableWithAggregatesFilter<"ActionDraft"> | string | null
+  toolCallId?: Prisma.StringNullableWithAggregatesFilter<"ActionDraft"> | string | null
   actorId?: Prisma.StringWithAggregatesFilter<"ActionDraft"> | string
   toolName?: Prisma.StringWithAggregatesFilter<"ActionDraft"> | string
   resource?: Prisma.StringWithAggregatesFilter<"ActionDraft"> | string
@@ -383,15 +415,19 @@ export type ActionDraftCreateInput = {
   confirmedAt?: Date | string | null
   executedAt?: Date | string | null
   expiresAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutActionDraftsInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutActionDraftsInput
   message?: Prisma.AssistantMessageCreateNestedOneWithoutActionDraftsInput
+  toolCall?: Prisma.ToolCallCreateNestedOneWithoutActionDraftsInput
 }
 
 export type ActionDraftUncheckedCreateInput = {
   id?: string
+  customerId: string
   requestId: string
   sessionId: string
   messageId?: string | null
+  toolCallId?: string | null
   actorId: string
   toolName: string
   resource: string
@@ -423,15 +459,19 @@ export type ActionDraftUpdateInput = {
   confirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutActionDraftsNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutActionDraftsNestedInput
   message?: Prisma.AssistantMessageUpdateOneWithoutActionDraftsNestedInput
+  toolCall?: Prisma.ToolCallUpdateOneWithoutActionDraftsNestedInput
 }
 
 export type ActionDraftUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   toolName?: Prisma.StringFieldUpdateOperationsInput | string
   resource?: Prisma.StringFieldUpdateOperationsInput | string
@@ -449,9 +489,11 @@ export type ActionDraftUncheckedUpdateInput = {
 
 export type ActionDraftCreateManyInput = {
   id?: string
+  customerId: string
   requestId: string
   sessionId: string
   messageId?: string | null
+  toolCallId?: string | null
   actorId: string
   toolName: string
   resource: string
@@ -487,9 +529,11 @@ export type ActionDraftUpdateManyMutationInput = {
 
 export type ActionDraftUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   toolName?: Prisma.StringFieldUpdateOperationsInput | string
   resource?: Prisma.StringFieldUpdateOperationsInput | string
@@ -515,11 +559,23 @@ export type ActionDraftOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type ActionDraftCustomerIdIdCompoundUniqueInput = {
+  customerId: string
+  id: string
+}
+
+export type ActionDraftCustomerIdIdempotencyKeyCompoundUniqueInput = {
+  customerId: string
+  idempotencyKey: string
+}
+
 export type ActionDraftCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
+  toolCallId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   toolName?: Prisma.SortOrder
   resource?: Prisma.SortOrder
@@ -537,9 +593,11 @@ export type ActionDraftCountOrderByAggregateInput = {
 
 export type ActionDraftMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
+  toolCallId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   toolName?: Prisma.SortOrder
   resource?: Prisma.SortOrder
@@ -555,9 +613,11 @@ export type ActionDraftMaxOrderByAggregateInput = {
 
 export type ActionDraftMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
+  toolCallId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   toolName?: Prisma.SortOrder
   resource?: Prisma.SortOrder
@@ -569,6 +629,48 @@ export type ActionDraftMinOrderByAggregateInput = {
   confirmedAt?: Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
+}
+
+export type ActionDraftCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.ActionDraftCreateWithoutCustomerInput, Prisma.ActionDraftUncheckedCreateWithoutCustomerInput> | Prisma.ActionDraftCreateWithoutCustomerInput[] | Prisma.ActionDraftUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.ActionDraftCreateOrConnectWithoutCustomerInput | Prisma.ActionDraftCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.ActionDraftCreateManyCustomerInputEnvelope
+  connect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+}
+
+export type ActionDraftUncheckedCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.ActionDraftCreateWithoutCustomerInput, Prisma.ActionDraftUncheckedCreateWithoutCustomerInput> | Prisma.ActionDraftCreateWithoutCustomerInput[] | Prisma.ActionDraftUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.ActionDraftCreateOrConnectWithoutCustomerInput | Prisma.ActionDraftCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.ActionDraftCreateManyCustomerInputEnvelope
+  connect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+}
+
+export type ActionDraftUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.ActionDraftCreateWithoutCustomerInput, Prisma.ActionDraftUncheckedCreateWithoutCustomerInput> | Prisma.ActionDraftCreateWithoutCustomerInput[] | Prisma.ActionDraftUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.ActionDraftCreateOrConnectWithoutCustomerInput | Prisma.ActionDraftCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.ActionDraftUpsertWithWhereUniqueWithoutCustomerInput | Prisma.ActionDraftUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.ActionDraftCreateManyCustomerInputEnvelope
+  set?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  disconnect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  delete?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  connect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  update?: Prisma.ActionDraftUpdateWithWhereUniqueWithoutCustomerInput | Prisma.ActionDraftUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.ActionDraftUpdateManyWithWhereWithoutCustomerInput | Prisma.ActionDraftUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.ActionDraftScalarWhereInput | Prisma.ActionDraftScalarWhereInput[]
+}
+
+export type ActionDraftUncheckedUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.ActionDraftCreateWithoutCustomerInput, Prisma.ActionDraftUncheckedCreateWithoutCustomerInput> | Prisma.ActionDraftCreateWithoutCustomerInput[] | Prisma.ActionDraftUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.ActionDraftCreateOrConnectWithoutCustomerInput | Prisma.ActionDraftCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.ActionDraftUpsertWithWhereUniqueWithoutCustomerInput | Prisma.ActionDraftUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.ActionDraftCreateManyCustomerInputEnvelope
+  set?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  disconnect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  delete?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  connect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  update?: Prisma.ActionDraftUpdateWithWhereUniqueWithoutCustomerInput | Prisma.ActionDraftUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.ActionDraftUpdateManyWithWhereWithoutCustomerInput | Prisma.ActionDraftUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.ActionDraftScalarWhereInput | Prisma.ActionDraftScalarWhereInput[]
 }
 
 export type ActionDraftCreateNestedManyWithoutSessionInput = {
@@ -655,8 +757,143 @@ export type ActionDraftUncheckedUpdateManyWithoutMessageNestedInput = {
   deleteMany?: Prisma.ActionDraftScalarWhereInput | Prisma.ActionDraftScalarWhereInput[]
 }
 
+export type ActionDraftCreateNestedManyWithoutToolCallInput = {
+  create?: Prisma.XOR<Prisma.ActionDraftCreateWithoutToolCallInput, Prisma.ActionDraftUncheckedCreateWithoutToolCallInput> | Prisma.ActionDraftCreateWithoutToolCallInput[] | Prisma.ActionDraftUncheckedCreateWithoutToolCallInput[]
+  connectOrCreate?: Prisma.ActionDraftCreateOrConnectWithoutToolCallInput | Prisma.ActionDraftCreateOrConnectWithoutToolCallInput[]
+  createMany?: Prisma.ActionDraftCreateManyToolCallInputEnvelope
+  connect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+}
+
+export type ActionDraftUncheckedCreateNestedManyWithoutToolCallInput = {
+  create?: Prisma.XOR<Prisma.ActionDraftCreateWithoutToolCallInput, Prisma.ActionDraftUncheckedCreateWithoutToolCallInput> | Prisma.ActionDraftCreateWithoutToolCallInput[] | Prisma.ActionDraftUncheckedCreateWithoutToolCallInput[]
+  connectOrCreate?: Prisma.ActionDraftCreateOrConnectWithoutToolCallInput | Prisma.ActionDraftCreateOrConnectWithoutToolCallInput[]
+  createMany?: Prisma.ActionDraftCreateManyToolCallInputEnvelope
+  connect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+}
+
+export type ActionDraftUpdateManyWithoutToolCallNestedInput = {
+  create?: Prisma.XOR<Prisma.ActionDraftCreateWithoutToolCallInput, Prisma.ActionDraftUncheckedCreateWithoutToolCallInput> | Prisma.ActionDraftCreateWithoutToolCallInput[] | Prisma.ActionDraftUncheckedCreateWithoutToolCallInput[]
+  connectOrCreate?: Prisma.ActionDraftCreateOrConnectWithoutToolCallInput | Prisma.ActionDraftCreateOrConnectWithoutToolCallInput[]
+  upsert?: Prisma.ActionDraftUpsertWithWhereUniqueWithoutToolCallInput | Prisma.ActionDraftUpsertWithWhereUniqueWithoutToolCallInput[]
+  createMany?: Prisma.ActionDraftCreateManyToolCallInputEnvelope
+  set?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  disconnect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  delete?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  connect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  update?: Prisma.ActionDraftUpdateWithWhereUniqueWithoutToolCallInput | Prisma.ActionDraftUpdateWithWhereUniqueWithoutToolCallInput[]
+  updateMany?: Prisma.ActionDraftUpdateManyWithWhereWithoutToolCallInput | Prisma.ActionDraftUpdateManyWithWhereWithoutToolCallInput[]
+  deleteMany?: Prisma.ActionDraftScalarWhereInput | Prisma.ActionDraftScalarWhereInput[]
+}
+
+export type ActionDraftUncheckedUpdateManyWithoutToolCallNestedInput = {
+  create?: Prisma.XOR<Prisma.ActionDraftCreateWithoutToolCallInput, Prisma.ActionDraftUncheckedCreateWithoutToolCallInput> | Prisma.ActionDraftCreateWithoutToolCallInput[] | Prisma.ActionDraftUncheckedCreateWithoutToolCallInput[]
+  connectOrCreate?: Prisma.ActionDraftCreateOrConnectWithoutToolCallInput | Prisma.ActionDraftCreateOrConnectWithoutToolCallInput[]
+  upsert?: Prisma.ActionDraftUpsertWithWhereUniqueWithoutToolCallInput | Prisma.ActionDraftUpsertWithWhereUniqueWithoutToolCallInput[]
+  createMany?: Prisma.ActionDraftCreateManyToolCallInputEnvelope
+  set?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  disconnect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  delete?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  connect?: Prisma.ActionDraftWhereUniqueInput | Prisma.ActionDraftWhereUniqueInput[]
+  update?: Prisma.ActionDraftUpdateWithWhereUniqueWithoutToolCallInput | Prisma.ActionDraftUpdateWithWhereUniqueWithoutToolCallInput[]
+  updateMany?: Prisma.ActionDraftUpdateManyWithWhereWithoutToolCallInput | Prisma.ActionDraftUpdateManyWithWhereWithoutToolCallInput[]
+  deleteMany?: Prisma.ActionDraftScalarWhereInput | Prisma.ActionDraftScalarWhereInput[]
+}
+
 export type EnumActionDraftStatusFieldUpdateOperationsInput = {
   set?: $Enums.ActionDraftStatus
+}
+
+export type ActionDraftCreateWithoutCustomerInput = {
+  id?: string
+  requestId: string
+  actorId: string
+  toolName: string
+  resource: string
+  operation: $Enums.ToolOperation
+  riskLevel: $Enums.RiskLevel
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.ActionDraftStatus
+  idempotencyKey?: string | null
+  createdAt?: Date | string
+  confirmedAt?: Date | string | null
+  executedAt?: Date | string | null
+  expiresAt?: Date | string | null
+  session: Prisma.AssistantSessionCreateNestedOneWithoutActionDraftsInput
+  message?: Prisma.AssistantMessageCreateNestedOneWithoutActionDraftsInput
+  toolCall?: Prisma.ToolCallCreateNestedOneWithoutActionDraftsInput
+}
+
+export type ActionDraftUncheckedCreateWithoutCustomerInput = {
+  id?: string
+  requestId: string
+  sessionId: string
+  messageId?: string | null
+  toolCallId?: string | null
+  actorId: string
+  toolName: string
+  resource: string
+  operation: $Enums.ToolOperation
+  riskLevel: $Enums.RiskLevel
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.ActionDraftStatus
+  idempotencyKey?: string | null
+  createdAt?: Date | string
+  confirmedAt?: Date | string | null
+  executedAt?: Date | string | null
+  expiresAt?: Date | string | null
+}
+
+export type ActionDraftCreateOrConnectWithoutCustomerInput = {
+  where: Prisma.ActionDraftWhereUniqueInput
+  create: Prisma.XOR<Prisma.ActionDraftCreateWithoutCustomerInput, Prisma.ActionDraftUncheckedCreateWithoutCustomerInput>
+}
+
+export type ActionDraftCreateManyCustomerInputEnvelope = {
+  data: Prisma.ActionDraftCreateManyCustomerInput | Prisma.ActionDraftCreateManyCustomerInput[]
+  skipDuplicates?: boolean
+}
+
+export type ActionDraftUpsertWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.ActionDraftWhereUniqueInput
+  update: Prisma.XOR<Prisma.ActionDraftUpdateWithoutCustomerInput, Prisma.ActionDraftUncheckedUpdateWithoutCustomerInput>
+  create: Prisma.XOR<Prisma.ActionDraftCreateWithoutCustomerInput, Prisma.ActionDraftUncheckedCreateWithoutCustomerInput>
+}
+
+export type ActionDraftUpdateWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.ActionDraftWhereUniqueInput
+  data: Prisma.XOR<Prisma.ActionDraftUpdateWithoutCustomerInput, Prisma.ActionDraftUncheckedUpdateWithoutCustomerInput>
+}
+
+export type ActionDraftUpdateManyWithWhereWithoutCustomerInput = {
+  where: Prisma.ActionDraftScalarWhereInput
+  data: Prisma.XOR<Prisma.ActionDraftUpdateManyMutationInput, Prisma.ActionDraftUncheckedUpdateManyWithoutCustomerInput>
+}
+
+export type ActionDraftScalarWhereInput = {
+  AND?: Prisma.ActionDraftScalarWhereInput | Prisma.ActionDraftScalarWhereInput[]
+  OR?: Prisma.ActionDraftScalarWhereInput[]
+  NOT?: Prisma.ActionDraftScalarWhereInput | Prisma.ActionDraftScalarWhereInput[]
+  id?: Prisma.StringFilter<"ActionDraft"> | string
+  customerId?: Prisma.StringFilter<"ActionDraft"> | string
+  requestId?: Prisma.StringFilter<"ActionDraft"> | string
+  sessionId?: Prisma.StringFilter<"ActionDraft"> | string
+  messageId?: Prisma.StringNullableFilter<"ActionDraft"> | string | null
+  toolCallId?: Prisma.StringNullableFilter<"ActionDraft"> | string | null
+  actorId?: Prisma.StringFilter<"ActionDraft"> | string
+  toolName?: Prisma.StringFilter<"ActionDraft"> | string
+  resource?: Prisma.StringFilter<"ActionDraft"> | string
+  operation?: Prisma.EnumToolOperationFilter<"ActionDraft"> | $Enums.ToolOperation
+  riskLevel?: Prisma.EnumRiskLevelFilter<"ActionDraft"> | $Enums.RiskLevel
+  payloadSummary?: Prisma.JsonFilter<"ActionDraft">
+  preview?: Prisma.JsonFilter<"ActionDraft">
+  status?: Prisma.EnumActionDraftStatusFilter<"ActionDraft"> | $Enums.ActionDraftStatus
+  idempotencyKey?: Prisma.StringNullableFilter<"ActionDraft"> | string | null
+  createdAt?: Prisma.DateTimeFilter<"ActionDraft"> | Date | string
+  confirmedAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
+  executedAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
+  expiresAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
 }
 
 export type ActionDraftCreateWithoutSessionInput = {
@@ -675,13 +912,16 @@ export type ActionDraftCreateWithoutSessionInput = {
   confirmedAt?: Date | string | null
   executedAt?: Date | string | null
   expiresAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutActionDraftsInput
   message?: Prisma.AssistantMessageCreateNestedOneWithoutActionDraftsInput
+  toolCall?: Prisma.ToolCallCreateNestedOneWithoutActionDraftsInput
 }
 
 export type ActionDraftUncheckedCreateWithoutSessionInput = {
   id?: string
   requestId: string
   messageId?: string | null
+  toolCallId?: string | null
   actorId: string
   toolName: string
   resource: string
@@ -723,29 +963,6 @@ export type ActionDraftUpdateManyWithWhereWithoutSessionInput = {
   data: Prisma.XOR<Prisma.ActionDraftUpdateManyMutationInput, Prisma.ActionDraftUncheckedUpdateManyWithoutSessionInput>
 }
 
-export type ActionDraftScalarWhereInput = {
-  AND?: Prisma.ActionDraftScalarWhereInput | Prisma.ActionDraftScalarWhereInput[]
-  OR?: Prisma.ActionDraftScalarWhereInput[]
-  NOT?: Prisma.ActionDraftScalarWhereInput | Prisma.ActionDraftScalarWhereInput[]
-  id?: Prisma.StringFilter<"ActionDraft"> | string
-  requestId?: Prisma.StringFilter<"ActionDraft"> | string
-  sessionId?: Prisma.StringFilter<"ActionDraft"> | string
-  messageId?: Prisma.StringNullableFilter<"ActionDraft"> | string | null
-  actorId?: Prisma.StringFilter<"ActionDraft"> | string
-  toolName?: Prisma.StringFilter<"ActionDraft"> | string
-  resource?: Prisma.StringFilter<"ActionDraft"> | string
-  operation?: Prisma.EnumToolOperationFilter<"ActionDraft"> | $Enums.ToolOperation
-  riskLevel?: Prisma.EnumRiskLevelFilter<"ActionDraft"> | $Enums.RiskLevel
-  payloadSummary?: Prisma.JsonFilter<"ActionDraft">
-  preview?: Prisma.JsonFilter<"ActionDraft">
-  status?: Prisma.EnumActionDraftStatusFilter<"ActionDraft"> | $Enums.ActionDraftStatus
-  idempotencyKey?: Prisma.StringNullableFilter<"ActionDraft"> | string | null
-  createdAt?: Prisma.DateTimeFilter<"ActionDraft"> | Date | string
-  confirmedAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
-  executedAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
-  expiresAt?: Prisma.DateTimeNullableFilter<"ActionDraft"> | Date | string | null
-}
-
 export type ActionDraftCreateWithoutMessageInput = {
   id?: string
   requestId: string
@@ -762,13 +979,16 @@ export type ActionDraftCreateWithoutMessageInput = {
   confirmedAt?: Date | string | null
   executedAt?: Date | string | null
   expiresAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutActionDraftsInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutActionDraftsInput
+  toolCall?: Prisma.ToolCallCreateNestedOneWithoutActionDraftsInput
 }
 
 export type ActionDraftUncheckedCreateWithoutMessageInput = {
   id?: string
   requestId: string
   sessionId: string
+  toolCallId?: string | null
   actorId: string
   toolName: string
   resource: string
@@ -810,10 +1030,162 @@ export type ActionDraftUpdateManyWithWhereWithoutMessageInput = {
   data: Prisma.XOR<Prisma.ActionDraftUpdateManyMutationInput, Prisma.ActionDraftUncheckedUpdateManyWithoutMessageInput>
 }
 
+export type ActionDraftCreateWithoutToolCallInput = {
+  id?: string
+  requestId: string
+  actorId: string
+  toolName: string
+  resource: string
+  operation: $Enums.ToolOperation
+  riskLevel: $Enums.RiskLevel
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.ActionDraftStatus
+  idempotencyKey?: string | null
+  createdAt?: Date | string
+  confirmedAt?: Date | string | null
+  executedAt?: Date | string | null
+  expiresAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutActionDraftsInput
+  session: Prisma.AssistantSessionCreateNestedOneWithoutActionDraftsInput
+  message?: Prisma.AssistantMessageCreateNestedOneWithoutActionDraftsInput
+}
+
+export type ActionDraftUncheckedCreateWithoutToolCallInput = {
+  id?: string
+  requestId: string
+  sessionId: string
+  messageId?: string | null
+  actorId: string
+  toolName: string
+  resource: string
+  operation: $Enums.ToolOperation
+  riskLevel: $Enums.RiskLevel
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.ActionDraftStatus
+  idempotencyKey?: string | null
+  createdAt?: Date | string
+  confirmedAt?: Date | string | null
+  executedAt?: Date | string | null
+  expiresAt?: Date | string | null
+}
+
+export type ActionDraftCreateOrConnectWithoutToolCallInput = {
+  where: Prisma.ActionDraftWhereUniqueInput
+  create: Prisma.XOR<Prisma.ActionDraftCreateWithoutToolCallInput, Prisma.ActionDraftUncheckedCreateWithoutToolCallInput>
+}
+
+export type ActionDraftCreateManyToolCallInputEnvelope = {
+  data: Prisma.ActionDraftCreateManyToolCallInput | Prisma.ActionDraftCreateManyToolCallInput[]
+  skipDuplicates?: boolean
+}
+
+export type ActionDraftUpsertWithWhereUniqueWithoutToolCallInput = {
+  where: Prisma.ActionDraftWhereUniqueInput
+  update: Prisma.XOR<Prisma.ActionDraftUpdateWithoutToolCallInput, Prisma.ActionDraftUncheckedUpdateWithoutToolCallInput>
+  create: Prisma.XOR<Prisma.ActionDraftCreateWithoutToolCallInput, Prisma.ActionDraftUncheckedCreateWithoutToolCallInput>
+}
+
+export type ActionDraftUpdateWithWhereUniqueWithoutToolCallInput = {
+  where: Prisma.ActionDraftWhereUniqueInput
+  data: Prisma.XOR<Prisma.ActionDraftUpdateWithoutToolCallInput, Prisma.ActionDraftUncheckedUpdateWithoutToolCallInput>
+}
+
+export type ActionDraftUpdateManyWithWhereWithoutToolCallInput = {
+  where: Prisma.ActionDraftScalarWhereInput
+  data: Prisma.XOR<Prisma.ActionDraftUpdateManyMutationInput, Prisma.ActionDraftUncheckedUpdateManyWithoutToolCallInput>
+}
+
+export type ActionDraftCreateManyCustomerInput = {
+  id?: string
+  requestId: string
+  sessionId: string
+  messageId?: string | null
+  toolCallId?: string | null
+  actorId: string
+  toolName: string
+  resource: string
+  operation: $Enums.ToolOperation
+  riskLevel: $Enums.RiskLevel
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.ActionDraftStatus
+  idempotencyKey?: string | null
+  createdAt?: Date | string
+  confirmedAt?: Date | string | null
+  executedAt?: Date | string | null
+  expiresAt?: Date | string | null
+}
+
+export type ActionDraftUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  actorId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolName?: Prisma.StringFieldUpdateOperationsInput | string
+  resource?: Prisma.StringFieldUpdateOperationsInput | string
+  operation?: Prisma.EnumToolOperationFieldUpdateOperationsInput | $Enums.ToolOperation
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumActionDraftStatusFieldUpdateOperationsInput | $Enums.ActionDraftStatus
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  confirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  executedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  session?: Prisma.AssistantSessionUpdateOneRequiredWithoutActionDraftsNestedInput
+  message?: Prisma.AssistantMessageUpdateOneWithoutActionDraftsNestedInput
+  toolCall?: Prisma.ToolCallUpdateOneWithoutActionDraftsNestedInput
+}
+
+export type ActionDraftUncheckedUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  actorId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolName?: Prisma.StringFieldUpdateOperationsInput | string
+  resource?: Prisma.StringFieldUpdateOperationsInput | string
+  operation?: Prisma.EnumToolOperationFieldUpdateOperationsInput | $Enums.ToolOperation
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumActionDraftStatusFieldUpdateOperationsInput | $Enums.ActionDraftStatus
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  confirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  executedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type ActionDraftUncheckedUpdateManyWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  actorId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolName?: Prisma.StringFieldUpdateOperationsInput | string
+  resource?: Prisma.StringFieldUpdateOperationsInput | string
+  operation?: Prisma.EnumToolOperationFieldUpdateOperationsInput | $Enums.ToolOperation
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumActionDraftStatusFieldUpdateOperationsInput | $Enums.ActionDraftStatus
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  confirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  executedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
 export type ActionDraftCreateManySessionInput = {
   id?: string
   requestId: string
   messageId?: string | null
+  toolCallId?: string | null
   actorId: string
   toolName: string
   resource: string
@@ -845,13 +1217,16 @@ export type ActionDraftUpdateWithoutSessionInput = {
   confirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutActionDraftsNestedInput
   message?: Prisma.AssistantMessageUpdateOneWithoutActionDraftsNestedInput
+  toolCall?: Prisma.ToolCallUpdateOneWithoutActionDraftsNestedInput
 }
 
 export type ActionDraftUncheckedUpdateWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   toolName?: Prisma.StringFieldUpdateOperationsInput | string
   resource?: Prisma.StringFieldUpdateOperationsInput | string
@@ -871,6 +1246,7 @@ export type ActionDraftUncheckedUpdateManyWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   toolName?: Prisma.StringFieldUpdateOperationsInput | string
   resource?: Prisma.StringFieldUpdateOperationsInput | string
@@ -890,6 +1266,7 @@ export type ActionDraftCreateManyMessageInput = {
   id?: string
   requestId: string
   sessionId: string
+  toolCallId?: string | null
   actorId: string
   toolName: string
   resource: string
@@ -921,13 +1298,16 @@ export type ActionDraftUpdateWithoutMessageInput = {
   confirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutActionDraftsNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutActionDraftsNestedInput
+  toolCall?: Prisma.ToolCallUpdateOneWithoutActionDraftsNestedInput
 }
 
 export type ActionDraftUncheckedUpdateWithoutMessageInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   toolName?: Prisma.StringFieldUpdateOperationsInput | string
   resource?: Prisma.StringFieldUpdateOperationsInput | string
@@ -947,6 +1327,88 @@ export type ActionDraftUncheckedUpdateManyWithoutMessageInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  actorId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolName?: Prisma.StringFieldUpdateOperationsInput | string
+  resource?: Prisma.StringFieldUpdateOperationsInput | string
+  operation?: Prisma.EnumToolOperationFieldUpdateOperationsInput | $Enums.ToolOperation
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumActionDraftStatusFieldUpdateOperationsInput | $Enums.ActionDraftStatus
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  confirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  executedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type ActionDraftCreateManyToolCallInput = {
+  id?: string
+  requestId: string
+  sessionId: string
+  messageId?: string | null
+  actorId: string
+  toolName: string
+  resource: string
+  operation: $Enums.ToolOperation
+  riskLevel: $Enums.RiskLevel
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.ActionDraftStatus
+  idempotencyKey?: string | null
+  createdAt?: Date | string
+  confirmedAt?: Date | string | null
+  executedAt?: Date | string | null
+  expiresAt?: Date | string | null
+}
+
+export type ActionDraftUpdateWithoutToolCallInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  actorId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolName?: Prisma.StringFieldUpdateOperationsInput | string
+  resource?: Prisma.StringFieldUpdateOperationsInput | string
+  operation?: Prisma.EnumToolOperationFieldUpdateOperationsInput | $Enums.ToolOperation
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumActionDraftStatusFieldUpdateOperationsInput | $Enums.ActionDraftStatus
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  confirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  executedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutActionDraftsNestedInput
+  session?: Prisma.AssistantSessionUpdateOneRequiredWithoutActionDraftsNestedInput
+  message?: Prisma.AssistantMessageUpdateOneWithoutActionDraftsNestedInput
+}
+
+export type ActionDraftUncheckedUpdateWithoutToolCallInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  actorId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolName?: Prisma.StringFieldUpdateOperationsInput | string
+  resource?: Prisma.StringFieldUpdateOperationsInput | string
+  operation?: Prisma.EnumToolOperationFieldUpdateOperationsInput | $Enums.ToolOperation
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  preview?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumActionDraftStatusFieldUpdateOperationsInput | $Enums.ActionDraftStatus
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  confirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  executedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type ActionDraftUncheckedUpdateManyWithoutToolCallInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   toolName?: Prisma.StringFieldUpdateOperationsInput | string
   resource?: Prisma.StringFieldUpdateOperationsInput | string
@@ -966,9 +1428,11 @@ export type ActionDraftUncheckedUpdateManyWithoutMessageInput = {
 
 export type ActionDraftSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
+  toolCallId?: boolean
   actorId?: boolean
   toolName?: boolean
   resource?: boolean
@@ -982,15 +1446,19 @@ export type ActionDraftSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   confirmedAt?: boolean
   executedAt?: boolean
   expiresAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ActionDraft$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ActionDraft$toolCallArgs<ExtArgs>
 }, ExtArgs["result"]["actionDraft"]>
 
 export type ActionDraftSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
+  toolCallId?: boolean
   actorId?: boolean
   toolName?: boolean
   resource?: boolean
@@ -1004,15 +1472,19 @@ export type ActionDraftSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   confirmedAt?: boolean
   executedAt?: boolean
   expiresAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ActionDraft$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ActionDraft$toolCallArgs<ExtArgs>
 }, ExtArgs["result"]["actionDraft"]>
 
 export type ActionDraftSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
+  toolCallId?: boolean
   actorId?: boolean
   toolName?: boolean
   resource?: boolean
@@ -1026,15 +1498,19 @@ export type ActionDraftSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   confirmedAt?: boolean
   executedAt?: boolean
   expiresAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ActionDraft$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ActionDraft$toolCallArgs<ExtArgs>
 }, ExtArgs["result"]["actionDraft"]>
 
 export type ActionDraftSelectScalar = {
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
+  toolCallId?: boolean
   actorId?: boolean
   toolName?: boolean
   resource?: boolean
@@ -1050,31 +1526,41 @@ export type ActionDraftSelectScalar = {
   expiresAt?: boolean
 }
 
-export type ActionDraftOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "sessionId" | "messageId" | "actorId" | "toolName" | "resource" | "operation" | "riskLevel" | "payloadSummary" | "preview" | "status" | "idempotencyKey" | "createdAt" | "confirmedAt" | "executedAt" | "expiresAt", ExtArgs["result"]["actionDraft"]>
+export type ActionDraftOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "sessionId" | "messageId" | "toolCallId" | "actorId" | "toolName" | "resource" | "operation" | "riskLevel" | "payloadSummary" | "preview" | "status" | "idempotencyKey" | "createdAt" | "confirmedAt" | "executedAt" | "expiresAt", ExtArgs["result"]["actionDraft"]>
 export type ActionDraftInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ActionDraft$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ActionDraft$toolCallArgs<ExtArgs>
 }
 export type ActionDraftIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ActionDraft$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ActionDraft$toolCallArgs<ExtArgs>
 }
 export type ActionDraftIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ActionDraft$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ActionDraft$toolCallArgs<ExtArgs>
 }
 
 export type $ActionDraftPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ActionDraft"
   objects: {
+    customer: Prisma.$CustomerPayload<ExtArgs>
     session: Prisma.$AssistantSessionPayload<ExtArgs>
     message: Prisma.$AssistantMessagePayload<ExtArgs> | null
+    toolCall: Prisma.$ToolCallPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     requestId: string
     sessionId: string
     messageId: string | null
+    toolCallId: string | null
     actorId: string
     toolName: string
     resource: string
@@ -1482,8 +1968,10 @@ readonly fields: ActionDraftFieldRefs;
  */
 export interface Prisma__ActionDraftClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   session<T extends Prisma.AssistantSessionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AssistantSessionDefaultArgs<ExtArgs>>): Prisma.Prisma__AssistantSessionClient<runtime.Types.Result.GetResult<Prisma.$AssistantSessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   message<T extends Prisma.ActionDraft$messageArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ActionDraft$messageArgs<ExtArgs>>): Prisma.Prisma__AssistantMessageClient<runtime.Types.Result.GetResult<Prisma.$AssistantMessagePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  toolCall<T extends Prisma.ActionDraft$toolCallArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ActionDraft$toolCallArgs<ExtArgs>>): Prisma.Prisma__ToolCallClient<runtime.Types.Result.GetResult<Prisma.$ToolCallPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1514,9 +2002,11 @@ export interface Prisma__ActionDraftClient<T, Null = never, ExtArgs extends runt
  */
 export interface ActionDraftFieldRefs {
   readonly id: Prisma.FieldRef<"ActionDraft", 'String'>
+  readonly customerId: Prisma.FieldRef<"ActionDraft", 'String'>
   readonly requestId: Prisma.FieldRef<"ActionDraft", 'String'>
   readonly sessionId: Prisma.FieldRef<"ActionDraft", 'String'>
   readonly messageId: Prisma.FieldRef<"ActionDraft", 'String'>
+  readonly toolCallId: Prisma.FieldRef<"ActionDraft", 'String'>
   readonly actorId: Prisma.FieldRef<"ActionDraft", 'String'>
   readonly toolName: Prisma.FieldRef<"ActionDraft", 'String'>
   readonly resource: Prisma.FieldRef<"ActionDraft", 'String'>
@@ -1947,6 +2437,25 @@ export type ActionDraft$messageArgs<ExtArgs extends runtime.Types.Extensions.Int
    */
   include?: Prisma.AssistantMessageInclude<ExtArgs> | null
   where?: Prisma.AssistantMessageWhereInput
+}
+
+/**
+ * ActionDraft.toolCall
+ */
+export type ActionDraft$toolCallArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ToolCall
+   */
+  select?: Prisma.ToolCallSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ToolCall
+   */
+  omit?: Prisma.ToolCallOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ToolCallInclude<ExtArgs> | null
+  where?: Prisma.ToolCallWhereInput
 }
 
 /**

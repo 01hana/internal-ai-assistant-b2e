@@ -384,6 +384,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
+  Customer: 'Customer',
   AssistantSession: 'AssistantSession',
   AssistantMessage: 'AssistantMessage',
   AssistantContextState: 'AssistantContextState',
@@ -392,6 +393,7 @@ export const ModelName = {
   ClarificationQuestion: 'ClarificationQuestion',
   GroundingCheck: 'GroundingCheck',
   ToolDefinition: 'ToolDefinition',
+  CustomerToolPolicy: 'CustomerToolPolicy',
   ToolCall: 'ToolCall',
   EvidenceRef: 'EvidenceRef',
   AuditEvent: 'AuditEvent',
@@ -420,10 +422,84 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "assistantSession" | "assistantMessage" | "assistantContextState" | "executionPlan" | "answerDecision" | "clarificationQuestion" | "groundingCheck" | "toolDefinition" | "toolCall" | "evidenceRef" | "auditEvent" | "feedbackEvent" | "reviewItem" | "approvalRequest" | "actionDraft" | "escalationRequest" | "queryUnderstandingResult" | "knowledgeDocument" | "knowledgeChunk" | "retrievalRun" | "retrievalCandidate"
+    modelProps: "customer" | "assistantSession" | "assistantMessage" | "assistantContextState" | "executionPlan" | "answerDecision" | "clarificationQuestion" | "groundingCheck" | "toolDefinition" | "customerToolPolicy" | "toolCall" | "evidenceRef" | "auditEvent" | "feedbackEvent" | "reviewItem" | "approvalRequest" | "actionDraft" | "escalationRequest" | "queryUnderstandingResult" | "knowledgeDocument" | "knowledgeChunk" | "retrievalRun" | "retrievalCandidate"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
+    Customer: {
+      payload: Prisma.$CustomerPayload<ExtArgs>
+      fields: Prisma.CustomerFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CustomerFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CustomerFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload>
+        }
+        findFirst: {
+          args: Prisma.CustomerFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CustomerFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload>
+        }
+        findMany: {
+          args: Prisma.CustomerFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload>[]
+        }
+        create: {
+          args: Prisma.CustomerCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload>
+        }
+        createMany: {
+          args: Prisma.CustomerCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CustomerCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload>[]
+        }
+        delete: {
+          args: Prisma.CustomerDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload>
+        }
+        update: {
+          args: Prisma.CustomerUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload>
+        }
+        deleteMany: {
+          args: Prisma.CustomerDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CustomerUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CustomerUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload>[]
+        }
+        upsert: {
+          args: Prisma.CustomerUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerPayload>
+        }
+        aggregate: {
+          args: Prisma.CustomerAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCustomer>
+        }
+        groupBy: {
+          args: Prisma.CustomerGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CustomerGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CustomerCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CustomerCountAggregateOutputType> | number
+        }
+      }
+    }
     AssistantSession: {
       payload: Prisma.$AssistantSessionPayload<ExtArgs>
       fields: Prisma.AssistantSessionFieldRefs
@@ -1013,6 +1089,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ToolDefinitionCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ToolDefinitionCountAggregateOutputType> | number
+        }
+      }
+    }
+    CustomerToolPolicy: {
+      payload: Prisma.$CustomerToolPolicyPayload<ExtArgs>
+      fields: Prisma.CustomerToolPolicyFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CustomerToolPolicyFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CustomerToolPolicyFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload>
+        }
+        findFirst: {
+          args: Prisma.CustomerToolPolicyFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CustomerToolPolicyFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload>
+        }
+        findMany: {
+          args: Prisma.CustomerToolPolicyFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload>[]
+        }
+        create: {
+          args: Prisma.CustomerToolPolicyCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload>
+        }
+        createMany: {
+          args: Prisma.CustomerToolPolicyCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CustomerToolPolicyCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload>[]
+        }
+        delete: {
+          args: Prisma.CustomerToolPolicyDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload>
+        }
+        update: {
+          args: Prisma.CustomerToolPolicyUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload>
+        }
+        deleteMany: {
+          args: Prisma.CustomerToolPolicyDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CustomerToolPolicyUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CustomerToolPolicyUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload>[]
+        }
+        upsert: {
+          args: Prisma.CustomerToolPolicyUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CustomerToolPolicyPayload>
+        }
+        aggregate: {
+          args: Prisma.CustomerToolPolicyAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCustomerToolPolicy>
+        }
+        groupBy: {
+          args: Prisma.CustomerToolPolicyGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CustomerToolPolicyGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CustomerToolPolicyCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CustomerToolPolicyCountAggregateOutputType> | number
         }
       }
     }
@@ -2017,8 +2167,16 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const CustomerScalarFieldEnum = {
+  id: 'id'
+} as const
+
+export type CustomerScalarFieldEnum = (typeof CustomerScalarFieldEnum)[keyof typeof CustomerScalarFieldEnum]
+
+
 export const AssistantSessionScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   hostApp: 'hostApp',
   organizationId: 'organizationId',
   actorId: 'actorId',
@@ -2033,6 +2191,7 @@ export type AssistantSessionScalarFieldEnum = (typeof AssistantSessionScalarFiel
 
 export const AssistantMessageScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   sessionId: 'sessionId',
   requestId: 'requestId',
   role: 'role',
@@ -2047,6 +2206,7 @@ export type AssistantMessageScalarFieldEnum = (typeof AssistantMessageScalarFiel
 
 export const AssistantContextStateScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   sessionId: 'sessionId',
   currentTask: 'currentTask',
   currentModule: 'currentModule',
@@ -2069,6 +2229,7 @@ export type AssistantContextStateScalarFieldEnum = (typeof AssistantContextState
 
 export const ExecutionPlanScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   sessionId: 'sessionId',
   messageId: 'messageId',
   taskType: 'taskType',
@@ -2088,6 +2249,7 @@ export type ExecutionPlanScalarFieldEnum = (typeof ExecutionPlanScalarFieldEnum)
 
 export const AnswerDecisionScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   status: 'status',
@@ -2103,6 +2265,7 @@ export type AnswerDecisionScalarFieldEnum = (typeof AnswerDecisionScalarFieldEnu
 
 export const ClarificationQuestionScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   question: 'question',
@@ -2118,6 +2281,7 @@ export type ClarificationQuestionScalarFieldEnum = (typeof ClarificationQuestion
 
 export const GroundingCheckScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   covered: 'covered',
@@ -2156,8 +2320,22 @@ export const ToolDefinitionScalarFieldEnum = {
 export type ToolDefinitionScalarFieldEnum = (typeof ToolDefinitionScalarFieldEnum)[keyof typeof ToolDefinitionScalarFieldEnum]
 
 
+export const CustomerToolPolicyScalarFieldEnum = {
+  customerId: 'customerId',
+  toolDefinitionId: 'toolDefinitionId',
+  enabled: 'enabled',
+  requiredRoles: 'requiredRoles',
+  requiredPermissionScopes: 'requiredPermissionScopes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CustomerToolPolicyScalarFieldEnum = (typeof CustomerToolPolicyScalarFieldEnum)[keyof typeof CustomerToolPolicyScalarFieldEnum]
+
+
 export const ToolCallScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   sessionId: 'sessionId',
   messageId: 'messageId',
@@ -2181,6 +2359,7 @@ export type ToolCallScalarFieldEnum = (typeof ToolCallScalarFieldEnum)[keyof typ
 
 export const EvidenceRefScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   sourceType: 'sourceType',
@@ -2201,6 +2380,7 @@ export type EvidenceRefScalarFieldEnum = (typeof EvidenceRefScalarFieldEnum)[key
 
 export const AuditEventScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   timestamp: 'timestamp',
   organizationId: 'organizationId',
@@ -2223,6 +2403,7 @@ export type AuditEventScalarFieldEnum = (typeof AuditEventScalarFieldEnum)[keyof
 
 export const FeedbackEventScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   rating: 'rating',
@@ -2240,6 +2421,7 @@ export type FeedbackEventScalarFieldEnum = (typeof FeedbackEventScalarFieldEnum)
 
 export const ReviewItemScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   sourceType: 'sourceType',
   sourceId: 'sourceId',
   status: 'status',
@@ -2255,9 +2437,11 @@ export type ReviewItemScalarFieldEnum = (typeof ReviewItemScalarFieldEnum)[keyof
 
 export const ApprovalRequestScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   sessionId: 'sessionId',
   messageId: 'messageId',
+  toolCallId: 'toolCallId',
   requesterActorId: 'requesterActorId',
   approverActorId: 'approverActorId',
   riskLevel: 'riskLevel',
@@ -2278,9 +2462,11 @@ export type ApprovalRequestScalarFieldEnum = (typeof ApprovalRequestScalarFieldE
 
 export const ActionDraftScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   sessionId: 'sessionId',
   messageId: 'messageId',
+  toolCallId: 'toolCallId',
   actorId: 'actorId',
   toolName: 'toolName',
   resource: 'resource',
@@ -2301,6 +2487,7 @@ export type ActionDraftScalarFieldEnum = (typeof ActionDraftScalarFieldEnum)[key
 
 export const EscalationRequestScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   sessionId: 'sessionId',
   messageId: 'messageId',
@@ -2317,6 +2504,7 @@ export type EscalationRequestScalarFieldEnum = (typeof EscalationRequestScalarFi
 
 export const QueryUnderstandingResultScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   sentences: 'sentences',
@@ -2337,12 +2525,16 @@ export type QueryUnderstandingResultScalarFieldEnum = (typeof QueryUnderstanding
 
 export const KnowledgeDocumentScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   title: 'title',
   sourceType: 'sourceType',
   sourceKey: 'sourceKey',
   version: 'version',
   language: 'language',
   status: 'status',
+  visibility: 'visibility',
+  organizationIds: 'organizationIds',
+  requiredPermissionScopes: 'requiredPermissionScopes',
   metadata: 'metadata',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -2353,6 +2545,7 @@ export type KnowledgeDocumentScalarFieldEnum = (typeof KnowledgeDocumentScalarFi
 
 export const KnowledgeChunkScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   documentId: 'documentId',
   chunkIndex: 'chunkIndex',
   heading: 'heading',
@@ -2371,6 +2564,7 @@ export type KnowledgeChunkScalarFieldEnum = (typeof KnowledgeChunkScalarFieldEnu
 
 export const RetrievalRunScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   query: 'query',
@@ -2388,6 +2582,7 @@ export type RetrievalRunScalarFieldEnum = (typeof RetrievalRunScalarFieldEnum)[k
 
 export const RetrievalCandidateScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   retrievalRunId: 'retrievalRunId',
   chunkId: 'chunkId',
   sourceId: 'sourceId',
@@ -2855,6 +3050,20 @@ export type ListEnumKnowledgeDocumentStatusFieldRefInput<$PrismaModel> = FieldRe
 
 
 /**
+ * Reference to a field of type 'KnowledgeVisibility'
+ */
+export type EnumKnowledgeVisibilityFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'KnowledgeVisibility'>
+    
+
+
+/**
+ * Reference to a field of type 'KnowledgeVisibility[]'
+ */
+export type ListEnumKnowledgeVisibilityFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'KnowledgeVisibility[]'>
+    
+
+
+/**
  * Reference to a field of type 'RetrievalStrategy'
  */
 export type EnumRetrievalStrategyFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RetrievalStrategy'>
@@ -2977,6 +3186,7 @@ export type PrismaClientOptions = ({
   queryPlanCacheMaxSize?: number
 }
 export type GlobalOmitConfig = {
+  customer?: Prisma.CustomerOmit
   assistantSession?: Prisma.AssistantSessionOmit
   assistantMessage?: Prisma.AssistantMessageOmit
   assistantContextState?: Prisma.AssistantContextStateOmit
@@ -2985,6 +3195,7 @@ export type GlobalOmitConfig = {
   clarificationQuestion?: Prisma.ClarificationQuestionOmit
   groundingCheck?: Prisma.GroundingCheckOmit
   toolDefinition?: Prisma.ToolDefinitionOmit
+  customerToolPolicy?: Prisma.CustomerToolPolicyOmit
   toolCall?: Prisma.ToolCallOmit
   evidenceRef?: Prisma.EvidenceRefOmit
   auditEvent?: Prisma.AuditEventOmit

@@ -243,6 +243,14 @@ export const KnowledgeDocumentStatus = {
 export type KnowledgeDocumentStatus = (typeof KnowledgeDocumentStatus)[keyof typeof KnowledgeDocumentStatus]
 
 
+export const KnowledgeVisibility = {
+  CUSTOMER: 'CUSTOMER',
+  ORGANIZATION: 'ORGANIZATION'
+} as const
+
+export type KnowledgeVisibility = (typeof KnowledgeVisibility)[keyof typeof KnowledgeVisibility]
+
+
 export const RetrievalStrategy = {
   keyword: 'keyword',
   vector: 'vector',

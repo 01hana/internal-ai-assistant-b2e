@@ -102,6 +102,17 @@ model Child {
       .filter((model) => model.name === 'Child');
     expect(child.relations[0]).toMatchObject({ fields: ['customerId', 'parentId'], references: ['customerId', 'id'] });
   });
+
+  it.each([
+    ['ApprovalRequest', 'AssistantSession', 'sessionId'],
+    ['ApprovalRequest', 'AssistantMessage', 'messageId'],
+    ['ApprovalRequest', 'ToolCall', 'toolCallId'],
+    ['ActionDraft', 'AssistantSession', 'sessionId'],
+    ['ActionDraft', 'AssistantMessage', 'messageId'],
+    ['ActionDraft', 'ToolCall', 'toolCallId']
+  ] as const)('maps %s → %s to %s', (child, parent, expectedField) => {
+    expect(parentIdField(child, parent)).toBe(expectedField);
+  });
 });
 
 function parentIdField(child: string, parent: string): string {
@@ -111,6 +122,7 @@ function parentIdField(child: string, parent: string): string {
   if (child === 'EvidenceRef' && parent === 'AssistantMessage') return 'messageId';
   if (child === 'ToolCall' && parent === 'AssistantMessage') return 'messageId';
   if (child === 'ToolCall') return 'sessionId';
+  if ((child === 'ApprovalRequest' || child === 'ActionDraft') && parent === 'AssistantMessage') return 'messageId';
   if ((child === 'ApprovalRequest' || child === 'ActionDraft') && parent === 'ToolCall') return 'toolCallId';
   if (child === 'KnowledgeChunk') return 'documentId';
   if (child === 'FeedbackEvent') return 'messageId';

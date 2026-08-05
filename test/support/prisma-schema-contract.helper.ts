@@ -75,7 +75,7 @@ function parseModels(schema: string): SchemaModelContract[] {
       if (field && !line.trimStart().startsWith('@@')) {
         fields.push(field[1]);
       }
-      const attribute = line.match(/^\s*@@(unique|id|index)\(\[([^]]+)\]/);
+      const attribute = line.match(/^\s*@@(unique|id|index)\(\[([^\]]+)\]/);
       if (attribute) {
         const key = attribute[2].split(',').map((value) => value.trim().split(':')[0]).filter(Boolean);
         if (attribute[1] === 'index') indexes.push(key);

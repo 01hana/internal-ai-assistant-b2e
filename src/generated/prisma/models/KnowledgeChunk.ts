@@ -38,6 +38,7 @@ export type KnowledgeChunkSumAggregateOutputType = {
 
 export type KnowledgeChunkMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   documentId: string | null
   chunkIndex: number | null
   heading: string | null
@@ -52,6 +53,7 @@ export type KnowledgeChunkMinAggregateOutputType = {
 
 export type KnowledgeChunkMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   documentId: string | null
   chunkIndex: number | null
   heading: string | null
@@ -66,6 +68,7 @@ export type KnowledgeChunkMaxAggregateOutputType = {
 
 export type KnowledgeChunkCountAggregateOutputType = {
   id: number
+  customerId: number
   documentId: number
   chunkIndex: number
   heading: number
@@ -93,6 +96,7 @@ export type KnowledgeChunkSumAggregateInputType = {
 
 export type KnowledgeChunkMinAggregateInputType = {
   id?: true
+  customerId?: true
   documentId?: true
   chunkIndex?: true
   heading?: true
@@ -107,6 +111,7 @@ export type KnowledgeChunkMinAggregateInputType = {
 
 export type KnowledgeChunkMaxAggregateInputType = {
   id?: true
+  customerId?: true
   documentId?: true
   chunkIndex?: true
   heading?: true
@@ -121,6 +126,7 @@ export type KnowledgeChunkMaxAggregateInputType = {
 
 export type KnowledgeChunkCountAggregateInputType = {
   id?: true
+  customerId?: true
   documentId?: true
   chunkIndex?: true
   heading?: true
@@ -223,6 +229,7 @@ export type KnowledgeChunkGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 
 export type KnowledgeChunkGroupByOutputType = {
   id: string
+  customerId: string
   documentId: string
   chunkIndex: number
   heading: string | null
@@ -261,6 +268,7 @@ export type KnowledgeChunkWhereInput = {
   OR?: Prisma.KnowledgeChunkWhereInput[]
   NOT?: Prisma.KnowledgeChunkWhereInput | Prisma.KnowledgeChunkWhereInput[]
   id?: Prisma.StringFilter<"KnowledgeChunk"> | string
+  customerId?: Prisma.StringFilter<"KnowledgeChunk"> | string
   documentId?: Prisma.StringFilter<"KnowledgeChunk"> | string
   chunkIndex?: Prisma.IntFilter<"KnowledgeChunk"> | number
   heading?: Prisma.StringNullableFilter<"KnowledgeChunk"> | string | null
@@ -273,12 +281,14 @@ export type KnowledgeChunkWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"KnowledgeChunk"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"KnowledgeChunk"> | Date | string
   document?: Prisma.XOR<Prisma.KnowledgeDocumentScalarRelationFilter, Prisma.KnowledgeDocumentWhereInput>
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   evidenceRefs?: Prisma.EvidenceRefListRelationFilter
   retrievalCandidates?: Prisma.RetrievalCandidateListRelationFilter
 }
 
 export type KnowledgeChunkOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   documentId?: Prisma.SortOrder
   chunkIndex?: Prisma.SortOrder
   heading?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -291,16 +301,19 @@ export type KnowledgeChunkOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   document?: Prisma.KnowledgeDocumentOrderByWithRelationInput
+  customer?: Prisma.CustomerOrderByWithRelationInput
   evidenceRefs?: Prisma.EvidenceRefOrderByRelationAggregateInput
   retrievalCandidates?: Prisma.RetrievalCandidateOrderByRelationAggregateInput
 }
 
 export type KnowledgeChunkWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  documentId_chunkIndex?: Prisma.KnowledgeChunkDocumentIdChunkIndexCompoundUniqueInput
+  customerId_id?: Prisma.KnowledgeChunkCustomerIdIdCompoundUniqueInput
+  customerId_documentId_chunkIndex?: Prisma.KnowledgeChunkCustomerIdDocumentIdChunkIndexCompoundUniqueInput
   AND?: Prisma.KnowledgeChunkWhereInput | Prisma.KnowledgeChunkWhereInput[]
   OR?: Prisma.KnowledgeChunkWhereInput[]
   NOT?: Prisma.KnowledgeChunkWhereInput | Prisma.KnowledgeChunkWhereInput[]
+  customerId?: Prisma.StringFilter<"KnowledgeChunk"> | string
   documentId?: Prisma.StringFilter<"KnowledgeChunk"> | string
   chunkIndex?: Prisma.IntFilter<"KnowledgeChunk"> | number
   heading?: Prisma.StringNullableFilter<"KnowledgeChunk"> | string | null
@@ -313,12 +326,14 @@ export type KnowledgeChunkWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"KnowledgeChunk"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"KnowledgeChunk"> | Date | string
   document?: Prisma.XOR<Prisma.KnowledgeDocumentScalarRelationFilter, Prisma.KnowledgeDocumentWhereInput>
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   evidenceRefs?: Prisma.EvidenceRefListRelationFilter
   retrievalCandidates?: Prisma.RetrievalCandidateListRelationFilter
-}, "id" | "documentId_chunkIndex">
+}, "id" | "customerId_id" | "customerId_documentId_chunkIndex">
 
 export type KnowledgeChunkOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   documentId?: Prisma.SortOrder
   chunkIndex?: Prisma.SortOrder
   heading?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -342,6 +357,7 @@ export type KnowledgeChunkScalarWhereWithAggregatesInput = {
   OR?: Prisma.KnowledgeChunkScalarWhereWithAggregatesInput[]
   NOT?: Prisma.KnowledgeChunkScalarWhereWithAggregatesInput | Prisma.KnowledgeChunkScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"KnowledgeChunk"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"KnowledgeChunk"> | string
   documentId?: Prisma.StringWithAggregatesFilter<"KnowledgeChunk"> | string
   chunkIndex?: Prisma.IntWithAggregatesFilter<"KnowledgeChunk"> | number
   heading?: Prisma.StringNullableWithAggregatesFilter<"KnowledgeChunk"> | string | null
@@ -368,12 +384,14 @@ export type KnowledgeChunkCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   document: Prisma.KnowledgeDocumentCreateNestedOneWithoutChunksInput
+  customer: Prisma.CustomerCreateNestedOneWithoutKnowledgeChunksInput
   evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutChunkInput
   retrievalCandidates?: Prisma.RetrievalCandidateCreateNestedManyWithoutChunkInput
 }
 
 export type KnowledgeChunkUncheckedCreateInput = {
   id?: string
+  customerId: string
   documentId: string
   chunkIndex: number
   heading?: string | null
@@ -402,12 +420,14 @@ export type KnowledgeChunkUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   document?: Prisma.KnowledgeDocumentUpdateOneRequiredWithoutChunksNestedInput
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutKnowledgeChunksNestedInput
   evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutChunkNestedInput
   retrievalCandidates?: Prisma.RetrievalCandidateUpdateManyWithoutChunkNestedInput
 }
 
 export type KnowledgeChunkUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   documentId?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
   heading?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -425,6 +445,7 @@ export type KnowledgeChunkUncheckedUpdateInput = {
 
 export type KnowledgeChunkCreateManyInput = {
   id?: string
+  customerId: string
   documentId: string
   chunkIndex: number
   heading?: string | null
@@ -454,6 +475,7 @@ export type KnowledgeChunkUpdateManyMutationInput = {
 
 export type KnowledgeChunkUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   documentId?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
   heading?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -467,11 +489,6 @@ export type KnowledgeChunkUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type KnowledgeChunkNullableScalarRelationFilter = {
-  is?: Prisma.KnowledgeChunkWhereInput | null
-  isNot?: Prisma.KnowledgeChunkWhereInput | null
-}
-
 export type KnowledgeChunkListRelationFilter = {
   every?: Prisma.KnowledgeChunkWhereInput
   some?: Prisma.KnowledgeChunkWhereInput
@@ -482,13 +499,25 @@ export type KnowledgeChunkOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
-export type KnowledgeChunkDocumentIdChunkIndexCompoundUniqueInput = {
+export type KnowledgeChunkNullableScalarRelationFilter = {
+  is?: Prisma.KnowledgeChunkWhereInput | null
+  isNot?: Prisma.KnowledgeChunkWhereInput | null
+}
+
+export type KnowledgeChunkCustomerIdIdCompoundUniqueInput = {
+  customerId: string
+  id: string
+}
+
+export type KnowledgeChunkCustomerIdDocumentIdChunkIndexCompoundUniqueInput = {
+  customerId: string
   documentId: string
   chunkIndex: number
 }
 
 export type KnowledgeChunkCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   documentId?: Prisma.SortOrder
   chunkIndex?: Prisma.SortOrder
   heading?: Prisma.SortOrder
@@ -509,6 +538,7 @@ export type KnowledgeChunkAvgOrderByAggregateInput = {
 
 export type KnowledgeChunkMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   documentId?: Prisma.SortOrder
   chunkIndex?: Prisma.SortOrder
   heading?: Prisma.SortOrder
@@ -523,6 +553,7 @@ export type KnowledgeChunkMaxOrderByAggregateInput = {
 
 export type KnowledgeChunkMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   documentId?: Prisma.SortOrder
   chunkIndex?: Prisma.SortOrder
   heading?: Prisma.SortOrder
@@ -538,6 +569,48 @@ export type KnowledgeChunkMinOrderByAggregateInput = {
 export type KnowledgeChunkSumOrderByAggregateInput = {
   chunkIndex?: Prisma.SortOrder
   tokenCount?: Prisma.SortOrder
+}
+
+export type KnowledgeChunkCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.KnowledgeChunkCreateWithoutCustomerInput, Prisma.KnowledgeChunkUncheckedCreateWithoutCustomerInput> | Prisma.KnowledgeChunkCreateWithoutCustomerInput[] | Prisma.KnowledgeChunkUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.KnowledgeChunkCreateOrConnectWithoutCustomerInput | Prisma.KnowledgeChunkCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.KnowledgeChunkCreateManyCustomerInputEnvelope
+  connect?: Prisma.KnowledgeChunkWhereUniqueInput | Prisma.KnowledgeChunkWhereUniqueInput[]
+}
+
+export type KnowledgeChunkUncheckedCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.KnowledgeChunkCreateWithoutCustomerInput, Prisma.KnowledgeChunkUncheckedCreateWithoutCustomerInput> | Prisma.KnowledgeChunkCreateWithoutCustomerInput[] | Prisma.KnowledgeChunkUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.KnowledgeChunkCreateOrConnectWithoutCustomerInput | Prisma.KnowledgeChunkCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.KnowledgeChunkCreateManyCustomerInputEnvelope
+  connect?: Prisma.KnowledgeChunkWhereUniqueInput | Prisma.KnowledgeChunkWhereUniqueInput[]
+}
+
+export type KnowledgeChunkUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.KnowledgeChunkCreateWithoutCustomerInput, Prisma.KnowledgeChunkUncheckedCreateWithoutCustomerInput> | Prisma.KnowledgeChunkCreateWithoutCustomerInput[] | Prisma.KnowledgeChunkUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.KnowledgeChunkCreateOrConnectWithoutCustomerInput | Prisma.KnowledgeChunkCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.KnowledgeChunkUpsertWithWhereUniqueWithoutCustomerInput | Prisma.KnowledgeChunkUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.KnowledgeChunkCreateManyCustomerInputEnvelope
+  set?: Prisma.KnowledgeChunkWhereUniqueInput | Prisma.KnowledgeChunkWhereUniqueInput[]
+  disconnect?: Prisma.KnowledgeChunkWhereUniqueInput | Prisma.KnowledgeChunkWhereUniqueInput[]
+  delete?: Prisma.KnowledgeChunkWhereUniqueInput | Prisma.KnowledgeChunkWhereUniqueInput[]
+  connect?: Prisma.KnowledgeChunkWhereUniqueInput | Prisma.KnowledgeChunkWhereUniqueInput[]
+  update?: Prisma.KnowledgeChunkUpdateWithWhereUniqueWithoutCustomerInput | Prisma.KnowledgeChunkUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.KnowledgeChunkUpdateManyWithWhereWithoutCustomerInput | Prisma.KnowledgeChunkUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.KnowledgeChunkScalarWhereInput | Prisma.KnowledgeChunkScalarWhereInput[]
+}
+
+export type KnowledgeChunkUncheckedUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.KnowledgeChunkCreateWithoutCustomerInput, Prisma.KnowledgeChunkUncheckedCreateWithoutCustomerInput> | Prisma.KnowledgeChunkCreateWithoutCustomerInput[] | Prisma.KnowledgeChunkUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.KnowledgeChunkCreateOrConnectWithoutCustomerInput | Prisma.KnowledgeChunkCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.KnowledgeChunkUpsertWithWhereUniqueWithoutCustomerInput | Prisma.KnowledgeChunkUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.KnowledgeChunkCreateManyCustomerInputEnvelope
+  set?: Prisma.KnowledgeChunkWhereUniqueInput | Prisma.KnowledgeChunkWhereUniqueInput[]
+  disconnect?: Prisma.KnowledgeChunkWhereUniqueInput | Prisma.KnowledgeChunkWhereUniqueInput[]
+  delete?: Prisma.KnowledgeChunkWhereUniqueInput | Prisma.KnowledgeChunkWhereUniqueInput[]
+  connect?: Prisma.KnowledgeChunkWhereUniqueInput | Prisma.KnowledgeChunkWhereUniqueInput[]
+  update?: Prisma.KnowledgeChunkUpdateWithWhereUniqueWithoutCustomerInput | Prisma.KnowledgeChunkUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.KnowledgeChunkUpdateManyWithWhereWithoutCustomerInput | Prisma.KnowledgeChunkUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.KnowledgeChunkScalarWhereInput | Prisma.KnowledgeChunkScalarWhereInput[]
 }
 
 export type KnowledgeChunkCreateNestedOneWithoutEvidenceRefsInput = {
@@ -614,6 +687,85 @@ export type KnowledgeChunkUpdateOneWithoutRetrievalCandidatesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.KnowledgeChunkUpdateToOneWithWhereWithoutRetrievalCandidatesInput, Prisma.KnowledgeChunkUpdateWithoutRetrievalCandidatesInput>, Prisma.KnowledgeChunkUncheckedUpdateWithoutRetrievalCandidatesInput>
 }
 
+export type KnowledgeChunkCreateWithoutCustomerInput = {
+  id?: string
+  chunkIndex: number
+  heading?: string | null
+  content: string
+  tokenCount: number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingRef?: string | null
+  vectorId?: string | null
+  enabled?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  document: Prisma.KnowledgeDocumentCreateNestedOneWithoutChunksInput
+  evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutChunkInput
+  retrievalCandidates?: Prisma.RetrievalCandidateCreateNestedManyWithoutChunkInput
+}
+
+export type KnowledgeChunkUncheckedCreateWithoutCustomerInput = {
+  id?: string
+  documentId: string
+  chunkIndex: number
+  heading?: string | null
+  content: string
+  tokenCount: number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingRef?: string | null
+  vectorId?: string | null
+  enabled?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  evidenceRefs?: Prisma.EvidenceRefUncheckedCreateNestedManyWithoutChunkInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUncheckedCreateNestedManyWithoutChunkInput
+}
+
+export type KnowledgeChunkCreateOrConnectWithoutCustomerInput = {
+  where: Prisma.KnowledgeChunkWhereUniqueInput
+  create: Prisma.XOR<Prisma.KnowledgeChunkCreateWithoutCustomerInput, Prisma.KnowledgeChunkUncheckedCreateWithoutCustomerInput>
+}
+
+export type KnowledgeChunkCreateManyCustomerInputEnvelope = {
+  data: Prisma.KnowledgeChunkCreateManyCustomerInput | Prisma.KnowledgeChunkCreateManyCustomerInput[]
+  skipDuplicates?: boolean
+}
+
+export type KnowledgeChunkUpsertWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.KnowledgeChunkWhereUniqueInput
+  update: Prisma.XOR<Prisma.KnowledgeChunkUpdateWithoutCustomerInput, Prisma.KnowledgeChunkUncheckedUpdateWithoutCustomerInput>
+  create: Prisma.XOR<Prisma.KnowledgeChunkCreateWithoutCustomerInput, Prisma.KnowledgeChunkUncheckedCreateWithoutCustomerInput>
+}
+
+export type KnowledgeChunkUpdateWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.KnowledgeChunkWhereUniqueInput
+  data: Prisma.XOR<Prisma.KnowledgeChunkUpdateWithoutCustomerInput, Prisma.KnowledgeChunkUncheckedUpdateWithoutCustomerInput>
+}
+
+export type KnowledgeChunkUpdateManyWithWhereWithoutCustomerInput = {
+  where: Prisma.KnowledgeChunkScalarWhereInput
+  data: Prisma.XOR<Prisma.KnowledgeChunkUpdateManyMutationInput, Prisma.KnowledgeChunkUncheckedUpdateManyWithoutCustomerInput>
+}
+
+export type KnowledgeChunkScalarWhereInput = {
+  AND?: Prisma.KnowledgeChunkScalarWhereInput | Prisma.KnowledgeChunkScalarWhereInput[]
+  OR?: Prisma.KnowledgeChunkScalarWhereInput[]
+  NOT?: Prisma.KnowledgeChunkScalarWhereInput | Prisma.KnowledgeChunkScalarWhereInput[]
+  id?: Prisma.StringFilter<"KnowledgeChunk"> | string
+  customerId?: Prisma.StringFilter<"KnowledgeChunk"> | string
+  documentId?: Prisma.StringFilter<"KnowledgeChunk"> | string
+  chunkIndex?: Prisma.IntFilter<"KnowledgeChunk"> | number
+  heading?: Prisma.StringNullableFilter<"KnowledgeChunk"> | string | null
+  content?: Prisma.StringFilter<"KnowledgeChunk"> | string
+  tokenCount?: Prisma.IntFilter<"KnowledgeChunk"> | number
+  metadata?: Prisma.JsonNullableFilter<"KnowledgeChunk">
+  embeddingRef?: Prisma.StringNullableFilter<"KnowledgeChunk"> | string | null
+  vectorId?: Prisma.StringNullableFilter<"KnowledgeChunk"> | string | null
+  enabled?: Prisma.BoolFilter<"KnowledgeChunk"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"KnowledgeChunk"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"KnowledgeChunk"> | Date | string
+}
+
 export type KnowledgeChunkCreateWithoutEvidenceRefsInput = {
   id?: string
   chunkIndex: number
@@ -627,11 +779,13 @@ export type KnowledgeChunkCreateWithoutEvidenceRefsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   document: Prisma.KnowledgeDocumentCreateNestedOneWithoutChunksInput
+  customer: Prisma.CustomerCreateNestedOneWithoutKnowledgeChunksInput
   retrievalCandidates?: Prisma.RetrievalCandidateCreateNestedManyWithoutChunkInput
 }
 
 export type KnowledgeChunkUncheckedCreateWithoutEvidenceRefsInput = {
   id?: string
+  customerId: string
   documentId: string
   chunkIndex: number
   heading?: string | null
@@ -675,11 +829,13 @@ export type KnowledgeChunkUpdateWithoutEvidenceRefsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   document?: Prisma.KnowledgeDocumentUpdateOneRequiredWithoutChunksNestedInput
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutKnowledgeChunksNestedInput
   retrievalCandidates?: Prisma.RetrievalCandidateUpdateManyWithoutChunkNestedInput
 }
 
 export type KnowledgeChunkUncheckedUpdateWithoutEvidenceRefsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   documentId?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
   heading?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -706,6 +862,7 @@ export type KnowledgeChunkCreateWithoutDocumentInput = {
   enabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutKnowledgeChunksInput
   evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutChunkInput
   retrievalCandidates?: Prisma.RetrievalCandidateCreateNestedManyWithoutChunkInput
 }
@@ -752,24 +909,6 @@ export type KnowledgeChunkUpdateManyWithWhereWithoutDocumentInput = {
   data: Prisma.XOR<Prisma.KnowledgeChunkUpdateManyMutationInput, Prisma.KnowledgeChunkUncheckedUpdateManyWithoutDocumentInput>
 }
 
-export type KnowledgeChunkScalarWhereInput = {
-  AND?: Prisma.KnowledgeChunkScalarWhereInput | Prisma.KnowledgeChunkScalarWhereInput[]
-  OR?: Prisma.KnowledgeChunkScalarWhereInput[]
-  NOT?: Prisma.KnowledgeChunkScalarWhereInput | Prisma.KnowledgeChunkScalarWhereInput[]
-  id?: Prisma.StringFilter<"KnowledgeChunk"> | string
-  documentId?: Prisma.StringFilter<"KnowledgeChunk"> | string
-  chunkIndex?: Prisma.IntFilter<"KnowledgeChunk"> | number
-  heading?: Prisma.StringNullableFilter<"KnowledgeChunk"> | string | null
-  content?: Prisma.StringFilter<"KnowledgeChunk"> | string
-  tokenCount?: Prisma.IntFilter<"KnowledgeChunk"> | number
-  metadata?: Prisma.JsonNullableFilter<"KnowledgeChunk">
-  embeddingRef?: Prisma.StringNullableFilter<"KnowledgeChunk"> | string | null
-  vectorId?: Prisma.StringNullableFilter<"KnowledgeChunk"> | string | null
-  enabled?: Prisma.BoolFilter<"KnowledgeChunk"> | boolean
-  createdAt?: Prisma.DateTimeFilter<"KnowledgeChunk"> | Date | string
-  updatedAt?: Prisma.DateTimeFilter<"KnowledgeChunk"> | Date | string
-}
-
 export type KnowledgeChunkCreateWithoutRetrievalCandidatesInput = {
   id?: string
   chunkIndex: number
@@ -783,11 +922,13 @@ export type KnowledgeChunkCreateWithoutRetrievalCandidatesInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   document: Prisma.KnowledgeDocumentCreateNestedOneWithoutChunksInput
+  customer: Prisma.CustomerCreateNestedOneWithoutKnowledgeChunksInput
   evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutChunkInput
 }
 
 export type KnowledgeChunkUncheckedCreateWithoutRetrievalCandidatesInput = {
   id?: string
+  customerId: string
   documentId: string
   chunkIndex: number
   heading?: string | null
@@ -831,10 +972,60 @@ export type KnowledgeChunkUpdateWithoutRetrievalCandidatesInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   document?: Prisma.KnowledgeDocumentUpdateOneRequiredWithoutChunksNestedInput
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutKnowledgeChunksNestedInput
   evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutChunkNestedInput
 }
 
 export type KnowledgeChunkUncheckedUpdateWithoutRetrievalCandidatesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  documentId?: Prisma.StringFieldUpdateOperationsInput | string
+  chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
+  heading?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  tokenCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  vectorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  evidenceRefs?: Prisma.EvidenceRefUncheckedUpdateManyWithoutChunkNestedInput
+}
+
+export type KnowledgeChunkCreateManyCustomerInput = {
+  id?: string
+  documentId: string
+  chunkIndex: number
+  heading?: string | null
+  content: string
+  tokenCount: number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingRef?: string | null
+  vectorId?: string | null
+  enabled?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type KnowledgeChunkUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
+  heading?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  tokenCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  vectorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  document?: Prisma.KnowledgeDocumentUpdateOneRequiredWithoutChunksNestedInput
+  evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutChunkNestedInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUpdateManyWithoutChunkNestedInput
+}
+
+export type KnowledgeChunkUncheckedUpdateWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   documentId?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
@@ -848,6 +1039,22 @@ export type KnowledgeChunkUncheckedUpdateWithoutRetrievalCandidatesInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evidenceRefs?: Prisma.EvidenceRefUncheckedUpdateManyWithoutChunkNestedInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUncheckedUpdateManyWithoutChunkNestedInput
+}
+
+export type KnowledgeChunkUncheckedUpdateManyWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  documentId?: Prisma.StringFieldUpdateOperationsInput | string
+  chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
+  heading?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  tokenCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  vectorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type KnowledgeChunkCreateManyDocumentInput = {
@@ -876,6 +1083,7 @@ export type KnowledgeChunkUpdateWithoutDocumentInput = {
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutKnowledgeChunksNestedInput
   evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutChunkNestedInput
   retrievalCandidates?: Prisma.RetrievalCandidateUpdateManyWithoutChunkNestedInput
 }
@@ -952,6 +1160,7 @@ export type KnowledgeChunkCountOutputTypeCountRetrievalCandidatesArgs<ExtArgs ex
 
 export type KnowledgeChunkSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   documentId?: boolean
   chunkIndex?: boolean
   heading?: boolean
@@ -964,6 +1173,7 @@ export type KnowledgeChunkSelect<ExtArgs extends runtime.Types.Extensions.Intern
   createdAt?: boolean
   updatedAt?: boolean
   document?: boolean | Prisma.KnowledgeDocumentDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   evidenceRefs?: boolean | Prisma.KnowledgeChunk$evidenceRefsArgs<ExtArgs>
   retrievalCandidates?: boolean | Prisma.KnowledgeChunk$retrievalCandidatesArgs<ExtArgs>
   _count?: boolean | Prisma.KnowledgeChunkCountOutputTypeDefaultArgs<ExtArgs>
@@ -971,6 +1181,7 @@ export type KnowledgeChunkSelect<ExtArgs extends runtime.Types.Extensions.Intern
 
 export type KnowledgeChunkSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   documentId?: boolean
   chunkIndex?: boolean
   heading?: boolean
@@ -983,10 +1194,12 @@ export type KnowledgeChunkSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   createdAt?: boolean
   updatedAt?: boolean
   document?: boolean | Prisma.KnowledgeDocumentDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["knowledgeChunk"]>
 
 export type KnowledgeChunkSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   documentId?: boolean
   chunkIndex?: boolean
   heading?: boolean
@@ -999,10 +1212,12 @@ export type KnowledgeChunkSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   createdAt?: boolean
   updatedAt?: boolean
   document?: boolean | Prisma.KnowledgeDocumentDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["knowledgeChunk"]>
 
 export type KnowledgeChunkSelectScalar = {
   id?: boolean
+  customerId?: boolean
   documentId?: boolean
   chunkIndex?: boolean
   heading?: boolean
@@ -1016,29 +1231,34 @@ export type KnowledgeChunkSelectScalar = {
   updatedAt?: boolean
 }
 
-export type KnowledgeChunkOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "documentId" | "chunkIndex" | "heading" | "content" | "tokenCount" | "metadata" | "embeddingRef" | "vectorId" | "enabled" | "createdAt" | "updatedAt", ExtArgs["result"]["knowledgeChunk"]>
+export type KnowledgeChunkOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "documentId" | "chunkIndex" | "heading" | "content" | "tokenCount" | "metadata" | "embeddingRef" | "vectorId" | "enabled" | "createdAt" | "updatedAt", ExtArgs["result"]["knowledgeChunk"]>
 export type KnowledgeChunkInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   document?: boolean | Prisma.KnowledgeDocumentDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   evidenceRefs?: boolean | Prisma.KnowledgeChunk$evidenceRefsArgs<ExtArgs>
   retrievalCandidates?: boolean | Prisma.KnowledgeChunk$retrievalCandidatesArgs<ExtArgs>
   _count?: boolean | Prisma.KnowledgeChunkCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type KnowledgeChunkIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   document?: boolean | Prisma.KnowledgeDocumentDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }
 export type KnowledgeChunkIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   document?: boolean | Prisma.KnowledgeDocumentDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }
 
 export type $KnowledgeChunkPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "KnowledgeChunk"
   objects: {
     document: Prisma.$KnowledgeDocumentPayload<ExtArgs>
+    customer: Prisma.$CustomerPayload<ExtArgs>
     evidenceRefs: Prisma.$EvidenceRefPayload<ExtArgs>[]
     retrievalCandidates: Prisma.$RetrievalCandidatePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     documentId: string
     chunkIndex: number
     heading: string | null
@@ -1445,6 +1665,7 @@ readonly fields: KnowledgeChunkFieldRefs;
 export interface Prisma__KnowledgeChunkClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   document<T extends Prisma.KnowledgeDocumentDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.KnowledgeDocumentDefaultArgs<ExtArgs>>): Prisma.Prisma__KnowledgeDocumentClient<runtime.Types.Result.GetResult<Prisma.$KnowledgeDocumentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   evidenceRefs<T extends Prisma.KnowledgeChunk$evidenceRefsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.KnowledgeChunk$evidenceRefsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvidenceRefPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   retrievalCandidates<T extends Prisma.KnowledgeChunk$retrievalCandidatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.KnowledgeChunk$retrievalCandidatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RetrievalCandidatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -1477,6 +1698,7 @@ export interface Prisma__KnowledgeChunkClient<T, Null = never, ExtArgs extends r
  */
 export interface KnowledgeChunkFieldRefs {
   readonly id: Prisma.FieldRef<"KnowledgeChunk", 'String'>
+  readonly customerId: Prisma.FieldRef<"KnowledgeChunk", 'String'>
   readonly documentId: Prisma.FieldRef<"KnowledgeChunk", 'String'>
   readonly chunkIndex: Prisma.FieldRef<"KnowledgeChunk", 'Int'>
   readonly heading: Prisma.FieldRef<"KnowledgeChunk", 'String'>

@@ -18,6 +18,11 @@ export { Prisma }
 export * as $Enums from './enums'
 export * from './enums';
 /**
+ * Model Customer
+ * 
+ */
+export type Customer = Prisma.CustomerModel
+/**
  * Model AssistantSession
  * 
  */
@@ -57,6 +62,11 @@ export type GroundingCheck = Prisma.GroundingCheckModel
  * 
  */
 export type ToolDefinition = Prisma.ToolDefinitionModel
+/**
+ * Model CustomerToolPolicy
+ * 
+ */
+export type CustomerToolPolicy = Prisma.CustomerToolPolicyModel
 /**
  * Model ToolCall
  * 

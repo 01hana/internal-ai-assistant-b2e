@@ -26,36 +26,44 @@ export type AggregateKnowledgeDocument = {
 
 export type KnowledgeDocumentMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   title: string | null
   sourceType: $Enums.KnowledgeSourceType | null
   sourceKey: string | null
   version: string | null
   language: string | null
   status: $Enums.KnowledgeDocumentStatus | null
+  visibility: $Enums.KnowledgeVisibility | null
   createdAt: Date | null
   updatedAt: Date | null
 }
 
 export type KnowledgeDocumentMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   title: string | null
   sourceType: $Enums.KnowledgeSourceType | null
   sourceKey: string | null
   version: string | null
   language: string | null
   status: $Enums.KnowledgeDocumentStatus | null
+  visibility: $Enums.KnowledgeVisibility | null
   createdAt: Date | null
   updatedAt: Date | null
 }
 
 export type KnowledgeDocumentCountAggregateOutputType = {
   id: number
+  customerId: number
   title: number
   sourceType: number
   sourceKey: number
   version: number
   language: number
   status: number
+  visibility: number
+  organizationIds: number
+  requiredPermissionScopes: number
   metadata: number
   createdAt: number
   updatedAt: number
@@ -65,36 +73,44 @@ export type KnowledgeDocumentCountAggregateOutputType = {
 
 export type KnowledgeDocumentMinAggregateInputType = {
   id?: true
+  customerId?: true
   title?: true
   sourceType?: true
   sourceKey?: true
   version?: true
   language?: true
   status?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
 }
 
 export type KnowledgeDocumentMaxAggregateInputType = {
   id?: true
+  customerId?: true
   title?: true
   sourceType?: true
   sourceKey?: true
   version?: true
   language?: true
   status?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
 }
 
 export type KnowledgeDocumentCountAggregateInputType = {
   id?: true
+  customerId?: true
   title?: true
   sourceType?: true
   sourceKey?: true
   version?: true
   language?: true
   status?: true
+  visibility?: true
+  organizationIds?: true
+  requiredPermissionScopes?: true
   metadata?: true
   createdAt?: true
   updatedAt?: true
@@ -175,12 +191,16 @@ export type KnowledgeDocumentGroupByArgs<ExtArgs extends runtime.Types.Extension
 
 export type KnowledgeDocumentGroupByOutputType = {
   id: string
+  customerId: string
   title: string
   sourceType: $Enums.KnowledgeSourceType
   sourceKey: string
   version: string
   language: string
   status: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds: string[]
+  requiredPermissionScopes: string[]
   metadata: runtime.JsonValue | null
   createdAt: Date
   updatedAt: Date
@@ -209,61 +229,81 @@ export type KnowledgeDocumentWhereInput = {
   OR?: Prisma.KnowledgeDocumentWhereInput[]
   NOT?: Prisma.KnowledgeDocumentWhereInput | Prisma.KnowledgeDocumentWhereInput[]
   id?: Prisma.StringFilter<"KnowledgeDocument"> | string
+  customerId?: Prisma.StringFilter<"KnowledgeDocument"> | string
   title?: Prisma.StringFilter<"KnowledgeDocument"> | string
   sourceType?: Prisma.EnumKnowledgeSourceTypeFilter<"KnowledgeDocument"> | $Enums.KnowledgeSourceType
   sourceKey?: Prisma.StringFilter<"KnowledgeDocument"> | string
   version?: Prisma.StringFilter<"KnowledgeDocument"> | string
   language?: Prisma.StringFilter<"KnowledgeDocument"> | string
   status?: Prisma.EnumKnowledgeDocumentStatusFilter<"KnowledgeDocument"> | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFilter<"KnowledgeDocument"> | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.StringNullableListFilter<"KnowledgeDocument">
+  requiredPermissionScopes?: Prisma.StringNullableListFilter<"KnowledgeDocument">
   metadata?: Prisma.JsonNullableFilter<"KnowledgeDocument">
   createdAt?: Prisma.DateTimeFilter<"KnowledgeDocument"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"KnowledgeDocument"> | Date | string
   chunks?: Prisma.KnowledgeChunkListRelationFilter
   evidenceRefs?: Prisma.EvidenceRefListRelationFilter
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
 }
 
 export type KnowledgeDocumentOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   sourceType?: Prisma.SortOrder
   sourceKey?: Prisma.SortOrder
   version?: Prisma.SortOrder
   language?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
+  organizationIds?: Prisma.SortOrder
+  requiredPermissionScopes?: Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   chunks?: Prisma.KnowledgeChunkOrderByRelationAggregateInput
   evidenceRefs?: Prisma.EvidenceRefOrderByRelationAggregateInput
+  customer?: Prisma.CustomerOrderByWithRelationInput
 }
 
 export type KnowledgeDocumentWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  sourceKey_version?: Prisma.KnowledgeDocumentSourceKeyVersionCompoundUniqueInput
+  customerId_sourceKey_version?: Prisma.KnowledgeDocumentCustomerIdSourceKeyVersionCompoundUniqueInput
+  customerId_id?: Prisma.KnowledgeDocumentCustomerIdIdCompoundUniqueInput
   AND?: Prisma.KnowledgeDocumentWhereInput | Prisma.KnowledgeDocumentWhereInput[]
   OR?: Prisma.KnowledgeDocumentWhereInput[]
   NOT?: Prisma.KnowledgeDocumentWhereInput | Prisma.KnowledgeDocumentWhereInput[]
+  customerId?: Prisma.StringFilter<"KnowledgeDocument"> | string
   title?: Prisma.StringFilter<"KnowledgeDocument"> | string
   sourceType?: Prisma.EnumKnowledgeSourceTypeFilter<"KnowledgeDocument"> | $Enums.KnowledgeSourceType
   sourceKey?: Prisma.StringFilter<"KnowledgeDocument"> | string
   version?: Prisma.StringFilter<"KnowledgeDocument"> | string
   language?: Prisma.StringFilter<"KnowledgeDocument"> | string
   status?: Prisma.EnumKnowledgeDocumentStatusFilter<"KnowledgeDocument"> | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFilter<"KnowledgeDocument"> | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.StringNullableListFilter<"KnowledgeDocument">
+  requiredPermissionScopes?: Prisma.StringNullableListFilter<"KnowledgeDocument">
   metadata?: Prisma.JsonNullableFilter<"KnowledgeDocument">
   createdAt?: Prisma.DateTimeFilter<"KnowledgeDocument"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"KnowledgeDocument"> | Date | string
   chunks?: Prisma.KnowledgeChunkListRelationFilter
   evidenceRefs?: Prisma.EvidenceRefListRelationFilter
-}, "id" | "sourceKey_version">
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
+}, "id" | "customerId_sourceKey_version" | "customerId_id">
 
 export type KnowledgeDocumentOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   sourceType?: Prisma.SortOrder
   sourceKey?: Prisma.SortOrder
   version?: Prisma.SortOrder
   language?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
+  organizationIds?: Prisma.SortOrder
+  requiredPermissionScopes?: Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -277,12 +317,16 @@ export type KnowledgeDocumentScalarWhereWithAggregatesInput = {
   OR?: Prisma.KnowledgeDocumentScalarWhereWithAggregatesInput[]
   NOT?: Prisma.KnowledgeDocumentScalarWhereWithAggregatesInput | Prisma.KnowledgeDocumentScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"KnowledgeDocument"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"KnowledgeDocument"> | string
   title?: Prisma.StringWithAggregatesFilter<"KnowledgeDocument"> | string
   sourceType?: Prisma.EnumKnowledgeSourceTypeWithAggregatesFilter<"KnowledgeDocument"> | $Enums.KnowledgeSourceType
   sourceKey?: Prisma.StringWithAggregatesFilter<"KnowledgeDocument"> | string
   version?: Prisma.StringWithAggregatesFilter<"KnowledgeDocument"> | string
   language?: Prisma.StringWithAggregatesFilter<"KnowledgeDocument"> | string
   status?: Prisma.EnumKnowledgeDocumentStatusWithAggregatesFilter<"KnowledgeDocument"> | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityWithAggregatesFilter<"KnowledgeDocument"> | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.StringNullableListFilter<"KnowledgeDocument">
+  requiredPermissionScopes?: Prisma.StringNullableListFilter<"KnowledgeDocument">
   metadata?: Prisma.JsonNullableWithAggregatesFilter<"KnowledgeDocument">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"KnowledgeDocument"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"KnowledgeDocument"> | Date | string
@@ -296,21 +340,29 @@ export type KnowledgeDocumentCreateInput = {
   version: string
   language: string
   status?: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentCreateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentCreaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   chunks?: Prisma.KnowledgeChunkCreateNestedManyWithoutDocumentInput
   evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutDocumentInput
+  customer: Prisma.CustomerCreateNestedOneWithoutKnowledgeDocumentsInput
 }
 
 export type KnowledgeDocumentUncheckedCreateInput = {
   id?: string
+  customerId: string
   title: string
   sourceType: $Enums.KnowledgeSourceType
   sourceKey: string
   version: string
   language: string
   status?: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentCreateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentCreaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -326,21 +378,29 @@ export type KnowledgeDocumentUpdateInput = {
   version?: Prisma.StringFieldUpdateOperationsInput | string
   language?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   chunks?: Prisma.KnowledgeChunkUpdateManyWithoutDocumentNestedInput
   evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutDocumentNestedInput
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutKnowledgeDocumentsNestedInput
 }
 
 export type KnowledgeDocumentUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   sourceType?: Prisma.EnumKnowledgeSourceTypeFieldUpdateOperationsInput | $Enums.KnowledgeSourceType
   sourceKey?: Prisma.StringFieldUpdateOperationsInput | string
   version?: Prisma.StringFieldUpdateOperationsInput | string
   language?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -350,12 +410,16 @@ export type KnowledgeDocumentUncheckedUpdateInput = {
 
 export type KnowledgeDocumentCreateManyInput = {
   id?: string
+  customerId: string
   title: string
   sourceType: $Enums.KnowledgeSourceType
   sourceKey: string
   version: string
   language: string
   status?: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentCreateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentCreaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -369,6 +433,9 @@ export type KnowledgeDocumentUpdateManyMutationInput = {
   version?: Prisma.StringFieldUpdateOperationsInput | string
   language?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -376,15 +443,29 @@ export type KnowledgeDocumentUpdateManyMutationInput = {
 
 export type KnowledgeDocumentUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   sourceType?: Prisma.EnumKnowledgeSourceTypeFieldUpdateOperationsInput | $Enums.KnowledgeSourceType
   sourceKey?: Prisma.StringFieldUpdateOperationsInput | string
   version?: Prisma.StringFieldUpdateOperationsInput | string
   language?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type KnowledgeDocumentListRelationFilter = {
+  every?: Prisma.KnowledgeDocumentWhereInput
+  some?: Prisma.KnowledgeDocumentWhereInput
+  none?: Prisma.KnowledgeDocumentWhereInput
+}
+
+export type KnowledgeDocumentOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type KnowledgeDocumentNullableScalarRelationFilter = {
@@ -392,19 +473,29 @@ export type KnowledgeDocumentNullableScalarRelationFilter = {
   isNot?: Prisma.KnowledgeDocumentWhereInput | null
 }
 
-export type KnowledgeDocumentSourceKeyVersionCompoundUniqueInput = {
+export type KnowledgeDocumentCustomerIdSourceKeyVersionCompoundUniqueInput = {
+  customerId: string
   sourceKey: string
   version: string
 }
 
+export type KnowledgeDocumentCustomerIdIdCompoundUniqueInput = {
+  customerId: string
+  id: string
+}
+
 export type KnowledgeDocumentCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   sourceType?: Prisma.SortOrder
   sourceKey?: Prisma.SortOrder
   version?: Prisma.SortOrder
   language?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
+  organizationIds?: Prisma.SortOrder
+  requiredPermissionScopes?: Prisma.SortOrder
   metadata?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -412,24 +503,28 @@ export type KnowledgeDocumentCountOrderByAggregateInput = {
 
 export type KnowledgeDocumentMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   sourceType?: Prisma.SortOrder
   sourceKey?: Prisma.SortOrder
   version?: Prisma.SortOrder
   language?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type KnowledgeDocumentMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   sourceType?: Prisma.SortOrder
   sourceKey?: Prisma.SortOrder
   version?: Prisma.SortOrder
   language?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -437,6 +532,48 @@ export type KnowledgeDocumentMinOrderByAggregateInput = {
 export type KnowledgeDocumentScalarRelationFilter = {
   is?: Prisma.KnowledgeDocumentWhereInput
   isNot?: Prisma.KnowledgeDocumentWhereInput
+}
+
+export type KnowledgeDocumentCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.KnowledgeDocumentCreateWithoutCustomerInput, Prisma.KnowledgeDocumentUncheckedCreateWithoutCustomerInput> | Prisma.KnowledgeDocumentCreateWithoutCustomerInput[] | Prisma.KnowledgeDocumentUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.KnowledgeDocumentCreateOrConnectWithoutCustomerInput | Prisma.KnowledgeDocumentCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.KnowledgeDocumentCreateManyCustomerInputEnvelope
+  connect?: Prisma.KnowledgeDocumentWhereUniqueInput | Prisma.KnowledgeDocumentWhereUniqueInput[]
+}
+
+export type KnowledgeDocumentUncheckedCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.KnowledgeDocumentCreateWithoutCustomerInput, Prisma.KnowledgeDocumentUncheckedCreateWithoutCustomerInput> | Prisma.KnowledgeDocumentCreateWithoutCustomerInput[] | Prisma.KnowledgeDocumentUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.KnowledgeDocumentCreateOrConnectWithoutCustomerInput | Prisma.KnowledgeDocumentCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.KnowledgeDocumentCreateManyCustomerInputEnvelope
+  connect?: Prisma.KnowledgeDocumentWhereUniqueInput | Prisma.KnowledgeDocumentWhereUniqueInput[]
+}
+
+export type KnowledgeDocumentUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.KnowledgeDocumentCreateWithoutCustomerInput, Prisma.KnowledgeDocumentUncheckedCreateWithoutCustomerInput> | Prisma.KnowledgeDocumentCreateWithoutCustomerInput[] | Prisma.KnowledgeDocumentUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.KnowledgeDocumentCreateOrConnectWithoutCustomerInput | Prisma.KnowledgeDocumentCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.KnowledgeDocumentUpsertWithWhereUniqueWithoutCustomerInput | Prisma.KnowledgeDocumentUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.KnowledgeDocumentCreateManyCustomerInputEnvelope
+  set?: Prisma.KnowledgeDocumentWhereUniqueInput | Prisma.KnowledgeDocumentWhereUniqueInput[]
+  disconnect?: Prisma.KnowledgeDocumentWhereUniqueInput | Prisma.KnowledgeDocumentWhereUniqueInput[]
+  delete?: Prisma.KnowledgeDocumentWhereUniqueInput | Prisma.KnowledgeDocumentWhereUniqueInput[]
+  connect?: Prisma.KnowledgeDocumentWhereUniqueInput | Prisma.KnowledgeDocumentWhereUniqueInput[]
+  update?: Prisma.KnowledgeDocumentUpdateWithWhereUniqueWithoutCustomerInput | Prisma.KnowledgeDocumentUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.KnowledgeDocumentUpdateManyWithWhereWithoutCustomerInput | Prisma.KnowledgeDocumentUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.KnowledgeDocumentScalarWhereInput | Prisma.KnowledgeDocumentScalarWhereInput[]
+}
+
+export type KnowledgeDocumentUncheckedUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.KnowledgeDocumentCreateWithoutCustomerInput, Prisma.KnowledgeDocumentUncheckedCreateWithoutCustomerInput> | Prisma.KnowledgeDocumentCreateWithoutCustomerInput[] | Prisma.KnowledgeDocumentUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.KnowledgeDocumentCreateOrConnectWithoutCustomerInput | Prisma.KnowledgeDocumentCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.KnowledgeDocumentUpsertWithWhereUniqueWithoutCustomerInput | Prisma.KnowledgeDocumentUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.KnowledgeDocumentCreateManyCustomerInputEnvelope
+  set?: Prisma.KnowledgeDocumentWhereUniqueInput | Prisma.KnowledgeDocumentWhereUniqueInput[]
+  disconnect?: Prisma.KnowledgeDocumentWhereUniqueInput | Prisma.KnowledgeDocumentWhereUniqueInput[]
+  delete?: Prisma.KnowledgeDocumentWhereUniqueInput | Prisma.KnowledgeDocumentWhereUniqueInput[]
+  connect?: Prisma.KnowledgeDocumentWhereUniqueInput | Prisma.KnowledgeDocumentWhereUniqueInput[]
+  update?: Prisma.KnowledgeDocumentUpdateWithWhereUniqueWithoutCustomerInput | Prisma.KnowledgeDocumentUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.KnowledgeDocumentUpdateManyWithWhereWithoutCustomerInput | Prisma.KnowledgeDocumentUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.KnowledgeDocumentScalarWhereInput | Prisma.KnowledgeDocumentScalarWhereInput[]
 }
 
 export type KnowledgeDocumentCreateNestedOneWithoutEvidenceRefsInput = {
@@ -455,12 +592,34 @@ export type KnowledgeDocumentUpdateOneWithoutEvidenceRefsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.KnowledgeDocumentUpdateToOneWithWhereWithoutEvidenceRefsInput, Prisma.KnowledgeDocumentUpdateWithoutEvidenceRefsInput>, Prisma.KnowledgeDocumentUncheckedUpdateWithoutEvidenceRefsInput>
 }
 
+export type KnowledgeDocumentCreateorganizationIdsInput = {
+  set: string[]
+}
+
+export type KnowledgeDocumentCreaterequiredPermissionScopesInput = {
+  set: string[]
+}
+
 export type EnumKnowledgeSourceTypeFieldUpdateOperationsInput = {
   set?: $Enums.KnowledgeSourceType
 }
 
 export type EnumKnowledgeDocumentStatusFieldUpdateOperationsInput = {
   set?: $Enums.KnowledgeDocumentStatus
+}
+
+export type EnumKnowledgeVisibilityFieldUpdateOperationsInput = {
+  set?: $Enums.KnowledgeVisibility
+}
+
+export type KnowledgeDocumentUpdateorganizationIdsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type KnowledgeDocumentUpdaterequiredPermissionScopesInput = {
+  set?: string[]
+  push?: string | string[]
 }
 
 export type KnowledgeDocumentCreateNestedOneWithoutChunksInput = {
@@ -477,6 +636,88 @@ export type KnowledgeDocumentUpdateOneRequiredWithoutChunksNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.KnowledgeDocumentUpdateToOneWithWhereWithoutChunksInput, Prisma.KnowledgeDocumentUpdateWithoutChunksInput>, Prisma.KnowledgeDocumentUncheckedUpdateWithoutChunksInput>
 }
 
+export type KnowledgeDocumentCreateWithoutCustomerInput = {
+  id?: string
+  title: string
+  sourceType: $Enums.KnowledgeSourceType
+  sourceKey: string
+  version: string
+  language: string
+  status?: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentCreateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentCreaterequiredPermissionScopesInput | string[]
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  chunks?: Prisma.KnowledgeChunkCreateNestedManyWithoutDocumentInput
+  evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutDocumentInput
+}
+
+export type KnowledgeDocumentUncheckedCreateWithoutCustomerInput = {
+  id?: string
+  title: string
+  sourceType: $Enums.KnowledgeSourceType
+  sourceKey: string
+  version: string
+  language: string
+  status?: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentCreateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentCreaterequiredPermissionScopesInput | string[]
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  chunks?: Prisma.KnowledgeChunkUncheckedCreateNestedManyWithoutDocumentInput
+  evidenceRefs?: Prisma.EvidenceRefUncheckedCreateNestedManyWithoutDocumentInput
+}
+
+export type KnowledgeDocumentCreateOrConnectWithoutCustomerInput = {
+  where: Prisma.KnowledgeDocumentWhereUniqueInput
+  create: Prisma.XOR<Prisma.KnowledgeDocumentCreateWithoutCustomerInput, Prisma.KnowledgeDocumentUncheckedCreateWithoutCustomerInput>
+}
+
+export type KnowledgeDocumentCreateManyCustomerInputEnvelope = {
+  data: Prisma.KnowledgeDocumentCreateManyCustomerInput | Prisma.KnowledgeDocumentCreateManyCustomerInput[]
+  skipDuplicates?: boolean
+}
+
+export type KnowledgeDocumentUpsertWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.KnowledgeDocumentWhereUniqueInput
+  update: Prisma.XOR<Prisma.KnowledgeDocumentUpdateWithoutCustomerInput, Prisma.KnowledgeDocumentUncheckedUpdateWithoutCustomerInput>
+  create: Prisma.XOR<Prisma.KnowledgeDocumentCreateWithoutCustomerInput, Prisma.KnowledgeDocumentUncheckedCreateWithoutCustomerInput>
+}
+
+export type KnowledgeDocumentUpdateWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.KnowledgeDocumentWhereUniqueInput
+  data: Prisma.XOR<Prisma.KnowledgeDocumentUpdateWithoutCustomerInput, Prisma.KnowledgeDocumentUncheckedUpdateWithoutCustomerInput>
+}
+
+export type KnowledgeDocumentUpdateManyWithWhereWithoutCustomerInput = {
+  where: Prisma.KnowledgeDocumentScalarWhereInput
+  data: Prisma.XOR<Prisma.KnowledgeDocumentUpdateManyMutationInput, Prisma.KnowledgeDocumentUncheckedUpdateManyWithoutCustomerInput>
+}
+
+export type KnowledgeDocumentScalarWhereInput = {
+  AND?: Prisma.KnowledgeDocumentScalarWhereInput | Prisma.KnowledgeDocumentScalarWhereInput[]
+  OR?: Prisma.KnowledgeDocumentScalarWhereInput[]
+  NOT?: Prisma.KnowledgeDocumentScalarWhereInput | Prisma.KnowledgeDocumentScalarWhereInput[]
+  id?: Prisma.StringFilter<"KnowledgeDocument"> | string
+  customerId?: Prisma.StringFilter<"KnowledgeDocument"> | string
+  title?: Prisma.StringFilter<"KnowledgeDocument"> | string
+  sourceType?: Prisma.EnumKnowledgeSourceTypeFilter<"KnowledgeDocument"> | $Enums.KnowledgeSourceType
+  sourceKey?: Prisma.StringFilter<"KnowledgeDocument"> | string
+  version?: Prisma.StringFilter<"KnowledgeDocument"> | string
+  language?: Prisma.StringFilter<"KnowledgeDocument"> | string
+  status?: Prisma.EnumKnowledgeDocumentStatusFilter<"KnowledgeDocument"> | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFilter<"KnowledgeDocument"> | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.StringNullableListFilter<"KnowledgeDocument">
+  requiredPermissionScopes?: Prisma.StringNullableListFilter<"KnowledgeDocument">
+  metadata?: Prisma.JsonNullableFilter<"KnowledgeDocument">
+  createdAt?: Prisma.DateTimeFilter<"KnowledgeDocument"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"KnowledgeDocument"> | Date | string
+}
+
 export type KnowledgeDocumentCreateWithoutEvidenceRefsInput = {
   id?: string
   title: string
@@ -485,20 +726,28 @@ export type KnowledgeDocumentCreateWithoutEvidenceRefsInput = {
   version: string
   language: string
   status?: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentCreateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentCreaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   chunks?: Prisma.KnowledgeChunkCreateNestedManyWithoutDocumentInput
+  customer: Prisma.CustomerCreateNestedOneWithoutKnowledgeDocumentsInput
 }
 
 export type KnowledgeDocumentUncheckedCreateWithoutEvidenceRefsInput = {
   id?: string
+  customerId: string
   title: string
   sourceType: $Enums.KnowledgeSourceType
   sourceKey: string
   version: string
   language: string
   status?: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentCreateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentCreaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -529,20 +778,28 @@ export type KnowledgeDocumentUpdateWithoutEvidenceRefsInput = {
   version?: Prisma.StringFieldUpdateOperationsInput | string
   language?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   chunks?: Prisma.KnowledgeChunkUpdateManyWithoutDocumentNestedInput
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutKnowledgeDocumentsNestedInput
 }
 
 export type KnowledgeDocumentUncheckedUpdateWithoutEvidenceRefsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   sourceType?: Prisma.EnumKnowledgeSourceTypeFieldUpdateOperationsInput | $Enums.KnowledgeSourceType
   sourceKey?: Prisma.StringFieldUpdateOperationsInput | string
   version?: Prisma.StringFieldUpdateOperationsInput | string
   language?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -557,20 +814,28 @@ export type KnowledgeDocumentCreateWithoutChunksInput = {
   version: string
   language: string
   status?: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentCreateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentCreaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutDocumentInput
+  customer: Prisma.CustomerCreateNestedOneWithoutKnowledgeDocumentsInput
 }
 
 export type KnowledgeDocumentUncheckedCreateWithoutChunksInput = {
   id?: string
+  customerId: string
   title: string
   sourceType: $Enums.KnowledgeSourceType
   sourceKey: string
   version: string
   language: string
   status?: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentCreateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentCreaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -601,13 +866,51 @@ export type KnowledgeDocumentUpdateWithoutChunksInput = {
   version?: Prisma.StringFieldUpdateOperationsInput | string
   language?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutDocumentNestedInput
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutKnowledgeDocumentsNestedInput
 }
 
 export type KnowledgeDocumentUncheckedUpdateWithoutChunksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceType?: Prisma.EnumKnowledgeSourceTypeFieldUpdateOperationsInput | $Enums.KnowledgeSourceType
+  sourceKey?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.StringFieldUpdateOperationsInput | string
+  language?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  evidenceRefs?: Prisma.EvidenceRefUncheckedUpdateManyWithoutDocumentNestedInput
+}
+
+export type KnowledgeDocumentCreateManyCustomerInput = {
+  id?: string
+  title: string
+  sourceType: $Enums.KnowledgeSourceType
+  sourceKey: string
+  version: string
+  language: string
+  status?: $Enums.KnowledgeDocumentStatus
+  visibility: $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentCreateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentCreaterequiredPermissionScopesInput | string[]
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type KnowledgeDocumentUpdateWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   sourceType?: Prisma.EnumKnowledgeSourceTypeFieldUpdateOperationsInput | $Enums.KnowledgeSourceType
@@ -615,10 +918,48 @@ export type KnowledgeDocumentUncheckedUpdateWithoutChunksInput = {
   version?: Prisma.StringFieldUpdateOperationsInput | string
   language?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  chunks?: Prisma.KnowledgeChunkUpdateManyWithoutDocumentNestedInput
+  evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutDocumentNestedInput
+}
+
+export type KnowledgeDocumentUncheckedUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceType?: Prisma.EnumKnowledgeSourceTypeFieldUpdateOperationsInput | $Enums.KnowledgeSourceType
+  sourceKey?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.StringFieldUpdateOperationsInput | string
+  language?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  chunks?: Prisma.KnowledgeChunkUncheckedUpdateManyWithoutDocumentNestedInput
   evidenceRefs?: Prisma.EvidenceRefUncheckedUpdateManyWithoutDocumentNestedInput
+}
+
+export type KnowledgeDocumentUncheckedUpdateManyWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceType?: Prisma.EnumKnowledgeSourceTypeFieldUpdateOperationsInput | $Enums.KnowledgeSourceType
+  sourceKey?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.StringFieldUpdateOperationsInput | string
+  language?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumKnowledgeDocumentStatusFieldUpdateOperationsInput | $Enums.KnowledgeDocumentStatus
+  visibility?: Prisma.EnumKnowledgeVisibilityFieldUpdateOperationsInput | $Enums.KnowledgeVisibility
+  organizationIds?: Prisma.KnowledgeDocumentUpdateorganizationIdsInput | string[]
+  requiredPermissionScopes?: Prisma.KnowledgeDocumentUpdaterequiredPermissionScopesInput | string[]
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -663,82 +1004,111 @@ export type KnowledgeDocumentCountOutputTypeCountEvidenceRefsArgs<ExtArgs extend
 
 export type KnowledgeDocumentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   title?: boolean
   sourceType?: boolean
   sourceKey?: boolean
   version?: boolean
   language?: boolean
   status?: boolean
+  visibility?: boolean
+  organizationIds?: boolean
+  requiredPermissionScopes?: boolean
   metadata?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   chunks?: boolean | Prisma.KnowledgeDocument$chunksArgs<ExtArgs>
   evidenceRefs?: boolean | Prisma.KnowledgeDocument$evidenceRefsArgs<ExtArgs>
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   _count?: boolean | Prisma.KnowledgeDocumentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["knowledgeDocument"]>
 
 export type KnowledgeDocumentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   title?: boolean
   sourceType?: boolean
   sourceKey?: boolean
   version?: boolean
   language?: boolean
   status?: boolean
+  visibility?: boolean
+  organizationIds?: boolean
+  requiredPermissionScopes?: boolean
   metadata?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["knowledgeDocument"]>
 
 export type KnowledgeDocumentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   title?: boolean
   sourceType?: boolean
   sourceKey?: boolean
   version?: boolean
   language?: boolean
   status?: boolean
+  visibility?: boolean
+  organizationIds?: boolean
+  requiredPermissionScopes?: boolean
   metadata?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["knowledgeDocument"]>
 
 export type KnowledgeDocumentSelectScalar = {
   id?: boolean
+  customerId?: boolean
   title?: boolean
   sourceType?: boolean
   sourceKey?: boolean
   version?: boolean
   language?: boolean
   status?: boolean
+  visibility?: boolean
+  organizationIds?: boolean
+  requiredPermissionScopes?: boolean
   metadata?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type KnowledgeDocumentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "sourceType" | "sourceKey" | "version" | "language" | "status" | "metadata" | "createdAt" | "updatedAt", ExtArgs["result"]["knowledgeDocument"]>
+export type KnowledgeDocumentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "title" | "sourceType" | "sourceKey" | "version" | "language" | "status" | "visibility" | "organizationIds" | "requiredPermissionScopes" | "metadata" | "createdAt" | "updatedAt", ExtArgs["result"]["knowledgeDocument"]>
 export type KnowledgeDocumentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   chunks?: boolean | Prisma.KnowledgeDocument$chunksArgs<ExtArgs>
   evidenceRefs?: boolean | Prisma.KnowledgeDocument$evidenceRefsArgs<ExtArgs>
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   _count?: boolean | Prisma.KnowledgeDocumentCountOutputTypeDefaultArgs<ExtArgs>
 }
-export type KnowledgeDocumentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type KnowledgeDocumentIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type KnowledgeDocumentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
+}
+export type KnowledgeDocumentIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
+}
 
 export type $KnowledgeDocumentPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "KnowledgeDocument"
   objects: {
     chunks: Prisma.$KnowledgeChunkPayload<ExtArgs>[]
     evidenceRefs: Prisma.$EvidenceRefPayload<ExtArgs>[]
+    customer: Prisma.$CustomerPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     title: string
     sourceType: $Enums.KnowledgeSourceType
     sourceKey: string
     version: string
     language: string
     status: $Enums.KnowledgeDocumentStatus
+    visibility: $Enums.KnowledgeVisibility
+    organizationIds: string[]
+    requiredPermissionScopes: string[]
     metadata: runtime.JsonValue | null
     createdAt: Date
     updatedAt: Date
@@ -1138,6 +1508,7 @@ export interface Prisma__KnowledgeDocumentClient<T, Null = never, ExtArgs extend
   readonly [Symbol.toStringTag]: "PrismaPromise"
   chunks<T extends Prisma.KnowledgeDocument$chunksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.KnowledgeDocument$chunksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$KnowledgeChunkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   evidenceRefs<T extends Prisma.KnowledgeDocument$evidenceRefsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.KnowledgeDocument$evidenceRefsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvidenceRefPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1168,12 +1539,16 @@ export interface Prisma__KnowledgeDocumentClient<T, Null = never, ExtArgs extend
  */
 export interface KnowledgeDocumentFieldRefs {
   readonly id: Prisma.FieldRef<"KnowledgeDocument", 'String'>
+  readonly customerId: Prisma.FieldRef<"KnowledgeDocument", 'String'>
   readonly title: Prisma.FieldRef<"KnowledgeDocument", 'String'>
   readonly sourceType: Prisma.FieldRef<"KnowledgeDocument", 'KnowledgeSourceType'>
   readonly sourceKey: Prisma.FieldRef<"KnowledgeDocument", 'String'>
   readonly version: Prisma.FieldRef<"KnowledgeDocument", 'String'>
   readonly language: Prisma.FieldRef<"KnowledgeDocument", 'String'>
   readonly status: Prisma.FieldRef<"KnowledgeDocument", 'KnowledgeDocumentStatus'>
+  readonly visibility: Prisma.FieldRef<"KnowledgeDocument", 'KnowledgeVisibility'>
+  readonly organizationIds: Prisma.FieldRef<"KnowledgeDocument", 'String[]'>
+  readonly requiredPermissionScopes: Prisma.FieldRef<"KnowledgeDocument", 'String[]'>
   readonly metadata: Prisma.FieldRef<"KnowledgeDocument", 'Json'>
   readonly createdAt: Prisma.FieldRef<"KnowledgeDocument", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"KnowledgeDocument", 'DateTime'>
@@ -1431,6 +1806,10 @@ export type KnowledgeDocumentCreateManyAndReturnArgs<ExtArgs extends runtime.Typ
    */
   data: Prisma.KnowledgeDocumentCreateManyInput | Prisma.KnowledgeDocumentCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.KnowledgeDocumentIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1501,6 +1880,10 @@ export type KnowledgeDocumentUpdateManyAndReturnArgs<ExtArgs extends runtime.Typ
    * Limit how many KnowledgeDocuments to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.KnowledgeDocumentIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

@@ -8,6 +8,7 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/Customer'
 export type * from './models/AssistantSession'
 export type * from './models/AssistantMessage'
 export type * from './models/AssistantContextState'
@@ -16,6 +17,7 @@ export type * from './models/AnswerDecision'
 export type * from './models/ClarificationQuestion'
 export type * from './models/GroundingCheck'
 export type * from './models/ToolDefinition'
+export type * from './models/CustomerToolPolicy'
 export type * from './models/ToolCall'
 export type * from './models/EvidenceRef'
 export type * from './models/AuditEvent'

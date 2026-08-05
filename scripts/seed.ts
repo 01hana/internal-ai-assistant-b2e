@@ -2,57 +2,62 @@ import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { RiskLevel, ToolOperation } from '../src/generated/prisma/enums';
 import { createPrismaClient } from '../src/prisma/prisma-client.factory';
+import { seedUs1TestFixtures } from './us1-test-fixtures';
+
+const FIXTURE_TIME = new Date('2026-08-04T00:00:00.000Z');
+const CUSTOMER_A_ID = 'customer-a';
+const CUSTOMER_B_ID = 'customer-b';
 
 export async function seedCoreData(prisma: PrismaClient) {
-  await seedToolDefinitions(prisma);
+  await seedCustomers(prisma);
+  const toolDefinitions = await seedToolDefinitions(prisma);
+  await seedCustomerToolPolicies(prisma, toolDefinitions);
   await seedKnowledgeDocuments(prisma);
+}
+
+async function seedCustomers(prisma: PrismaClient) {
+  for (const id of [CUSTOMER_A_ID, CUSTOMER_B_ID]) {
+    await prisma.customer.upsert({ where: { id }, update: {}, create: { id } });
+  }
 }
 
 async function seedKnowledgeDocuments(prisma: PrismaClient) {
   for (const document of KNOWLEDGE_DOCUMENT_FIXTURES) {
-    const existingDocument = await prisma.knowledgeDocument.findUnique({
+    const { chunks, ...documentData } = document;
+    const knowledgeDocument = await prisma.knowledgeDocument.upsert({
       where: {
-        sourceKey_version: {
-          sourceKey: document.sourceKey,
-          version: document.version
+        customerId_sourceKey_version: {
+          customerId: documentData.customerId,
+          sourceKey: documentData.sourceKey,
+          version: documentData.version
         }
-      }
+      },
+      update: documentData,
+      create: documentData
     });
 
-    const knowledgeDocument = existingDocument
-      ? await prisma.knowledgeDocument.update({
-          where: { id: existingDocument.id },
-          data: {
-            title: document.title,
-            sourceType: document.sourceType,
-            sourceKey: document.sourceKey,
-            version: document.version,
-            language: document.language,
-            status: document.status,
-            metadata: document.metadata
+    for (const chunk of chunks) {
+      await prisma.knowledgeChunk.upsert({
+        where: {
+          customerId_id: {
+            customerId: document.customerId,
+            id: chunk.id
           }
-        })
-      : await prisma.knowledgeDocument.create({
-          data: {
-            title: document.title,
-            sourceType: document.sourceType,
-            sourceKey: document.sourceKey,
-            version: document.version,
-            language: document.language,
-            status: document.status,
-            metadata: document.metadata
+        },
+        update: {
+          documentId: knowledgeDocument.id,
+          chunkIndex: chunk.chunkIndex,
+          heading: chunk.heading,
+          content: chunk.content,
+          tokenCount: chunk.tokenCount,
+          metadata: {
+            fixture: true,
+            sourceKey: document.sourceKey
           }
-        });
-
-    await prisma.knowledgeChunk.deleteMany({
-      where: {
-        documentId: knowledgeDocument.id
-      }
-    });
-
-    for (const chunk of document.chunks) {
-      await prisma.knowledgeChunk.create({
-        data: {
+        },
+        create: {
+          id: chunk.id,
+          customerId: document.customerId,
           documentId: knowledgeDocument.id,
           chunkIndex: chunk.chunkIndex,
           heading: chunk.heading,
@@ -70,15 +75,21 @@ async function seedKnowledgeDocuments(prisma: PrismaClient) {
 
 const KNOWLEDGE_DOCUMENT_FIXTURES = [
   {
+    id: 'knowledge-customer-a-sop-001',
+    customerId: CUSTOMER_A_ID,
     title: 'Internal Assistant SOP',
     sourceType: 'sop' as const,
     sourceKey: 'internal-assistant-sop',
     version: '1.0.0',
     language: 'zh-TW',
     status: 'active' as const,
+    visibility: 'CUSTOMER' as const,
+    organizationIds: [],
+    requiredPermissionScopes: [],
     metadata: { fixture: true },
     chunks: [
       {
+        id: 'knowledge-chunk-customer-a-sop-001',
         chunkIndex: 0,
         heading: '權限與資料邊界',
         content: '內部後台 AI 助理必須先檢查身份、組織邊界與權限，再查詢資料或呼叫工具。',
@@ -87,15 +98,21 @@ const KNOWLEDGE_DOCUMENT_FIXTURES = [
     ]
   },
   {
+    id: 'knowledge-customer-a-return-001',
+    customerId: CUSTOMER_A_ID,
     title: '退貨處理 SOP',
     sourceType: 'sop' as const,
     sourceKey: 'sop-return-process',
     version: '1.0.0',
     language: 'zh-TW',
     status: 'active' as const,
+    visibility: 'CUSTOMER' as const,
+    organizationIds: [],
+    requiredPermissionScopes: [],
     metadata: { fixture: true, domain: 'orders' },
     chunks: [
       {
+        id: 'knowledge-chunk-customer-a-return-001',
         chunkIndex: 0,
         heading: '退貨流程',
         content: '退貨流程須先確認訂單狀態與收貨紀錄，再依 SOP 建立退貨申請；未完成收貨前不得直接退款。',
@@ -104,27 +121,65 @@ const KNOWLEDGE_DOCUMENT_FIXTURES = [
     ]
   },
   {
+    id: 'knowledge-customer-a-order-status-001',
+    customerId: CUSTOMER_A_ID,
     title: '訂單狀態欄位說明',
     sourceType: 'field_guide' as const,
     sourceKey: 'field-order-status',
     version: '1.0.0',
     language: 'zh-TW',
     status: 'active' as const,
+    visibility: 'CUSTOMER' as const,
+    organizationIds: [],
+    requiredPermissionScopes: [],
     metadata: { fixture: true, domain: 'orders' },
     chunks: [
       {
+        id: 'knowledge-chunk-customer-a-order-status-001',
         chunkIndex: 0,
         heading: 'status 欄位',
         content: 'status 欄位代表訂單目前處理階段，例如 draft、confirmed、shipped 或 cancelled；它不是庫存數量欄位。',
         tokenCount: 49
       }
     ]
+  },
+  // Deterministic rebuildable seed fixtures, not retained-data ownership inference.
+  {
+    id: 'knowledge-customer-a-shared-001',
+    customerId: CUSTOMER_A_ID,
+    title: 'Customer A shared knowledge fixture',
+    sourceType: 'policy' as const,
+    sourceKey: 'shared-source',
+    version: '1',
+    language: 'en',
+    status: 'active' as const,
+    visibility: 'CUSTOMER' as const,
+    organizationIds: [],
+    requiredPermissionScopes: [],
+    metadata: { fixture: true, customerFixture: 'A' },
+    chunks: [{ id: 'knowledge-chunk-customer-a-shared-001', chunkIndex: 0, heading: 'shared', content: 'Customer A shared fixture.', tokenCount: 5 }]
+  },
+  {
+    id: 'knowledge-customer-b-shared-001',
+    customerId: CUSTOMER_B_ID,
+    title: 'Customer B shared knowledge fixture',
+    sourceType: 'policy' as const,
+    sourceKey: 'shared-source',
+    version: '1',
+    language: 'en',
+    status: 'active' as const,
+    visibility: 'ORGANIZATION' as const,
+    organizationIds: ['org-shared'],
+    requiredPermissionScopes: ['orders:read'],
+    metadata: { fixture: true, customerFixture: 'B' },
+    chunks: [{ id: 'knowledge-chunk-customer-b-shared-001', chunkIndex: 0, heading: 'shared', content: 'Customer B shared fixture.', tokenCount: 5 }]
   }
 ];
 
 async function seedToolDefinitions(prisma: PrismaClient) {
+  const definitions = [];
   for (const tool of MOCK_TOOL_DEFINITIONS) {
-    await prisma.toolDefinition.upsert({
+    definitions.push(await prisma.toolDefinition.upsert({
       where: {
         name_version: {
           name: tool.name,
@@ -134,9 +189,22 @@ async function seedToolDefinitions(prisma: PrismaClient) {
       update: {
         ...tool,
         isActive: true,
-        updatedAt: new Date()
+        updatedAt: FIXTURE_TIME
       },
       create: tool
+    }));
+  }
+  return definitions;
+}
+
+async function seedCustomerToolPolicies(prisma: PrismaClient, toolDefinitions: Array<{ id: string; name: string; version: string }>) {
+  const lookup = toolDefinitions.find((tool) => tool.name === 'mock.orders.status.lookup' && tool.version === '1.0.0');
+  if (!lookup) throw new Error('Required global ToolDefinition mock.orders.status.lookup@1.0.0 was not seeded.');
+  for (const customerId of [CUSTOMER_A_ID, CUSTOMER_B_ID]) {
+    await prisma.customerToolPolicy.upsert({
+      where: { customerId_toolDefinitionId: { customerId, toolDefinitionId: lookup.id } },
+      update: { enabled: true, requiredRoles: [], requiredPermissionScopes: [] },
+      create: { customerId, toolDefinitionId: lookup.id, enabled: true, requiredRoles: [], requiredPermissionScopes: [] }
     });
   }
 }
@@ -319,6 +387,7 @@ async function main() {
 
   try {
     await seedCoreData(prisma);
+    await seedUs1TestFixtures(prisma);
   } finally {
     await prisma.$disconnect();
   }

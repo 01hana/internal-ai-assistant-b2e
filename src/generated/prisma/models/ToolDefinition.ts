@@ -313,6 +313,7 @@ export type ToolDefinitionWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"ToolDefinition"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ToolDefinition"> | Date | string
   toolCalls?: Prisma.ToolCallListRelationFilter
+  customerPolicies?: Prisma.CustomerToolPolicyListRelationFilter
 }
 
 export type ToolDefinitionOrderByWithRelationInput = {
@@ -336,6 +337,7 @@ export type ToolDefinitionOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   toolCalls?: Prisma.ToolCallOrderByRelationAggregateInput
+  customerPolicies?: Prisma.CustomerToolPolicyOrderByRelationAggregateInput
 }
 
 export type ToolDefinitionWhereUniqueInput = Prisma.AtLeast<{
@@ -363,6 +365,7 @@ export type ToolDefinitionWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"ToolDefinition"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ToolDefinition"> | Date | string
   toolCalls?: Prisma.ToolCallListRelationFilter
+  customerPolicies?: Prisma.CustomerToolPolicyListRelationFilter
 }, "id" | "name_version">
 
 export type ToolDefinitionOrderByWithAggregationInput = {
@@ -438,6 +441,7 @@ export type ToolDefinitionCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   toolCalls?: Prisma.ToolCallCreateNestedManyWithoutToolDefinitionInput
+  customerPolicies?: Prisma.CustomerToolPolicyCreateNestedManyWithoutToolDefinitionInput
 }
 
 export type ToolDefinitionUncheckedCreateInput = {
@@ -461,6 +465,7 @@ export type ToolDefinitionUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   toolCalls?: Prisma.ToolCallUncheckedCreateNestedManyWithoutToolDefinitionInput
+  customerPolicies?: Prisma.CustomerToolPolicyUncheckedCreateNestedManyWithoutToolDefinitionInput
 }
 
 export type ToolDefinitionUpdateInput = {
@@ -484,6 +489,7 @@ export type ToolDefinitionUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   toolCalls?: Prisma.ToolCallUpdateManyWithoutToolDefinitionNestedInput
+  customerPolicies?: Prisma.CustomerToolPolicyUpdateManyWithoutToolDefinitionNestedInput
 }
 
 export type ToolDefinitionUncheckedUpdateInput = {
@@ -507,6 +513,7 @@ export type ToolDefinitionUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   toolCalls?: Prisma.ToolCallUncheckedUpdateManyWithoutToolDefinitionNestedInput
+  customerPolicies?: Prisma.CustomerToolPolicyUncheckedUpdateManyWithoutToolDefinitionNestedInput
 }
 
 export type ToolDefinitionCreateManyInput = {
@@ -646,6 +653,11 @@ export type ToolDefinitionSumOrderByAggregateInput = {
   timeoutMs?: Prisma.SortOrder
 }
 
+export type ToolDefinitionScalarRelationFilter = {
+  is?: Prisma.ToolDefinitionWhereInput
+  isNot?: Prisma.ToolDefinitionWhereInput
+}
+
 export type ToolDefinitionNullableScalarRelationFilter = {
   is?: Prisma.ToolDefinitionWhereInput | null
   isNot?: Prisma.ToolDefinitionWhereInput | null
@@ -664,6 +676,20 @@ export type ToolDefinitionUpdaterequiredPermissionsInput = {
   push?: string | string[]
 }
 
+export type ToolDefinitionCreateNestedOneWithoutCustomerPoliciesInput = {
+  create?: Prisma.XOR<Prisma.ToolDefinitionCreateWithoutCustomerPoliciesInput, Prisma.ToolDefinitionUncheckedCreateWithoutCustomerPoliciesInput>
+  connectOrCreate?: Prisma.ToolDefinitionCreateOrConnectWithoutCustomerPoliciesInput
+  connect?: Prisma.ToolDefinitionWhereUniqueInput
+}
+
+export type ToolDefinitionUpdateOneRequiredWithoutCustomerPoliciesNestedInput = {
+  create?: Prisma.XOR<Prisma.ToolDefinitionCreateWithoutCustomerPoliciesInput, Prisma.ToolDefinitionUncheckedCreateWithoutCustomerPoliciesInput>
+  connectOrCreate?: Prisma.ToolDefinitionCreateOrConnectWithoutCustomerPoliciesInput
+  upsert?: Prisma.ToolDefinitionUpsertWithoutCustomerPoliciesInput
+  connect?: Prisma.ToolDefinitionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ToolDefinitionUpdateToOneWithWhereWithoutCustomerPoliciesInput, Prisma.ToolDefinitionUpdateWithoutCustomerPoliciesInput>, Prisma.ToolDefinitionUncheckedUpdateWithoutCustomerPoliciesInput>
+}
+
 export type ToolDefinitionCreateNestedOneWithoutToolCallsInput = {
   create?: Prisma.XOR<Prisma.ToolDefinitionCreateWithoutToolCallsInput, Prisma.ToolDefinitionUncheckedCreateWithoutToolCallsInput>
   connectOrCreate?: Prisma.ToolDefinitionCreateOrConnectWithoutToolCallsInput
@@ -678,6 +704,114 @@ export type ToolDefinitionUpdateOneWithoutToolCallsNestedInput = {
   delete?: Prisma.ToolDefinitionWhereInput | boolean
   connect?: Prisma.ToolDefinitionWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.ToolDefinitionUpdateToOneWithWhereWithoutToolCallsInput, Prisma.ToolDefinitionUpdateWithoutToolCallsInput>, Prisma.ToolDefinitionUncheckedUpdateWithoutToolCallsInput>
+}
+
+export type ToolDefinitionCreateWithoutCustomerPoliciesInput = {
+  id?: string
+  name: string
+  version: string
+  description: string
+  resource: string
+  operation: $Enums.ToolOperation
+  inputSchema: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  outputSchema: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  requiredPermissions?: Prisma.ToolDefinitionCreaterequiredPermissionsInput | string[]
+  riskLevel: $Enums.RiskLevel
+  hasSideEffect?: boolean
+  requiresConfirmation?: boolean
+  requiresApproval?: boolean
+  connectorKey: string
+  timeoutMs: number
+  auditBehavior?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  toolCalls?: Prisma.ToolCallCreateNestedManyWithoutToolDefinitionInput
+}
+
+export type ToolDefinitionUncheckedCreateWithoutCustomerPoliciesInput = {
+  id?: string
+  name: string
+  version: string
+  description: string
+  resource: string
+  operation: $Enums.ToolOperation
+  inputSchema: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  outputSchema: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  requiredPermissions?: Prisma.ToolDefinitionCreaterequiredPermissionsInput | string[]
+  riskLevel: $Enums.RiskLevel
+  hasSideEffect?: boolean
+  requiresConfirmation?: boolean
+  requiresApproval?: boolean
+  connectorKey: string
+  timeoutMs: number
+  auditBehavior?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  toolCalls?: Prisma.ToolCallUncheckedCreateNestedManyWithoutToolDefinitionInput
+}
+
+export type ToolDefinitionCreateOrConnectWithoutCustomerPoliciesInput = {
+  where: Prisma.ToolDefinitionWhereUniqueInput
+  create: Prisma.XOR<Prisma.ToolDefinitionCreateWithoutCustomerPoliciesInput, Prisma.ToolDefinitionUncheckedCreateWithoutCustomerPoliciesInput>
+}
+
+export type ToolDefinitionUpsertWithoutCustomerPoliciesInput = {
+  update: Prisma.XOR<Prisma.ToolDefinitionUpdateWithoutCustomerPoliciesInput, Prisma.ToolDefinitionUncheckedUpdateWithoutCustomerPoliciesInput>
+  create: Prisma.XOR<Prisma.ToolDefinitionCreateWithoutCustomerPoliciesInput, Prisma.ToolDefinitionUncheckedCreateWithoutCustomerPoliciesInput>
+  where?: Prisma.ToolDefinitionWhereInput
+}
+
+export type ToolDefinitionUpdateToOneWithWhereWithoutCustomerPoliciesInput = {
+  where?: Prisma.ToolDefinitionWhereInput
+  data: Prisma.XOR<Prisma.ToolDefinitionUpdateWithoutCustomerPoliciesInput, Prisma.ToolDefinitionUncheckedUpdateWithoutCustomerPoliciesInput>
+}
+
+export type ToolDefinitionUpdateWithoutCustomerPoliciesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  resource?: Prisma.StringFieldUpdateOperationsInput | string
+  operation?: Prisma.EnumToolOperationFieldUpdateOperationsInput | $Enums.ToolOperation
+  inputSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  outputSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  requiredPermissions?: Prisma.ToolDefinitionUpdaterequiredPermissionsInput | string[]
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  hasSideEffect?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  requiresConfirmation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  requiresApproval?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  connectorKey?: Prisma.StringFieldUpdateOperationsInput | string
+  timeoutMs?: Prisma.IntFieldUpdateOperationsInput | number
+  auditBehavior?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  toolCalls?: Prisma.ToolCallUpdateManyWithoutToolDefinitionNestedInput
+}
+
+export type ToolDefinitionUncheckedUpdateWithoutCustomerPoliciesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  resource?: Prisma.StringFieldUpdateOperationsInput | string
+  operation?: Prisma.EnumToolOperationFieldUpdateOperationsInput | $Enums.ToolOperation
+  inputSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  outputSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  requiredPermissions?: Prisma.ToolDefinitionUpdaterequiredPermissionsInput | string[]
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  hasSideEffect?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  requiresConfirmation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  requiresApproval?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  connectorKey?: Prisma.StringFieldUpdateOperationsInput | string
+  timeoutMs?: Prisma.IntFieldUpdateOperationsInput | number
+  auditBehavior?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  toolCalls?: Prisma.ToolCallUncheckedUpdateManyWithoutToolDefinitionNestedInput
 }
 
 export type ToolDefinitionCreateWithoutToolCallsInput = {
@@ -700,6 +834,7 @@ export type ToolDefinitionCreateWithoutToolCallsInput = {
   isActive?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  customerPolicies?: Prisma.CustomerToolPolicyCreateNestedManyWithoutToolDefinitionInput
 }
 
 export type ToolDefinitionUncheckedCreateWithoutToolCallsInput = {
@@ -722,6 +857,7 @@ export type ToolDefinitionUncheckedCreateWithoutToolCallsInput = {
   isActive?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  customerPolicies?: Prisma.CustomerToolPolicyUncheckedCreateNestedManyWithoutToolDefinitionInput
 }
 
 export type ToolDefinitionCreateOrConnectWithoutToolCallsInput = {
@@ -760,6 +896,7 @@ export type ToolDefinitionUpdateWithoutToolCallsInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customerPolicies?: Prisma.CustomerToolPolicyUpdateManyWithoutToolDefinitionNestedInput
 }
 
 export type ToolDefinitionUncheckedUpdateWithoutToolCallsInput = {
@@ -782,6 +919,7 @@ export type ToolDefinitionUncheckedUpdateWithoutToolCallsInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customerPolicies?: Prisma.CustomerToolPolicyUncheckedUpdateManyWithoutToolDefinitionNestedInput
 }
 
 
@@ -791,10 +929,12 @@ export type ToolDefinitionUncheckedUpdateWithoutToolCallsInput = {
 
 export type ToolDefinitionCountOutputType = {
   toolCalls: number
+  customerPolicies: number
 }
 
 export type ToolDefinitionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   toolCalls?: boolean | ToolDefinitionCountOutputTypeCountToolCallsArgs
+  customerPolicies?: boolean | ToolDefinitionCountOutputTypeCountCustomerPoliciesArgs
 }
 
 /**
@@ -812,6 +952,13 @@ export type ToolDefinitionCountOutputTypeDefaultArgs<ExtArgs extends runtime.Typ
  */
 export type ToolDefinitionCountOutputTypeCountToolCallsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ToolCallWhereInput
+}
+
+/**
+ * ToolDefinitionCountOutputType without action
+ */
+export type ToolDefinitionCountOutputTypeCountCustomerPoliciesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CustomerToolPolicyWhereInput
 }
 
 
@@ -836,6 +983,7 @@ export type ToolDefinitionSelect<ExtArgs extends runtime.Types.Extensions.Intern
   createdAt?: boolean
   updatedAt?: boolean
   toolCalls?: boolean | Prisma.ToolDefinition$toolCallsArgs<ExtArgs>
+  customerPolicies?: boolean | Prisma.ToolDefinition$customerPoliciesArgs<ExtArgs>
   _count?: boolean | Prisma.ToolDefinitionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["toolDefinition"]>
 
@@ -908,6 +1056,7 @@ export type ToolDefinitionSelectScalar = {
 export type ToolDefinitionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "version" | "description" | "resource" | "operation" | "inputSchema" | "outputSchema" | "requiredPermissions" | "riskLevel" | "hasSideEffect" | "requiresConfirmation" | "requiresApproval" | "connectorKey" | "timeoutMs" | "auditBehavior" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["toolDefinition"]>
 export type ToolDefinitionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   toolCalls?: boolean | Prisma.ToolDefinition$toolCallsArgs<ExtArgs>
+  customerPolicies?: boolean | Prisma.ToolDefinition$customerPoliciesArgs<ExtArgs>
   _count?: boolean | Prisma.ToolDefinitionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ToolDefinitionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -917,6 +1066,7 @@ export type $ToolDefinitionPayload<ExtArgs extends runtime.Types.Extensions.Inte
   name: "ToolDefinition"
   objects: {
     toolCalls: Prisma.$ToolCallPayload<ExtArgs>[]
+    customerPolicies: Prisma.$CustomerToolPolicyPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1333,6 +1483,7 @@ readonly fields: ToolDefinitionFieldRefs;
 export interface Prisma__ToolDefinitionClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   toolCalls<T extends Prisma.ToolDefinition$toolCallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ToolDefinition$toolCallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ToolCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  customerPolicies<T extends Prisma.ToolDefinition$customerPoliciesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ToolDefinition$customerPoliciesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CustomerToolPolicyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1795,6 +1946,30 @@ export type ToolDefinition$toolCallsArgs<ExtArgs extends runtime.Types.Extension
   take?: number
   skip?: number
   distinct?: Prisma.ToolCallScalarFieldEnum | Prisma.ToolCallScalarFieldEnum[]
+}
+
+/**
+ * ToolDefinition.customerPolicies
+ */
+export type ToolDefinition$customerPoliciesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CustomerToolPolicy
+   */
+  select?: Prisma.CustomerToolPolicySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CustomerToolPolicy
+   */
+  omit?: Prisma.CustomerToolPolicyOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CustomerToolPolicyInclude<ExtArgs> | null
+  where?: Prisma.CustomerToolPolicyWhereInput
+  orderBy?: Prisma.CustomerToolPolicyOrderByWithRelationInput | Prisma.CustomerToolPolicyOrderByWithRelationInput[]
+  cursor?: Prisma.CustomerToolPolicyWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CustomerToolPolicyScalarFieldEnum | Prisma.CustomerToolPolicyScalarFieldEnum[]
 }
 
 /**

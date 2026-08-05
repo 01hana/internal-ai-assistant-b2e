@@ -26,6 +26,7 @@ export type AggregateAssistantMessage = {
 
 export type AssistantMessageMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   sessionId: string | null
   requestId: string | null
   role: $Enums.AssistantMessageRole | null
@@ -36,6 +37,7 @@ export type AssistantMessageMinAggregateOutputType = {
 
 export type AssistantMessageMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   sessionId: string | null
   requestId: string | null
   role: $Enums.AssistantMessageRole | null
@@ -46,6 +48,7 @@ export type AssistantMessageMaxAggregateOutputType = {
 
 export type AssistantMessageCountAggregateOutputType = {
   id: number
+  customerId: number
   sessionId: number
   requestId: number
   role: number
@@ -59,6 +62,7 @@ export type AssistantMessageCountAggregateOutputType = {
 
 export type AssistantMessageMinAggregateInputType = {
   id?: true
+  customerId?: true
   sessionId?: true
   requestId?: true
   role?: true
@@ -69,6 +73,7 @@ export type AssistantMessageMinAggregateInputType = {
 
 export type AssistantMessageMaxAggregateInputType = {
   id?: true
+  customerId?: true
   sessionId?: true
   requestId?: true
   role?: true
@@ -79,6 +84,7 @@ export type AssistantMessageMaxAggregateInputType = {
 
 export type AssistantMessageCountAggregateInputType = {
   id?: true
+  customerId?: true
   sessionId?: true
   requestId?: true
   role?: true
@@ -163,6 +169,7 @@ export type AssistantMessageGroupByArgs<ExtArgs extends runtime.Types.Extensions
 
 export type AssistantMessageGroupByOutputType = {
   id: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -195,6 +202,7 @@ export type AssistantMessageWhereInput = {
   OR?: Prisma.AssistantMessageWhereInput[]
   NOT?: Prisma.AssistantMessageWhereInput | Prisma.AssistantMessageWhereInput[]
   id?: Prisma.StringFilter<"AssistantMessage"> | string
+  customerId?: Prisma.StringFilter<"AssistantMessage"> | string
   sessionId?: Prisma.StringFilter<"AssistantMessage"> | string
   requestId?: Prisma.StringFilter<"AssistantMessage"> | string
   role?: Prisma.EnumAssistantMessageRoleFilter<"AssistantMessage"> | $Enums.AssistantMessageRole
@@ -202,6 +210,7 @@ export type AssistantMessageWhereInput = {
   answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"AssistantMessage"> | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.JsonNullableFilter<"AssistantMessage">
   createdAt?: Prisma.DateTimeFilter<"AssistantMessage"> | Date | string
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   session?: Prisma.XOR<Prisma.AssistantSessionScalarRelationFilter, Prisma.AssistantSessionWhereInput>
   executionPlans?: Prisma.ExecutionPlanListRelationFilter
   answerDecisions?: Prisma.AnswerDecisionListRelationFilter
@@ -220,6 +229,7 @@ export type AssistantMessageWhereInput = {
 
 export type AssistantMessageOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   role?: Prisma.SortOrder
@@ -227,6 +237,7 @@ export type AssistantMessageOrderByWithRelationInput = {
   answerDecision?: Prisma.SortOrderInput | Prisma.SortOrder
   pageContext?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  customer?: Prisma.CustomerOrderByWithRelationInput
   session?: Prisma.AssistantSessionOrderByWithRelationInput
   executionPlans?: Prisma.ExecutionPlanOrderByRelationAggregateInput
   answerDecisions?: Prisma.AnswerDecisionOrderByRelationAggregateInput
@@ -245,9 +256,11 @@ export type AssistantMessageOrderByWithRelationInput = {
 
 export type AssistantMessageWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  customerId_id?: Prisma.AssistantMessageCustomerIdIdCompoundUniqueInput
   AND?: Prisma.AssistantMessageWhereInput | Prisma.AssistantMessageWhereInput[]
   OR?: Prisma.AssistantMessageWhereInput[]
   NOT?: Prisma.AssistantMessageWhereInput | Prisma.AssistantMessageWhereInput[]
+  customerId?: Prisma.StringFilter<"AssistantMessage"> | string
   sessionId?: Prisma.StringFilter<"AssistantMessage"> | string
   requestId?: Prisma.StringFilter<"AssistantMessage"> | string
   role?: Prisma.EnumAssistantMessageRoleFilter<"AssistantMessage"> | $Enums.AssistantMessageRole
@@ -255,6 +268,7 @@ export type AssistantMessageWhereUniqueInput = Prisma.AtLeast<{
   answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"AssistantMessage"> | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.JsonNullableFilter<"AssistantMessage">
   createdAt?: Prisma.DateTimeFilter<"AssistantMessage"> | Date | string
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   session?: Prisma.XOR<Prisma.AssistantSessionScalarRelationFilter, Prisma.AssistantSessionWhereInput>
   executionPlans?: Prisma.ExecutionPlanListRelationFilter
   answerDecisions?: Prisma.AnswerDecisionListRelationFilter
@@ -269,10 +283,11 @@ export type AssistantMessageWhereUniqueInput = Prisma.AtLeast<{
   feedbackEvents?: Prisma.FeedbackEventListRelationFilter
   auditEvents?: Prisma.AuditEventListRelationFilter
   retrievalRuns?: Prisma.RetrievalRunListRelationFilter
-}, "id">
+}, "id" | "customerId_id">
 
 export type AssistantMessageOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   role?: Prisma.SortOrder
@@ -290,6 +305,7 @@ export type AssistantMessageScalarWhereWithAggregatesInput = {
   OR?: Prisma.AssistantMessageScalarWhereWithAggregatesInput[]
   NOT?: Prisma.AssistantMessageScalarWhereWithAggregatesInput | Prisma.AssistantMessageScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"AssistantMessage"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"AssistantMessage"> | string
   sessionId?: Prisma.StringWithAggregatesFilter<"AssistantMessage"> | string
   requestId?: Prisma.StringWithAggregatesFilter<"AssistantMessage"> | string
   role?: Prisma.EnumAssistantMessageRoleWithAggregatesFilter<"AssistantMessage"> | $Enums.AssistantMessageRole
@@ -307,6 +323,7 @@ export type AssistantMessageCreateInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -325,6 +342,7 @@ export type AssistantMessageCreateInput = {
 
 export type AssistantMessageUncheckedCreateInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -355,6 +373,7 @@ export type AssistantMessageUpdateInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -373,6 +392,7 @@ export type AssistantMessageUpdateInput = {
 
 export type AssistantMessageUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -397,6 +417,7 @@ export type AssistantMessageUncheckedUpdateInput = {
 
 export type AssistantMessageCreateManyInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -418,6 +439,7 @@ export type AssistantMessageUpdateManyMutationInput = {
 
 export type AssistantMessageUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -437,8 +459,14 @@ export type AssistantMessageOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type AssistantMessageCustomerIdIdCompoundUniqueInput = {
+  customerId: string
+  id: string
+}
+
 export type AssistantMessageCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   role?: Prisma.SortOrder
@@ -450,6 +478,7 @@ export type AssistantMessageCountOrderByAggregateInput = {
 
 export type AssistantMessageMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   role?: Prisma.SortOrder
@@ -460,6 +489,7 @@ export type AssistantMessageMaxOrderByAggregateInput = {
 
 export type AssistantMessageMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   role?: Prisma.SortOrder
@@ -476,6 +506,48 @@ export type AssistantMessageNullableScalarRelationFilter = {
 export type AssistantMessageScalarRelationFilter = {
   is?: Prisma.AssistantMessageWhereInput
   isNot?: Prisma.AssistantMessageWhereInput
+}
+
+export type AssistantMessageCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.AssistantMessageCreateWithoutCustomerInput, Prisma.AssistantMessageUncheckedCreateWithoutCustomerInput> | Prisma.AssistantMessageCreateWithoutCustomerInput[] | Prisma.AssistantMessageUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.AssistantMessageCreateOrConnectWithoutCustomerInput | Prisma.AssistantMessageCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.AssistantMessageCreateManyCustomerInputEnvelope
+  connect?: Prisma.AssistantMessageWhereUniqueInput | Prisma.AssistantMessageWhereUniqueInput[]
+}
+
+export type AssistantMessageUncheckedCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.AssistantMessageCreateWithoutCustomerInput, Prisma.AssistantMessageUncheckedCreateWithoutCustomerInput> | Prisma.AssistantMessageCreateWithoutCustomerInput[] | Prisma.AssistantMessageUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.AssistantMessageCreateOrConnectWithoutCustomerInput | Prisma.AssistantMessageCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.AssistantMessageCreateManyCustomerInputEnvelope
+  connect?: Prisma.AssistantMessageWhereUniqueInput | Prisma.AssistantMessageWhereUniqueInput[]
+}
+
+export type AssistantMessageUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.AssistantMessageCreateWithoutCustomerInput, Prisma.AssistantMessageUncheckedCreateWithoutCustomerInput> | Prisma.AssistantMessageCreateWithoutCustomerInput[] | Prisma.AssistantMessageUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.AssistantMessageCreateOrConnectWithoutCustomerInput | Prisma.AssistantMessageCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.AssistantMessageUpsertWithWhereUniqueWithoutCustomerInput | Prisma.AssistantMessageUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.AssistantMessageCreateManyCustomerInputEnvelope
+  set?: Prisma.AssistantMessageWhereUniqueInput | Prisma.AssistantMessageWhereUniqueInput[]
+  disconnect?: Prisma.AssistantMessageWhereUniqueInput | Prisma.AssistantMessageWhereUniqueInput[]
+  delete?: Prisma.AssistantMessageWhereUniqueInput | Prisma.AssistantMessageWhereUniqueInput[]
+  connect?: Prisma.AssistantMessageWhereUniqueInput | Prisma.AssistantMessageWhereUniqueInput[]
+  update?: Prisma.AssistantMessageUpdateWithWhereUniqueWithoutCustomerInput | Prisma.AssistantMessageUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.AssistantMessageUpdateManyWithWhereWithoutCustomerInput | Prisma.AssistantMessageUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.AssistantMessageScalarWhereInput | Prisma.AssistantMessageScalarWhereInput[]
+}
+
+export type AssistantMessageUncheckedUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.AssistantMessageCreateWithoutCustomerInput, Prisma.AssistantMessageUncheckedCreateWithoutCustomerInput> | Prisma.AssistantMessageCreateWithoutCustomerInput[] | Prisma.AssistantMessageUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.AssistantMessageCreateOrConnectWithoutCustomerInput | Prisma.AssistantMessageCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.AssistantMessageUpsertWithWhereUniqueWithoutCustomerInput | Prisma.AssistantMessageUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.AssistantMessageCreateManyCustomerInputEnvelope
+  set?: Prisma.AssistantMessageWhereUniqueInput | Prisma.AssistantMessageWhereUniqueInput[]
+  disconnect?: Prisma.AssistantMessageWhereUniqueInput | Prisma.AssistantMessageWhereUniqueInput[]
+  delete?: Prisma.AssistantMessageWhereUniqueInput | Prisma.AssistantMessageWhereUniqueInput[]
+  connect?: Prisma.AssistantMessageWhereUniqueInput | Prisma.AssistantMessageWhereUniqueInput[]
+  update?: Prisma.AssistantMessageUpdateWithWhereUniqueWithoutCustomerInput | Prisma.AssistantMessageUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.AssistantMessageUpdateManyWithWhereWithoutCustomerInput | Prisma.AssistantMessageUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.AssistantMessageScalarWhereInput | Prisma.AssistantMessageScalarWhereInput[]
 }
 
 export type AssistantMessageCreateNestedManyWithoutSessionInput = {
@@ -726,6 +798,95 @@ export type AssistantMessageUpdateOneWithoutRetrievalRunsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.AssistantMessageUpdateToOneWithWhereWithoutRetrievalRunsInput, Prisma.AssistantMessageUpdateWithoutRetrievalRunsInput>, Prisma.AssistantMessageUncheckedUpdateWithoutRetrievalRunsInput>
 }
 
+export type AssistantMessageCreateWithoutCustomerInput = {
+  id?: string
+  requestId: string
+  role: $Enums.AssistantMessageRole
+  content: string
+  answerDecision?: $Enums.AnswerDecisionStatus | null
+  pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
+  executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
+  answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
+  clarificationQuestions?: Prisma.ClarificationQuestionCreateNestedManyWithoutMessageInput
+  groundingChecks?: Prisma.GroundingCheckCreateNestedManyWithoutMessageInput
+  queryUnderstanding?: Prisma.QueryUnderstandingResultCreateNestedOneWithoutMessageInput
+  toolCalls?: Prisma.ToolCallCreateNestedManyWithoutMessageInput
+  evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutMessageInput
+  approvalRequests?: Prisma.ApprovalRequestCreateNestedManyWithoutMessageInput
+  actionDrafts?: Prisma.ActionDraftCreateNestedManyWithoutMessageInput
+  escalationRequests?: Prisma.EscalationRequestCreateNestedManyWithoutMessageInput
+  feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutMessageInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutMessageInput
+  retrievalRuns?: Prisma.RetrievalRunCreateNestedManyWithoutMessageInput
+}
+
+export type AssistantMessageUncheckedCreateWithoutCustomerInput = {
+  id?: string
+  sessionId: string
+  requestId: string
+  role: $Enums.AssistantMessageRole
+  content: string
+  answerDecision?: $Enums.AnswerDecisionStatus | null
+  pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  executionPlans?: Prisma.ExecutionPlanUncheckedCreateNestedManyWithoutMessageInput
+  answerDecisions?: Prisma.AnswerDecisionUncheckedCreateNestedManyWithoutMessageInput
+  clarificationQuestions?: Prisma.ClarificationQuestionUncheckedCreateNestedManyWithoutMessageInput
+  groundingChecks?: Prisma.GroundingCheckUncheckedCreateNestedManyWithoutMessageInput
+  queryUnderstanding?: Prisma.QueryUnderstandingResultUncheckedCreateNestedOneWithoutMessageInput
+  toolCalls?: Prisma.ToolCallUncheckedCreateNestedManyWithoutMessageInput
+  evidenceRefs?: Prisma.EvidenceRefUncheckedCreateNestedManyWithoutMessageInput
+  approvalRequests?: Prisma.ApprovalRequestUncheckedCreateNestedManyWithoutMessageInput
+  actionDrafts?: Prisma.ActionDraftUncheckedCreateNestedManyWithoutMessageInput
+  escalationRequests?: Prisma.EscalationRequestUncheckedCreateNestedManyWithoutMessageInput
+  feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutMessageInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutMessageInput
+  retrievalRuns?: Prisma.RetrievalRunUncheckedCreateNestedManyWithoutMessageInput
+}
+
+export type AssistantMessageCreateOrConnectWithoutCustomerInput = {
+  where: Prisma.AssistantMessageWhereUniqueInput
+  create: Prisma.XOR<Prisma.AssistantMessageCreateWithoutCustomerInput, Prisma.AssistantMessageUncheckedCreateWithoutCustomerInput>
+}
+
+export type AssistantMessageCreateManyCustomerInputEnvelope = {
+  data: Prisma.AssistantMessageCreateManyCustomerInput | Prisma.AssistantMessageCreateManyCustomerInput[]
+  skipDuplicates?: boolean
+}
+
+export type AssistantMessageUpsertWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.AssistantMessageWhereUniqueInput
+  update: Prisma.XOR<Prisma.AssistantMessageUpdateWithoutCustomerInput, Prisma.AssistantMessageUncheckedUpdateWithoutCustomerInput>
+  create: Prisma.XOR<Prisma.AssistantMessageCreateWithoutCustomerInput, Prisma.AssistantMessageUncheckedCreateWithoutCustomerInput>
+}
+
+export type AssistantMessageUpdateWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.AssistantMessageWhereUniqueInput
+  data: Prisma.XOR<Prisma.AssistantMessageUpdateWithoutCustomerInput, Prisma.AssistantMessageUncheckedUpdateWithoutCustomerInput>
+}
+
+export type AssistantMessageUpdateManyWithWhereWithoutCustomerInput = {
+  where: Prisma.AssistantMessageScalarWhereInput
+  data: Prisma.XOR<Prisma.AssistantMessageUpdateManyMutationInput, Prisma.AssistantMessageUncheckedUpdateManyWithoutCustomerInput>
+}
+
+export type AssistantMessageScalarWhereInput = {
+  AND?: Prisma.AssistantMessageScalarWhereInput | Prisma.AssistantMessageScalarWhereInput[]
+  OR?: Prisma.AssistantMessageScalarWhereInput[]
+  NOT?: Prisma.AssistantMessageScalarWhereInput | Prisma.AssistantMessageScalarWhereInput[]
+  id?: Prisma.StringFilter<"AssistantMessage"> | string
+  customerId?: Prisma.StringFilter<"AssistantMessage"> | string
+  sessionId?: Prisma.StringFilter<"AssistantMessage"> | string
+  requestId?: Prisma.StringFilter<"AssistantMessage"> | string
+  role?: Prisma.EnumAssistantMessageRoleFilter<"AssistantMessage"> | $Enums.AssistantMessageRole
+  content?: Prisma.StringFilter<"AssistantMessage"> | string
+  answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"AssistantMessage"> | $Enums.AnswerDecisionStatus | null
+  pageContext?: Prisma.JsonNullableFilter<"AssistantMessage">
+  createdAt?: Prisma.DateTimeFilter<"AssistantMessage"> | Date | string
+}
+
 export type AssistantMessageCreateWithoutSessionInput = {
   id?: string
   requestId: string
@@ -734,6 +895,7 @@ export type AssistantMessageCreateWithoutSessionInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
   clarificationQuestions?: Prisma.ClarificationQuestionCreateNestedManyWithoutMessageInput
@@ -798,20 +960,6 @@ export type AssistantMessageUpdateManyWithWhereWithoutSessionInput = {
   data: Prisma.XOR<Prisma.AssistantMessageUpdateManyMutationInput, Prisma.AssistantMessageUncheckedUpdateManyWithoutSessionInput>
 }
 
-export type AssistantMessageScalarWhereInput = {
-  AND?: Prisma.AssistantMessageScalarWhereInput | Prisma.AssistantMessageScalarWhereInput[]
-  OR?: Prisma.AssistantMessageScalarWhereInput[]
-  NOT?: Prisma.AssistantMessageScalarWhereInput | Prisma.AssistantMessageScalarWhereInput[]
-  id?: Prisma.StringFilter<"AssistantMessage"> | string
-  sessionId?: Prisma.StringFilter<"AssistantMessage"> | string
-  requestId?: Prisma.StringFilter<"AssistantMessage"> | string
-  role?: Prisma.EnumAssistantMessageRoleFilter<"AssistantMessage"> | $Enums.AssistantMessageRole
-  content?: Prisma.StringFilter<"AssistantMessage"> | string
-  answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"AssistantMessage"> | $Enums.AnswerDecisionStatus | null
-  pageContext?: Prisma.JsonNullableFilter<"AssistantMessage">
-  createdAt?: Prisma.DateTimeFilter<"AssistantMessage"> | Date | string
-}
-
 export type AssistantMessageCreateWithoutExecutionPlansInput = {
   id?: string
   requestId: string
@@ -820,6 +968,7 @@ export type AssistantMessageCreateWithoutExecutionPlansInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
   clarificationQuestions?: Prisma.ClarificationQuestionCreateNestedManyWithoutMessageInput
@@ -837,6 +986,7 @@ export type AssistantMessageCreateWithoutExecutionPlansInput = {
 
 export type AssistantMessageUncheckedCreateWithoutExecutionPlansInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -882,6 +1032,7 @@ export type AssistantMessageUpdateWithoutExecutionPlansInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
   clarificationQuestions?: Prisma.ClarificationQuestionUpdateManyWithoutMessageNestedInput
@@ -899,6 +1050,7 @@ export type AssistantMessageUpdateWithoutExecutionPlansInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutExecutionPlansInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -928,6 +1080,7 @@ export type AssistantMessageCreateWithoutAnswerDecisionsInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   clarificationQuestions?: Prisma.ClarificationQuestionCreateNestedManyWithoutMessageInput
@@ -945,6 +1098,7 @@ export type AssistantMessageCreateWithoutAnswerDecisionsInput = {
 
 export type AssistantMessageUncheckedCreateWithoutAnswerDecisionsInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -990,6 +1144,7 @@ export type AssistantMessageUpdateWithoutAnswerDecisionsInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   clarificationQuestions?: Prisma.ClarificationQuestionUpdateManyWithoutMessageNestedInput
@@ -1007,6 +1162,7 @@ export type AssistantMessageUpdateWithoutAnswerDecisionsInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutAnswerDecisionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -1036,6 +1192,7 @@ export type AssistantMessageCreateWithoutClarificationQuestionsInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -1053,6 +1210,7 @@ export type AssistantMessageCreateWithoutClarificationQuestionsInput = {
 
 export type AssistantMessageUncheckedCreateWithoutClarificationQuestionsInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -1098,6 +1256,7 @@ export type AssistantMessageUpdateWithoutClarificationQuestionsInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -1115,6 +1274,7 @@ export type AssistantMessageUpdateWithoutClarificationQuestionsInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutClarificationQuestionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -1144,6 +1304,7 @@ export type AssistantMessageCreateWithoutGroundingChecksInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -1161,6 +1322,7 @@ export type AssistantMessageCreateWithoutGroundingChecksInput = {
 
 export type AssistantMessageUncheckedCreateWithoutGroundingChecksInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -1206,6 +1368,7 @@ export type AssistantMessageUpdateWithoutGroundingChecksInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -1223,6 +1386,7 @@ export type AssistantMessageUpdateWithoutGroundingChecksInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutGroundingChecksInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -1252,6 +1416,7 @@ export type AssistantMessageCreateWithoutToolCallsInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -1269,6 +1434,7 @@ export type AssistantMessageCreateWithoutToolCallsInput = {
 
 export type AssistantMessageUncheckedCreateWithoutToolCallsInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -1314,6 +1480,7 @@ export type AssistantMessageUpdateWithoutToolCallsInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -1331,6 +1498,7 @@ export type AssistantMessageUpdateWithoutToolCallsInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutToolCallsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -1360,6 +1528,7 @@ export type AssistantMessageCreateWithoutEvidenceRefsInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -1377,6 +1546,7 @@ export type AssistantMessageCreateWithoutEvidenceRefsInput = {
 
 export type AssistantMessageUncheckedCreateWithoutEvidenceRefsInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -1422,6 +1592,7 @@ export type AssistantMessageUpdateWithoutEvidenceRefsInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -1439,6 +1610,7 @@ export type AssistantMessageUpdateWithoutEvidenceRefsInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutEvidenceRefsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -1468,6 +1640,7 @@ export type AssistantMessageCreateWithoutAuditEventsInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -1485,6 +1658,7 @@ export type AssistantMessageCreateWithoutAuditEventsInput = {
 
 export type AssistantMessageUncheckedCreateWithoutAuditEventsInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -1530,6 +1704,7 @@ export type AssistantMessageUpdateWithoutAuditEventsInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -1547,6 +1722,7 @@ export type AssistantMessageUpdateWithoutAuditEventsInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutAuditEventsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -1576,6 +1752,7 @@ export type AssistantMessageCreateWithoutFeedbackEventsInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -1593,6 +1770,7 @@ export type AssistantMessageCreateWithoutFeedbackEventsInput = {
 
 export type AssistantMessageUncheckedCreateWithoutFeedbackEventsInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -1638,6 +1816,7 @@ export type AssistantMessageUpdateWithoutFeedbackEventsInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -1655,6 +1834,7 @@ export type AssistantMessageUpdateWithoutFeedbackEventsInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutFeedbackEventsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -1684,6 +1864,7 @@ export type AssistantMessageCreateWithoutApprovalRequestsInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -1701,6 +1882,7 @@ export type AssistantMessageCreateWithoutApprovalRequestsInput = {
 
 export type AssistantMessageUncheckedCreateWithoutApprovalRequestsInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -1746,6 +1928,7 @@ export type AssistantMessageUpdateWithoutApprovalRequestsInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -1763,6 +1946,7 @@ export type AssistantMessageUpdateWithoutApprovalRequestsInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutApprovalRequestsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -1792,6 +1976,7 @@ export type AssistantMessageCreateWithoutActionDraftsInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -1809,6 +1994,7 @@ export type AssistantMessageCreateWithoutActionDraftsInput = {
 
 export type AssistantMessageUncheckedCreateWithoutActionDraftsInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -1854,6 +2040,7 @@ export type AssistantMessageUpdateWithoutActionDraftsInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -1871,6 +2058,7 @@ export type AssistantMessageUpdateWithoutActionDraftsInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutActionDraftsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -1900,6 +2088,7 @@ export type AssistantMessageCreateWithoutEscalationRequestsInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -1917,6 +2106,7 @@ export type AssistantMessageCreateWithoutEscalationRequestsInput = {
 
 export type AssistantMessageUncheckedCreateWithoutEscalationRequestsInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -1962,6 +2152,7 @@ export type AssistantMessageUpdateWithoutEscalationRequestsInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -1979,6 +2170,7 @@ export type AssistantMessageUpdateWithoutEscalationRequestsInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutEscalationRequestsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -2008,6 +2200,7 @@ export type AssistantMessageCreateWithoutQueryUnderstandingInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -2025,6 +2218,7 @@ export type AssistantMessageCreateWithoutQueryUnderstandingInput = {
 
 export type AssistantMessageUncheckedCreateWithoutQueryUnderstandingInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -2070,6 +2264,7 @@ export type AssistantMessageUpdateWithoutQueryUnderstandingInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -2087,6 +2282,7 @@ export type AssistantMessageUpdateWithoutQueryUnderstandingInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutQueryUnderstandingInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -2116,6 +2312,7 @@ export type AssistantMessageCreateWithoutRetrievalRunsInput = {
   answerDecision?: $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutAssistantMessagesInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutMessagesInput
   executionPlans?: Prisma.ExecutionPlanCreateNestedManyWithoutMessageInput
   answerDecisions?: Prisma.AnswerDecisionCreateNestedManyWithoutMessageInput
@@ -2133,6 +2330,7 @@ export type AssistantMessageCreateWithoutRetrievalRunsInput = {
 
 export type AssistantMessageUncheckedCreateWithoutRetrievalRunsInput = {
   id?: string
+  customerId: string
   sessionId: string
   requestId: string
   role: $Enums.AssistantMessageRole
@@ -2178,6 +2376,7 @@ export type AssistantMessageUpdateWithoutRetrievalRunsInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
@@ -2195,6 +2394,7 @@ export type AssistantMessageUpdateWithoutRetrievalRunsInput = {
 
 export type AssistantMessageUncheckedUpdateWithoutRetrievalRunsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
@@ -2216,6 +2416,76 @@ export type AssistantMessageUncheckedUpdateWithoutRetrievalRunsInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutMessageNestedInput
 }
 
+export type AssistantMessageCreateManyCustomerInput = {
+  id?: string
+  sessionId: string
+  requestId: string
+  role: $Enums.AssistantMessageRole
+  content: string
+  answerDecision?: $Enums.AnswerDecisionStatus | null
+  pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+}
+
+export type AssistantMessageUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
+  pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  session?: Prisma.AssistantSessionUpdateOneRequiredWithoutMessagesNestedInput
+  executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
+  answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
+  clarificationQuestions?: Prisma.ClarificationQuestionUpdateManyWithoutMessageNestedInput
+  groundingChecks?: Prisma.GroundingCheckUpdateManyWithoutMessageNestedInput
+  queryUnderstanding?: Prisma.QueryUnderstandingResultUpdateOneWithoutMessageNestedInput
+  toolCalls?: Prisma.ToolCallUpdateManyWithoutMessageNestedInput
+  evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutMessageNestedInput
+  approvalRequests?: Prisma.ApprovalRequestUpdateManyWithoutMessageNestedInput
+  actionDrafts?: Prisma.ActionDraftUpdateManyWithoutMessageNestedInput
+  escalationRequests?: Prisma.EscalationRequestUpdateManyWithoutMessageNestedInput
+  feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutMessageNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutMessageNestedInput
+  retrievalRuns?: Prisma.RetrievalRunUpdateManyWithoutMessageNestedInput
+}
+
+export type AssistantMessageUncheckedUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
+  pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  executionPlans?: Prisma.ExecutionPlanUncheckedUpdateManyWithoutMessageNestedInput
+  answerDecisions?: Prisma.AnswerDecisionUncheckedUpdateManyWithoutMessageNestedInput
+  clarificationQuestions?: Prisma.ClarificationQuestionUncheckedUpdateManyWithoutMessageNestedInput
+  groundingChecks?: Prisma.GroundingCheckUncheckedUpdateManyWithoutMessageNestedInput
+  queryUnderstanding?: Prisma.QueryUnderstandingResultUncheckedUpdateOneWithoutMessageNestedInput
+  toolCalls?: Prisma.ToolCallUncheckedUpdateManyWithoutMessageNestedInput
+  evidenceRefs?: Prisma.EvidenceRefUncheckedUpdateManyWithoutMessageNestedInput
+  approvalRequests?: Prisma.ApprovalRequestUncheckedUpdateManyWithoutMessageNestedInput
+  actionDrafts?: Prisma.ActionDraftUncheckedUpdateManyWithoutMessageNestedInput
+  escalationRequests?: Prisma.EscalationRequestUncheckedUpdateManyWithoutMessageNestedInput
+  feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutMessageNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutMessageNestedInput
+  retrievalRuns?: Prisma.RetrievalRunUncheckedUpdateManyWithoutMessageNestedInput
+}
+
+export type AssistantMessageUncheckedUpdateManyWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumAssistantMessageRoleFieldUpdateOperationsInput | $Enums.AssistantMessageRole
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
+  pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type AssistantMessageCreateManySessionInput = {
   id?: string
   requestId: string
@@ -2234,6 +2504,7 @@ export type AssistantMessageUpdateWithoutSessionInput = {
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   pageContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantMessagesNestedInput
   executionPlans?: Prisma.ExecutionPlanUpdateManyWithoutMessageNestedInput
   answerDecisions?: Prisma.AnswerDecisionUpdateManyWithoutMessageNestedInput
   clarificationQuestions?: Prisma.ClarificationQuestionUpdateManyWithoutMessageNestedInput
@@ -2414,6 +2685,7 @@ export type AssistantMessageCountOutputTypeCountRetrievalRunsArgs<ExtArgs extend
 
 export type AssistantMessageSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   requestId?: boolean
   role?: boolean
@@ -2421,6 +2693,7 @@ export type AssistantMessageSelect<ExtArgs extends runtime.Types.Extensions.Inte
   answerDecision?: boolean
   pageContext?: boolean
   createdAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   executionPlans?: boolean | Prisma.AssistantMessage$executionPlansArgs<ExtArgs>
   answerDecisions?: boolean | Prisma.AssistantMessage$answerDecisionsArgs<ExtArgs>
@@ -2440,6 +2713,7 @@ export type AssistantMessageSelect<ExtArgs extends runtime.Types.Extensions.Inte
 
 export type AssistantMessageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   requestId?: boolean
   role?: boolean
@@ -2447,11 +2721,13 @@ export type AssistantMessageSelectCreateManyAndReturn<ExtArgs extends runtime.Ty
   answerDecision?: boolean
   pageContext?: boolean
   createdAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["assistantMessage"]>
 
 export type AssistantMessageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   requestId?: boolean
   role?: boolean
@@ -2459,11 +2735,13 @@ export type AssistantMessageSelectUpdateManyAndReturn<ExtArgs extends runtime.Ty
   answerDecision?: boolean
   pageContext?: boolean
   createdAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["assistantMessage"]>
 
 export type AssistantMessageSelectScalar = {
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   requestId?: boolean
   role?: boolean
@@ -2473,8 +2751,9 @@ export type AssistantMessageSelectScalar = {
   createdAt?: boolean
 }
 
-export type AssistantMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "sessionId" | "requestId" | "role" | "content" | "answerDecision" | "pageContext" | "createdAt", ExtArgs["result"]["assistantMessage"]>
+export type AssistantMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "sessionId" | "requestId" | "role" | "content" | "answerDecision" | "pageContext" | "createdAt", ExtArgs["result"]["assistantMessage"]>
 export type AssistantMessageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   executionPlans?: boolean | Prisma.AssistantMessage$executionPlansArgs<ExtArgs>
   answerDecisions?: boolean | Prisma.AssistantMessage$answerDecisionsArgs<ExtArgs>
@@ -2492,15 +2771,18 @@ export type AssistantMessageInclude<ExtArgs extends runtime.Types.Extensions.Int
   _count?: boolean | Prisma.AssistantMessageCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AssistantMessageIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
 }
 export type AssistantMessageIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
 }
 
 export type $AssistantMessagePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "AssistantMessage"
   objects: {
+    customer: Prisma.$CustomerPayload<ExtArgs>
     session: Prisma.$AssistantSessionPayload<ExtArgs>
     executionPlans: Prisma.$ExecutionPlanPayload<ExtArgs>[]
     answerDecisions: Prisma.$AnswerDecisionPayload<ExtArgs>[]
@@ -2518,6 +2800,7 @@ export type $AssistantMessagePayload<ExtArgs extends runtime.Types.Extensions.In
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     sessionId: string
     requestId: string
     role: $Enums.AssistantMessageRole
@@ -2919,6 +3202,7 @@ readonly fields: AssistantMessageFieldRefs;
  */
 export interface Prisma__AssistantMessageClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   session<T extends Prisma.AssistantSessionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AssistantSessionDefaultArgs<ExtArgs>>): Prisma.Prisma__AssistantSessionClient<runtime.Types.Result.GetResult<Prisma.$AssistantSessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   executionPlans<T extends Prisma.AssistantMessage$executionPlansArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AssistantMessage$executionPlansArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ExecutionPlanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   answerDecisions<T extends Prisma.AssistantMessage$answerDecisionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AssistantMessage$answerDecisionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AnswerDecisionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2963,6 +3247,7 @@ export interface Prisma__AssistantMessageClient<T, Null = never, ExtArgs extends
  */
 export interface AssistantMessageFieldRefs {
   readonly id: Prisma.FieldRef<"AssistantMessage", 'String'>
+  readonly customerId: Prisma.FieldRef<"AssistantMessage", 'String'>
   readonly sessionId: Prisma.FieldRef<"AssistantMessage", 'String'>
   readonly requestId: Prisma.FieldRef<"AssistantMessage", 'String'>
   readonly role: Prisma.FieldRef<"AssistantMessage", 'AssistantMessageRole'>

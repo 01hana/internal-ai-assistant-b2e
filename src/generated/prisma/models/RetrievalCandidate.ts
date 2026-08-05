@@ -38,6 +38,7 @@ export type RetrievalCandidateSumAggregateOutputType = {
 
 export type RetrievalCandidateMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   retrievalRunId: string | null
   chunkId: string | null
   sourceId: string | null
@@ -50,6 +51,7 @@ export type RetrievalCandidateMinAggregateOutputType = {
 
 export type RetrievalCandidateMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   retrievalRunId: string | null
   chunkId: string | null
   sourceId: string | null
@@ -62,6 +64,7 @@ export type RetrievalCandidateMaxAggregateOutputType = {
 
 export type RetrievalCandidateCountAggregateOutputType = {
   id: number
+  customerId: number
   retrievalRunId: number
   chunkId: number
   sourceId: number
@@ -86,6 +89,7 @@ export type RetrievalCandidateSumAggregateInputType = {
 
 export type RetrievalCandidateMinAggregateInputType = {
   id?: true
+  customerId?: true
   retrievalRunId?: true
   chunkId?: true
   sourceId?: true
@@ -98,6 +102,7 @@ export type RetrievalCandidateMinAggregateInputType = {
 
 export type RetrievalCandidateMaxAggregateInputType = {
   id?: true
+  customerId?: true
   retrievalRunId?: true
   chunkId?: true
   sourceId?: true
@@ -110,6 +115,7 @@ export type RetrievalCandidateMaxAggregateInputType = {
 
 export type RetrievalCandidateCountAggregateInputType = {
   id?: true
+  customerId?: true
   retrievalRunId?: true
   chunkId?: true
   sourceId?: true
@@ -209,6 +215,7 @@ export type RetrievalCandidateGroupByArgs<ExtArgs extends runtime.Types.Extensio
 
 export type RetrievalCandidateGroupByOutputType = {
   id: string
+  customerId: string
   retrievalRunId: string
   chunkId: string | null
   sourceId: string
@@ -244,6 +251,7 @@ export type RetrievalCandidateWhereInput = {
   OR?: Prisma.RetrievalCandidateWhereInput[]
   NOT?: Prisma.RetrievalCandidateWhereInput | Prisma.RetrievalCandidateWhereInput[]
   id?: Prisma.StringFilter<"RetrievalCandidate"> | string
+  customerId?: Prisma.StringFilter<"RetrievalCandidate"> | string
   retrievalRunId?: Prisma.StringFilter<"RetrievalCandidate"> | string
   chunkId?: Prisma.StringNullableFilter<"RetrievalCandidate"> | string | null
   sourceId?: Prisma.StringFilter<"RetrievalCandidate"> | string
@@ -252,12 +260,14 @@ export type RetrievalCandidateWhereInput = {
   rank?: Prisma.IntFilter<"RetrievalCandidate"> | number
   selected?: Prisma.BoolFilter<"RetrievalCandidate"> | boolean
   reason?: Prisma.StringNullableFilter<"RetrievalCandidate"> | string | null
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   retrievalRun?: Prisma.XOR<Prisma.RetrievalRunScalarRelationFilter, Prisma.RetrievalRunWhereInput>
   chunk?: Prisma.XOR<Prisma.KnowledgeChunkNullableScalarRelationFilter, Prisma.KnowledgeChunkWhereInput> | null
 }
 
 export type RetrievalCandidateOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   retrievalRunId?: Prisma.SortOrder
   chunkId?: Prisma.SortOrderInput | Prisma.SortOrder
   sourceId?: Prisma.SortOrder
@@ -266,15 +276,18 @@ export type RetrievalCandidateOrderByWithRelationInput = {
   rank?: Prisma.SortOrder
   selected?: Prisma.SortOrder
   reason?: Prisma.SortOrderInput | Prisma.SortOrder
+  customer?: Prisma.CustomerOrderByWithRelationInput
   retrievalRun?: Prisma.RetrievalRunOrderByWithRelationInput
   chunk?: Prisma.KnowledgeChunkOrderByWithRelationInput
 }
 
 export type RetrievalCandidateWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  customerId_id?: Prisma.RetrievalCandidateCustomerIdIdCompoundUniqueInput
   AND?: Prisma.RetrievalCandidateWhereInput | Prisma.RetrievalCandidateWhereInput[]
   OR?: Prisma.RetrievalCandidateWhereInput[]
   NOT?: Prisma.RetrievalCandidateWhereInput | Prisma.RetrievalCandidateWhereInput[]
+  customerId?: Prisma.StringFilter<"RetrievalCandidate"> | string
   retrievalRunId?: Prisma.StringFilter<"RetrievalCandidate"> | string
   chunkId?: Prisma.StringNullableFilter<"RetrievalCandidate"> | string | null
   sourceId?: Prisma.StringFilter<"RetrievalCandidate"> | string
@@ -283,12 +296,14 @@ export type RetrievalCandidateWhereUniqueInput = Prisma.AtLeast<{
   rank?: Prisma.IntFilter<"RetrievalCandidate"> | number
   selected?: Prisma.BoolFilter<"RetrievalCandidate"> | boolean
   reason?: Prisma.StringNullableFilter<"RetrievalCandidate"> | string | null
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   retrievalRun?: Prisma.XOR<Prisma.RetrievalRunScalarRelationFilter, Prisma.RetrievalRunWhereInput>
   chunk?: Prisma.XOR<Prisma.KnowledgeChunkNullableScalarRelationFilter, Prisma.KnowledgeChunkWhereInput> | null
-}, "id">
+}, "id" | "customerId_id">
 
 export type RetrievalCandidateOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   retrievalRunId?: Prisma.SortOrder
   chunkId?: Prisma.SortOrderInput | Prisma.SortOrder
   sourceId?: Prisma.SortOrder
@@ -309,6 +324,7 @@ export type RetrievalCandidateScalarWhereWithAggregatesInput = {
   OR?: Prisma.RetrievalCandidateScalarWhereWithAggregatesInput[]
   NOT?: Prisma.RetrievalCandidateScalarWhereWithAggregatesInput | Prisma.RetrievalCandidateScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"RetrievalCandidate"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"RetrievalCandidate"> | string
   retrievalRunId?: Prisma.StringWithAggregatesFilter<"RetrievalCandidate"> | string
   chunkId?: Prisma.StringNullableWithAggregatesFilter<"RetrievalCandidate"> | string | null
   sourceId?: Prisma.StringWithAggregatesFilter<"RetrievalCandidate"> | string
@@ -327,12 +343,14 @@ export type RetrievalCandidateCreateInput = {
   rank: number
   selected?: boolean
   reason?: string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutRetrievalCandidatesInput
   retrievalRun: Prisma.RetrievalRunCreateNestedOneWithoutCandidatesInput
   chunk?: Prisma.KnowledgeChunkCreateNestedOneWithoutRetrievalCandidatesInput
 }
 
 export type RetrievalCandidateUncheckedCreateInput = {
   id?: string
+  customerId: string
   retrievalRunId: string
   chunkId?: string | null
   sourceId: string
@@ -351,12 +369,14 @@ export type RetrievalCandidateUpdateInput = {
   rank?: Prisma.IntFieldUpdateOperationsInput | number
   selected?: Prisma.BoolFieldUpdateOperationsInput | boolean
   reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutRetrievalCandidatesNestedInput
   retrievalRun?: Prisma.RetrievalRunUpdateOneRequiredWithoutCandidatesNestedInput
   chunk?: Prisma.KnowledgeChunkUpdateOneWithoutRetrievalCandidatesNestedInput
 }
 
 export type RetrievalCandidateUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   retrievalRunId?: Prisma.StringFieldUpdateOperationsInput | string
   chunkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sourceId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -369,6 +389,7 @@ export type RetrievalCandidateUncheckedUpdateInput = {
 
 export type RetrievalCandidateCreateManyInput = {
   id?: string
+  customerId: string
   retrievalRunId: string
   chunkId?: string | null
   sourceId: string
@@ -391,6 +412,7 @@ export type RetrievalCandidateUpdateManyMutationInput = {
 
 export type RetrievalCandidateUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   retrievalRunId?: Prisma.StringFieldUpdateOperationsInput | string
   chunkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sourceId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -411,8 +433,14 @@ export type RetrievalCandidateOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type RetrievalCandidateCustomerIdIdCompoundUniqueInput = {
+  customerId: string
+  id: string
+}
+
 export type RetrievalCandidateCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   retrievalRunId?: Prisma.SortOrder
   chunkId?: Prisma.SortOrder
   sourceId?: Prisma.SortOrder
@@ -430,6 +458,7 @@ export type RetrievalCandidateAvgOrderByAggregateInput = {
 
 export type RetrievalCandidateMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   retrievalRunId?: Prisma.SortOrder
   chunkId?: Prisma.SortOrder
   sourceId?: Prisma.SortOrder
@@ -442,6 +471,7 @@ export type RetrievalCandidateMaxOrderByAggregateInput = {
 
 export type RetrievalCandidateMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   retrievalRunId?: Prisma.SortOrder
   chunkId?: Prisma.SortOrder
   sourceId?: Prisma.SortOrder
@@ -455,6 +485,48 @@ export type RetrievalCandidateMinOrderByAggregateInput = {
 export type RetrievalCandidateSumOrderByAggregateInput = {
   score?: Prisma.SortOrder
   rank?: Prisma.SortOrder
+}
+
+export type RetrievalCandidateCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.RetrievalCandidateCreateWithoutCustomerInput, Prisma.RetrievalCandidateUncheckedCreateWithoutCustomerInput> | Prisma.RetrievalCandidateCreateWithoutCustomerInput[] | Prisma.RetrievalCandidateUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.RetrievalCandidateCreateOrConnectWithoutCustomerInput | Prisma.RetrievalCandidateCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.RetrievalCandidateCreateManyCustomerInputEnvelope
+  connect?: Prisma.RetrievalCandidateWhereUniqueInput | Prisma.RetrievalCandidateWhereUniqueInput[]
+}
+
+export type RetrievalCandidateUncheckedCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.RetrievalCandidateCreateWithoutCustomerInput, Prisma.RetrievalCandidateUncheckedCreateWithoutCustomerInput> | Prisma.RetrievalCandidateCreateWithoutCustomerInput[] | Prisma.RetrievalCandidateUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.RetrievalCandidateCreateOrConnectWithoutCustomerInput | Prisma.RetrievalCandidateCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.RetrievalCandidateCreateManyCustomerInputEnvelope
+  connect?: Prisma.RetrievalCandidateWhereUniqueInput | Prisma.RetrievalCandidateWhereUniqueInput[]
+}
+
+export type RetrievalCandidateUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.RetrievalCandidateCreateWithoutCustomerInput, Prisma.RetrievalCandidateUncheckedCreateWithoutCustomerInput> | Prisma.RetrievalCandidateCreateWithoutCustomerInput[] | Prisma.RetrievalCandidateUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.RetrievalCandidateCreateOrConnectWithoutCustomerInput | Prisma.RetrievalCandidateCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.RetrievalCandidateUpsertWithWhereUniqueWithoutCustomerInput | Prisma.RetrievalCandidateUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.RetrievalCandidateCreateManyCustomerInputEnvelope
+  set?: Prisma.RetrievalCandidateWhereUniqueInput | Prisma.RetrievalCandidateWhereUniqueInput[]
+  disconnect?: Prisma.RetrievalCandidateWhereUniqueInput | Prisma.RetrievalCandidateWhereUniqueInput[]
+  delete?: Prisma.RetrievalCandidateWhereUniqueInput | Prisma.RetrievalCandidateWhereUniqueInput[]
+  connect?: Prisma.RetrievalCandidateWhereUniqueInput | Prisma.RetrievalCandidateWhereUniqueInput[]
+  update?: Prisma.RetrievalCandidateUpdateWithWhereUniqueWithoutCustomerInput | Prisma.RetrievalCandidateUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.RetrievalCandidateUpdateManyWithWhereWithoutCustomerInput | Prisma.RetrievalCandidateUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.RetrievalCandidateScalarWhereInput | Prisma.RetrievalCandidateScalarWhereInput[]
+}
+
+export type RetrievalCandidateUncheckedUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.RetrievalCandidateCreateWithoutCustomerInput, Prisma.RetrievalCandidateUncheckedCreateWithoutCustomerInput> | Prisma.RetrievalCandidateCreateWithoutCustomerInput[] | Prisma.RetrievalCandidateUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.RetrievalCandidateCreateOrConnectWithoutCustomerInput | Prisma.RetrievalCandidateCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.RetrievalCandidateUpsertWithWhereUniqueWithoutCustomerInput | Prisma.RetrievalCandidateUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.RetrievalCandidateCreateManyCustomerInputEnvelope
+  set?: Prisma.RetrievalCandidateWhereUniqueInput | Prisma.RetrievalCandidateWhereUniqueInput[]
+  disconnect?: Prisma.RetrievalCandidateWhereUniqueInput | Prisma.RetrievalCandidateWhereUniqueInput[]
+  delete?: Prisma.RetrievalCandidateWhereUniqueInput | Prisma.RetrievalCandidateWhereUniqueInput[]
+  connect?: Prisma.RetrievalCandidateWhereUniqueInput | Prisma.RetrievalCandidateWhereUniqueInput[]
+  update?: Prisma.RetrievalCandidateUpdateWithWhereUniqueWithoutCustomerInput | Prisma.RetrievalCandidateUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.RetrievalCandidateUpdateManyWithWhereWithoutCustomerInput | Prisma.RetrievalCandidateUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.RetrievalCandidateScalarWhereInput | Prisma.RetrievalCandidateScalarWhereInput[]
 }
 
 export type RetrievalCandidateCreateNestedManyWithoutChunkInput = {
@@ -541,6 +613,72 @@ export type RetrievalCandidateUncheckedUpdateManyWithoutRetrievalRunNestedInput 
   deleteMany?: Prisma.RetrievalCandidateScalarWhereInput | Prisma.RetrievalCandidateScalarWhereInput[]
 }
 
+export type RetrievalCandidateCreateWithoutCustomerInput = {
+  id?: string
+  sourceId: string
+  sourceType: $Enums.EvidenceSourceType
+  score: number
+  rank: number
+  selected?: boolean
+  reason?: string | null
+  retrievalRun: Prisma.RetrievalRunCreateNestedOneWithoutCandidatesInput
+  chunk?: Prisma.KnowledgeChunkCreateNestedOneWithoutRetrievalCandidatesInput
+}
+
+export type RetrievalCandidateUncheckedCreateWithoutCustomerInput = {
+  id?: string
+  retrievalRunId: string
+  chunkId?: string | null
+  sourceId: string
+  sourceType: $Enums.EvidenceSourceType
+  score: number
+  rank: number
+  selected?: boolean
+  reason?: string | null
+}
+
+export type RetrievalCandidateCreateOrConnectWithoutCustomerInput = {
+  where: Prisma.RetrievalCandidateWhereUniqueInput
+  create: Prisma.XOR<Prisma.RetrievalCandidateCreateWithoutCustomerInput, Prisma.RetrievalCandidateUncheckedCreateWithoutCustomerInput>
+}
+
+export type RetrievalCandidateCreateManyCustomerInputEnvelope = {
+  data: Prisma.RetrievalCandidateCreateManyCustomerInput | Prisma.RetrievalCandidateCreateManyCustomerInput[]
+  skipDuplicates?: boolean
+}
+
+export type RetrievalCandidateUpsertWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.RetrievalCandidateWhereUniqueInput
+  update: Prisma.XOR<Prisma.RetrievalCandidateUpdateWithoutCustomerInput, Prisma.RetrievalCandidateUncheckedUpdateWithoutCustomerInput>
+  create: Prisma.XOR<Prisma.RetrievalCandidateCreateWithoutCustomerInput, Prisma.RetrievalCandidateUncheckedCreateWithoutCustomerInput>
+}
+
+export type RetrievalCandidateUpdateWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.RetrievalCandidateWhereUniqueInput
+  data: Prisma.XOR<Prisma.RetrievalCandidateUpdateWithoutCustomerInput, Prisma.RetrievalCandidateUncheckedUpdateWithoutCustomerInput>
+}
+
+export type RetrievalCandidateUpdateManyWithWhereWithoutCustomerInput = {
+  where: Prisma.RetrievalCandidateScalarWhereInput
+  data: Prisma.XOR<Prisma.RetrievalCandidateUpdateManyMutationInput, Prisma.RetrievalCandidateUncheckedUpdateManyWithoutCustomerInput>
+}
+
+export type RetrievalCandidateScalarWhereInput = {
+  AND?: Prisma.RetrievalCandidateScalarWhereInput | Prisma.RetrievalCandidateScalarWhereInput[]
+  OR?: Prisma.RetrievalCandidateScalarWhereInput[]
+  NOT?: Prisma.RetrievalCandidateScalarWhereInput | Prisma.RetrievalCandidateScalarWhereInput[]
+  id?: Prisma.StringFilter<"RetrievalCandidate"> | string
+  customerId?: Prisma.StringFilter<"RetrievalCandidate"> | string
+  retrievalRunId?: Prisma.StringFilter<"RetrievalCandidate"> | string
+  chunkId?: Prisma.StringNullableFilter<"RetrievalCandidate"> | string | null
+  sourceId?: Prisma.StringFilter<"RetrievalCandidate"> | string
+  sourceType?: Prisma.EnumEvidenceSourceTypeFilter<"RetrievalCandidate"> | $Enums.EvidenceSourceType
+  score?: Prisma.FloatFilter<"RetrievalCandidate"> | number
+  rank?: Prisma.IntFilter<"RetrievalCandidate"> | number
+  selected?: Prisma.BoolFilter<"RetrievalCandidate"> | boolean
+  reason?: Prisma.StringNullableFilter<"RetrievalCandidate"> | string | null
+}
+
 export type RetrievalCandidateCreateWithoutChunkInput = {
   id?: string
   sourceId: string
@@ -549,6 +687,7 @@ export type RetrievalCandidateCreateWithoutChunkInput = {
   rank: number
   selected?: boolean
   reason?: string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutRetrievalCandidatesInput
   retrievalRun: Prisma.RetrievalRunCreateNestedOneWithoutCandidatesInput
 }
 
@@ -589,21 +728,6 @@ export type RetrievalCandidateUpdateManyWithWhereWithoutChunkInput = {
   data: Prisma.XOR<Prisma.RetrievalCandidateUpdateManyMutationInput, Prisma.RetrievalCandidateUncheckedUpdateManyWithoutChunkInput>
 }
 
-export type RetrievalCandidateScalarWhereInput = {
-  AND?: Prisma.RetrievalCandidateScalarWhereInput | Prisma.RetrievalCandidateScalarWhereInput[]
-  OR?: Prisma.RetrievalCandidateScalarWhereInput[]
-  NOT?: Prisma.RetrievalCandidateScalarWhereInput | Prisma.RetrievalCandidateScalarWhereInput[]
-  id?: Prisma.StringFilter<"RetrievalCandidate"> | string
-  retrievalRunId?: Prisma.StringFilter<"RetrievalCandidate"> | string
-  chunkId?: Prisma.StringNullableFilter<"RetrievalCandidate"> | string | null
-  sourceId?: Prisma.StringFilter<"RetrievalCandidate"> | string
-  sourceType?: Prisma.EnumEvidenceSourceTypeFilter<"RetrievalCandidate"> | $Enums.EvidenceSourceType
-  score?: Prisma.FloatFilter<"RetrievalCandidate"> | number
-  rank?: Prisma.IntFilter<"RetrievalCandidate"> | number
-  selected?: Prisma.BoolFilter<"RetrievalCandidate"> | boolean
-  reason?: Prisma.StringNullableFilter<"RetrievalCandidate"> | string | null
-}
-
 export type RetrievalCandidateCreateWithoutRetrievalRunInput = {
   id?: string
   sourceId: string
@@ -612,6 +736,7 @@ export type RetrievalCandidateCreateWithoutRetrievalRunInput = {
   rank: number
   selected?: boolean
   reason?: string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutRetrievalCandidatesInput
   chunk?: Prisma.KnowledgeChunkCreateNestedOneWithoutRetrievalCandidatesInput
 }
 
@@ -652,6 +777,54 @@ export type RetrievalCandidateUpdateManyWithWhereWithoutRetrievalRunInput = {
   data: Prisma.XOR<Prisma.RetrievalCandidateUpdateManyMutationInput, Prisma.RetrievalCandidateUncheckedUpdateManyWithoutRetrievalRunInput>
 }
 
+export type RetrievalCandidateCreateManyCustomerInput = {
+  id?: string
+  retrievalRunId: string
+  chunkId?: string | null
+  sourceId: string
+  sourceType: $Enums.EvidenceSourceType
+  score: number
+  rank: number
+  selected?: boolean
+  reason?: string | null
+}
+
+export type RetrievalCandidateUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceType?: Prisma.EnumEvidenceSourceTypeFieldUpdateOperationsInput | $Enums.EvidenceSourceType
+  score?: Prisma.FloatFieldUpdateOperationsInput | number
+  rank?: Prisma.IntFieldUpdateOperationsInput | number
+  selected?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retrievalRun?: Prisma.RetrievalRunUpdateOneRequiredWithoutCandidatesNestedInput
+  chunk?: Prisma.KnowledgeChunkUpdateOneWithoutRetrievalCandidatesNestedInput
+}
+
+export type RetrievalCandidateUncheckedUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  retrievalRunId?: Prisma.StringFieldUpdateOperationsInput | string
+  chunkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceType?: Prisma.EnumEvidenceSourceTypeFieldUpdateOperationsInput | $Enums.EvidenceSourceType
+  score?: Prisma.FloatFieldUpdateOperationsInput | number
+  rank?: Prisma.IntFieldUpdateOperationsInput | number
+  selected?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type RetrievalCandidateUncheckedUpdateManyWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  retrievalRunId?: Prisma.StringFieldUpdateOperationsInput | string
+  chunkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceType?: Prisma.EnumEvidenceSourceTypeFieldUpdateOperationsInput | $Enums.EvidenceSourceType
+  score?: Prisma.FloatFieldUpdateOperationsInput | number
+  rank?: Prisma.IntFieldUpdateOperationsInput | number
+  selected?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
 export type RetrievalCandidateCreateManyChunkInput = {
   id?: string
   retrievalRunId: string
@@ -671,6 +844,7 @@ export type RetrievalCandidateUpdateWithoutChunkInput = {
   rank?: Prisma.IntFieldUpdateOperationsInput | number
   selected?: Prisma.BoolFieldUpdateOperationsInput | boolean
   reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutRetrievalCandidatesNestedInput
   retrievalRun?: Prisma.RetrievalRunUpdateOneRequiredWithoutCandidatesNestedInput
 }
 
@@ -715,6 +889,7 @@ export type RetrievalCandidateUpdateWithoutRetrievalRunInput = {
   rank?: Prisma.IntFieldUpdateOperationsInput | number
   selected?: Prisma.BoolFieldUpdateOperationsInput | boolean
   reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutRetrievalCandidatesNestedInput
   chunk?: Prisma.KnowledgeChunkUpdateOneWithoutRetrievalCandidatesNestedInput
 }
 
@@ -744,6 +919,7 @@ export type RetrievalCandidateUncheckedUpdateManyWithoutRetrievalRunInput = {
 
 export type RetrievalCandidateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   retrievalRunId?: boolean
   chunkId?: boolean
   sourceId?: boolean
@@ -752,12 +928,14 @@ export type RetrievalCandidateSelect<ExtArgs extends runtime.Types.Extensions.In
   rank?: boolean
   selected?: boolean
   reason?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   retrievalRun?: boolean | Prisma.RetrievalRunDefaultArgs<ExtArgs>
   chunk?: boolean | Prisma.RetrievalCandidate$chunkArgs<ExtArgs>
 }, ExtArgs["result"]["retrievalCandidate"]>
 
 export type RetrievalCandidateSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   retrievalRunId?: boolean
   chunkId?: boolean
   sourceId?: boolean
@@ -766,12 +944,14 @@ export type RetrievalCandidateSelectCreateManyAndReturn<ExtArgs extends runtime.
   rank?: boolean
   selected?: boolean
   reason?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   retrievalRun?: boolean | Prisma.RetrievalRunDefaultArgs<ExtArgs>
   chunk?: boolean | Prisma.RetrievalCandidate$chunkArgs<ExtArgs>
 }, ExtArgs["result"]["retrievalCandidate"]>
 
 export type RetrievalCandidateSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   retrievalRunId?: boolean
   chunkId?: boolean
   sourceId?: boolean
@@ -780,12 +960,14 @@ export type RetrievalCandidateSelectUpdateManyAndReturn<ExtArgs extends runtime.
   rank?: boolean
   selected?: boolean
   reason?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   retrievalRun?: boolean | Prisma.RetrievalRunDefaultArgs<ExtArgs>
   chunk?: boolean | Prisma.RetrievalCandidate$chunkArgs<ExtArgs>
 }, ExtArgs["result"]["retrievalCandidate"]>
 
 export type RetrievalCandidateSelectScalar = {
   id?: boolean
+  customerId?: boolean
   retrievalRunId?: boolean
   chunkId?: boolean
   sourceId?: boolean
@@ -796,16 +978,19 @@ export type RetrievalCandidateSelectScalar = {
   reason?: boolean
 }
 
-export type RetrievalCandidateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "retrievalRunId" | "chunkId" | "sourceId" | "sourceType" | "score" | "rank" | "selected" | "reason", ExtArgs["result"]["retrievalCandidate"]>
+export type RetrievalCandidateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "retrievalRunId" | "chunkId" | "sourceId" | "sourceType" | "score" | "rank" | "selected" | "reason", ExtArgs["result"]["retrievalCandidate"]>
 export type RetrievalCandidateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   retrievalRun?: boolean | Prisma.RetrievalRunDefaultArgs<ExtArgs>
   chunk?: boolean | Prisma.RetrievalCandidate$chunkArgs<ExtArgs>
 }
 export type RetrievalCandidateIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   retrievalRun?: boolean | Prisma.RetrievalRunDefaultArgs<ExtArgs>
   chunk?: boolean | Prisma.RetrievalCandidate$chunkArgs<ExtArgs>
 }
 export type RetrievalCandidateIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   retrievalRun?: boolean | Prisma.RetrievalRunDefaultArgs<ExtArgs>
   chunk?: boolean | Prisma.RetrievalCandidate$chunkArgs<ExtArgs>
 }
@@ -813,11 +998,13 @@ export type RetrievalCandidateIncludeUpdateManyAndReturn<ExtArgs extends runtime
 export type $RetrievalCandidatePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "RetrievalCandidate"
   objects: {
+    customer: Prisma.$CustomerPayload<ExtArgs>
     retrievalRun: Prisma.$RetrievalRunPayload<ExtArgs>
     chunk: Prisma.$KnowledgeChunkPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     retrievalRunId: string
     chunkId: string | null
     sourceId: string
@@ -1220,6 +1407,7 @@ readonly fields: RetrievalCandidateFieldRefs;
  */
 export interface Prisma__RetrievalCandidateClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   retrievalRun<T extends Prisma.RetrievalRunDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RetrievalRunDefaultArgs<ExtArgs>>): Prisma.Prisma__RetrievalRunClient<runtime.Types.Result.GetResult<Prisma.$RetrievalRunPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   chunk<T extends Prisma.RetrievalCandidate$chunkArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RetrievalCandidate$chunkArgs<ExtArgs>>): Prisma.Prisma__KnowledgeChunkClient<runtime.Types.Result.GetResult<Prisma.$KnowledgeChunkPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
@@ -1252,6 +1440,7 @@ export interface Prisma__RetrievalCandidateClient<T, Null = never, ExtArgs exten
  */
 export interface RetrievalCandidateFieldRefs {
   readonly id: Prisma.FieldRef<"RetrievalCandidate", 'String'>
+  readonly customerId: Prisma.FieldRef<"RetrievalCandidate", 'String'>
   readonly retrievalRunId: Prisma.FieldRef<"RetrievalCandidate", 'String'>
   readonly chunkId: Prisma.FieldRef<"RetrievalCandidate", 'String'>
   readonly sourceId: Prisma.FieldRef<"RetrievalCandidate", 'String'>
