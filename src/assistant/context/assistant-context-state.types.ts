@@ -1,7 +1,9 @@
 import { PageContextDto } from '../page-context/page-context.dto';
+import { CustomerScope } from '../../identity/customer-scope.types';
 import { AssistantPlanningResult } from '../planning/assistant-planning.types';
 
 export interface UpdateAssistantContextStateInput {
+  customerScope: CustomerScope;
   sessionId: string;
   pageContext?: PageContextDto;
   planningResult: AssistantPlanningResult;

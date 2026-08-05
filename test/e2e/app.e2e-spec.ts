@@ -4,12 +4,13 @@ import request = require('supertest');
 import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.filter';
 import { RequestIdInterceptor } from '../../src/common/request-id/request-id.interceptor';
 import { ResponseEnvelopeInterceptor } from '../../src/common/response/response-envelope.interceptor';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse } from '../support/us1-test-app.helper';
+import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
 
 describe('App bootstrap', () => {
   let app: INestApplication;
 
   async function createApp(enableSwaggerDocs = false) {
-    jest.resetModules();
     process.env.DATABASE_URL = 'postgresql://assistant:assistant_dev_password@localhost:5432/assistant_dev';
     process.env.POSTGRES_USER = 'assistant';
     process.env.POSTGRES_PASSWORD = 'assistant_dev_password';
@@ -17,6 +18,9 @@ describe('App bootstrap', () => {
     process.env.LLM_PROVIDER = 'openai';
     process.env.LLM_MODEL = 'local-placeholder-model';
     process.env.OPENAI_API_KEY = 'placeholder-openai-api-key';
+    process.env.INTERNAL_IDENTITY_JWT_ISSUER = TEST_GATEWAY_ISSUER;
+    process.env.INTERNAL_IDENTITY_JWT_AUDIENCE = TEST_BACKEND_AUDIENCE;
+    process.env.INTERNAL_IDENTITY_JWKS_URI = 'https://gateway.test.internal/.well-known/jwks.json';
     process.env.ENABLE_SWAGGER_DOCS = String(enableSwaggerDocs);
     process.env.SWAGGER_PATH = 'docs';
 
@@ -92,6 +96,53 @@ describe('App bootstrap', () => {
       expect(response.text).toContain('Swagger UI');
     } finally {
       await swaggerApp.close();
+    }
+  });
+});
+
+const describeCustomerUs1E2e = process.env.RUN_CUSTOMER_US1_E2E_TESTS === 'true' ? describe : describe.skip;
+
+describeCustomerUs1E2e('Customer A/B assistant flow', () => {
+  const fixture = createInternalIdentityJwtFixture();
+
+  it('keeps Customer B out of Customer A create, SSE, and history flow despite matching lower-level identity', async () => {
+    const { app, state } = await createUs1TestAppWithState({
+      internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: fixture.jwks }
+    });
+    try {
+      const headers = (customer: 'customerA' | 'customerB', requestId: string) =>
+        createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims[customer], requestId });
+      const created = await request(app.getHttpServer())
+        .post('/api/v1/assistant/sessions')
+        .set(headers('customerA', 'req-e2e-customer-a-create'))
+        .send({ pageContext: { module: 'orders' } });
+      expect(created.status).toBe(201);
+      const sessionId = created.body.data?.sessionId as string;
+      expect(sessionId).toEqual(expect.any(String));
+
+      const ownSse = await request(app.getHttpServer())
+        .post(`/api/v1/assistant/sessions/${sessionId}/messages`)
+        .set(headers('customerA', 'req-e2e-customer-a-message'))
+        .send({ message: 'Customer A assistant flow' });
+      expect(ownSse.status).toBe(200);
+      expect(parseSseResponse(ownSse.text).at(-1)?.event).toBe('final');
+
+      const ownHistory = await request(app.getHttpServer())
+        .get(`/api/v1/assistant/sessions/${sessionId}/messages`)
+        .set(headers('customerA', 'req-e2e-customer-a-history'));
+      expect(ownHistory.status).toBe(200);
+      expect(state.sessions.find((session) => session.id === sessionId)?.customerId).toBe('customer-a');
+
+      const before = { messages: state.messages.length, auditEvents: state.auditEvents.length };
+      const foreign = await request(app.getHttpServer())
+        .post(`/api/v1/assistant/sessions/${sessionId}/messages`)
+        .set(headers('customerB', 'req-e2e-customer-b-foreign'))
+        .send({ message: 'must not access Customer A' });
+      expect(foreign.status).toBe(404);
+      expect(foreign.headers['content-type']).toContain('application/json');
+      expect({ messages: state.messages.length, auditEvents: state.auditEvents.length }).toEqual(before);
+    } finally {
+      await app.close();
     }
   });
 });

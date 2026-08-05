@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { AssistantTaskState, ExecutionDecision } from '../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CustomerScope } from '../../identity/customer-scope.types';
 import { getPageEntityRef, toPageContextPersistence } from '../page-context/page-context.mapper';
 import { MarkWaitingClarificationInput, UpdateAssistantContextStateInput } from './assistant-context-state.types';
 
@@ -9,13 +10,18 @@ import { MarkWaitingClarificationInput, UpdateAssistantContextStateInput } from 
 export class AssistantContextStateService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createInitialState(sessionId: string, pageContext?: UpdateAssistantContextStateInput['pageContext']) {
-    const entityRef = getPageEntityRef(pageContext);
+  async createInitialState(input: {
+    customerScope: CustomerScope;
+    sessionId: string;
+    pageContext?: UpdateAssistantContextStateInput['pageContext'];
+  }) {
+    const entityRef = getPageEntityRef(input.pageContext);
     return this.prisma.db.assistantContextState.create({
       data: {
-        sessionId,
-        currentModule: pageContext?.module,
-        currentPage: toPageContextPersistence(pageContext) ?? Prisma.JsonNull,
+        customerId: input.customerScope.customerId,
+        sessionId: input.sessionId,
+        currentModule: input.pageContext?.module,
+        currentPage: toPageContextPersistence(input.pageContext) ?? Prisma.JsonNull,
         currentEntityType: entityRef.entityType,
         currentEntityId: entityRef.entityId,
         taskState: AssistantTaskState.idle,
@@ -25,9 +31,10 @@ export class AssistantContextStateService {
     });
   }
 
-  async loadLatest(sessionId: string) {
+  async loadLatest(customerScope: CustomerScope, sessionId: string) {
     return this.prisma.db.assistantContextState.findFirst({
       where: {
+        customerId: customerScope.customerId,
         sessionId
       },
       orderBy: {
@@ -58,25 +65,7 @@ export class AssistantContextStateService {
           : AssistantTaskState.completed
     };
 
-    const updated = await this.prisma.db.assistantContextState.updateMany({
-      where: {
-        sessionId: input.sessionId
-      },
-      data
-    });
-
-    if (updated.count > 0) {
-      return this.loadLatest(input.sessionId);
-    }
-
-    await this.prisma.db.assistantContextState.create({
-      data: {
-        sessionId: input.sessionId,
-        ...data
-      }
-    });
-
-    return this.loadLatest(input.sessionId);
+    return this.updateOrCreate(input.customerScope, input.sessionId, data);
   }
 
   async markWaitingClarification(input: MarkWaitingClarificationInput) {
@@ -102,25 +91,7 @@ export class AssistantContextStateService {
       taskState: AssistantTaskState.waiting_clarification
     };
 
-    const updated = await this.prisma.db.assistantContextState.updateMany({
-      where: {
-        sessionId: input.sessionId
-      },
-      data
-    });
-
-    if (updated.count > 0) {
-      return this.loadLatest(input.sessionId);
-    }
-
-    await this.prisma.db.assistantContextState.create({
-      data: {
-        sessionId: input.sessionId,
-        ...data
-      }
-    });
-
-    return this.loadLatest(input.sessionId);
+    return this.updateOrCreate(input.customerScope, input.sessionId, data);
   }
 
   async markWaitingConfirmation(input: UpdateAssistantContextStateInput) {
@@ -139,25 +110,7 @@ export class AssistantContextStateService {
       taskState: AssistantTaskState.waiting_confirmation
     };
 
-    const updated = await this.prisma.db.assistantContextState.updateMany({
-      where: {
-        sessionId: input.sessionId
-      },
-      data
-    });
-
-    if (updated.count > 0) {
-      return this.loadLatest(input.sessionId);
-    }
-
-    await this.prisma.db.assistantContextState.create({
-      data: {
-        sessionId: input.sessionId,
-        ...data
-      }
-    });
-
-    return this.loadLatest(input.sessionId);
+    return this.updateOrCreate(input.customerScope, input.sessionId, data);
   }
 
   async markWaitingApproval(input: UpdateAssistantContextStateInput) {
@@ -177,25 +130,7 @@ export class AssistantContextStateService {
       taskState: AssistantTaskState.waiting_approval
     };
 
-    const updated = await this.prisma.db.assistantContextState.updateMany({
-      where: {
-        sessionId: input.sessionId
-      },
-      data
-    });
-
-    if (updated.count > 0) {
-      return this.loadLatest(input.sessionId);
-    }
-
-    await this.prisma.db.assistantContextState.create({
-      data: {
-        sessionId: input.sessionId,
-        ...data
-      }
-    });
-
-    return this.loadLatest(input.sessionId);
+    return this.updateOrCreate(input.customerScope, input.sessionId, data);
   }
 
   async markWaitingEscalation(input: UpdateAssistantContextStateInput) {
@@ -218,28 +153,43 @@ export class AssistantContextStateService {
       taskState: AssistantTaskState.waiting_escalation
     };
 
+    return this.updateOrCreate(input.customerScope, input.sessionId, data);
+  }
+
+  private async updateOrCreate(
+    customerScope: CustomerScope,
+    sessionId: string,
+    data: ContextStatePersistenceData
+  ) {
     const updated = await this.prisma.db.assistantContextState.updateMany({
       where: {
-        sessionId: input.sessionId
+        customerId: customerScope.customerId,
+        sessionId
       },
       data
     });
 
     if (updated.count > 0) {
-      return this.loadLatest(input.sessionId);
+      return this.loadLatest(customerScope, sessionId);
     }
 
     await this.prisma.db.assistantContextState.create({
       data: {
-        sessionId: input.sessionId,
+        customerId: customerScope.customerId,
+        sessionId,
         ...data
       }
     });
 
-    return this.loadLatest(input.sessionId);
+    return this.loadLatest(customerScope, sessionId);
   }
 }
 
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
 }
+
+type ContextStatePersistenceData = Omit<
+  Prisma.AssistantContextStateUncheckedCreateInput,
+  'id' | 'customerId' | 'sessionId' | 'createdAt' | 'updatedAt'
+>;

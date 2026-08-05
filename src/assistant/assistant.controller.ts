@@ -17,6 +17,7 @@ import {
   IdentityRequest,
 } from "../identity/identity-context.extractor";
 import { IdentityGuard } from "../identity/identity.guard";
+import { createCustomerScopeFromIdentityContext } from "../identity/customer-scope.factory";
 import {
   CreateAssistantSessionDto,
   SendAssistantMessageDto,
@@ -71,6 +72,10 @@ export class AssistantController {
   ) {
     const identityContext = getRequiredIdentityContext(request);
     const requestId = identityContext.requestId;
+
+    const customerScope = createCustomerScopeFromIdentityContext(identityContext);
+    await this.assistantSessionService.getVisibleSession(sessionId, customerScope);
+
     response.status(HttpStatus.OK);
     response.setHeader("Content-Type", "text/event-stream; charset=utf-8");
 
@@ -143,17 +148,6 @@ function extractErrorCode(error: unknown): string {
   return "ERROR";
 }
 
-function extractErrorMessage(error: unknown): string {
-  if (typeof error === "object" && error && "response" in error) {
-    const response = (error as { response?: { message?: string } }).response;
-    if (typeof response?.message === "string") {
-      return response.message;
-    }
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Unexpected error.";
+function extractErrorMessage(_error: unknown): string {
+  return "Assistant message processing failed.";
 }

@@ -1,6 +1,7 @@
 import { ToolCall } from '../../generated/prisma/client';
 import { RiskLevel, ToolCallStatus, ToolExecutionStatus } from '../../generated/prisma/enums';
 import { RequestIdentityContext } from '../../identity/identity-context.types';
+import { CustomerScope } from '../../identity/customer-scope.types';
 import { ConnectorExecuteResult } from '../../connectors/connector-adapter.interface';
 import { PageContextDto } from '../page-context/page-context.dto';
 import { PageEntityRef } from '../page-context/page-context.types';
@@ -12,9 +13,11 @@ export interface StructuredBusinessRecord {
 }
 
 export interface AssistantReadonlyRuntimeInput {
+  customerScope: CustomerScope;
   requestId: string;
   sessionId: string;
-  messageId: string;
+  sourceMessageId: string;
+  responseMessageId: string;
   identityContext: RequestIdentityContext;
   executionPlan: PersistedExecutionPlan;
   pageContext?: PageContextDto;

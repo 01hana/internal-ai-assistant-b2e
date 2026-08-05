@@ -1,8 +1,8 @@
 # Feature 002 — Implementation Inventory and Feature 001 Regression Baseline
 
-**Tasks completed**: T001–T004. T003 completed the documentation-only retained-data mapping runbook; T004 completed a read-only reset/seed safety inventory.  
-**Evidence date**: 2026-08-03.  
-**Method**: static, read-only inspection of the repository. No test, seed, migration, DB-reset, other DB-writing command, or T005+ command was executed.
+**Initial baseline scope**: T001–T004. T003 completed the documentation-only retained-data mapping runbook; T004 completed a read-only reset/seed safety inventory.
+**Initial baseline evidence date**: 2026-08-03.
+**Initial baseline method**: static, read-only inspection. The baseline did not execute test, seed, migration, DB-reset, other DB-writing commands, or T005+. Subsequent sections record later implementation and verification evidence without replacing this historical baseline.
 
 ## 1. Repository Baseline
 
@@ -201,3 +201,49 @@ No reset, migrate, generate, seed, test-DB initialization, or other database-wri
 ## T001–T004 Completion Boundary
 
 This inventory establishes the Feature 001 preservation/replacement baseline, records the T003 documentation-only mapping runbook, and records T004 reset/seed safety. It does not create a migration, modify code/schema/seed, add tests, run DB commands, or perform T005+ work.
+
+## Post-T038 Compile Gap Matrix
+
+**Evidence date**: 2026-08-05.  `npm run typecheck -- --pretty false` and a bounded `npm run start:dev` watch compilation both reported the same post-schema persistence gaps. T038, T039, and T040 source files have no TypeScript diagnostics after their respective scoped changes. This matrix records remaining work; it does not authorize a cross-task implementation.
+
+| File:line | Prisma model | Operation | Missing Customer-qualified input | Owner task | Blocks T039? |
+| --- | --- | --- | --- | --- | --- |
+| `src/approvals/action-draft.service.ts:49` | ActionDraft | create | `customerId` and qualified parent ownership | T062 | No |
+| `src/approvals/approval-request.service.ts:59` | ApprovalRequest | create | `customerId` and qualified parent ownership | T061 | No |
+| `src/approvals/escalation-request.service.ts:32` | EscalationRequest | create | `customerId` and qualified parent ownership | T063 | No |
+| `src/approvals/side-effect-execution-guard.service.ts:104` | ToolCall | create | `customerId` and Customer-scoped idempotency/parent input | T056 | No |
+| `src/assistant/runtime/tool-call.service.ts:24,127` | ToolCall | create | `customerId` and Customer-qualified session/message relation | T056 | No |
+| `src/audit/audit-writer.service.ts:13` | AuditEvent | create | `customerId` and qualified optional session/message/tool relations | T069 | No |
+| `src/evidence/evidence-ref.service.ts:60,121` | EvidenceRef | create | `customerId` and Customer-qualified message/tool/document/chunk relations | T049 | No |
+| `src/feedback/feedback-event.service.ts:63` | FeedbackEvent | create | `customerId` and Customer-qualified message relation | T067 | No |
+| `src/feedback/review-item.service.ts:58,120` | ReviewItem | create | required Customer relation/`customerId` | T068 | No |
+| `src/retrieval/retrieval.service.ts:70,89` | RetrievalRun, RetrievalCandidate | create | `customerId` and qualified message/run/chunk relations | T048 | No |
+
+### T039 status and evidence
+
+- T038 HTTP acceptance was verified by the user locally: 2 suites / 16 tests passed. T038 is therefore marked complete in `tasks.md` without changing its implementation.
+- T039 isolated-transpile baseline originally reached its business assertions and exposed missing direct-message repository APIs, bare message update, unscoped message/history reads, and the existing controller pre-stream error behavior.
+- Before T041, the elevated HTTP run passed 13 of 14 T035 tests; the remaining foreign-append `200` SSE error was resolved by the final pre-stream boundary implementation. T039 is now complete under the final US1 acceptance evidence below.
+- The Codex sandbox initially blocked Supertest loopback with `listen EPERM`; the elevated test run was used to distinguish that environment restriction from application behavior.
+
+### T040 status and evidence
+
+- T040 now carries the already-derived `CustomerScope` into ContextState, planning, query understanding, answer decisions, grounding checks, and clarification questions. Each direct child write receives canonical `customerId`; ContextState uses the schema-valid Customer-qualified `updateMany → create → findFirst` sequence rather than a nonexistent compound upsert.
+- T040-owned source files have zero diagnostics in the current full typecheck. Focused isolated-transpile service/repository tests pass: 6 suites / 24 tests.
+- The elevated Customer-child HTTP suite passes 14 of 16 tests. Both remaining failures are only the existing T041 controller boundary: a foreign parent returns `200 text/event-stream` with an SSE error instead of the required JSON `404`. The gated Customer A/B E2E assertion has the same T041 failure; it did not create or mutate foreign child records.
+- T040's former HTTP boundary blocker was resolved by T041; its Customer-child acceptance is now included in the final US1 evidence below.
+
+### T041 and US1 final acceptance
+
+- `AssistantController.postMessage()` now derives `CustomerScope` exclusively from the verified canonical identity and calls Customer-qualified active-session preflight before setting an SSE status/header or invoking message orchestration. Foreign, missing, closed, and expired sessions therefore use the existing Nest JSON `404 NOT_FOUND` envelope with no SSE event, mutation, audit, tool, evidence, or orchestration work.
+- Runtime input now explicitly separates `sourceMessageId` (user message) from `responseMessageId` (assistant message). The parent-consistency gate validates Customer, session, and source message before page-context processing, tool resolution, permission, ToolCall, or connector work. Downstream ToolCall/Evidence/Answer records retain the response assistant message parent.
+- Final targeted acceptance passed: T036 12/12; T035/T037/T038 plus Feature 001 SSE and analytics 69/69; runtime unit 10/10; Customer A/B E2E 4/4. Own Customer streams retain the required sequence, while a visible-session forced runtime failure remains `200 text/event-stream` with one redacted safe `error` event.
+- T039, T040, and T041 are complete. US1 checkpoint is complete: Customer A/B share organizationId, actorId, and HostApp yet cannot read, mutate, or stream each other's session/message/history/SSE/child data.
+
+### T042 expected-red evidence
+
+- The tests-first fixture defines active Customer A and Customer B `Shared Return SOP` documents/chunks with the same `sourceKey=shared-return-sop` and `version=1.0.0`; their canonical JWT claims share `org-shared`, `actor-shared`, and `erp`, while only Customer/integration/token trace differs. Each side has a unique content marker. A Customer B-only matching document supports the safe no-evidence disclosure contract.
+- The test helper applies only predicates actually supplied by runtime. It does not inject `customerId`, infer ownership from a parent or lower-level identity, or post-filter `findMany` output.
+- Current `DeterministicRetrievalProvider` sends only `enabled=true` and active-document status to `knowledgeChunk.findMany`, then materializes and ranks candidates globally. The first expected-red business assertion is therefore a foreign Customer chunk becoming a selected candidate.
+- The immediate implementation owner is T047 (Customer-first provider predicate). T048 and T049 subsequently own Customer-qualified RetrievalRun/Candidate persistence and EvidenceRef read/write isolation. T042 changes no production behavior and does not complete the US2 checkpoint.
+- Observed with `RUN_CUSTOMER_US2_TESTS=true`: the fixture-invariant case passes; the three HTTP cases reach their business assertions and fail only because Customer A selects `knowledge-chunk-customer-b-return-001`, Customer B selects `knowledge-chunk-customer-a-return-001`, and Customer A receives an answered response with Customer B-only evidence for `foreign-only-return-sop`. The normal sandbox invocation is blocked by loopback `listen EPERM`; the same isolated-transpile suite was verified outside that restriction, with no fixture, JWT, DI, or mock setup failure.

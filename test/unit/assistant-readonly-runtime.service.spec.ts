@@ -1,6 +1,7 @@
 import { RiskLevel, ExecutionDecision, ToolCallStatus, ToolExecutionStatus, ToolOperation } from '../../src/generated/prisma/enums';
 import { AssistantReadonlyRuntimeService } from '../../src/assistant/runtime/assistant-readonly-runtime.service';
 import { ToolCallService } from '../../src/assistant/runtime/tool-call.service';
+import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { RegisteredToolDefinition, ToolPermissionDeniedReason } from '../../src/tools/tool-registry.types';
 
@@ -129,6 +130,40 @@ describe('AssistantReadonlyRuntimeService', () => {
     expect(result.toolLifecycle).toBe('failed');
     expect(result.connectorStatus).toBe('failed');
     expect(result.sanitizedResult).toEqual({});
+  });
+
+  it.each([
+    ['Customer', (input: ReturnType<typeof runtimeInput>) => {
+      input.executionPlan.customerId = 'customer-b';
+    }],
+    ['session', (input: ReturnType<typeof runtimeInput>) => {
+      input.executionPlan.sessionId = 'session-hidden-001';
+    }],
+    ['source message', (input: ReturnType<typeof runtimeInput>) => {
+      input.executionPlan.messageId = 'message-hidden-user-001';
+    }]
+  ])('rejects a mismatched %s execution-plan parent before all runtime downstream work', async (_label, mutate) => {
+    const harness = createMismatchRuntimeHarness();
+    const input = runtimeInput();
+    mutate(input);
+
+    await expect(harness.service.execute(input)).rejects.toMatchObject({
+      status: 404,
+      response: {
+        error: 'NOT_FOUND',
+        message: 'Assistant runtime context not found.'
+      }
+    });
+
+    expect(harness.toolRegistry.resolveExecutableTool).not.toHaveBeenCalled();
+    expect(harness.toolRegistry.validateInput).not.toHaveBeenCalled();
+    expect(harness.permissionPrecheck.check).not.toHaveBeenCalled();
+    expect(harness.permissionPrecheck.recordDenied).not.toHaveBeenCalled();
+    expect(harness.toolCallService.startToolCall).not.toHaveBeenCalled();
+    expect(harness.toolCallService.completeToolCall).not.toHaveBeenCalled();
+    expect(harness.toolCallService.failToolCall).not.toHaveBeenCalled();
+    expect(harness.toolCallService.blockToolCall).not.toHaveBeenCalled();
+    expect(harness.connector.execute).not.toHaveBeenCalled();
   });
 });
 
@@ -324,13 +359,17 @@ function registeredTool(): RegisteredToolDefinition {
 
 function runtimeInput() {
   return {
+    customerScope: createCustomerScopeFromIdentityContext(identityContext()),
     requestId: 'req-001',
     sessionId: 'session-001',
-    messageId: 'message-001',
+    sourceMessageId: 'message-user-001',
+    responseMessageId: 'message-001',
     identityContext: identityContext(),
     executionPlan: {
       id: 'plan-001',
+      customerId: 'customer-a',
       sessionId: 'session-001',
+      messageId: 'message-user-001',
       taskType: 'order_status_lookup',
       requiredEvidence: [],
       candidateTools: [{ key: 'mock.orders.status.lookup', reason: 'order status query' }],
@@ -354,8 +393,42 @@ function runtimeInput() {
 function identityContext() {
   return {
     requestId: 'req-001',
-    actor: { actorId: 'actor-001', role: 'planner', permissionScopes: ['orders:read'] },
+    customer: { customerId: 'customer-a', integrationId: 'integration-erp' },
+    organization: { organizationId: 'org-001' },
     hostApp: { hostApp: 'erp' },
-    company: { organizationId: 'org-001' }
+    actor: { actorId: 'actor-001', roles: ['planner'], permissionScopes: ['orders:read'] },
+    auth: { tokenId: 'token-001', gatewayIssuer: 'https://gateway.test.internal' }
+  };
+}
+
+function createMismatchRuntimeHarness() {
+  const toolRegistry = {
+    resolveExecutableTool: jest.fn(),
+    validateInput: jest.fn()
+  };
+  const connector = { execute: jest.fn() };
+  const permissionPrecheck = {
+    check: jest.fn(),
+    recordDenied: jest.fn()
+  };
+  const toolCallService = {
+    startToolCall: jest.fn(),
+    completeToolCall: jest.fn(),
+    failToolCall: jest.fn(),
+    blockToolCall: jest.fn()
+  };
+
+  return {
+    service: new AssistantReadonlyRuntimeService(
+      toolRegistry as unknown as ConstructorParameters<typeof AssistantReadonlyRuntimeService>[0],
+      connector as unknown as ConstructorParameters<typeof AssistantReadonlyRuntimeService>[1],
+      permissionPrecheck as unknown as ConstructorParameters<typeof AssistantReadonlyRuntimeService>[2],
+      toolCallService as unknown as ConstructorParameters<typeof AssistantReadonlyRuntimeService>[3],
+      { sanitize: jest.fn() } as unknown as ConstructorParameters<typeof AssistantReadonlyRuntimeService>[4]
+    ),
+    toolRegistry,
+    connector,
+    permissionPrecheck,
+    toolCallService
   };
 }

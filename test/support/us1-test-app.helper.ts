@@ -18,6 +18,7 @@ import {
   FeedbackRating,
   RiskLevel,
   KnowledgeDocumentStatus,
+  KnowledgeVisibility,
   KnowledgeSourceType,
   ToolCallStatus,
   ToolExecutionStatus,
@@ -39,6 +40,7 @@ import {
 
 type SessionRecord = {
   id: string;
+  customerId?: string;
   hostApp: string;
   organizationId: string;
   actorId: string;
@@ -50,6 +52,7 @@ type SessionRecord = {
 
 type ContextStateRecord = {
   id: string;
+  customerId?: string;
   sessionId: string;
   currentTask: string | null;
   currentModule: string | null;
@@ -69,6 +72,7 @@ type ContextStateRecord = {
 
 type MessageRecord = {
   id: string;
+  customerId?: string;
   sessionId: string;
   requestId: string;
   role: AssistantMessageRole;
@@ -80,6 +84,7 @@ type MessageRecord = {
 
 type ToolCallRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   sessionId: string;
   messageId: string | null;
@@ -175,6 +180,7 @@ type EscalationRequestRecord = {
 
 type EvidenceRefRecord = {
   id: string;
+  customerId?: string;
   requestId: string | null;
   messageId: string | null;
   sourceType: EvidenceSourceType;
@@ -192,6 +198,7 @@ type EvidenceRefRecord = {
 
 type AuditEventRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   timestamp: Date;
   organizationId: string;
@@ -211,6 +218,7 @@ type AuditEventRecord = {
 
 type QueryUnderstandingRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   messageId: string;
   sentences: unknown;
@@ -228,6 +236,7 @@ type QueryUnderstandingRecord = {
 
 type GroundingCheckRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   messageId: string;
   covered: boolean;
@@ -240,6 +249,7 @@ type GroundingCheckRecord = {
 
 type AnswerDecisionRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   messageId: string;
   status: string;
@@ -252,6 +262,7 @@ type AnswerDecisionRecord = {
 
 type ClarificationQuestionRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   messageId: string;
   question: string;
@@ -290,12 +301,16 @@ type FeedbackEventRecord = {
 
 type KnowledgeDocumentRecord = {
   id: string;
+  customerId: string;
   title: string;
   sourceType: KnowledgeSourceType;
   sourceKey: string;
   version: string;
   language: string;
   status: KnowledgeDocumentStatus;
+  visibility: KnowledgeVisibility;
+  organizationIds: string[];
+  requiredPermissionScopes: string[];
   metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
@@ -303,6 +318,7 @@ type KnowledgeDocumentRecord = {
 
 type KnowledgeChunkRecord = {
   id: string;
+  customerId: string;
   documentId: string;
   chunkIndex: number;
   heading: string | null;
@@ -344,6 +360,7 @@ type RetrievalCandidateRecord = {
 
 type ExecutionPlanRecord = {
   id: string;
+  customerId?: string;
   sessionId: string;
   messageId: string | null;
   taskType: string;
@@ -393,11 +410,12 @@ export type { InternalIdentityTestConfig } from './internal-identity-test-module
 
 export type Us1TestAppOptions = {
   internalIdentity?: InternalIdentityTestConfig;
+  forceMessageServiceErrorForSessionId?: string;
 };
 
 export async function createUs1TestAppWithState(
   options: Us1TestAppOptions = {}
-): Promise<{ app: INestApplication; state: Us1TestState }> {
+): Promise<{ app: INestApplication; state: Us1TestState; prismaMock: ReturnType<typeof createPrismaMock> }> {
   process.env.DATABASE_URL = 'postgresql://assistant:assistant_dev_password@localhost:5432/assistant_dev';
   process.env.POSTGRES_USER = 'assistant';
   process.env.POSTGRES_PASSWORD = 'assistant_dev_password';
@@ -454,6 +472,9 @@ export async function createUs1TestAppWithState(
   const originalSendMessage = assistantMessageService.sendMessage.bind(assistantMessageService);
   jest.spyOn(assistantMessageService, 'sendMessage').mockImplementation(async (input) => {
     state.orchestration.sendMessage(input);
+    if (input.sessionId === options.forceMessageServiceErrorForSessionId) {
+      throw new Error('test-only in-stream failure');
+    }
     return originalSendMessage(input);
   });
   const sseEventBuilder = moduleRef.get(AssistantSseEventBuilder);
@@ -472,7 +493,7 @@ export async function createUs1TestAppWithState(
   app.useGlobalFilters(new GlobalExceptionFilter());
   await app.init();
 
-  return { app, state };
+  return { app, state, prismaMock };
 }
 
 export async function createUs1TestApp(): Promise<INestApplication> {
@@ -546,6 +567,14 @@ export function parseSseResponse(text: string) {
   });
 }
 
+export function createUs1PrismaMockForTest(state: Us1TestState) {
+  return createPrismaMock(state);
+}
+
+export function createUs1TestStateForTest(): Us1TestState {
+  return createInitialState();
+}
+
 function createPrismaMock(state: MockState) {
   return {
     $queryRaw: jest.fn(async () => [{ result: 1 }]),
@@ -554,6 +583,7 @@ function createPrismaMock(state: MockState) {
         const now = nextDate();
         const record: SessionRecord = {
           id: `session-created-${state.sessions.length + 1}`,
+          customerId: data.customerId,
           hostApp: data.hostApp ?? 'erp',
           organizationId: data.organizationId ?? 'org-001',
           actorId: data.actorId ?? 'actor-001',
@@ -565,26 +595,39 @@ function createPrismaMock(state: MockState) {
         state.sessions.push(record);
         return record;
       }),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.sessions.find((item) => item.id === where.id) ?? null),
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => state.sessions.find((item) => matchesWhere(item, where)) ?? null),
       findFirst: jest.fn(
         async ({
           where
         }: {
-          where: {
-            id: string;
-            organizationId: string;
-            hostApp: string;
-            actorId: string;
-          };
+          where: Record<string, unknown>;
         }) =>
-          state.sessions.find(
-            (item) =>
-              item.id === where.id &&
-              item.organizationId === where.organizationId &&
-              item.hostApp === where.hostApp &&
-              item.actorId === where.actorId
-          ) ?? null
-      )
+          state.sessions.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.sessions.filter((item) => !where || matchesWhere(item, where))
+      ),
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<SessionRecord> }) => {
+        const session = state.sessions.find((item) => matchesWhere(item, where));
+        if (!session) throw new Error('AssistantSession not found.');
+        Object.assign(session, data, { updatedAt: nextDate() });
+        return session;
+      }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<SessionRecord> }) => {
+        const matches = state.sessions.filter((item) => matchesWhere(item, where));
+        matches.forEach((item) => Object.assign(item, data, { updatedAt: nextDate() }));
+        return { count: matches.length };
+      }),
+      delete: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        const index = state.sessions.findIndex((item) => matchesWhere(item, where));
+        if (index < 0) throw new Error('AssistantSession not found.');
+        return state.sessions.splice(index, 1)[0];
+      }),
+      deleteMany: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        const matches = state.sessions.filter((item) => matchesWhere(item, where));
+        state.sessions.splice(0, state.sessions.length, ...state.sessions.filter((item) => !matches.includes(item)));
+        return { count: matches.length };
+      })
     },
     toolDefinition: {
       findMany: jest.fn(
@@ -638,6 +681,7 @@ function createPrismaMock(state: MockState) {
         const now = nextDate();
         const record: ContextStateRecord = {
           id: `context-${state.contextStates.length + 1}`,
+          customerId: data.customerId,
           sessionId: data.sessionId ?? 'session-owned-001',
           currentTask: (data.currentTask as string | null | undefined) ?? null,
           currentModule: (data.currentModule as string | null | undefined) ?? null,
@@ -661,16 +705,15 @@ function createPrismaMock(state: MockState) {
         async ({
           where
         }: {
-          where: { sessionId: string };
+          where: Record<string, unknown>;
           orderBy?: { updatedAt: 'desc' | 'asc' };
         }) =>
           [...state.contextStates]
-            .filter((item) => item.sessionId === where.sessionId)
+            .filter((item) => matchesWhere(item, where))
             .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())[0] ?? null
       ),
-      upsert: jest.fn(async ({ where, create, update }: { where: { sessionId?: string }; create: Partial<ContextStateRecord>; update: Partial<ContextStateRecord> }) => {
-        const key = where.sessionId ?? create.sessionId;
-        const existing = state.contextStates.find((item) => item.sessionId === key);
+      upsert: jest.fn(async ({ where, create, update }: { where: Record<string, unknown>; create: Partial<ContextStateRecord>; update: Partial<ContextStateRecord> }) => {
+        const existing = state.contextStates.find((item) => matchesWhere(item, where));
         if (existing) {
           Object.assign(existing, update, { updatedAt: nextDate() });
           return existing;
@@ -678,7 +721,8 @@ function createPrismaMock(state: MockState) {
 
         const record = {
           id: `context-${state.contextStates.length + 1}`,
-          sessionId: create.sessionId ?? key ?? 'session-owned-001',
+          customerId: create.customerId,
+          sessionId: create.sessionId ?? 'session-owned-001',
           currentTask: (create.currentTask as string | null | undefined) ?? null,
           currentModule: (create.currentModule as string | null | undefined) ?? null,
           currentPage: create.currentPage ?? null,
@@ -697,8 +741,8 @@ function createPrismaMock(state: MockState) {
         state.contextStates.push(record);
         return record;
       }),
-      updateMany: jest.fn(async ({ where, data }: { where: { sessionId: string }; data: Partial<ContextStateRecord> }) => {
-        const matching = state.contextStates.filter((item) => item.sessionId === where.sessionId);
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ContextStateRecord> }) => {
+        const matching = state.contextStates.filter((item) => matchesWhere(item, where));
         matching.forEach((item) => Object.assign(item, data, { updatedAt: nextDate() }));
         return {
           count: matching.length
@@ -710,6 +754,7 @@ function createPrismaMock(state: MockState) {
         const now = nextDate();
         const record: MessageRecord = {
           id: `message-${state.messages.length + 1}`,
+          customerId: data.customerId,
           sessionId: data.sessionId ?? 'session-owned-001',
           requestId: data.requestId ?? 'req-generated',
           role: (data.role as AssistantMessageRole) ?? AssistantMessageRole.user,
@@ -734,14 +779,14 @@ function createPrismaMock(state: MockState) {
           cursor,
           skip
         }: {
-          where: { sessionId: string };
+          where: Record<string, unknown>;
           orderBy?: { createdAt: 'asc' | 'desc' };
           take?: number;
           cursor?: { id: string };
           skip?: number;
         }) => {
         const sorted = [...state.messages]
-          .filter((item) => item.sessionId === where.sessionId)
+          .filter((item) => matchesWhere(item, where))
           .sort((left, right) =>
             (orderBy?.createdAt ?? 'asc') === 'asc'
               ? left.createdAt.getTime() - right.createdAt.getTime()
@@ -752,8 +797,8 @@ function createPrismaMock(state: MockState) {
         const paginated = sorted.slice(startIndex);
         return typeof take === 'number' ? paginated.slice(0, take) : paginated;
       }),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<MessageRecord> }) => {
-        const message = state.messages.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<MessageRecord> }) => {
+        const message = state.messages.find((item) => matchesWhere(item, where));
         if (!message) {
           throw new Error(`Message ${where.id} not found.`);
         }
@@ -761,13 +806,21 @@ function createPrismaMock(state: MockState) {
         Object.assign(message, data);
         return message;
       }),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>
-        state.messages.find((item) => item.id === where.id) ?? null
-      )
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.messages.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.messages.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<MessageRecord> }) => {
+        const matching = state.messages.filter((item) => matchesWhere(item, where));
+        matching.forEach((item) => Object.assign(item, data));
+        return { count: matching.length };
+      })
     },
     queryUnderstandingResult: {
-      upsert: jest.fn(async ({ where, create, update }: { where: { messageId: string }; create: Partial<QueryUnderstandingRecord>; update: Partial<QueryUnderstandingRecord> }) => {
-        const existing = state.queryUnderstandingResults.find((item) => item.messageId === where.messageId);
+      upsert: jest.fn(async ({ where, create, update }: { where: Record<string, unknown>; create: Partial<QueryUnderstandingRecord>; update: Partial<QueryUnderstandingRecord> }) => {
+        const existing = state.queryUnderstandingResults.find((item) => matchesWhere(item, where));
         if (existing) {
           Object.assign(existing, update);
           return existing;
@@ -775,8 +828,9 @@ function createPrismaMock(state: MockState) {
 
         const record: QueryUnderstandingRecord = {
           id: `qu-${state.queryUnderstandingResults.length + 1}`,
+          customerId: create.customerId,
           requestId: create.requestId ?? 'req-generated',
-          messageId: create.messageId ?? where.messageId,
+          messageId: create.messageId ?? 'message-generated',
           sentences: create.sentences ?? [],
           tokens: create.tokens ?? [],
           phrases: create.phrases ?? [],
@@ -797,6 +851,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<ExecutionPlanRecord> }) => {
         const record: ExecutionPlanRecord = {
           id: `plan-${state.executionPlans.length + 1}`,
+          customerId: data.customerId,
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
           taskType: data.taskType ?? 'general_lookup',
@@ -1038,6 +1093,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<ToolCallRecord> }) => {
         const record: ToolCallRecord = {
           id: `tool-call-${state.toolCalls.length + 1}`,
+          customerId: data.customerId,
           requestId: data.requestId ?? 'req-generated',
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
@@ -1058,8 +1114,8 @@ function createPrismaMock(state: MockState) {
         state.toolCalls.push(record);
         return record;
       }),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ToolCallRecord> }) => {
-        const toolCall = state.toolCalls.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ToolCallRecord> }) => {
+        const toolCall = state.toolCalls.find((item) => matchesWhere(item, where));
         if (!toolCall) {
           throw new Error(`ToolCall ${where.id} not found.`);
         }
@@ -1067,20 +1123,20 @@ function createPrismaMock(state: MockState) {
         Object.assign(toolCall, data);
         return toolCall;
       }),
-      findMany: jest.fn(async ({ where }: { where: { sessionId?: string; messageId?: string } }) =>
+      findMany: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
         state.toolCalls
-          .filter((item) => (!where.sessionId || item.sessionId === where.sessionId) && (!where.messageId || item.messageId === where.messageId))
+          .filter((item) => matchesWhere(item, where))
           .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
       ),
       findFirst: jest.fn(
-        async ({ where }: { where: { idempotencyKey?: string | null } }) =>
-          state.toolCalls.find((item) => where.idempotencyKey && item.idempotencyKey === where.idempotencyKey) ?? null
+        async ({ where }: { where: Record<string, unknown> }) => state.toolCalls.find((item) => matchesWhere(item, where)) ?? null
       )
     },
     evidenceRef: {
       create: jest.fn(async ({ data }: { data: Partial<EvidenceRefRecord> }) => {
         const record: EvidenceRefRecord = {
           id: `evidence-${state.evidenceRefs.length + 1}`,
+          customerId: data.customerId,
           requestId: (data.requestId as string | null | undefined) ?? null,
           messageId: (data.messageId as string | null | undefined) ?? null,
           sourceType: (data.sourceType as EvidenceSourceType) ?? EvidenceSourceType.structured_record,
@@ -1098,9 +1154,9 @@ function createPrismaMock(state: MockState) {
         state.evidenceRefs.push(record);
         return record;
       }),
-      findMany: jest.fn(async ({ where }: { where: { messageId: { in: string[] } } }) =>
+      findMany: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
         state.evidenceRefs
-          .filter((item) => item.messageId && where.messageId.in.includes(item.messageId))
+          .filter((item) => matchesWhere(item, where))
           .sort((left, right) => left.timestamp.getTime() - right.timestamp.getTime())
       )
     },
@@ -1108,6 +1164,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<AuditEventRecord> }) => {
         const record: AuditEventRecord = {
           id: `audit-${state.auditEvents.length + 1}`,
+          customerId: data.customerId,
           requestId: data.requestId ?? 'req-generated',
           timestamp: nextDate(),
           organizationId: data.organizationId ?? 'org-001',
@@ -1132,6 +1189,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<GroundingCheckRecord> }) => {
         const record: GroundingCheckRecord = {
           id: `grounding-${state.groundingChecks.length + 1}`,
+          customerId: data.customerId,
           requestId: data.requestId ?? 'req-generated',
           messageId: data.messageId ?? 'message-generated',
           covered: data.covered ?? false,
@@ -1149,6 +1207,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<AnswerDecisionRecord> }) => {
         const record: AnswerDecisionRecord = {
           id: `answer-decision-${state.answerDecisions.length + 1}`,
+          customerId: data.customerId,
           requestId: data.requestId ?? 'req-generated',
           messageId: data.messageId ?? 'message-generated',
           status: data.status ?? 'answered',
@@ -1166,6 +1225,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<ClarificationQuestionRecord> }) => {
         const record: ClarificationQuestionRecord = {
           id: `clarification-question-${state.clarificationQuestions.length + 1}`,
+          customerId: data.customerId,
           requestId: data.requestId ?? 'req-generated',
           messageId: data.messageId ?? 'message-generated',
           question: data.question ?? '請補充查詢目標。',
@@ -1289,12 +1349,16 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<KnowledgeDocumentRecord> }) => {
         const record: KnowledgeDocumentRecord = {
           id: data.id ?? `knowledge-document-${state.knowledgeDocuments.length + 1}`,
+          customerId: data.customerId ?? 'customer-a',
           title: data.title ?? 'Knowledge document',
           sourceType: (data.sourceType as KnowledgeSourceType | undefined) ?? KnowledgeSourceType.sop,
           sourceKey: data.sourceKey ?? `knowledge-source-${state.knowledgeDocuments.length + 1}`,
           version: data.version ?? '1.0.0',
           language: data.language ?? 'zh-TW',
           status: (data.status as KnowledgeDocumentStatus | undefined) ?? KnowledgeDocumentStatus.active,
+          visibility: (data.visibility as KnowledgeVisibility | undefined) ?? KnowledgeVisibility.CUSTOMER,
+          organizationIds: (data.organizationIds as string[] | undefined) ?? [],
+          requiredPermissionScopes: (data.requiredPermissionScopes as string[] | undefined) ?? [],
           metadata: data.metadata ?? null,
           createdAt: nextDate(),
           updatedAt: nextDate()
@@ -1353,6 +1417,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<KnowledgeChunkRecord> }) => {
         const record: KnowledgeChunkRecord = {
           id: data.id ?? `knowledge-chunk-${state.knowledgeChunks.length + 1}`,
+          customerId: data.customerId ?? 'customer-a',
           documentId: data.documentId ?? 'knowledge-document-sop-return-001',
           chunkIndex: data.chunkIndex ?? state.knowledgeChunks.length,
           heading: (data.heading as string | null | undefined) ?? null,
@@ -1437,9 +1502,10 @@ function createInitialState(): MockState {
     sessions: [
       {
         id: 'session-owned-001',
+        customerId: 'customer-a',
         hostApp: 'erp',
-        organizationId: 'org-001',
-        actorId: 'actor-001',
+        organizationId: 'org-shared',
+        actorId: 'actor-shared',
         status: AssistantSessionStatus.active,
         createdAt: new Date(baseDate),
         updatedAt: new Date('2026-06-16T00:00:04.000Z'),
@@ -1447,9 +1513,10 @@ function createInitialState(): MockState {
       },
       {
         id: 'session-hidden-001',
+        customerId: 'customer-b',
         hostApp: 'erp',
-        organizationId: 'org-001',
-        actorId: 'actor-002',
+        organizationId: 'org-shared',
+        actorId: 'actor-shared',
         status: AssistantSessionStatus.active,
         createdAt: new Date(baseDate),
         updatedAt: new Date('2026-06-16T00:00:01.000Z'),
@@ -1457,9 +1524,10 @@ function createInitialState(): MockState {
       },
       {
         id: 'session-closed-001',
+        customerId: 'customer-a',
         hostApp: 'erp',
-        organizationId: 'org-001',
-        actorId: 'actor-001',
+        organizationId: 'org-shared',
+        actorId: 'actor-shared',
         status: AssistantSessionStatus.closed,
         createdAt: new Date(baseDate),
         updatedAt: new Date('2026-06-16T00:00:05.000Z'),
@@ -1467,18 +1535,31 @@ function createInitialState(): MockState {
       },
       {
         id: 'session-expired-001',
+        customerId: 'customer-a',
         hostApp: 'erp',
-        organizationId: 'org-001',
-        actorId: 'actor-001',
+        organizationId: 'org-shared',
+        actorId: 'actor-shared',
         status: AssistantSessionStatus.expired,
         createdAt: new Date(baseDate),
         updatedAt: new Date('2026-06-16T00:00:06.000Z'),
         lastMessageAt: new Date('2026-06-16T00:00:06.000Z')
+      },
+      {
+        id: 'session-flow-error-001',
+        customerId: 'customer-a',
+        hostApp: 'erp',
+        organizationId: 'org-shared',
+        actorId: 'actor-shared',
+        status: AssistantSessionStatus.active,
+        createdAt: new Date(baseDate),
+        updatedAt: new Date('2026-06-16T00:00:07.000Z'),
+        lastMessageAt: null
       }
     ],
     contextStates: [
       {
         id: 'context-owned-001',
+        customerId: 'customer-a',
         sessionId: 'session-owned-001',
         currentTask: 'order_status_lookup',
         currentModule: 'orders',
@@ -1503,6 +1584,7 @@ function createInitialState(): MockState {
       },
       {
         id: 'context-hidden-001',
+        customerId: 'customer-b',
         sessionId: 'session-hidden-001',
         currentTask: 'order_status_lookup',
         currentModule: 'orders',
@@ -1523,6 +1605,7 @@ function createInitialState(): MockState {
     messages: [
       {
         id: 'message-owned-user-001',
+        customerId: 'customer-a',
         sessionId: 'session-owned-001',
         requestId: 'req-history-seed-001',
         role: AssistantMessageRole.user,
@@ -1533,10 +1616,33 @@ function createInitialState(): MockState {
       },
       {
         id: 'message-owned-assistant-001',
+        customerId: 'customer-a',
         sessionId: 'session-owned-001',
         requestId: 'req-history-seed-001',
         role: AssistantMessageRole.assistant,
         content: '這張訂單目前狀態為已確認，客戶名稱是王小明企業。',
+        answerDecision: 'answered',
+        pageContext: null,
+        createdAt: new Date('2026-06-16T00:00:04.000Z')
+      },
+      {
+        id: 'message-hidden-user-001',
+        customerId: 'customer-b',
+        sessionId: 'session-hidden-001',
+        requestId: 'req-history-seed-hidden-001',
+        role: AssistantMessageRole.user,
+        content: 'Customer B private message.',
+        answerDecision: null,
+        pageContext: null,
+        createdAt: new Date('2026-06-16T00:00:02.000Z')
+      },
+      {
+        id: 'message-hidden-assistant-001',
+        customerId: 'customer-b',
+        sessionId: 'session-hidden-001',
+        requestId: 'req-history-seed-hidden-001',
+        role: AssistantMessageRole.assistant,
+        content: 'Customer B private answer.',
         answerDecision: 'answered',
         pageContext: null,
         createdAt: new Date('2026-06-16T00:00:04.000Z')
@@ -1549,6 +1655,7 @@ function createInitialState(): MockState {
     toolCalls: [
       {
         id: 'tool-call-owned-001',
+        customerId: 'customer-a',
         requestId: 'req-history-seed-001',
         sessionId: 'session-owned-001',
         messageId: 'message-owned-assistant-001',
@@ -1565,11 +1672,32 @@ function createInitialState(): MockState {
         errorCode: null,
         createdAt: new Date('2026-06-16T00:00:03.000Z'),
         executedAt: new Date('2026-06-16T00:00:03.000Z')
+      },
+      {
+        id: 'tool-call-hidden-001',
+        customerId: 'customer-b',
+        requestId: 'req-history-seed-hidden-001',
+        sessionId: 'session-hidden-001',
+        messageId: 'message-hidden-assistant-001',
+        toolDefinitionId: 'tool-definition-orders-001',
+        toolName: 'mock.orders.status.lookup',
+        toolVersion: '1.0.0',
+        inputSummary: { entityId: 'SO-20002' },
+        permissionResult: { scopes: ['orders:read'] },
+        outputSummary: { status: 'private' },
+        status: ToolCallStatus.success,
+        executionStatus: ToolExecutionStatus.executed,
+        idempotencyKey: null,
+        durationMs: 1,
+        errorCode: null,
+        createdAt: new Date('2026-06-16T00:00:03.000Z'),
+        executedAt: new Date('2026-06-16T00:00:03.000Z')
       }
     ],
     evidenceRefs: [
       {
         id: 'evidence-owned-001',
+        customerId: 'customer-a',
         requestId: 'req-history-seed-001',
         messageId: 'message-owned-assistant-001',
         sourceType: EvidenceSourceType.structured_record,
@@ -1583,6 +1711,23 @@ function createInitialState(): MockState {
         timestamp: new Date('2026-06-16T00:00:03.500Z'),
         permissionSnapshot: { visibleFields: ['status', 'customerName'] },
         summary: { fields: { status: '已確認', customerName: '王小明企業' } }
+      },
+      {
+        id: 'evidence-hidden-001',
+        customerId: 'customer-b',
+        requestId: 'req-history-seed-hidden-001',
+        messageId: 'message-hidden-assistant-001',
+        sourceType: EvidenceSourceType.structured_record,
+        sourceId: 'SO-20002',
+        toolCallId: 'tool-call-hidden-001',
+        documentId: null,
+        chunkId: null,
+        entityType: 'order',
+        entityId: 'SO-20002',
+        fieldPaths: ['status'],
+        timestamp: new Date('2026-06-16T00:00:03.500Z'),
+        permissionSnapshot: { visibleFields: ['status'] },
+        summary: { fields: { status: 'private' } }
       }
     ],
     auditEvents: [],
@@ -1602,6 +1747,65 @@ function createInitialState(): MockState {
       sseEventBuilds: jest.fn()
     }
   };
+}
+
+/**
+ * The in-memory delegates intentionally apply only predicates supplied by the
+ * runtime. They never synthesize a Customer predicate, so an unscoped query
+ * remains observable as an expected-red Customer isolation failure.
+ */
+/**
+ * Test delegates deliberately implement only explicit Prisma-style predicates.
+ * They never add a Customer condition or infer one from a parent, organization,
+ * actor, HostApp, request, or fixture.
+ */
+function matchesWhere(record: Record<string, unknown>, where: Record<string, unknown>): boolean {
+  return Object.entries(where).every(([key, value]) => {
+    // A supplied undefined value is an invalid predicate, never a wildcard.
+    // Absence of the key remains observable as the legacy bare-ID behavior.
+    if (value === undefined) return false;
+
+    if (key === 'AND') {
+      return Array.isArray(value) && value.every((predicate) => isRecord(predicate) && matchesWhere(record, predicate));
+    }
+
+    const compound = compoundSelectorFields(key, value);
+    if (compound) {
+      return compound.every(([field, expected]) => record[field] === expected);
+    }
+
+    if (key.startsWith('customerId_')) {
+      return false;
+    }
+
+    if (isRecord(value)) {
+      if (Array.isArray(value.in)) return value.in.includes(record[key]);
+      return false;
+    }
+
+    return record[key] === value;
+  });
+}
+
+function compoundSelectorFields(
+  key: string,
+  value: unknown
+): Array<[string, unknown]> | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const expectedFields: Record<string, readonly string[]> = {
+    customerId_id: ['customerId', 'id'],
+    customerId_sessionId: ['customerId', 'sessionId'],
+    customerId_messageId: ['customerId', 'messageId']
+  };
+  const fields = expectedFields[key];
+  if (!fields || Object.keys(value).some((field) => !fields.includes(field))) return undefined;
+  if (fields.some((field) => !(field in value) || value[field] === undefined)) return undefined;
+  return fields.map((field) => [field, value[field]]);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function createReviewItems(baseDate: Date): ReviewItemRecord[] {
@@ -1682,12 +1886,16 @@ function createKnowledgeDocuments(baseDate: Date): KnowledgeDocumentRecord[] {
   return [
     {
       id: 'knowledge-document-sop-return-001',
+      customerId: 'customer-a',
       title: '退貨處理 SOP',
       sourceType: KnowledgeSourceType.sop,
       sourceKey: 'sop-return-process',
       version: '1.0.0',
       language: 'zh-TW',
       status: KnowledgeDocumentStatus.active,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
       metadata: {
         domain: 'orders'
       },
@@ -1696,12 +1904,16 @@ function createKnowledgeDocuments(baseDate: Date): KnowledgeDocumentRecord[] {
     },
     {
       id: 'knowledge-document-field-order-status-001',
+      customerId: 'customer-a',
       title: '訂單狀態欄位說明',
       sourceType: KnowledgeSourceType.field_guide,
       sourceKey: 'field-order-status',
       version: '1.0.0',
       language: 'zh-TW',
       status: KnowledgeDocumentStatus.active,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
       metadata: {
         domain: 'orders'
       },
@@ -1710,13 +1922,65 @@ function createKnowledgeDocuments(baseDate: Date): KnowledgeDocumentRecord[] {
     },
     {
       id: 'knowledge-document-archived-001',
+      customerId: 'customer-a',
       title: '封存文件',
       sourceType: KnowledgeSourceType.manual,
       sourceKey: 'archived-manual',
       version: '1.0.0',
       language: 'zh-TW',
       status: KnowledgeDocumentStatus.archived,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
       metadata: null,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-document-customer-a-return-001',
+      customerId: 'customer-a',
+      title: 'Shared Return SOP',
+      sourceType: KnowledgeSourceType.sop,
+      sourceKey: 'shared-return-sop',
+      version: '1.0.0',
+      language: 'en',
+      status: KnowledgeDocumentStatus.active,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
+      metadata: { fixture: 'customer-a-own-match' },
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-document-customer-b-return-001',
+      customerId: 'customer-b',
+      title: 'Shared Return SOP',
+      sourceType: KnowledgeSourceType.sop,
+      sourceKey: 'shared-return-sop',
+      version: '1.0.0',
+      language: 'en',
+      status: KnowledgeDocumentStatus.active,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
+      metadata: { fixture: 'customer-b-own-match' },
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-document-customer-b-foreign-only-001',
+      customerId: 'customer-b',
+      title: 'Foreign-only Return SOP',
+      sourceType: KnowledgeSourceType.sop,
+      sourceKey: 'customer-b-foreign-only-return-sop',
+      version: '1.0.0',
+      language: 'en',
+      status: KnowledgeDocumentStatus.active,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
+      metadata: { fixture: 'customer-b-foreign-only' },
       createdAt: new Date(baseDate),
       updatedAt: new Date(baseDate)
     }
@@ -1727,6 +1991,7 @@ function createKnowledgeChunks(baseDate: Date): KnowledgeChunkRecord[] {
   return [
     {
       id: 'knowledge-chunk-sop-return-001',
+      customerId: 'customer-a',
       documentId: 'knowledge-document-sop-return-001',
       chunkIndex: 0,
       heading: '退貨流程',
@@ -1743,6 +2008,7 @@ function createKnowledgeChunks(baseDate: Date): KnowledgeChunkRecord[] {
     },
     {
       id: 'knowledge-chunk-field-order-status-001',
+      customerId: 'customer-a',
       documentId: 'knowledge-document-field-order-status-001',
       chunkIndex: 0,
       heading: 'status 欄位',
@@ -1759,12 +2025,58 @@ function createKnowledgeChunks(baseDate: Date): KnowledgeChunkRecord[] {
     },
     {
       id: 'knowledge-chunk-archived-001',
+      customerId: 'customer-a',
       documentId: 'knowledge-document-archived-001',
       chunkIndex: 0,
       heading: '封存',
       content: '這段封存內容不應被 retrieval 使用。',
       tokenCount: 15,
       metadata: null,
+      embeddingRef: null,
+      vectorId: null,
+      enabled: true,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-chunk-customer-a-return-001',
+      customerId: 'customer-a',
+      documentId: 'knowledge-document-customer-a-return-001',
+      chunkIndex: 0,
+      heading: 'Shared Return SOP',
+      content: 'shared return SOP policy CUSTOMER_A_RETURN_RULE',
+      tokenCount: 6,
+      metadata: { fixture: 'customer-a-own-match' },
+      embeddingRef: null,
+      vectorId: null,
+      enabled: true,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-chunk-customer-b-return-001',
+      customerId: 'customer-b',
+      documentId: 'knowledge-document-customer-b-return-001',
+      chunkIndex: 0,
+      heading: 'Shared Return SOP',
+      content: 'shared return SOP policy CUSTOMER_B_PRIVATE_RETURN_RULE',
+      tokenCount: 6,
+      metadata: { fixture: 'customer-b-own-match' },
+      embeddingRef: null,
+      vectorId: null,
+      enabled: true,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-chunk-customer-b-foreign-only-001',
+      customerId: 'customer-b',
+      documentId: 'knowledge-document-customer-b-foreign-only-001',
+      chunkIndex: 0,
+      heading: 'Foreign-only Return SOP',
+      content: 'foreign-only-return-sop CUSTOMER_B_FOREIGN_ONLY_RETURN_RULE',
+      tokenCount: 4,
+      metadata: { fixture: 'customer-b-foreign-only' },
       embeddingRef: null,
       vectorId: null,
       enabled: true,

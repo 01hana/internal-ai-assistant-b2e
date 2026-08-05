@@ -1,14 +1,31 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { AssistantMessageRole, EvidenceSourceType } from '../../src/generated/prisma/enums';
-import { createIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import {
+  createAuthorizedInternalIdentityHeaders,
+  createUs1TestAppWithState,
+  parseSseResponse,
+  Us1TestState
+} from '../support/us1-test-app.helper';
+import {
+  createInternalIdentityJwtFixture,
+  TEST_BACKEND_AUDIENCE,
+  TEST_GATEWAY_ISSUER
+} from '../support/internal-identity-jwt.helper';
 
 describe('analytics-ready raw event records', () => {
+  const identityFixture = createInternalIdentityJwtFixture();
   let app: INestApplication;
   let state: Us1TestState;
 
   beforeEach(async () => {
-    const testApp = await createUs1TestAppWithState();
+    const testApp = await createUs1TestAppWithState({
+      internalIdentity: {
+        issuer: TEST_GATEWAY_ISSUER,
+        audience: TEST_BACKEND_AUDIENCE,
+        jwks: identityFixture.jwks
+      }
+    });
     app = testApp.app;
     state = testApp.state;
   });
@@ -160,7 +177,7 @@ describe('analytics-ready raw event records', () => {
     const requestId = 'req-analytics-tool-failure';
     const result = await sendAssistantMessage({
       requestId,
-      headers: { 'x-permission-scopes': 'orders:read' },
+      permissionScopes: ['orders:read'],
       message: '請查 SO-99999 訂單狀態',
       pageContext: {
         module: 'orders',
@@ -220,7 +237,7 @@ describe('analytics-ready raw event records', () => {
     const requestId = 'req-analytics-action-draft';
     const result = await sendAssistantMessage({
       requestId,
-      headers: { 'x-permission-scopes': 'orders:read,orders:update' },
+      permissionScopes: ['orders:read', 'orders:update'],
       message: '請幫我更新 SO-10001 的訂單狀態為已確認',
       pageContext: {
         module: 'orders',
@@ -239,7 +256,7 @@ describe('analytics-ready raw event records', () => {
         requestId,
         sessionId: 'session-owned-001',
         messageId: assistantMessage?.id,
-        actorId: 'actor-001',
+        actorId: 'actor-shared',
         toolName: 'mock.orders.status.update',
         resource: 'orders',
         operation: 'update',
@@ -259,7 +276,7 @@ describe('analytics-ready raw event records', () => {
     const approvalRequestId = 'req-analytics-approval';
     const approvalResult = await sendAssistantMessage({
       requestId: approvalRequestId,
-      headers: { 'x-permission-scopes': 'orders:read,orders:update' },
+      permissionScopes: ['orders:read', 'orders:update'],
       message: '請取消 SO-10001 訂單',
       pageContext: {
         module: 'orders',
@@ -278,7 +295,7 @@ describe('analytics-ready raw event records', () => {
         requestId: approvalRequestId,
         sessionId: 'session-owned-001',
         messageId: approvalAssistantMessage?.id,
-        requesterActorId: 'actor-001',
+        requesterActorId: 'actor-shared',
         riskLevel: 'high',
         status: 'pending',
         actionSummary: expect.anything(),
@@ -294,7 +311,7 @@ describe('analytics-ready raw event records', () => {
 
     const answeredResult = await sendAssistantMessage({
       requestId: 'req-analytics-feedback-answer',
-      headers: { 'x-permission-scopes': 'orders:read' },
+      permissionScopes: ['orders:read'],
       message: '請查 SO-10001 訂單狀態',
       pageContext: {
         module: 'orders',
@@ -310,11 +327,17 @@ describe('analytics-ready raw event records', () => {
 
     const positiveResponse = await request(app.getHttpServer())
       .post(`/api/v1/assistant/messages/${answeredMessage?.id}/feedback`)
-      .set(createIdentityHeaders({ 'x-request-id': 'req-analytics-feedback-positive' }))
+      .set(createAuthorizedInternalIdentityHeaders(identityFixture, {
+        claims: identityFixture.canonicalClaims.customerA,
+        requestId: 'req-analytics-feedback-positive'
+      }))
       .send({ rating: 'positive', intent: 'other', reason: 'clear' });
     const negativeResponse = await request(app.getHttpServer())
       .post(`/api/v1/assistant/messages/${answeredMessage?.id}/feedback`)
-      .set(createIdentityHeaders({ 'x-request-id': 'req-analytics-feedback-negative' }))
+      .set(createAuthorizedInternalIdentityHeaders(identityFixture, {
+        claims: identityFixture.canonicalClaims.customerA,
+        requestId: 'req-analytics-feedback-negative'
+      }))
       .send({ rating: 'negative', intent: 'not_helpful', reason: 'wrong source', comment });
 
     const newFeedbackEvents = state.feedbackEvents.slice(feedbackCount);
@@ -370,12 +393,20 @@ describe('analytics-ready raw event records', () => {
     requestId: string;
     message: string;
     pageContext: Record<string, unknown>;
-    headers?: Partial<Record<string, string>>;
+    permissionScopes?: string[];
   }) {
     const before = snapshotState(state);
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createIdentityHeaders({ 'x-request-id': input.requestId, ...input.headers }))
+      .set(
+        createAuthorizedInternalIdentityHeaders(identityFixture, {
+          claims: {
+            ...identityFixture.canonicalClaims.customerA,
+            permission_scopes: input.permissionScopes ?? identityFixture.canonicalClaims.customerA.permission_scopes
+          },
+          requestId: input.requestId
+        })
+      )
       .send({ message: input.message, pageContext: input.pageContext });
     const events = parseSseResponse(response.text);
     const finalEvent = events.find((event) => event.event === 'final');

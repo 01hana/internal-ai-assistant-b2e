@@ -85,14 +85,14 @@
 
 **Independent test**: Customer A/B with equal organizationId, actorId, and HostApp execute every session/message/history/SSE path using signed JWTs.
 
-- [ ] T034 [P] [US1] Add Customer A/B session create/get/list/update/delete and global session-ID safe-not-found cases in `test/contract/customer-session-isolation.contract.spec.ts` and `test/integration/customer-session-isolation.spec.ts`.
-- [ ] T035 [P] [US1] Add message append/read/history and global message-ID isolation cases in `test/contract/customer-message-history.contract.spec.ts` and `test/integration/customer-message-history.spec.ts`.
-- [ ] T036 [P] [US1] Add SSE guard rejection and Customer A/B orchestration isolation cases in `test/contract/customer-assistant-sse.contract.spec.ts` and `test/integration/customer-sse-isolation.spec.ts`.
-- [ ] T037 [P] [US1] Add parent-owned context/planning/answer/clarification/grounding/query-understanding isolation cases in `test/integration/customer-conversation-children.spec.ts` and Feature 001 regression in `test/e2e/app.e2e-spec.ts`.
-- [ ] T038 [US1] Apply `CustomerScope` to session create/visibility/get/list/update/delete in `src/assistant/session/assistant-session.service.ts` and `src/assistant/session/assistant-session.types.ts`.
-- [ ] T039 [US1] Apply Customer-qualified message persistence/reads in `src/assistant/message/assistant-message.repository.ts`, `src/assistant/message/assistant-message.service.ts`, and `src/assistant/history/assistant-history.service.ts`.
-- [ ] T040 [US1] Apply Customer-qualified parent traversal in `src/assistant/context/**`, `src/assistant/planning/**`, `src/assistant/answer/**`, and `src/query-understanding/query-understanding.repository.ts`.
-- [ ] T041 [US1] Apply canonical CustomerScope and safe not-found behavior to `src/assistant/assistant.controller.ts`, `src/assistant/runtime/assistant-readonly-runtime.service.ts`, and `src/assistant/sse/**`.
+- [x] T034 [P] [US1] Add Customer A/B session create/get/list/soft-close and global session-ID safe-not-found cases in `test/contract/customer-session-isolation.contract.spec.ts` and `test/integration/customer-session-isolation.spec.ts`; soft close is `active → closed`, preserves history/context/children, and is not physical delete or generic update.
+- [x] T035 [P] [US1] Add message append/read/history and global message-ID isolation cases in `test/contract/customer-message-history.contract.spec.ts` and `test/integration/customer-message-history.spec.ts`.
+- [x] T036 [P] [US1] Add SSE guard rejection and Customer A/B orchestration isolation cases in `test/contract/customer-assistant-sse.contract.spec.ts` and `test/integration/customer-sse-isolation.spec.ts`.
+- [x] T037 [P] [US1] Add parent-owned context/planning/answer/clarification/grounding/query-understanding isolation cases in `test/integration/customer-conversation-children.spec.ts` and Feature 001 regression in `test/e2e/app.e2e-spec.ts`.
+- [x] T038 [US1] Apply `CustomerScope` to session create/visibility/get/list/soft-close in `src/assistant/session/assistant-session.service.ts` and `src/assistant/session/assistant-session.types.ts`; soft close is `active → closed` with preserved history/context/children, and no generic update or physical delete is introduced.
+- [x] T039 [US1] Apply Customer-qualified message persistence/reads in `src/assistant/message/assistant-message.repository.ts`, `src/assistant/message/assistant-message.service.ts`, and `src/assistant/history/assistant-history.service.ts`.
+- [x] T040 [US1] Apply Customer-qualified parent traversal in `src/assistant/context/**`, `src/assistant/planning/**`, `src/assistant/answer/**`, and `src/query-understanding/query-understanding.repository.ts`.
+- [x] T041 [US1] Apply canonical CustomerScope and safe not-found behavior to `src/assistant/assistant.controller.ts`, `src/assistant/runtime/assistant-readonly-runtime.service.ts`, and `src/assistant/sse/**`.
 
 **US1 checkpoint**: Run T034–T037. Mark US1 complete only when Customer A/B with identical lower-level identity values can neither disclose nor mutate each other's session, message, history, SSE, or parent-owned conversation records, while same-Customer paths remain functional.
 
@@ -102,7 +102,7 @@
 
 **Independent test**: Customer A queries matching sources while Customer B and inaccessible Customer A sources contain the same match.
 
-- [ ] T042 [P] [US2] Add Customer A/B matching-knowledge, no-evidence disclosure, and repeated sourceKey/version tests in `test/integration/customer-knowledge-isolation.spec.ts`.
+- [x] T042 [P] [US2] Add Customer A/B matching-knowledge, no-evidence disclosure, and repeated sourceKey/version tests in `test/integration/customer-knowledge-isolation.spec.ts`.
 - [ ] T043 [P] [US2] Add same-Customer pre-candidate policy tests in `test/integration/customer-rag-permission-isolation.spec.ts`: `CUSTOMER` with empty allowlist works across Organizations; `ORGANIZATION` requires canonical organization membership; required scopes use ALL semantics; empty scopes add no restriction; HostApp does not affect visibility; invalid/legacy policy denies by default without metadata/count/content leakage.
 - [ ] T044 [P] [US2] Add retrieval run/candidate/evidence Customer-qualified relation tests in `test/integration/customer-retrieval-evidence-integrity.spec.ts`.
 - [ ] T045 [P] [US2] Add RAG no-answer/evidence regression cases in `test/eval/customer-rag-isolation.eval.spec.ts` and `test/integration/rag-sop-field-explanation.spec.ts`.

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { RiskLevel, ToolOperation } from '../../generated/prisma/enums';
 import { MockConnectorAdapter } from '../../connectors/mock/mock-connector.adapter';
@@ -20,6 +20,8 @@ export class AssistantReadonlyRuntimeService {
   ) {}
 
   async execute(input: AssistantReadonlyRuntimeInput): Promise<AssistantReadonlyRuntimeResult> {
+    this.assertExecutionPlanParentConsistency(input);
+
     const entityRef = getPageEntityRef(input.pageContext);
     const visibleFields = getVisibleColumns(input.pageContext);
     const toolName = firstToolName(input.executionPlan.candidateTools);
@@ -30,7 +32,7 @@ export class AssistantReadonlyRuntimeService {
       await this.permissionPrecheck.recordDenied({
         requestId: input.requestId,
         sessionId: input.sessionId,
-        messageId: input.messageId,
+        messageId: input.responseMessageId,
         identityContext: input.identityContext,
         toolName,
         operation: ToolOperation.read,
@@ -39,7 +41,7 @@ export class AssistantReadonlyRuntimeService {
       const { toolCall } = await this.toolCallService.blockToolCall({
         requestId: input.requestId,
         sessionId: input.sessionId,
-        messageId: input.messageId,
+        messageId: input.responseMessageId,
         identityContext: input.identityContext,
         toolName,
         toolVersion: 'unknown',
@@ -70,7 +72,7 @@ export class AssistantReadonlyRuntimeService {
       await this.permissionPrecheck.recordDenied({
         requestId: input.requestId,
         sessionId: input.sessionId,
-        messageId: input.messageId,
+        messageId: input.responseMessageId,
         identityContext: input.identityContext,
         toolName: tool.key,
         operation: tool.operation,
@@ -80,7 +82,7 @@ export class AssistantReadonlyRuntimeService {
       const { toolCall } = await this.toolCallService.blockToolCall({
         requestId: input.requestId,
         sessionId: input.sessionId,
-        messageId: input.messageId,
+        messageId: input.responseMessageId,
         identityContext: input.identityContext,
         toolName: tool.key,
         toolVersion: tool.version,
@@ -106,7 +108,7 @@ export class AssistantReadonlyRuntimeService {
     const permission = await this.permissionPrecheck.check({
       requestId: input.requestId,
       sessionId: input.sessionId,
-      messageId: input.messageId,
+      messageId: input.responseMessageId,
       identityContext: input.identityContext,
       toolName: tool.key,
       operation: tool.operation,
@@ -117,7 +119,7 @@ export class AssistantReadonlyRuntimeService {
       const { toolCall } = await this.toolCallService.blockToolCall({
         requestId: input.requestId,
         sessionId: input.sessionId,
-        messageId: input.messageId,
+        messageId: input.responseMessageId,
         identityContext: input.identityContext,
         toolName: tool.key,
         toolVersion: tool.version,
@@ -144,7 +146,7 @@ export class AssistantReadonlyRuntimeService {
     const { toolCall: startedToolCall } = await this.toolCallService.startToolCall({
       requestId: input.requestId,
       sessionId: input.sessionId,
-      messageId: input.messageId,
+      messageId: input.responseMessageId,
       identityContext: input.identityContext,
       toolName: tool.key,
       toolVersion: tool.version,
@@ -165,7 +167,7 @@ export class AssistantReadonlyRuntimeService {
       const { toolCall } = await this.toolCallService.failToolCall({
         requestId: input.requestId,
         sessionId: input.sessionId,
-        messageId: input.messageId,
+        messageId: input.responseMessageId,
         identityContext: input.identityContext,
         toolCallId: startedToolCall.id,
         toolName: tool.key,
@@ -198,7 +200,7 @@ export class AssistantReadonlyRuntimeService {
     const { toolCall } = await this.toolCallService.completeToolCall({
       requestId: input.requestId,
       sessionId: input.sessionId,
-      messageId: input.messageId,
+      messageId: input.responseMessageId,
       identityContext: input.identityContext,
       toolCallId: startedToolCall.id,
       toolName: tool.key,
@@ -221,6 +223,19 @@ export class AssistantReadonlyRuntimeService {
       connectorStatus: connectorResult.status,
       durationMs
     };
+  }
+
+  private assertExecutionPlanParentConsistency(input: AssistantReadonlyRuntimeInput): void {
+    if (
+      input.executionPlan.customerId !== input.customerScope.customerId ||
+      input.executionPlan.sessionId !== input.sessionId ||
+      input.executionPlan.messageId !== input.sourceMessageId
+    ) {
+      throw new NotFoundException({
+        error: 'NOT_FOUND',
+        message: 'Assistant runtime context not found.'
+      });
+    }
   }
 }
 

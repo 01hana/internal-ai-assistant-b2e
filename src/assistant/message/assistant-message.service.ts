@@ -1,11 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditWriterService } from '../../audit/audit-writer.service';
 import { ActionDraftService } from '../../approvals/action-draft.service';
 import { ApprovalRequestService } from '../../approvals/approval-request.service';
 import { EscalationRequestService } from '../../approvals/escalation-request.service';
 import { AttachedEvidence, EvidenceRefService } from '../../evidence/evidence-ref.service';
 import { Prisma } from '../../generated/prisma/client';
-import { AnswerDecisionStatus, NoAnswerReason, RiskLevel } from '../../generated/prisma/enums';
+import { createCustomerScopeFromIdentityContext } from '../../identity/customer-scope.factory';
+import { AnswerDecisionStatus, AssistantMessageRole, NoAnswerReason, RiskLevel } from '../../generated/prisma/enums';
 import { ReviewItemService } from '../../feedback/review-item.service';
 import { RetrievalService } from '../../retrieval/retrieval.service';
 import { AnswerDecisionService } from '../answer/answer-decision.service';
@@ -46,8 +47,10 @@ export class AssistantMessageService {
   ) {}
 
   async sendMessage(input: SendAssistantMessageInput): Promise<AssistantSseEventRecord[]> {
-    const session = await this.sessionService.getVisibleSession(input.sessionId, input.identityContext);
+    const customerScope = createCustomerScopeFromIdentityContext(input.identityContext);
+    const session = await this.sessionService.getVisibleSession(input.sessionId, customerScope);
     const userMessage = await this.messageRepository.createUserMessage({
+      customerScope,
       sessionId: session.id,
       requestId: input.requestId,
       content: input.message,
@@ -67,8 +70,9 @@ export class AssistantMessageService {
       })
     });
 
-    const latestContextState = await this.contextStateService.loadLatest(session.id);
+    const latestContextState = await this.contextStateService.loadLatest(customerScope, session.id);
     const planningResult = await this.planningService.createPlan({
+      customerScope,
       requestId: input.requestId,
       sessionId: session.id,
       messageId: userMessage.id,
@@ -86,9 +90,11 @@ export class AssistantMessageService {
     });
 
     const assistantMessage = await this.messageRepository.createPendingAssistantMessage({
+      customerScope,
       sessionId: session.id,
       requestId: input.requestId
     });
+    this.assertResponseMessageOwnership(assistantMessage, customerScope.customerId, session.id);
 
     const preRuntimeGate = this.noAnswerGateService.evaluatePreRuntime(planningResult);
     if (
@@ -96,6 +102,7 @@ export class AssistantMessageService {
       shouldApplyPreRuntimeClarificationGate(planningResult.executionPlan.riskAssessment, input.pageContext, preRuntimeGate.clarificationReason)
     ) {
       const clarificationQuestion = await this.clarificationQuestionService.create({
+        customerScope,
         requestId: input.requestId,
         sessionId: session.id,
         messageId: assistantMessage.id,
@@ -108,6 +115,7 @@ export class AssistantMessageService {
       });
 
       const answerDecision = await this.answerDecisionService.recordSafeDecision({
+        customerScope,
         requestId: input.requestId,
         messageId: assistantMessage.id,
         status: AnswerDecisionStatus.clarification_required,
@@ -125,12 +133,14 @@ export class AssistantMessageService {
       });
 
       await this.messageRepository.completeAssistantMessage({
+        customerScope,
         messageId: assistantMessage.id,
         content: answerDecision.answer.text,
         answerDecision: answerDecision.status
       });
 
       await this.contextStateService.markWaitingClarification({
+        customerScope,
         sessionId: session.id,
         pageContext: input.pageContext,
         planningResult,
@@ -188,12 +198,14 @@ export class AssistantMessageService {
       const answerText = '這項操作需要你先確認，確認前系統不會執行任何變更。';
 
       await this.messageRepository.completeAssistantMessage({
+        customerScope,
         messageId: assistantMessage.id,
         content: answerText,
         answerDecision: AnswerDecisionStatus.confirmation_required
       });
 
       await this.contextStateService.markWaitingConfirmation({
+        customerScope,
         sessionId: session.id,
         pageContext: input.pageContext,
         planningResult,
@@ -248,12 +260,14 @@ export class AssistantMessageService {
       const answerText = '這項重大風險操作需要升級由人工處理；升級完成前系統不會執行任何變更。';
 
       await this.messageRepository.completeAssistantMessage({
+        customerScope,
         messageId: assistantMessage.id,
         content: answerText,
         answerDecision: AnswerDecisionStatus.escalation_required
       });
 
       await this.contextStateService.markWaitingEscalation({
+        customerScope,
         sessionId: session.id,
         pageContext: input.pageContext,
         planningResult,
@@ -310,12 +324,14 @@ export class AssistantMessageService {
       const answerText = '這項高風險操作需要核准後才可繼續；核准前系統不會執行任何變更。';
 
       await this.messageRepository.completeAssistantMessage({
+        customerScope,
         messageId: assistantMessage.id,
         content: answerText,
         answerDecision: AnswerDecisionStatus.approval_required
       });
 
       await this.contextStateService.markWaitingApproval({
+        customerScope,
         sessionId: session.id,
         pageContext: input.pageContext,
         planningResult,
@@ -368,6 +384,7 @@ export class AssistantMessageService {
         });
       } catch {
         return this.completeRetrievalFailure({
+          customerScope,
           requestId: input.requestId,
           sessionId: session.id,
           messageId: assistantMessage.id,
@@ -379,6 +396,7 @@ export class AssistantMessageService {
 
       if (retrievalResult.selectedCandidates.length === 0) {
         const answerDecision = await this.answerDecisionService.recordSafeDecision({
+          customerScope,
           requestId: input.requestId,
           messageId: assistantMessage.id,
           status: AnswerDecisionStatus.no_answer,
@@ -407,12 +425,14 @@ export class AssistantMessageService {
         });
 
         await this.messageRepository.completeAssistantMessage({
+          customerScope,
           messageId: assistantMessage.id,
           content: answerDecision.answer.text,
           answerDecision: answerDecision.status
         });
 
         await this.contextStateService.updateAfterMessageFlow({
+          customerScope,
           sessionId: session.id,
           pageContext: input.pageContext,
           planningResult,
@@ -489,6 +509,7 @@ export class AssistantMessageService {
       });
 
       const answerDecision = await this.answerDecisionService.decide({
+        customerScope,
         requestId: input.requestId,
         messageId: assistantMessage.id,
         executionPlan: planningResult.executionPlan,
@@ -499,12 +520,14 @@ export class AssistantMessageService {
       });
 
       await this.messageRepository.completeAssistantMessage({
+        customerScope,
         messageId: assistantMessage.id,
         content: answerDecision.answer.text,
         answerDecision: answerDecision.status
       });
 
       await this.contextStateService.updateAfterMessageFlow({
+        customerScope,
         sessionId: session.id,
         pageContext: input.pageContext,
         planningResult,
@@ -547,9 +570,11 @@ export class AssistantMessageService {
     }
 
     const runtimeResult = await this.readonlyRuntimeService.execute({
+      customerScope,
       requestId: input.requestId,
       sessionId: session.id,
-      messageId: assistantMessage.id,
+      sourceMessageId: userMessage.id,
+      responseMessageId: assistantMessage.id,
       identityContext: input.identityContext,
       executionPlan: planningResult.executionPlan,
       pageContext: input.pageContext
@@ -561,6 +586,7 @@ export class AssistantMessageService {
         evidenceRefCount: 0
       });
       const answerDecision = await this.answerDecisionService.recordSafeDecision({
+        customerScope,
         requestId: input.requestId,
         messageId: assistantMessage.id,
         status: gateDecision?.kind === 'no_answer' ? gateDecision.status : AnswerDecisionStatus.no_answer,
@@ -597,12 +623,14 @@ export class AssistantMessageService {
         : undefined;
 
       await this.messageRepository.completeAssistantMessage({
+        customerScope,
         messageId: assistantMessage.id,
         content: answerDecision.answer.text,
         answerDecision: answerDecision.status
       });
 
       await this.contextStateService.updateAfterMessageFlow({
+        customerScope,
         sessionId: session.id,
         pageContext: input.pageContext,
         planningResult,
@@ -674,6 +702,7 @@ export class AssistantMessageService {
 
     if (noEvidenceGate?.kind === 'no_answer') {
       const answerDecision = await this.answerDecisionService.recordSafeDecision({
+        customerScope,
         requestId: input.requestId,
         messageId: assistantMessage.id,
         status: noEvidenceGate.status,
@@ -704,12 +733,14 @@ export class AssistantMessageService {
       });
 
       await this.messageRepository.completeAssistantMessage({
+        customerScope,
         messageId: assistantMessage.id,
         content: answerDecision.answer.text,
         answerDecision: answerDecision.status
       });
 
       await this.contextStateService.updateAfterMessageFlow({
+        customerScope,
         sessionId: session.id,
         pageContext: input.pageContext,
         planningResult,
@@ -760,6 +791,7 @@ export class AssistantMessageService {
 
     if (conflictGate?.kind === 'no_answer') {
       const answerDecision = await this.answerDecisionService.recordSafeDecision({
+        customerScope,
         requestId: input.requestId,
         messageId: assistantMessage.id,
         status: conflictGate.status,
@@ -797,12 +829,14 @@ export class AssistantMessageService {
       });
 
       await this.messageRepository.completeAssistantMessage({
+        customerScope,
         messageId: assistantMessage.id,
         content: answerDecision.answer.text,
         answerDecision: answerDecision.status
       });
 
       await this.contextStateService.updateAfterMessageFlow({
+        customerScope,
         sessionId: session.id,
         pageContext: input.pageContext,
         planningResult,
@@ -853,6 +887,7 @@ export class AssistantMessageService {
     }
 
     const answerDecision = await this.answerDecisionService.decide({
+      customerScope,
       requestId: input.requestId,
       messageId: assistantMessage.id,
       executionPlan: planningResult.executionPlan,
@@ -867,12 +902,14 @@ export class AssistantMessageService {
     });
 
     await this.messageRepository.completeAssistantMessage({
+      customerScope,
       messageId: assistantMessage.id,
       content: answerDecision.answer.text,
       answerDecision: answerDecision.status
     });
 
     await this.contextStateService.updateAfterMessageFlow({
+      customerScope,
       sessionId: session.id,
       pageContext: input.pageContext,
       planningResult,
@@ -919,7 +956,25 @@ export class AssistantMessageService {
     return this.sseEventBuilder.buildErrorEvent(input);
   }
 
+  private assertResponseMessageOwnership(
+    message: { customerId: string; sessionId: string; role: AssistantMessageRole },
+    customerId: string,
+    sessionId: string
+  ): void {
+    if (
+      message.customerId !== customerId ||
+      message.sessionId !== sessionId ||
+      message.role !== AssistantMessageRole.assistant
+    ) {
+      throw new NotFoundException({
+        error: 'NOT_FOUND',
+        message: 'Assistant runtime context not found.'
+      });
+    }
+  }
+
   private async completeRetrievalFailure(input: {
+    customerScope: ReturnType<typeof createCustomerScopeFromIdentityContext>;
     requestId: string;
     sessionId: string;
     messageId: string;
@@ -929,6 +984,7 @@ export class AssistantMessageService {
   }): Promise<AssistantSseEventRecord[]> {
     const retrievalFailureReason = 'retrieval_unavailable';
     const answerDecision = await this.answerDecisionService.recordSafeDecision({
+      customerScope: input.customerScope,
       requestId: input.requestId,
       messageId: input.messageId,
       status: AnswerDecisionStatus.no_answer,
@@ -956,12 +1012,14 @@ export class AssistantMessageService {
     });
 
     await this.messageRepository.completeAssistantMessage({
+      customerScope: input.customerScope,
       messageId: input.messageId,
       content: answerDecision.answer.text,
       answerDecision: answerDecision.status
     });
 
     await this.contextStateService.updateAfterMessageFlow({
+      customerScope: input.customerScope,
       sessionId: input.sessionId,
       pageContext: input.pageContext,
       planningResult: input.planningResult,

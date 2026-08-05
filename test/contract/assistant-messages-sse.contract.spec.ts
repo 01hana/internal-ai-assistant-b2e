@@ -9,18 +9,13 @@ import {
 } from '../support/us1-test-app.helper';
 import {
   createInternalIdentityJwtFixture,
-  InternalTokenClaims,
   TEST_BACKEND_AUDIENCE,
   TEST_GATEWAY_ISSUER
 } from '../support/internal-identity-jwt.helper';
 
 describe('assistant message SSE contract', () => {
   const identityFixture = createInternalIdentityJwtFixture();
-  const ownedClaims: Partial<InternalTokenClaims> = {
-    sub: 'actor-001',
-    org_id: 'org-001',
-    host_app: 'erp'
-  };
+  const ownedClaims = identityFixture.canonicalClaims.customerA;
   let app: INestApplication;
   let state: Us1TestState;
 
@@ -30,7 +25,8 @@ describe('assistant message SSE contract', () => {
         issuer: TEST_GATEWAY_ISSUER,
         audience: TEST_BACKEND_AUDIENCE,
         jwks: identityFixture.jwks
-      }
+      },
+      forceMessageServiceErrorForSessionId: 'session-flow-error-001'
     });
     app = testApp.app;
     state = testApp.state;
@@ -96,10 +92,10 @@ describe('assistant message SSE contract', () => {
 
   it('returns an SSE error event instead of a synchronous JSON body when the message flow fails', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/v1/assistant/sessions/session-hidden-001/messages')
+      .post('/api/v1/assistant/sessions/session-flow-error-001/messages')
       .set(
         createAuthorizedInternalIdentityHeaders(identityFixture, {
-          claims: { ...ownedClaims, sub: 'actor-999' },
+          claims: ownedClaims,
           requestId: 'req-us1-sse-error'
         })
       )
@@ -117,7 +113,7 @@ describe('assistant message SSE contract', () => {
         event: 'error',
         data: expect.objectContaining({
           requestId: 'req-us1-sse-error',
-          sessionId: 'session-hidden-001',
+          sessionId: 'session-flow-error-001',
           eventType: 'error',
           sequence: 1,
           data: expect.objectContaining({
@@ -127,6 +123,7 @@ describe('assistant message SSE contract', () => {
         })
       })
     ]);
+    expect(response.text).not.toContain('test-only in-stream failure');
   });
 
   it.each([

@@ -1,6 +1,7 @@
 import { AssistantContextStateService } from '../../src/assistant/context/assistant-context-state.service';
 import { ExecutionDecision, RiskLevel, AssistantTaskState } from '../../src/generated/prisma/enums';
 import { PrismaService } from '../../src/prisma/prisma.service';
+import { CUSTOMER_SCOPE_FIXTURES, createCustomerScopeFixtureScope } from '../support/customer-scope-fixtures';
 
 describe('AssistantContextStateService', () => {
   it('creates an initial context state from page context', async () => {
@@ -13,15 +14,20 @@ describe('AssistantContextStateService', () => {
       }
     } as unknown as PrismaService);
 
-    await service.createInitialState('session-001', {
-      module: 'orders',
-      entityType: 'order',
-      entityId: 'SO-10001'
+    await service.createInitialState({
+      customerScope: createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerA),
+      sessionId: 'session-001',
+      pageContext: {
+        module: 'orders',
+        entityType: 'order',
+        entityId: 'SO-10001'
+      }
     });
 
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
+          customerId: 'customer-a',
           sessionId: 'session-001',
           currentModule: 'orders',
           currentEntityType: 'order',
@@ -45,6 +51,7 @@ describe('AssistantContextStateService', () => {
     } as unknown as PrismaService);
 
     await service.updateAfterMessageFlow({
+      customerScope: createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerA),
       sessionId: 'session-001',
       pageContext: {
         module: 'orders',
@@ -58,7 +65,7 @@ describe('AssistantContextStateService', () => {
 
     expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { sessionId: 'session-001' },
+        where: { customerId: 'customer-a', sessionId: 'session-001' },
         data: expect.objectContaining({
           currentTask: 'order_status_lookup',
           taskState: AssistantTaskState.completed,
@@ -82,6 +89,7 @@ describe('AssistantContextStateService', () => {
     } as unknown as PrismaService);
 
     await service.updateAfterMessageFlow({
+      customerScope: createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerA),
       sessionId: 'session-001',
       planningResult: createPlanningResult(ExecutionDecision.clarify, [{ reason: 'missing_context', question: '請補充目標。' }]),
       toolCallIds: [],
@@ -117,9 +125,25 @@ function createPlanningResult(decision: ExecutionDecision, clarificationNeeds: A
       clarificationNeeds,
       requiredEvidence: []
     },
-    persistedQueryUnderstanding: {} as never,
+    persistedQueryUnderstanding: {
+      id: 'query-understanding-001',
+      requestId: 'request-001',
+      messageId: 'message-001',
+      sentences: [],
+      tokens: [],
+      phrases: [],
+      normalizedTerms: [],
+      timeRanges: null,
+      resolvedReferences: null,
+      entityCandidates: [],
+      subTasks: null,
+      confidence: 0.9,
+      clarificationNeeds: null,
+      createdAt: new Date()
+    },
     executionPlan: {
       id: 'plan-001',
+      customerId: 'customer-a',
       sessionId: 'session-001',
       messageId: 'message-001',
       taskType: 'order_status_lookup',

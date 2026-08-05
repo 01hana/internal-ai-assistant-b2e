@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { createCustomerScopeFromIdentityContext } from '../identity/customer-scope.factory';
 import { createRuntimeDecisionMetadata } from '../observability/observability-metadata.helper';
 import { QueryUnderstandingPipeline } from './query-understanding-pipeline.interface';
 import { QueryUnderstandingRepository } from './query-understanding.repository';
@@ -22,8 +23,10 @@ export class QueryUnderstandingService {
     persisted: PersistedQueryUnderstandingResult;
   }> {
     const startedAt = new Date();
+    const customerScope = createCustomerScopeFromIdentityContext(input.identityContext);
     const output = await this.pipeline.understand(input);
     const persisted = await this.repository.save({
+      customerScope,
       requestId: input.requestId,
       messageId: input.messageId,
       output

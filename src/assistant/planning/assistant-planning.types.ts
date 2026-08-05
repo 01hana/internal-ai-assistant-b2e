@@ -1,6 +1,7 @@
 import { Prisma } from '../../generated/prisma/client';
 import { ExecutionDecision, RiskLevel } from '../../generated/prisma/enums';
 import { RequestIdentityContext } from '../../identity/identity-context.types';
+import { CustomerScope } from '../../identity/customer-scope.types';
 import {
   PersistedQueryUnderstandingResult,
   QueryUnderstandingContextStateSnapshot,
@@ -8,6 +9,7 @@ import {
 } from '../../query-understanding/query-understanding.types';
 
 export interface AssistantPlanningInput {
+  customerScope: CustomerScope;
   requestId: string;
   sessionId: string;
   messageId: string;
@@ -26,6 +28,7 @@ export interface AssistantPlanningResult {
 
 export interface PersistedExecutionPlan {
   id: string;
+  customerId: string;
   sessionId: string;
   messageId?: string;
   taskType: string;

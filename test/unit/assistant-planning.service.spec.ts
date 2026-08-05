@@ -3,22 +3,15 @@ import { ExecutionDecision, RiskLevel } from '../../src/generated/prisma/enums';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { QueryUnderstandingService } from '../../src/query-understanding/query-understanding.service';
 import { AuditWriterService } from '../../src/audit/audit-writer.service';
+import {
+  CUSTOMER_SCOPE_FIXTURES,
+  createCustomerScopeFixtureIdentityContext,
+  createCustomerScopeFixtureScope
+} from '../support/customer-scope-fixtures';
 
 describe('AssistantPlanningService', () => {
-  const identityContext = {
-    requestId: 'req-plan-001',
-    actor: {
-      actorId: 'actor-001',
-      role: 'planner',
-      permissionScopes: ['orders:read']
-    },
-    hostApp: {
-      hostApp: 'erp'
-    },
-    company: {
-      organizationId: 'org-001'
-    }
-  };
+  const identityContext = createCustomerScopeFixtureIdentityContext(CUSTOMER_SCOPE_FIXTURES.customerA);
+  const customerScope = createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerA);
 
   it('creates an execution plan from query-understanding output rather than raw text parsing', async () => {
     const understandAndPersist = jest.fn().mockResolvedValue({
@@ -57,6 +50,7 @@ describe('AssistantPlanningService', () => {
     });
     const create = jest.fn().mockResolvedValue({
       id: 'plan-001',
+      customerId: 'customer-a',
       sessionId: 'session-001',
       messageId: 'message-001',
       taskType: 'inventory_availability_lookup',
@@ -87,6 +81,7 @@ describe('AssistantPlanningService', () => {
     );
 
     const result = await service.createPlan({
+      customerScope,
       requestId: 'req-plan-001',
       sessionId: 'session-001',
       messageId: 'message-001',
@@ -98,6 +93,7 @@ describe('AssistantPlanningService', () => {
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
+          customerId: 'customer-a',
           taskType: 'inventory_availability_lookup',
           decision: ExecutionDecision.continue
         })
@@ -151,6 +147,7 @@ describe('AssistantPlanningService', () => {
     });
     const create = jest.fn().mockResolvedValue({
       id: 'plan-002',
+      customerId: 'customer-a',
       sessionId: 'session-001',
       messageId: 'message-002',
       taskType: 'order_status_lookup',
@@ -181,6 +178,7 @@ describe('AssistantPlanningService', () => {
     );
 
     await service.createPlan({
+      customerScope,
       requestId: 'req-plan-002',
       sessionId: 'session-001',
       messageId: 'message-002',
@@ -192,6 +190,7 @@ describe('AssistantPlanningService', () => {
     expect(understandAndPersist).toHaveBeenCalledWith(
       expect.objectContaining({
         requestId: 'req-plan-002',
+        customerScope,
         pageContext
       })
     );

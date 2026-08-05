@@ -69,6 +69,7 @@ function toExecutionPlanCreateInput(
   output: QueryUnderstandingOutput
 ): Prisma.ExecutionPlanUncheckedCreateInput {
   return {
+    customerId: input.customerScope.customerId,
     sessionId: input.sessionId,
     messageId: input.messageId,
     taskType: output.taskType,
@@ -96,6 +97,7 @@ function toExecutionPlanCreateInput(
 function mapExecutionPlan(plan: ExecutionPlan): PersistedExecutionPlan {
   return {
     id: plan.id,
+    customerId: plan.customerId,
     sessionId: plan.sessionId,
     messageId: plan.messageId ?? undefined,
     taskType: plan.taskType,

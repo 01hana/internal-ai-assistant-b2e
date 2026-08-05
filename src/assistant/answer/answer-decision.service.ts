@@ -21,6 +21,7 @@ export class AnswerDecisionService {
 
     const groundingCheck = await this.prisma.db.groundingCheck.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         messageId: input.messageId,
         covered,
@@ -36,6 +37,7 @@ export class AnswerDecisionService {
 
     const answerDecision = await this.prisma.db.answerDecision.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         messageId: input.messageId,
         status,
@@ -60,6 +62,7 @@ export class AnswerDecisionService {
   async recordSafeDecision(input: RecordSafeAnswerDecisionInput): Promise<PersistedAnswerDecisionResult> {
     const groundingCheck = await this.prisma.db.groundingCheck.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         messageId: input.messageId,
         covered: input.grounding?.covered ?? false,
@@ -77,6 +80,7 @@ export class AnswerDecisionService {
 
     const answerDecision = await this.prisma.db.answerDecision.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         messageId: input.messageId,
         status: input.status,
