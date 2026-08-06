@@ -10,6 +10,7 @@ export type ToolPermissionDeniedReason =
   | 'organization_boundary'
   | 'tool_not_registered'
   | 'tool_inactive'
+  | 'customer_policy_denied'
   | 'schema_invalid'
   | 'tool_contract_mismatch'
   | 'idempotency_required';
@@ -39,6 +40,17 @@ export interface RegisteredToolDefinition {
 
 export interface ToolRegistryResolveResult {
   tool?: RegisteredToolDefinition;
+  deniedReason?: ToolPermissionDeniedReason;
+}
+
+export interface ResolvedCustomerTool {
+  tool: RegisteredToolDefinition;
+  requiredRoles: readonly string[];
+  requiredPermissionScopes: readonly string[];
+}
+
+export interface CustomerToolRegistryResolveResult {
+  resolved?: ResolvedCustomerTool;
   deniedReason?: ToolPermissionDeniedReason;
 }
 

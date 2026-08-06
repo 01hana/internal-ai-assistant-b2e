@@ -119,16 +119,16 @@
 
 **Independent test**: Customer A/B configure different policies for the same persisted ToolDefinition and reuse one idempotency key.
 
-- [ ] T050 [P] [US3] Add persisted global ToolDefinition versus CustomerToolPolicy enablement/disablement tests in `test/integration/customer-tool-policy.spec.ts`.
-- [ ] T051 [P] [US3] Add empty authorization-array, denied-before-connector, Customer audit, and header-conflict tool tests in `test/integration/customer-tool-permission.spec.ts`.
-- [ ] T052 [P] [US3] Add Customer-scoped idempotency/retry/result-lookup/non-disclosure tests in `test/integration/customer-tool-idempotency.spec.ts` and `test/unit/side-effect-idempotency.spec.ts`.
-- [ ] T053 [P] [US3] Add CustomerToolPolicy/permission composition tests in `test/unit/customer-tool-policy.spec.ts` and `test/unit/tool-permission-precheck.service.spec.ts`.
-- [ ] T054 [US3] Implement CustomerToolPolicy resolution against existing persisted ToolDefinition IDs in `src/tools/tool-registry.service.ts`, `src/tools/tool-registry.types.ts`, and new `src/tools/customer-tool-policy.service.ts`.
-- [ ] T055 [US3] Apply CustomerScope, canonical roles/scopes, and Customer policy before execution in `src/permissions/tool-permission-precheck.service.ts` and `src/assistant/runtime/tool-call.service.ts`; denied work stops before connector/side effect.
+- [x] T050 [P] [US3] Add persisted global ToolDefinition versus CustomerToolPolicy enablement/disablement tests in `test/integration/customer-tool-policy.spec.ts`.
+- [x] T051 [P] [US3] Add empty authorization-array, denied-before-connector, Customer audit, and header-conflict tool tests in `test/integration/customer-tool-permission.spec.ts`.
+- [x] T052 [P] [US3] Add Customer-scoped idempotency/retry/result-lookup/non-disclosure tests in `test/integration/customer-tool-idempotency.spec.ts` and `test/unit/side-effect-idempotency.spec.ts`.
+- [x] T053 [P] [US3] Add CustomerToolPolicy/permission composition tests in `test/unit/customer-tool-policy.spec.ts` and `test/unit/tool-permission-precheck.service.spec.ts`.
+- [x] T054 [US3] Implement CustomerToolPolicy resolution against existing persisted ToolDefinition IDs in `src/tools/tool-registry.service.ts`, `src/tools/tool-registry.types.ts`, and new `src/tools/customer-tool-policy.service.ts`.
+- [x] T055 [US3] Apply CustomerScope, canonical roles/scopes, and Customer policy before execution in `src/permissions/tool-permission-precheck.service.ts` and minimal `src/assistant/runtime/assistant-readonly-runtime.service.ts` wiring; denied work stops before connector/side effect.
 - [ ] T056 [US3] Apply CustomerScope to ToolCall persistence, result lookup, retry, and idempotency in `src/assistant/runtime/tool-call.service.ts` and `src/approvals/side-effect-execution-guard.service.ts`.
 - [ ] T057 [US3] Write Customer-scoped tool denial/execution audit through `src/audit/audit-writer.service.ts` and preserve redaction in `src/common/logger/redaction.util.ts`.
 
-**US3 checkpoint**: Run T050–T053. Mark US3 complete only when global ToolDefinition remains shared, CustomerToolPolicy and canonical scopes are evaluated before side effects, and Customer-scoped retries cannot disclose or deduplicate another Customer's ToolCall.
+**US3 checkpoint**: pending final T056/T057 parent-validation, audit-redaction, and full regression evidence.
 
 ---
 

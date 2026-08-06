@@ -126,6 +126,14 @@ type ToolDefinitionRecord = {
   updatedAt: Date;
 };
 
+type CustomerToolPolicyRecord = {
+  customerId: string;
+  toolDefinitionId: string;
+  enabled: boolean;
+  requiredRoles: string[];
+  requiredPermissionScopes: string[];
+};
+
 type ActionDraftRecord = {
   id: string;
   requestId: string;
@@ -383,6 +391,7 @@ type MockState = {
   contextStates: ContextStateRecord[];
   messages: MessageRecord[];
   toolDefinitions: ToolDefinitionRecord[];
+  customerToolPolicies: CustomerToolPolicyRecord[];
   actionDrafts: ActionDraftRecord[];
   approvalRequests: ApprovalRequestRecord[];
   escalationRequests: EscalationRequestRecord[];
@@ -1174,6 +1183,11 @@ function createPrismaMock(state: MockState) {
         Object.assign(toolCall, data);
         return toolCall;
       }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ToolCallRecord> }) => {
+        const matches = state.toolCalls.filter((item) => matchesWhere(item, where));
+        matches.forEach((item) => Object.assign(item, data));
+        return { count: matches.length };
+      }),
       findMany: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
         state.toolCalls
           .filter((item) => matchesWhere(item, where))
@@ -1181,6 +1195,18 @@ function createPrismaMock(state: MockState) {
       ),
       findFirst: jest.fn(
         async ({ where }: { where: Record<string, unknown> }) => state.toolCalls.find((item) => matchesWhere(item, where)) ?? null
+      )
+    },
+    customerToolPolicy: {
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        const selector = where.customerId_toolDefinitionId;
+        if (!isRecord(selector)) return null;
+        return state.customerToolPolicies.find(
+          (item) => item.customerId === selector.customerId && item.toolDefinitionId === selector.toolDefinitionId
+        ) ?? null;
+      }),
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.customerToolPolicies.find((item) => matchesWhere(item, where)) ?? null
       )
     },
     evidenceRef: {
@@ -1706,6 +1732,22 @@ function createInitialState(): MockState {
       }
     ],
     toolDefinitions: createToolDefinitions(baseDate),
+    customerToolPolicies: [
+      {
+        customerId: 'customer-a',
+        toolDefinitionId: 'tool-definition-orders-001',
+        enabled: true,
+        requiredRoles: [],
+        requiredPermissionScopes: []
+      },
+      {
+        customerId: 'customer-b',
+        toolDefinitionId: 'tool-definition-orders-001',
+        enabled: false,
+        requiredRoles: [],
+        requiredPermissionScopes: []
+      }
+    ],
     actionDrafts: createActionDrafts(baseDate),
     approvalRequests: createApprovalRequests(baseDate),
     escalationRequests: createEscalationRequests(baseDate),

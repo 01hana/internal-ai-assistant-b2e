@@ -25,20 +25,21 @@ export class AssistantReadonlyRuntimeService {
     const entityRef = getPageEntityRef(input.pageContext);
     const visibleFields = getVisibleColumns(input.pageContext);
     const toolName = firstToolName(input.executionPlan.candidateTools);
-    const toolResolution = await this.toolRegistry.resolveExecutableTool(toolName);
-    const tool = toolResolution.tool;
+    const toolResolution = await this.toolRegistry.resolveToolForCustomer(toolName, input.customerScope);
+    const resolvedTool = toolResolution.resolved;
 
-    if (!tool) {
-      await this.permissionPrecheck.recordDenied({
+    if (!resolvedTool) {
+      await this.permissionPrecheck.recordRuntimeCustomerToolDenied({
+        customerScope: input.customerScope,
         requestId: input.requestId,
         sessionId: input.sessionId,
         messageId: input.responseMessageId,
-        identityContext: input.identityContext,
         toolName,
         operation: ToolOperation.read,
         deniedReason: toolResolution.deniedReason ?? 'tool_not_registered'
       });
       const { toolCall } = await this.toolCallService.blockToolCall({
+        customerScope: input.customerScope,
         requestId: input.requestId,
         sessionId: input.sessionId,
         messageId: input.responseMessageId,
@@ -64,59 +65,20 @@ export class AssistantReadonlyRuntimeService {
       };
     }
 
-    const toolInput = {
-      entityId: entityRef.entityId
-    };
-    const validation = this.toolRegistry.validateInput(tool, toolInput);
-    if (!validation.valid) {
-      await this.permissionPrecheck.recordDenied({
-        requestId: input.requestId,
-        sessionId: input.sessionId,
-        messageId: input.responseMessageId,
-        identityContext: input.identityContext,
-        toolName: tool.key,
-        operation: tool.operation,
-        deniedReason: validation.deniedReason,
-        schemaErrorReason: validation.schemaErrorReason
-      });
-      const { toolCall } = await this.toolCallService.blockToolCall({
-        requestId: input.requestId,
-        sessionId: input.sessionId,
-        messageId: input.responseMessageId,
-        identityContext: input.identityContext,
-        toolName: tool.key,
-        toolVersion: tool.version,
-        riskLevel: tool.riskLevel,
-        entityId: entityRef.entityId,
-        visibleFields,
-        deniedReason: validation.deniedReason
-      });
+    const tool = resolvedTool.tool;
 
-      return {
-        toolName: tool.key,
-        toolVersion: tool.version,
-        toolCallId: toolCall.id,
-        toolLifecycle: 'blocked',
-        riskLevel: tool.riskLevel,
-        entityRef,
-        visibleFields,
-        sanitizedResult: {},
-        deniedReason: validation.deniedReason
-      };
-    }
-
-    const permission = await this.permissionPrecheck.check({
+    const permission = await this.permissionPrecheck.checkResolvedCustomerTool({
       requestId: input.requestId,
       sessionId: input.sessionId,
       messageId: input.responseMessageId,
       identityContext: input.identityContext,
-      toolName: tool.key,
-      operation: tool.operation,
-      requiredPermissionScopes: tool.requiredPermissionScopes
+      customerScope: input.customerScope,
+      resolvedTool
     });
 
     if (!permission.allowed) {
       const { toolCall } = await this.toolCallService.blockToolCall({
+        customerScope: input.customerScope,
         requestId: input.requestId,
         sessionId: input.sessionId,
         messageId: input.responseMessageId,
@@ -142,8 +104,87 @@ export class AssistantReadonlyRuntimeService {
       };
     }
 
+    if (!this.toolRegistry.isExecutableReadOnly(tool)) {
+      await this.permissionPrecheck.recordRuntimeCustomerToolDenied({
+        customerScope: input.customerScope,
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.responseMessageId,
+        toolName: tool.key,
+        operation: tool.operation,
+        deniedReason: 'operation_denied'
+      });
+      const { toolCall } = await this.toolCallService.blockToolCall({
+        customerScope: input.customerScope,
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.responseMessageId,
+        identityContext: input.identityContext,
+        toolName: tool.key,
+        toolVersion: tool.version,
+        riskLevel: tool.riskLevel,
+        entityId: entityRef.entityId,
+        visibleFields,
+        deniedReason: 'operation_denied'
+      });
+      return {
+        toolName: tool.key,
+        toolVersion: tool.version,
+        toolCallId: toolCall.id,
+        toolLifecycle: 'blocked',
+        riskLevel: tool.riskLevel,
+        entityRef,
+        visibleFields,
+        sanitizedResult: {},
+        deniedReason: 'operation_denied'
+      };
+    }
+
+    const toolInput = {
+      entityId: entityRef.entityId
+    };
+    const validation = this.toolRegistry.validateInput(tool, toolInput);
+    if (!validation.valid) {
+      await this.permissionPrecheck.recordRuntimeCustomerToolDenied({
+        customerScope: input.customerScope,
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.responseMessageId,
+        toolName: tool.key,
+        operation: tool.operation,
+        deniedReason: validation.deniedReason,
+        schemaErrorReason: validation.schemaErrorReason
+      });
+      const { toolCall } = await this.toolCallService.blockToolCall({
+        customerScope: input.customerScope,
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.responseMessageId,
+        identityContext: input.identityContext,
+        toolName: tool.key,
+        toolVersion: tool.version,
+        riskLevel: tool.riskLevel,
+        entityId: entityRef.entityId,
+        visibleFields,
+        deniedReason: validation.deniedReason
+      });
+
+      return {
+        toolName: tool.key,
+        toolVersion: tool.version,
+        toolCallId: toolCall.id,
+        toolLifecycle: 'blocked',
+        riskLevel: tool.riskLevel,
+        entityRef,
+        visibleFields,
+        sanitizedResult: {},
+        deniedReason: validation.deniedReason
+      };
+    }
+
     const startedAt = Date.now();
     const { toolCall: startedToolCall } = await this.toolCallService.startToolCall({
+      customerScope: input.customerScope,
       requestId: input.requestId,
       sessionId: input.sessionId,
       messageId: input.responseMessageId,
@@ -165,6 +206,7 @@ export class AssistantReadonlyRuntimeService {
 
     if (connectorResult.status !== 'succeeded' || !connectorResult.data) {
       const { toolCall } = await this.toolCallService.failToolCall({
+        customerScope: input.customerScope,
         requestId: input.requestId,
         sessionId: input.sessionId,
         messageId: input.responseMessageId,
@@ -198,6 +240,7 @@ export class AssistantReadonlyRuntimeService {
     });
     const sanitizedResult = sanitization.sanitized;
     const { toolCall } = await this.toolCallService.completeToolCall({
+      customerScope: input.customerScope,
       requestId: input.requestId,
       sessionId: input.sessionId,
       messageId: input.responseMessageId,

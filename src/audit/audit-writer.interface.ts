@@ -1,5 +1,6 @@
 import { AnswerDecisionStatus, RiskLevel } from '../generated/prisma/enums';
 import { Prisma } from '../generated/prisma/client';
+import { CustomerScope } from '../identity/customer-scope.types';
 
 export interface AuditWriter {
   append(input: AppendAuditEventInput): Promise<AuditEventRecord>;
@@ -25,4 +26,16 @@ export interface AppendAuditEventInput {
 export interface AuditEventRecord extends AppendAuditEventInput {
   id: string;
   timestamp: Date;
+}
+
+export interface AppendCustomerToolAuditInput {
+  customerScope: CustomerScope;
+  requestId: string;
+  eventType: string;
+  sessionId?: string;
+  messageId?: string;
+  toolCallId?: string;
+  riskLevel?: RiskLevel;
+  durationMs?: number;
+  metadata?: Prisma.InputJsonValue;
 }

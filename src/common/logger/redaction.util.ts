@@ -1,6 +1,6 @@
 const REDACTED = '[REDACTED]';
 
-const sensitiveKeyPattern = /(api[_-]?key|authorization|credential|database[_-]?url|password|secret|token)/i;
+const sensitiveKeyPattern = /(api[_-]?key|authorization|credential|database[_-]?url|password|secret|token|jwt|claim|jwks|signature|idempotency[_-]?key|connector[_-]?output|foreign[_-]?(result|output))/i;
 const secretValuePatterns = [
   /sk-[A-Za-z0-9_-]{12,}/g,
   /(postgres(?:ql)?:\/\/)([^:\s/]+):([^@\s/]+)@/gi,

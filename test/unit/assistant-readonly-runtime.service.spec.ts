@@ -155,10 +155,10 @@ describe('AssistantReadonlyRuntimeService', () => {
       }
     });
 
-    expect(harness.toolRegistry.resolveExecutableTool).not.toHaveBeenCalled();
+    expect(harness.toolRegistry.resolveToolForCustomer).not.toHaveBeenCalled();
     expect(harness.toolRegistry.validateInput).not.toHaveBeenCalled();
-    expect(harness.permissionPrecheck.check).not.toHaveBeenCalled();
-    expect(harness.permissionPrecheck.recordDenied).not.toHaveBeenCalled();
+    expect(harness.permissionPrecheck.checkResolvedCustomerTool).not.toHaveBeenCalled();
+    expect(harness.permissionPrecheck.recordRuntimeCustomerToolDenied).not.toHaveBeenCalled();
     expect(harness.toolCallService.startToolCall).not.toHaveBeenCalled();
     expect(harness.toolCallService.completeToolCall).not.toHaveBeenCalled();
     expect(harness.toolCallService.failToolCall).not.toHaveBeenCalled();
@@ -169,22 +169,28 @@ describe('AssistantReadonlyRuntimeService', () => {
 
 describe('ToolCallService', () => {
   it('creates, completes, fails, and blocks tool calls with lifecycle-safe payloads', async () => {
-    const create = jest.fn().mockResolvedValue({ id: 'tool-call-001', toolName: 'mock.orders.status.lookup' });
-    const update = jest.fn(async ({ where, data }) => ({ id: where.id, ...data }));
-    const append = jest.fn().mockResolvedValue({ id: 'audit-001' });
+    const create = jest.fn().mockImplementation(async ({ data }) => ({ id: 'tool-call-001', ...data }));
+    const findFirst = jest.fn().mockImplementation(async ({ where }) => ({ id: where.id ?? 'tool-call-001', customerId: where.customerId, sessionId: where.sessionId, messageId: where.messageId }));
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const appendCustomerToolEvent = jest.fn().mockResolvedValue({ id: 'audit-001' });
+    const customerScope = createCustomerScopeFromIdentityContext(identityContext());
     const service = new ToolCallService(
       {
         db: {
+          assistantSession: { findFirst: jest.fn().mockResolvedValue({ id: 'session-001', customerId: 'customer-a' }) },
+          assistantMessage: { findFirst: jest.fn().mockResolvedValue({ id: 'message-001', customerId: 'customer-a', sessionId: 'session-001' }) },
           toolCall: {
             create,
-            update
+            findFirst,
+            updateMany
           }
         }
       } as unknown as PrismaService,
-      { append } as never
+      { appendCustomerToolEvent } as never
     );
 
     const started = await service.startToolCall({
+      customerScope,
       requestId: 'req-001',
       sessionId: 'session-001',
       messageId: 'message-001',
@@ -197,6 +203,7 @@ describe('ToolCallService', () => {
     });
 
     await service.completeToolCall({
+      customerScope,
       requestId: 'req-001',
       sessionId: 'session-001',
       messageId: 'message-001',
@@ -211,6 +218,7 @@ describe('ToolCallService', () => {
     });
 
     await service.failToolCall({
+      customerScope,
       requestId: 'req-001',
       sessionId: 'session-001',
       messageId: 'message-001',
@@ -224,6 +232,7 @@ describe('ToolCallService', () => {
     });
 
     await service.blockToolCall({
+      customerScope,
       requestId: 'req-001',
       sessionId: 'session-001',
       messageId: 'message-001',
@@ -248,7 +257,7 @@ describe('ToolCallService', () => {
         })
       })
     );
-    expect(update).toHaveBeenCalledWith(
+    expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           status: ToolCallStatus.success,
@@ -257,7 +266,7 @@ describe('ToolCallService', () => {
         })
       })
     );
-    expect(update).toHaveBeenCalledWith(
+    expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           status: ToolCallStatus.failed,
@@ -278,15 +287,44 @@ describe('ToolCallService', () => {
       })
     );
     expect(JSON.stringify(create.mock.calls)).not.toContain('128000');
-    expect(append).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'tool_call_started' }));
-    expect(append).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'tool_call_completed' }));
-    expect(append).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'tool_call_failed' }));
-    expect(append).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'tool_call_blocked' }));
+    expect(appendCustomerToolEvent).toHaveBeenCalledWith(expect.objectContaining({ customerScope, eventType: 'tool_call_started' }));
+    expect(appendCustomerToolEvent).toHaveBeenCalledWith(expect.objectContaining({ customerScope, eventType: 'tool_call_completed' }));
+    expect(appendCustomerToolEvent).toHaveBeenCalledWith(expect.objectContaining({ customerScope, eventType: 'tool_call_failed' }));
+    expect(appendCustomerToolEvent).toHaveBeenCalledWith(expect.objectContaining({ customerScope, eventType: 'tool_call_blocked' }));
+  });
+
+  it('returns an own Customer result only for its exact session/message parent', async () => {
+    const owned = { id: 'tool-call-owned', customerId: 'customer-a', sessionId: 'session-001', messageId: 'message-001', outputSummary: { safe: 'visible' }, errorCode: null, status: ToolCallStatus.success };
+    const findFirst = jest.fn().mockImplementation(async ({ where }) => (
+      where.customerId === 'customer-a' && where.id === owned.id && where.sessionId === owned.sessionId && where.messageId === owned.messageId ? owned : null
+    ));
+    const scope = createCustomerScopeFromIdentityContext(identityContext());
+    const service = new ToolCallService(
+      { db: { toolCall: { findFirst } } } as unknown as PrismaService,
+      { appendCustomerToolEvent: jest.fn() } as never
+    );
+
+    await expect(service.getVisibleToolCall({ customerScope: scope, toolCallId: owned.id, sessionId: owned.sessionId, messageId: owned.messageId })).resolves.toEqual(owned);
+  });
+
+  it.each([
+    ['foreign Customer', 'customer-b', 'session-001', 'message-001'],
+    ['wrong session', 'customer-a', 'session-other', 'message-001'],
+    ['wrong message', 'customer-a', 'session-001', 'message-other']
+  ])('returns the same safe not-found result for %s', async (_scenario, customerId, sessionId, messageId) => {
+    const foreign = { id: 'tool-call-private', customerId: 'customer-b', sessionId: 'session-001', messageId: 'message-001', outputSummary: { secret: 'never-disclose' }, errorCode: 'PRIVATE', status: ToolCallStatus.failed };
+    const findFirst = jest.fn().mockResolvedValue(null);
+    const scope = createCustomerScopeFromIdentityContext({ ...identityContext(), customer: { customerId, integrationId: 'integration-erp' } });
+    const service = new ToolCallService({ db: { toolCall: { findFirst } } } as unknown as PrismaService, { appendCustomerToolEvent: jest.fn() } as never);
+
+    await expect(service.getVisibleToolCall({ customerScope: scope, toolCallId: foreign.id, sessionId, messageId })).rejects.toMatchObject({ status: 404, response: { error: 'NOT_FOUND' } });
+    expect(JSON.stringify((await findFirst.mock.results[0].value) ?? {})).not.toContain('never-disclose');
+    expect(findFirst).toHaveBeenCalledWith({ where: { customerId, id: foreign.id, sessionId, messageId } });
   });
 });
 
 function createRuntimeService(overrides?: {
-  registryResult?: { tool?: RegisteredToolDefinition; deniedReason?: ToolPermissionDeniedReason };
+  registryResult?: { resolved?: { tool: RegisteredToolDefinition; requiredRoles: readonly string[]; requiredPermissionScopes: readonly string[] }; deniedReason?: ToolPermissionDeniedReason };
   validation?: { valid: true } | { valid: false; deniedReason: 'schema_invalid'; schemaErrorReason: string };
   permission?: { allowed: true } | { allowed: false; reason: ToolPermissionDeniedReason; missingScopes?: string[] };
   connectorExecute?: jest.Mock;
@@ -298,7 +336,8 @@ function createRuntimeService(overrides?: {
 }) {
   return new AssistantReadonlyRuntimeService(
     {
-      resolveExecutableTool: jest.fn().mockResolvedValue(overrides?.registryResult ?? { tool: registeredTool() }),
+      resolveToolForCustomer: jest.fn().mockResolvedValue(overrides?.registryResult ?? { resolved: { tool: registeredTool(), requiredRoles: [], requiredPermissionScopes: [] } }),
+      isExecutableReadOnly: jest.fn().mockReturnValue(true),
       validateInput: jest.fn().mockReturnValue(overrides?.validation ?? { valid: true })
     } as never,
     {
@@ -314,8 +353,8 @@ function createRuntimeService(overrides?: {
         })
     } as never,
     {
-      check: jest.fn().mockResolvedValue(overrides?.permission ?? { allowed: true }),
-      recordDenied: overrides?.recordDenied ?? jest.fn()
+      checkResolvedCustomerTool: jest.fn().mockResolvedValue(overrides?.permission ?? { allowed: true }),
+      recordRuntimeCustomerToolDenied: overrides?.recordDenied ?? jest.fn()
     } as never,
     {
       startToolCall: overrides?.startToolCall ?? jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-001' } }),
@@ -403,13 +442,14 @@ function identityContext() {
 
 function createMismatchRuntimeHarness() {
   const toolRegistry = {
-    resolveExecutableTool: jest.fn(),
+    resolveToolForCustomer: jest.fn(),
+    isExecutableReadOnly: jest.fn(),
     validateInput: jest.fn()
   };
   const connector = { execute: jest.fn() };
   const permissionPrecheck = {
-    check: jest.fn(),
-    recordDenied: jest.fn()
+    checkResolvedCustomerTool: jest.fn(),
+    recordRuntimeCustomerToolDenied: jest.fn()
   };
   const toolCallService = {
     startToolCall: jest.fn(),

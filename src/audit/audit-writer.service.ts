@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { redactSecrets } from '../common/logger/redaction.util';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AppendAuditEventInput, AuditEventRecord, AuditWriter } from './audit-writer.interface';
+import { AppendAuditEventInput, AppendCustomerToolAuditInput, AuditEventRecord, AuditWriter } from './audit-writer.interface';
 
 @Injectable()
 export class AuditWriterService implements AuditWriter {
@@ -46,6 +46,27 @@ export class AuditWriterService implements AuditWriter {
       durationMs: event.durationMs ?? undefined,
       metadata: event.metadata as Prisma.InputJsonValue | undefined
     };
+  }
+
+  async appendCustomerToolEvent(input: AppendCustomerToolAuditInput): Promise<AuditEventRecord> {
+    const event = await this.prisma.db.auditEvent.create({
+      data: {
+        customerId: input.customerScope.customerId,
+        requestId: input.requestId,
+        organizationId: input.customerScope.organizationId,
+        hostApp: input.customerScope.hostApp,
+        actorId: input.customerScope.actorId,
+        eventType: input.eventType,
+        sessionId: input.sessionId,
+        messageId: input.messageId,
+        toolCallId: input.toolCallId,
+        riskLevel: input.riskLevel,
+        evidenceRefIds: [],
+        durationMs: input.durationMs,
+        metadata: input.metadata ? toJsonInput(redactSecrets(input.metadata)) : undefined
+      }
+    });
+    return { id: event.id, timestamp: event.timestamp, requestId: event.requestId, organizationId: event.organizationId, hostApp: event.hostApp, actorId: event.actorId, eventType: event.eventType, sessionId: event.sessionId ?? undefined, messageId: event.messageId ?? undefined, toolCallId: event.toolCallId ?? undefined, riskLevel: event.riskLevel ?? undefined, evidenceRefIds: event.evidenceRefIds, durationMs: event.durationMs ?? undefined, metadata: event.metadata as Prisma.InputJsonValue | undefined };
   }
 }
 

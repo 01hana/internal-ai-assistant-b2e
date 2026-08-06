@@ -1,12 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, ToolDefinition } from '../generated/prisma/client';
 import { ToolOperation } from '../generated/prisma/enums';
+import { CustomerScope } from '../identity/customer-scope.types';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisteredToolDefinition, ToolJsonSchema, ToolRegistryResolveResult, ToolValidationResult } from './tool-registry.types';
+import { CustomerToolPolicyService } from './customer-tool-policy.service';
+import { CustomerToolRegistryResolveResult, RegisteredToolDefinition, ToolJsonSchema, ToolRegistryResolveResult, ToolValidationResult } from './tool-registry.types';
 
 @Injectable()
 export class ToolRegistryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly customerToolPolicy: CustomerToolPolicyService
+  ) {}
 
   async listTools(): Promise<RegisteredToolDefinition[]> {
     const tools = await this.prisma.db.toolDefinition.findMany({
@@ -55,6 +60,33 @@ export class ToolRegistryService {
     return {
       tool: normalizeToolDefinition(tool)
     };
+  }
+
+  async resolveToolForCustomer(toolKey: string, customerScope: CustomerScope): Promise<CustomerToolRegistryResolveResult> {
+    const global = await this.resolveRegisteredTool(toolKey);
+    if (!global.tool) {
+      return { deniedReason: global.deniedReason };
+    }
+
+    const policy = await this.customerToolPolicy.resolve({
+      customerId: customerScope.customerId,
+      toolDefinitionId: global.tool.id
+    });
+    if (!policy.allowed) {
+      return { deniedReason: 'customer_policy_denied' };
+    }
+
+    return {
+      resolved: {
+        tool: global.tool,
+        requiredRoles: Object.freeze([...policy.policy.requiredRoles]),
+        requiredPermissionScopes: Object.freeze([...policy.policy.requiredPermissionScopes])
+      }
+    };
+  }
+
+  isExecutableReadOnly(tool: RegisteredToolDefinition): boolean {
+    return tool.operation === ToolOperation.read && !tool.hasSideEffect;
   }
 
   private findLatestTool(toolKey: string) {
