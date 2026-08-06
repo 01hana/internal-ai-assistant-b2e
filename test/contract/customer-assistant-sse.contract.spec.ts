@@ -1,5 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
+import { MockConnectorAdapter } from '../../src/connectors/mock/mock-connector.adapter';
+import { ToolCallStatus, ToolExecutionStatus } from '../../src/generated/prisma/enums';
 import {
   createAuthorizedInternalIdentityHeaders,
   createLegacyPublicIdentityHeaders,
@@ -17,13 +19,18 @@ describeCustomerUs1('Customer SSE isolation contract', () => {
     createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims[customer], requestId });
   let app: INestApplication;
   let state: Us1TestState;
+  let connectorExecute: jest.SpyInstance;
 
   beforeAll(async () => {
     ({ app, state } = await createUs1TestAppWithState({
       internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: fixture.jwks }
     }));
+    connectorExecute = jest.spyOn(app.get(MockConnectorAdapter), 'execute');
   });
-  afterAll(async () => app.close());
+  afterAll(async () => {
+    connectorExecute.mockRestore();
+    await app.close();
+  });
 
   it.each([
     ['missing', {}, 401, 'IDENTITY_TOKEN_INVALID'],
@@ -58,14 +65,13 @@ describeCustomerUs1('Customer SSE isolation contract', () => {
     expect(counters(state)).toEqual(before);
   });
 
-  it.each([
-    ['customerA', 'session-owned-001'],
-    ['customerB', 'session-hidden-001']
-  ] as const)('fails closed for %s own structured-tool request until T056 persists Customer-qualified ToolCalls', async (customer, sessionId) => {
+  it('streams Customer A structured-tool completion with Customer-owned ToolCall and Evidence', async () => {
     const beforeMessages = state.messages.length;
+    const beforeToolCalls = state.toolCalls.length;
+    const beforeEvidence = state.evidenceRefs.length;
     const response = await request(app.getHttpServer())
-      .post(`/api/v1/assistant/sessions/${sessionId}/messages`)
-      .set(headersFor(customer, `req-sse-own-${customer}`))
+      .post('/api/v1/assistant/sessions/session-owned-001/messages')
+      .set(headersFor('customerA', 'req-sse-own-customer-a'))
       .send({
         message: '這張訂單目前狀態？',
         pageContext: {
@@ -78,11 +84,55 @@ describeCustomerUs1('Customer SSE isolation contract', () => {
       });
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toContain('text/event-stream');
-    expect(parseSseResponse(response.text).map((event) => event.event)).toEqual(['error']);
+    const events = parseSseResponse(response.text).map((event) => event.event);
+    expect(events).toEqual(['tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final']);
+    expect(events).not.toContain('error');
     const created = state.messages.slice(beforeMessages);
+    const createdToolCalls = state.toolCalls.slice(beforeToolCalls);
+    const createdEvidence = state.evidenceRefs.slice(beforeEvidence);
     expect(created).not.toHaveLength(0);
-    expect(created.every((message) => message.customerId === (customer === 'customerA' ? 'customer-a' : 'customer-b'))).toBe(true);
-    expect(state.evidenceRefs.filter((evidence) => evidence.messageId === created.at(-1)?.id)).toHaveLength(0);
+    expect(created.every((message) => message.customerId === 'customer-a')).toBe(true);
+    expect(createdToolCalls).toHaveLength(1);
+    expect(createdToolCalls[0]).toMatchObject({ customerId: 'customer-a', status: ToolCallStatus.success, executionStatus: ToolExecutionStatus.executed });
+    expect(createdEvidence).toHaveLength(1);
+    expect(createdEvidence[0]).toMatchObject({ customerId: 'customer-a', toolCallId: createdToolCalls[0].id });
+    expect(JSON.stringify({ events, created, createdToolCalls, createdEvidence })).not.toContain('customer-b');
+  });
+
+  it('streams Customer B policy denial as a Customer-owned blocked ToolCall without connector or Evidence', async () => {
+    const beforeMessages = state.messages.length;
+    const beforeToolCalls = state.toolCalls.length;
+    const beforeEvidence = state.evidenceRefs.length;
+    const beforeConnectorCalls = connectorExecute.mock.calls.length;
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/assistant/sessions/session-hidden-001/messages')
+      .set(headersFor('customerB', 'req-sse-own-customer-b'))
+      .send({
+        message: '這張訂單目前狀態？',
+        pageContext: {
+          module: 'orders',
+          screenId: 'order-detail',
+          entityType: 'order',
+          entityId: 'SO-10001',
+          visibleColumns: ['status', 'customerName']
+        }
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('text/event-stream');
+    const events = parseSseResponse(response.text).map((event) => event.event);
+    expect(events).toEqual(['tool_call_blocked', 'answer_delta', 'final']);
+    expect(events).not.toContain('error');
+    const created = state.messages.slice(beforeMessages);
+    const createdToolCalls = state.toolCalls.slice(beforeToolCalls);
+    const createdEvidence = state.evidenceRefs.slice(beforeEvidence);
+    expect(created).not.toHaveLength(0);
+    expect(created.every((message) => message.customerId === 'customer-b')).toBe(true);
+    expect(createdToolCalls).toHaveLength(1);
+    expect(createdToolCalls[0]).toMatchObject({ customerId: 'customer-b', status: ToolCallStatus.blocked, executionStatus: ToolExecutionStatus.not_started });
+    expect(createdEvidence).toHaveLength(0);
+    expect(connectorExecute).toHaveBeenCalledTimes(beforeConnectorCalls);
+    expect(JSON.stringify({ events, created, createdToolCalls, createdEvidence, response: response.text })).not.toContain('customer-a');
   });
 });
 

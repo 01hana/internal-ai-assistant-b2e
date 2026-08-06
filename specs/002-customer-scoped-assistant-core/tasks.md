@@ -125,10 +125,10 @@
 - [x] T053 [P] [US3] Add CustomerToolPolicy/permission composition tests in `test/unit/customer-tool-policy.spec.ts` and `test/unit/tool-permission-precheck.service.spec.ts`.
 - [x] T054 [US3] Implement CustomerToolPolicy resolution against existing persisted ToolDefinition IDs in `src/tools/tool-registry.service.ts`, `src/tools/tool-registry.types.ts`, and new `src/tools/customer-tool-policy.service.ts`.
 - [x] T055 [US3] Apply CustomerScope, canonical roles/scopes, and Customer policy before execution in `src/permissions/tool-permission-precheck.service.ts` and minimal `src/assistant/runtime/assistant-readonly-runtime.service.ts` wiring; denied work stops before connector/side effect.
-- [ ] T056 [US3] Apply CustomerScope to ToolCall persistence, result lookup, retry, and idempotency in `src/assistant/runtime/tool-call.service.ts` and `src/approvals/side-effect-execution-guard.service.ts`.
-- [ ] T057 [US3] Write Customer-scoped tool denial/execution audit through `src/audit/audit-writer.service.ts` and preserve redaction in `src/common/logger/redaction.util.ts`.
+- [x] T056 [US3] Apply CustomerScope to ToolCall persistence, result lookup, retry, and idempotency in `src/assistant/runtime/tool-call.service.ts` and `src/approvals/side-effect-execution-guard.service.ts`.
+- [x] T057 [US3] Write Customer-scoped tool denial/execution audit through `src/audit/audit-writer.service.ts` and preserve redaction in `src/common/logger/redaction.util.ts`.
 
-**US3 checkpoint**: pending final T056/T057 parent-validation, audit-redaction, and full regression evidence.
+**US3 checkpoint — complete**: Global `ToolDefinition` remains shared; `CustomerToolPolicy` and canonical roles/permission scopes resolve before connector or side effect work. ToolCall result lookup, retry, and idempotency are Customer-scoped. Customer tool audit writes caller ownership from immutable `CustomerScope` and retains redaction. T058 remains unstarted.
 
 ---
 
