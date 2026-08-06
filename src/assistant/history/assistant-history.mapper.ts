@@ -2,6 +2,20 @@ import { AnswerDecisionStatus, AssistantMessageRole, ToolCallStatus } from '../.
 import { AssistantHistorySanitizer } from './assistant-history.sanitizer';
 import { AssistantHistoryMessage } from './assistant-history.types';
 
+/**
+ * Evidence reaches this mapper only after the history service applies the
+ * Customer-qualified message predicate. Mapping is intentionally not an
+ * authorization layer and must not perform a second, application-side filter.
+ */
+export interface CustomerScopedHistoryEvidenceRef {
+  id: string;
+  customerId: string;
+  messageId: string | null;
+  fieldPaths?: string[];
+  permissionSnapshot?: unknown;
+  summary?: unknown;
+}
+
 export function mapAssistantHistoryMessage(
   message: {
     id: string;
@@ -14,12 +28,7 @@ export function mapAssistantHistoryMessage(
     id: string;
     status: ToolCallStatus;
   }>,
-  evidenceRefs: Array<{
-    id: string;
-    fieldPaths?: string[];
-    permissionSnapshot?: unknown;
-    summary?: unknown;
-  }>,
+  evidenceRefs: CustomerScopedHistoryEvidenceRef[],
   permissionScopes: string[]
 ): AssistantHistoryMessage {
   const response: AssistantHistoryMessage = {

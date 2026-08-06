@@ -1,18 +1,22 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import {
-  createIdentityHeaders,
+  createAuthorizedInternalIdentityHeaders,
   createUs1TestAppWithState,
   parseSseResponse,
   Us1TestState
 } from '../support/us1-test-app.helper';
+import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
 
 describe('US4 deterministic document retrieval integration', () => {
+  const fixture = createInternalIdentityJwtFixture();
   let app: INestApplication;
   let state: Us1TestState;
 
   beforeAll(async () => {
-    const testApp = await createUs1TestAppWithState();
+    const testApp = await createUs1TestAppWithState({
+      internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: fixture.jwks }
+    });
     app = testApp.app;
     state = testApp.state;
   });
@@ -26,7 +30,7 @@ describe('US4 deterministic document retrieval integration', () => {
 
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us4-retrieval-sop' }))
+      .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims.customerA, requestId: 'req-us4-retrieval-sop' }))
       .send({
         message: '退貨流程 SOP 怎麼說？',
         pageContext: {
@@ -63,7 +67,7 @@ describe('US4 deterministic document retrieval integration', () => {
   it('answers field explanation questions with document chunks', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us4-retrieval-field' }))
+      .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims.customerA, requestId: 'req-us4-retrieval-field' }))
       .send({
         message: 'status 欄位是什麼意思？',
         pageContext: {
@@ -83,12 +87,12 @@ describe('US4 deterministic document retrieval integration', () => {
     expect(finalEvent?.data?.data.answer).toContain('status 欄位');
   });
 
-  it('keeps live structured lookup on the tool path instead of retrieval', async () => {
+  it('fails closed before attaching structured tool evidence until ToolCall is Customer-qualified', async () => {
     const initialRetrievalRunCount = state.retrievalRuns.length;
 
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us4-structured-regression' }))
+      .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims.customerA, requestId: 'req-us4-structured-regression' }))
       .send({
         message: '請查 SO-10001 訂單狀態',
         pageContext: {
@@ -101,8 +105,9 @@ describe('US4 deterministic document retrieval integration', () => {
 
     expect(response.status).toBe(200);
     const eventNames = parseSseResponse(response.text).map((event) => event.event);
-    expect(eventNames).toContain('tool_call_started');
-    expect(eventNames).toContain('tool_call_completed');
+    expect(eventNames).toEqual(['error']);
+    expect(response.text).not.toContain('SO-10001');
     expect(state.retrievalRuns).toHaveLength(initialRetrievalRunCount);
+    expect(state.evidenceRefs.filter((evidence) => evidence.requestId === 'req-us4-structured-regression')).toHaveLength(0);
   });
 });

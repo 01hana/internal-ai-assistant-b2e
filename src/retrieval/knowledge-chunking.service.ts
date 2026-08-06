@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { KnowledgeChunkParentInput, normalizeKnowledgeChunkParent } from './knowledge-access-policy.types';
 
-export interface ChunkKnowledgeDocumentInput {
-  documentId: string;
+export interface ChunkKnowledgeDocumentInput extends KnowledgeChunkParentInput {
   content: string;
   maxChars?: number;
 }
 
 export interface KnowledgeChunkDraft {
+  customerId: string;
   documentId: string;
   chunkIndex: number;
   heading?: string;
@@ -18,6 +19,7 @@ export interface KnowledgeChunkDraft {
 @Injectable()
 export class KnowledgeChunkingService {
   chunkDocument(input: ChunkKnowledgeDocumentInput): KnowledgeChunkDraft[] {
+    const parent = normalizeKnowledgeChunkParent(input);
     const maxChars = input.maxChars ?? 700;
     const paragraphs = input.content
       .split(/\n{2,}/)
@@ -35,7 +37,8 @@ export class KnowledgeChunkingService {
 
       for (const content of splitBySize(paragraph, maxChars)) {
         chunks.push({
-          documentId: input.documentId,
+          customerId: parent.customerId,
+          documentId: parent.documentId,
           chunkIndex: chunks.length,
           heading,
           content,

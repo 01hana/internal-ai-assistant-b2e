@@ -41,7 +41,7 @@ describe('assistant message SSE contract', () => {
     await app.close();
   });
 
-  it('streams the message flow as SSE events only, with the required event sequence and metadata envelope', async () => {
+  it('fails closed with a safe SSE error when structured ToolCall ownership is unavailable pending T056', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(createAuthorizedInternalIdentityHeaders(identityFixture, { claims: ownedClaims, requestId: 'req-us1-sse-success' }))
@@ -61,13 +61,8 @@ describe('assistant message SSE contract', () => {
 
     const events = parseSseResponse(response.text);
 
-    expect(events.map((event) => event.event)).toEqual([
-      'tool_call_started',
-      'tool_call_completed',
-      'evidence_attached',
-      'answer_delta',
-      'final'
-    ]);
+    expect(events.map((event) => event.event)).toEqual(['error']);
+    expect(response.text).not.toContain('SO-10001');
     expect(events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -84,7 +79,8 @@ describe('assistant message SSE contract', () => {
     expect(events.at(-1)?.data).toEqual(
       expect.objectContaining({
         data: expect.objectContaining({
-          answerDecision: expect.any(String)
+          code: 'NOT_FOUND',
+          message: 'Assistant message processing failed.'
         })
       })
     );

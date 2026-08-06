@@ -37,6 +37,7 @@ import {
   INTERNAL_IDENTITY_TEST_CONFIG,
   InternalIdentityTestConfig
 } from './internal-identity-test-module.helper';
+import { isValidNormalizedKnowledgeDocumentAccessPolicy } from '../../src/retrieval/knowledge-access-policy.types';
 
 type SessionRecord = {
   id: string;
@@ -180,7 +181,7 @@ type EscalationRequestRecord = {
 
 type EvidenceRefRecord = {
   id: string;
-  customerId?: string;
+  customerId: string;
   requestId: string | null;
   messageId: string | null;
   sourceType: EvidenceSourceType;
@@ -308,9 +309,9 @@ type KnowledgeDocumentRecord = {
   version: string;
   language: string;
   status: KnowledgeDocumentStatus;
-  visibility: KnowledgeVisibility;
-  organizationIds: string[];
-  requiredPermissionScopes: string[];
+  visibility: KnowledgeVisibility | string | null;
+  organizationIds: unknown;
+  requiredPermissionScopes: unknown;
   metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
@@ -334,6 +335,7 @@ type KnowledgeChunkRecord = {
 
 type RetrievalRunRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   messageId: string | null;
   query: string;
@@ -348,6 +350,7 @@ type RetrievalRunRecord = {
 
 type RetrievalCandidateRecord = {
   id: string;
+  customerId: string;
   retrievalRunId: string;
   chunkId: string | null;
   sourceId: string;
@@ -577,7 +580,55 @@ export function createUs1TestStateForTest(): Us1TestState {
 
 function createPrismaMock(state: MockState) {
   return {
-    $queryRaw: jest.fn(async () => [{ result: 1 }]),
+    $queryRaw: jest.fn(async (query: unknown, ...values: unknown[]) => {
+      if (!isAuthorizedKnowledgeChunkQuery(query)) {
+        return [{ result: 1 }];
+      }
+
+      const [customerId, documentCustomerId, status, organizationId, permissionScopes] = values;
+      if (
+        typeof customerId !== 'string' ||
+        documentCustomerId !== customerId ||
+        status !== KnowledgeDocumentStatus.active ||
+        typeof organizationId !== 'string' ||
+        !Array.isArray(permissionScopes) ||
+        permissionScopes.some((scope) => typeof scope !== 'string')
+      ) {
+        return [];
+      }
+
+      return state.knowledgeChunks
+        .filter((chunk) => chunk.customerId === customerId && chunk.enabled)
+        .map((chunk) => ({ chunk, document: state.knowledgeDocuments.find((document) => document.id === chunk.documentId) }))
+        .filter(({ document }) =>
+          document?.customerId === customerId &&
+          document.status === KnowledgeDocumentStatus.active &&
+          isValidNormalizedKnowledgeDocumentAccessPolicy(document)
+        )
+        .filter(({ document }) =>
+          document?.visibility === KnowledgeVisibility.CUSTOMER ||
+          (document?.visibility === KnowledgeVisibility.ORGANIZATION &&
+            Array.isArray(document.organizationIds) &&
+            document.organizationIds.includes(organizationId))
+        )
+        .filter(({ document }) =>
+          Array.isArray(document?.requiredPermissionScopes) &&
+          document.requiredPermissionScopes.every((scope) => permissionScopes.includes(scope))
+        )
+        .sort((left, right) =>
+          left.chunk.documentId.localeCompare(right.chunk.documentId) || left.chunk.chunkIndex - right.chunk.chunkIndex
+        )
+        .map(({ chunk, document }) => ({
+          id: chunk.id,
+          customerId: chunk.customerId,
+          documentId: chunk.documentId,
+          chunkIndex: chunk.chunkIndex,
+          heading: chunk.heading,
+          content: chunk.content,
+          title: document!.title,
+          sourceKey: document!.sourceKey
+        }));
+    }),
     assistantSession: {
       create: jest.fn(async ({ data }: { data: Partial<SessionRecord> }) => {
         const now = nextDate();
@@ -1136,7 +1187,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<EvidenceRefRecord> }) => {
         const record: EvidenceRefRecord = {
           id: `evidence-${state.evidenceRefs.length + 1}`,
-          customerId: data.customerId,
+          customerId: requireCustomerId(data.customerId, 'EvidenceRef'),
           requestId: (data.requestId as string | null | undefined) ?? null,
           messageId: (data.messageId as string | null | undefined) ?? null,
           sourceType: (data.sourceType as EvidenceSourceType) ?? EvidenceSourceType.structured_record,
@@ -1338,6 +1389,9 @@ function createPrismaMock(state: MockState) {
       )
     },
     knowledgeDocument: {
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.knowledgeDocuments.find((item) => matchesWhere(item, where)) ?? null
+      ),
       findMany: jest.fn(
         async ({ where }: { where?: { status?: KnowledgeDocumentStatus; sourceType?: KnowledgeSourceType } } = {}) =>
           state.knowledgeDocuments.filter(
@@ -1349,7 +1403,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<KnowledgeDocumentRecord> }) => {
         const record: KnowledgeDocumentRecord = {
           id: data.id ?? `knowledge-document-${state.knowledgeDocuments.length + 1}`,
-          customerId: data.customerId ?? 'customer-a',
+          customerId: requireCustomerId(data.customerId, 'KnowledgeDocument'),
           title: data.title ?? 'Knowledge document',
           sourceType: (data.sourceType as KnowledgeSourceType | undefined) ?? KnowledgeSourceType.sop,
           sourceKey: data.sourceKey ?? `knowledge-source-${state.knowledgeDocuments.length + 1}`,
@@ -1368,6 +1422,9 @@ function createPrismaMock(state: MockState) {
       })
     },
     knowledgeChunk: {
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.knowledgeChunks.find((item) => matchesWhere(item, where)) ?? null
+      ),
       findMany: jest.fn(
         async ({
           where,
@@ -1417,7 +1474,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<KnowledgeChunkRecord> }) => {
         const record: KnowledgeChunkRecord = {
           id: data.id ?? `knowledge-chunk-${state.knowledgeChunks.length + 1}`,
-          customerId: data.customerId ?? 'customer-a',
+          customerId: requireCustomerId(data.customerId, 'KnowledgeChunk'),
           documentId: data.documentId ?? 'knowledge-document-sop-return-001',
           chunkIndex: data.chunkIndex ?? state.knowledgeChunks.length,
           heading: (data.heading as string | null | undefined) ?? null,
@@ -1438,6 +1495,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<RetrievalRunRecord> }) => {
         const record: RetrievalRunRecord = {
           id: `retrieval-run-${state.retrievalRuns.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'RetrievalRun'),
           requestId: data.requestId ?? 'req-generated',
           messageId: (data.messageId as string | null | undefined) ?? null,
           query: data.query ?? '',
@@ -1452,27 +1510,23 @@ function createPrismaMock(state: MockState) {
         state.retrievalRuns.push(record);
         return record;
       }),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<RetrievalRunRecord> }) => {
-        const retrievalRun = state.retrievalRuns.find((item) => item.id === where.id);
-        if (!retrievalRun) {
-          throw new Error(`RetrievalRun ${where.id} not found.`);
-        }
-
-        Object.assign(retrievalRun, data);
-        return retrievalRun;
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<RetrievalRunRecord> }) => {
+        const records = state.retrievalRuns.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
       }),
-      findMany: jest.fn(async ({ where }: { where?: { requestId?: string; messageId?: string } } = {}) =>
-        state.retrievalRuns.filter(
-          (item) =>
-            (!where?.requestId || item.requestId === where.requestId) &&
-            (!where?.messageId || item.messageId === where.messageId)
-        )
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.retrievalRuns.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.retrievalRuns.filter((item) => !where || matchesWhere(item, where))
       )
     },
     retrievalCandidate: {
       create: jest.fn(async ({ data }: { data: Partial<RetrievalCandidateRecord> }) => {
         const record: RetrievalCandidateRecord = {
           id: `retrieval-candidate-${state.retrievalCandidates.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'RetrievalCandidate'),
           retrievalRunId: data.retrievalRunId ?? 'retrieval-run-1',
           chunkId: (data.chunkId as string | null | undefined) ?? null,
           sourceId: data.sourceId ?? 'source-001',
@@ -1485,15 +1539,18 @@ function createPrismaMock(state: MockState) {
         state.retrievalCandidates.push(record);
         return record;
       }),
-      findMany: jest.fn(async ({ where }: { where?: { retrievalRunId?: string; selected?: boolean } } = {}) =>
-        state.retrievalCandidates.filter(
-          (item) =>
-            (!where?.retrievalRunId || item.retrievalRunId === where.retrievalRunId) &&
-            (where?.selected === undefined || item.selected === where.selected)
-        )
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.retrievalCandidates.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.retrievalCandidates.filter((item) => !where || matchesWhere(item, where))
       )
     }
   };
+}
+
+function isAuthorizedKnowledgeChunkQuery(query: unknown): boolean {
+  return Array.isArray(query) && query.join('').includes('FROM "KnowledgeChunk" AS chunk');
 }
 
 function createInitialState(): MockState {
@@ -1806,6 +1863,13 @@ function compoundSelectorFields(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function requireCustomerId(value: unknown, model: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`${model}.customerId must be provided by production data.`);
+  }
+  return value;
 }
 
 function createReviewItems(baseDate: Date): ReviewItemRecord[] {

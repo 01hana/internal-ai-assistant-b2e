@@ -378,6 +378,7 @@ export class AssistantMessageService {
           sessionId: session.id,
           messageId: assistantMessage.id,
           identityContext: input.identityContext,
+          customerScope,
           query: input.message,
           normalizedQuery: planningResult.queryUnderstanding.tokens.map((token) => token.normalizedValue).join(' '),
           limit: 2
@@ -478,7 +479,6 @@ export class AssistantMessageService {
       const documentEvidenceRefs: AttachedEvidence<Record<string, unknown>>[] = [];
       for (const candidate of retrievalResult.selectedCandidates) {
         const documentId = stringFromMetadata(candidate.metadata.documentId);
-        const sourceKey = stringFromMetadata(candidate.metadata.sourceKey) ?? candidate.sourceId;
         if (!candidate.chunkId || !documentId) {
           continue;
         }
@@ -489,21 +489,17 @@ export class AssistantMessageService {
             sessionId: session.id,
             messageId: assistantMessage.id,
             identityContext: input.identityContext,
+            customerScope,
             retrievalRunId: retrievalResult.retrievalRunId,
             retrievalCandidateId: candidate.id,
             documentId,
             chunkId: candidate.chunkId,
-            sourceKey,
-            documentTitle: candidate.title ?? sourceKey,
-            heading: stringFromMetadata(candidate.metadata.heading),
-            snippet: candidate.content,
-            score: candidate.score,
-            rank: candidate.rank
           })
         );
       }
 
       await this.retrievalService.markSelectedEvidence({
+        customerScope,
         retrievalRunId: retrievalResult.retrievalRunId,
         evidenceRefIds: documentEvidenceRefs.map((evidence) => evidence.id)
       });
@@ -688,6 +684,7 @@ export class AssistantMessageService {
           messageId: assistantMessage.id,
           toolCallId: runtimeResult.toolCallId,
           identityContext: input.identityContext,
+          customerScope,
           entityType: runtimeResult.entityRef.entityType ?? 'order',
           entityId: runtimeResult.entityRef.entityId ?? runtimeResult.toolName,
           record: runtimeResult.sanitizedResult,

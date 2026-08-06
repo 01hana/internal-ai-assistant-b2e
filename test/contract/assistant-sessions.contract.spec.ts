@@ -8,18 +8,13 @@ import {
 } from '../support/us1-test-app.helper';
 import {
   createInternalIdentityJwtFixture,
-  InternalTokenClaims,
   TEST_BACKEND_AUDIENCE,
   TEST_GATEWAY_ISSUER
 } from '../support/internal-identity-jwt.helper';
 
 describe('assistant sessions contract', () => {
   const identityFixture = createInternalIdentityJwtFixture();
-  const ownedClaims: Partial<InternalTokenClaims> = {
-    sub: 'actor-001',
-    org_id: 'org-001',
-    host_app: 'erp'
-  };
+  const ownedClaims = identityFixture.canonicalClaims.customerA;
   let app: INestApplication;
   let state: Us1TestState;
 

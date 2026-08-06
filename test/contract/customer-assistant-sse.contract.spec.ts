@@ -61,7 +61,7 @@ describeCustomerUs1('Customer SSE isolation contract', () => {
   it.each([
     ['customerA', 'session-owned-001'],
     ['customerB', 'session-hidden-001']
-  ] as const)('keeps the required SSE event sequence for %s own session', async (customer, sessionId) => {
+  ] as const)('fails closed for %s own structured-tool request until T056 persists Customer-qualified ToolCalls', async (customer, sessionId) => {
     const beforeMessages = state.messages.length;
     const response = await request(app.getHttpServer())
       .post(`/api/v1/assistant/sessions/${sessionId}/messages`)
@@ -78,12 +78,11 @@ describeCustomerUs1('Customer SSE isolation contract', () => {
       });
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toContain('text/event-stream');
-    expect(parseSseResponse(response.text).map((event) => event.event)).toEqual([
-      'tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final'
-    ]);
+    expect(parseSseResponse(response.text).map((event) => event.event)).toEqual(['error']);
     const created = state.messages.slice(beforeMessages);
     expect(created).not.toHaveLength(0);
     expect(created.every((message) => message.customerId === (customer === 'customerA' ? 'customer-a' : 'customer-b'))).toBe(true);
+    expect(state.evidenceRefs.filter((evidence) => evidence.messageId === created.at(-1)?.id)).toHaveLength(0);
   });
 });
 
