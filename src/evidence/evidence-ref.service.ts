@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { Prisma } from '../generated/prisma/client';
-import { EvidenceSourceType } from '../generated/prisma/enums';
+import { EvidenceSourceType, KnowledgeDocumentStatus } from '../generated/prisma/enums';
+import { CustomerScope } from '../identity/customer-scope.types';
 import { RequestIdentityContext } from '../identity/identity-context.types';
 import { minimizeForLlmInput } from '../permissions/masking.util';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,6 +13,7 @@ export interface StructuredEvidenceInput<TRecord extends Record<string, unknown>
   messageId: string;
   toolCallId: string;
   identityContext: RequestIdentityContext;
+  customerScope: CustomerScope;
   entityType: string;
   entityId: string;
   record: TRecord;
@@ -23,16 +25,11 @@ export interface DocumentChunkEvidenceInput {
   sessionId: string;
   messageId: string;
   identityContext: RequestIdentityContext;
+  customerScope: CustomerScope;
   retrievalRunId: string;
   retrievalCandidateId: string;
   documentId: string;
   chunkId: string;
-  sourceKey: string;
-  documentTitle: string;
-  heading?: string | null;
-  snippet: string;
-  score: number;
-  rank: number;
 }
 
 export interface AttachedEvidence<TSummary extends Record<string, unknown> = Record<string, unknown>> {
@@ -55,9 +52,11 @@ export class EvidenceRefService {
   async attachStructuredRecordEvidence<TRecord extends Record<string, unknown>>(
     input: StructuredEvidenceInput<TRecord>
   ): Promise<AttachedEvidence<Partial<TRecord>>> {
+    await this.assertStructuredParents(input.customerScope, input);
     const sanitizedSummary = minimizeForLlmInput(input.record, input.visibleFields);
     const evidenceRef = await this.prisma.db.evidenceRef.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         messageId: input.messageId,
         sourceType: EvidenceSourceType.structured_record,
@@ -76,10 +75,8 @@ export class EvidenceRefService {
     });
 
     await this.auditWriter.append({
+      customerScope: input.customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId,
       toolCallId: input.toolCallId,
@@ -108,23 +105,25 @@ export class EvidenceRefService {
   async attachDocumentChunkEvidence(
     input: DocumentChunkEvidenceInput
   ): Promise<AttachedEvidence<Record<string, unknown>>> {
-    const snippet = toBoundedSnippet(input.snippet);
+    const { document, chunk, candidate } = await this.assertDocumentParents(input.customerScope, input);
+    const snippet = toBoundedSnippet(chunk.content);
     const summary = {
-      documentTitle: input.documentTitle,
-      sourceKey: input.sourceKey,
-      heading: input.heading ?? null,
+      documentTitle: document.title,
+      sourceKey: document.sourceKey,
+      heading: chunk.heading,
       snippet,
-      score: input.score,
-      rank: input.rank
+      score: candidate.score,
+      rank: candidate.rank
     };
     const evidenceRef = await this.prisma.db.evidenceRef.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         messageId: input.messageId,
         sourceType: EvidenceSourceType.document_chunk,
         sourceId: input.chunkId,
-        documentId: input.documentId,
-        chunkId: input.chunkId,
+        documentId: document.id,
+        chunkId: chunk.id,
         fieldPaths: [],
         permissionSnapshot: toJsonInput({
           retrievalRunId: input.retrievalRunId,
@@ -135,10 +134,8 @@ export class EvidenceRefService {
     });
 
     await this.auditWriter.append({
+      customerScope: input.customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId,
       eventType: 'evidence_attached',
@@ -146,11 +143,11 @@ export class EvidenceRefService {
       metadata: toJsonInput({
         evidenceRefId: evidenceRef.id,
         sourceType: evidenceRef.sourceType,
-        documentId: input.documentId,
-        chunkId: input.chunkId,
-        sourceKey: input.sourceKey,
-        score: input.score,
-        rank: input.rank
+        documentId: document.id,
+        chunkId: chunk.id,
+        sourceKey: document.sourceKey,
+        score: candidate.score,
+        rank: candidate.rank
       })
     });
 
@@ -161,6 +158,65 @@ export class EvidenceRefService {
       fieldPaths: evidenceRef.fieldPaths,
       summary
     };
+  }
+
+  private async assertStructuredParents<TRecord extends Record<string, unknown>>(
+    customerScope: CustomerScope,
+    input: StructuredEvidenceInput<TRecord>
+  ): Promise<void> {
+    const [message, toolCall] = await Promise.all([
+      this.prisma.db.assistantMessage.findFirst({
+        where: { customerId: customerScope.customerId, id: input.messageId, sessionId: input.sessionId }
+      }),
+      this.prisma.db.toolCall.findFirst({
+        where: {
+          customerId: customerScope.customerId,
+          id: input.toolCallId,
+          sessionId: input.sessionId,
+          messageId: input.messageId
+        }
+      })
+    ]);
+    if (!message || !toolCall) {
+      throw this.createNotFoundError();
+    }
+  }
+
+  private async assertDocumentParents(
+    customerScope: CustomerScope,
+    input: DocumentChunkEvidenceInput
+  ) {
+    const message = await this.prisma.db.assistantMessage.findFirst({
+      where: { customerId: customerScope.customerId, id: input.messageId, sessionId: input.sessionId }
+    });
+    const retrievalRun = await this.prisma.db.retrievalRun.findFirst({
+      where: { customerId: customerScope.customerId, id: input.retrievalRunId, messageId: input.messageId }
+    });
+    const candidate = await this.prisma.db.retrievalCandidate.findFirst({
+      where: {
+        customerId: customerScope.customerId,
+        id: input.retrievalCandidateId,
+        retrievalRunId: input.retrievalRunId,
+        chunkId: input.chunkId,
+        selected: true
+      }
+    });
+    const [document, chunk] = await Promise.all([
+      this.prisma.db.knowledgeDocument.findFirst({
+        where: { customerId: customerScope.customerId, id: input.documentId, status: KnowledgeDocumentStatus.active }
+      }),
+      this.prisma.db.knowledgeChunk.findFirst({
+        where: { customerId: customerScope.customerId, id: input.chunkId, documentId: input.documentId, enabled: true }
+      })
+    ]);
+    if (!message || !retrievalRun || !candidate || !document || !chunk || candidate.sourceId !== chunk.id) {
+      throw this.createNotFoundError();
+    }
+    return { document, chunk, candidate };
+  }
+
+  private createNotFoundError(): NotFoundException {
+    return new NotFoundException({ error: 'NOT_FOUND', message: 'Evidence resource not found.' });
   }
 }
 

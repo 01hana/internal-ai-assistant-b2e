@@ -18,6 +18,7 @@ import {
   FeedbackRating,
   RiskLevel,
   KnowledgeDocumentStatus,
+  KnowledgeVisibility,
   KnowledgeSourceType,
   ToolCallStatus,
   ToolExecutionStatus,
@@ -27,9 +28,23 @@ import {
 import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.filter';
 import { RequestIdInterceptor } from '../../src/common/request-id/request-id.interceptor';
 import { ResponseEnvelopeInterceptor } from '../../src/common/response/response-envelope.interceptor';
+import {
+  DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE,
+  InternalTokenClaims,
+  TEST_BACKEND_AUDIENCE,
+  TEST_GATEWAY_ISSUER,
+  TestJwtFixture
+} from './internal-identity-jwt.helper';
+import {
+  createInternalIdentityTestConfig,
+  INTERNAL_IDENTITY_TEST_CONFIG,
+  InternalIdentityTestConfig
+} from './internal-identity-test-module.helper';
+import { isValidNormalizedKnowledgeDocumentAccessPolicy } from '../../src/retrieval/knowledge-access-policy.types';
 
 type SessionRecord = {
   id: string;
+  customerId?: string;
   hostApp: string;
   organizationId: string;
   actorId: string;
@@ -41,6 +56,7 @@ type SessionRecord = {
 
 type ContextStateRecord = {
   id: string;
+  customerId?: string;
   sessionId: string;
   currentTask: string | null;
   currentModule: string | null;
@@ -60,6 +76,7 @@ type ContextStateRecord = {
 
 type MessageRecord = {
   id: string;
+  customerId?: string;
   sessionId: string;
   requestId: string;
   role: AssistantMessageRole;
@@ -71,6 +88,7 @@ type MessageRecord = {
 
 type ToolCallRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   sessionId: string;
   messageId: string | null;
@@ -111,8 +129,17 @@ type ToolDefinitionRecord = {
   updatedAt: Date;
 };
 
+type CustomerToolPolicyRecord = {
+  customerId: string;
+  toolDefinitionId: string;
+  enabled: boolean;
+  requiredRoles: string[];
+  requiredPermissionScopes: string[];
+};
+
 type ActionDraftRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   sessionId: string;
   messageId: string | null;
@@ -133,6 +160,7 @@ type ActionDraftRecord = {
 
 type ApprovalRequestRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   sessionId: string;
   messageId: string | null;
@@ -153,6 +181,7 @@ type ApprovalRequestRecord = {
 
 type EscalationRequestRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   sessionId: string;
   messageId: string | null;
@@ -166,6 +195,7 @@ type EscalationRequestRecord = {
 
 type EvidenceRefRecord = {
   id: string;
+  customerId: string;
   requestId: string | null;
   messageId: string | null;
   sourceType: EvidenceSourceType;
@@ -183,6 +213,7 @@ type EvidenceRefRecord = {
 
 type AuditEventRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   timestamp: Date;
   organizationId: string;
@@ -202,6 +233,7 @@ type AuditEventRecord = {
 
 type QueryUnderstandingRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   messageId: string;
   sentences: unknown;
@@ -219,6 +251,7 @@ type QueryUnderstandingRecord = {
 
 type GroundingCheckRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   messageId: string;
   covered: boolean;
@@ -231,6 +264,7 @@ type GroundingCheckRecord = {
 
 type AnswerDecisionRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   messageId: string;
   status: string;
@@ -243,6 +277,7 @@ type AnswerDecisionRecord = {
 
 type ClarificationQuestionRecord = {
   id: string;
+  customerId?: string;
   requestId: string;
   messageId: string;
   question: string;
@@ -255,6 +290,7 @@ type ClarificationQuestionRecord = {
 
 type ReviewItemRecord = {
   id: string;
+  customerId: string;
   sourceType: ReviewSourceType;
   sourceId: string;
   status: ReviewItemStatus;
@@ -267,6 +303,7 @@ type ReviewItemRecord = {
 
 type FeedbackEventRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   messageId: string;
   rating: FeedbackRating;
@@ -281,12 +318,16 @@ type FeedbackEventRecord = {
 
 type KnowledgeDocumentRecord = {
   id: string;
+  customerId: string;
   title: string;
   sourceType: KnowledgeSourceType;
   sourceKey: string;
   version: string;
   language: string;
   status: KnowledgeDocumentStatus;
+  visibility: KnowledgeVisibility | string | null;
+  organizationIds: unknown;
+  requiredPermissionScopes: unknown;
   metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
@@ -294,6 +335,7 @@ type KnowledgeDocumentRecord = {
 
 type KnowledgeChunkRecord = {
   id: string;
+  customerId: string;
   documentId: string;
   chunkIndex: number;
   heading: string | null;
@@ -309,6 +351,7 @@ type KnowledgeChunkRecord = {
 
 type RetrievalRunRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   messageId: string | null;
   query: string;
@@ -323,6 +366,7 @@ type RetrievalRunRecord = {
 
 type RetrievalCandidateRecord = {
   id: string;
+  customerId: string;
   retrievalRunId: string;
   chunkId: string | null;
   sourceId: string;
@@ -335,6 +379,7 @@ type RetrievalCandidateRecord = {
 
 type ExecutionPlanRecord = {
   id: string;
+  customerId?: string;
   sessionId: string;
   messageId: string | null;
   taskType: string;
@@ -354,6 +399,7 @@ type MockState = {
   contextStates: ContextStateRecord[];
   messages: MessageRecord[];
   toolDefinitions: ToolDefinitionRecord[];
+  customerToolPolicies: CustomerToolPolicyRecord[];
   actionDrafts: ActionDraftRecord[];
   approvalRequests: ApprovalRequestRecord[];
   escalationRequests: EscalationRequestRecord[];
@@ -371,11 +417,26 @@ type MockState = {
   knowledgeChunks: KnowledgeChunkRecord[];
   retrievalRuns: RetrievalRunRecord[];
   retrievalCandidates: RetrievalCandidateRecord[];
+  internalIdentity?: InternalIdentityTestConfig;
+  workflowAuditFailureEventTypes: string[];
+  orchestration: {
+    sendMessage: jest.Mock;
+    sseEventBuilds: jest.Mock;
+  };
 };
 
 export type Us1TestState = MockState;
 
-export async function createUs1TestAppWithState(): Promise<{ app: INestApplication; state: Us1TestState }> {
+export type { InternalIdentityTestConfig } from './internal-identity-test-module.helper';
+
+export type Us1TestAppOptions = {
+  internalIdentity?: InternalIdentityTestConfig;
+  forceMessageServiceErrorForSessionId?: string;
+};
+
+export async function createUs1TestAppWithState(
+  options: Us1TestAppOptions = {}
+): Promise<{ app: INestApplication; state: Us1TestState; prismaMock: ReturnType<typeof createPrismaMock> }> {
   process.env.DATABASE_URL = 'postgresql://assistant:assistant_dev_password@localhost:5432/assistant_dev';
   process.env.POSTGRES_USER = 'assistant';
   process.env.POSTGRES_PASSWORD = 'assistant_dev_password';
@@ -383,17 +444,39 @@ export async function createUs1TestAppWithState(): Promise<{ app: INestApplicati
   process.env.LLM_PROVIDER = 'openai';
   process.env.LLM_MODEL = 'local-placeholder-model';
   process.env.OPENAI_API_KEY = 'placeholder-openai-api-key';
+  process.env.INTERNAL_IDENTITY_JWT_ISSUER = options.internalIdentity?.issuer ?? 'https://gateway.test.internal';
+  process.env.INTERNAL_IDENTITY_JWT_AUDIENCE = options.internalIdentity?.audience ?? 'internal-assistant-core-test';
+  process.env.INTERNAL_IDENTITY_JWKS_URI = 'https://gateway.test.internal/.well-known/jwks.json';
   process.env.ENABLE_SWAGGER_DOCS = 'false';
   process.env.SWAGGER_PATH = 'docs';
 
   const state = createInitialState();
   const prismaMock = createPrismaMock(state);
+  const internalIdentity = createInternalIdentityTestConfig(options.internalIdentity ?? {
+    issuer: TEST_GATEWAY_ISSUER,
+    audience: TEST_BACKEND_AUDIENCE,
+    jwks: DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.jwks
+  });
 
   const { AppModule } = await import('../../src/app.module');
+  const { createStaticInternalIdentityTokenVerifier } = await import('../../src/identity/internal-identity-token-verifier');
+  const { INTERNAL_IDENTITY_CONFIG, INTERNAL_IDENTITY_TOKEN_VERIFIER } = await import('../../src/identity/identity-token.types');
   const { PrismaService } = await import('../../src/prisma/prisma.service');
   const moduleRef = await Test.createTestingModule({
-    imports: [AppModule]
+    imports: [AppModule],
+    providers: [{ provide: INTERNAL_IDENTITY_TEST_CONFIG, useValue: internalIdentity }]
   })
+    .overrideProvider(INTERNAL_IDENTITY_CONFIG)
+    .useValue({
+      issuer: internalIdentity.issuer,
+      audience: internalIdentity.audience,
+      jwksUri: process.env.INTERNAL_IDENTITY_JWKS_URI,
+      clockToleranceSeconds: 0
+    })
+    .overrideProvider(INTERNAL_IDENTITY_TOKEN_VERIFIER)
+    .useValue(
+      createStaticInternalIdentityTokenVerifier(internalIdentity)
+    )
     .overrideProvider(PrismaService)
     .useValue({
       onModuleInit: jest.fn(),
@@ -402,6 +485,26 @@ export async function createUs1TestAppWithState(): Promise<{ app: INestApplicati
     })
     .compile();
 
+  const { AssistantMessageService } = await import('../../src/assistant/message/assistant-message.service');
+  const { AssistantSseEventBuilder } = await import('../../src/assistant/sse/assistant-sse-event.builder');
+  const assistantMessageService = moduleRef.get(AssistantMessageService);
+  const originalSendMessage = assistantMessageService.sendMessage.bind(assistantMessageService);
+  jest.spyOn(assistantMessageService, 'sendMessage').mockImplementation(async (input) => {
+    state.orchestration.sendMessage(input);
+    if (input.sessionId === options.forceMessageServiceErrorForSessionId) {
+      throw new Error('test-only in-stream failure');
+    }
+    return originalSendMessage(input);
+  });
+  const sseEventBuilder = moduleRef.get(AssistantSseEventBuilder);
+  const originalBuildMessageEvents = sseEventBuilder.buildMessageEvents.bind(sseEventBuilder);
+  jest.spyOn(sseEventBuilder, 'buildMessageEvents').mockImplementation((input) => {
+    state.orchestration.sseEventBuilds(input);
+    return originalBuildMessageEvents(input);
+  });
+
+  state.internalIdentity = internalIdentity;
+
   const app = moduleRef.createNestApplication();
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ forbidNonWhitelisted: true, transform: true, whitelist: true }));
@@ -409,7 +512,7 @@ export async function createUs1TestAppWithState(): Promise<{ app: INestApplicati
   app.useGlobalFilters(new GlobalExceptionFilter());
   await app.init();
 
-  return { app, state };
+  return { app, state, prismaMock };
 }
 
 export async function createUs1TestApp(): Promise<INestApplication> {
@@ -419,6 +522,7 @@ export async function createUs1TestApp(): Promise<INestApplication> {
 
 export function createIdentityHeaders(overrides?: Partial<Record<string, string>>) {
   return {
+    authorization: `Bearer ${DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.sign()}`,
     'x-request-id': 'req-us1-default',
     'x-actor-id': 'actor-001',
     'x-host-app': 'erp',
@@ -426,6 +530,43 @@ export function createIdentityHeaders(overrides?: Partial<Record<string, string>
     'x-role': 'planner',
     'x-permission-scopes': 'orders:read,inventory:read',
     ...overrides
+  };
+}
+
+export function createAuthorizedInternalIdentityHeaders(
+  fixture: TestJwtFixture,
+  options: {
+    claims?: Partial<InternalTokenClaims>;
+    requestId?: string;
+  } = {}
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    authorization: `Bearer ${fixture.sign({ claims: options.claims })}`
+  };
+
+  if (options.requestId !== undefined) {
+    headers['x-request-id'] = options.requestId;
+  }
+
+  return headers;
+}
+
+export function createLegacyPublicIdentityHeaders(
+  overrides: Partial<Record<string, string>> = {}
+): Record<string, string> {
+  const nonAuthorizationOverrides = Object.fromEntries(
+    Object.entries(overrides).filter(([name]) => name.toLowerCase() !== 'authorization')
+  );
+
+  return {
+    'x-request-id': 'req-legacy-public-identity',
+    'x-customer-id': 'customer-header',
+    'x-actor-id': 'actor-header',
+    'x-role': 'planner',
+    'x-organization-id': 'org-header',
+    'x-host-app': 'erp',
+    'x-permission-scopes': 'orders:read',
+    ...nonAuthorizationOverrides
   };
 }
 
@@ -446,14 +587,71 @@ export function parseSseResponse(text: string) {
   });
 }
 
+export function createUs1PrismaMockForTest(state: Us1TestState) {
+  return createPrismaMock(state);
+}
+
+export function createUs1TestStateForTest(): Us1TestState {
+  return createInitialState();
+}
+
 function createPrismaMock(state: MockState) {
-  return {
-    $queryRaw: jest.fn(async () => [{ result: 1 }]),
+  const prismaMock: Record<string, any> = {
+    $queryRaw: jest.fn(async (query: unknown, ...values: unknown[]) => {
+      if (!isAuthorizedKnowledgeChunkQuery(query)) {
+        return [{ result: 1 }];
+      }
+
+      const [customerId, documentCustomerId, status, organizationId, permissionScopes] = values;
+      if (
+        typeof customerId !== 'string' ||
+        documentCustomerId !== customerId ||
+        status !== KnowledgeDocumentStatus.active ||
+        typeof organizationId !== 'string' ||
+        !Array.isArray(permissionScopes) ||
+        permissionScopes.some((scope) => typeof scope !== 'string')
+      ) {
+        return [];
+      }
+
+      return state.knowledgeChunks
+        .filter((chunk) => chunk.customerId === customerId && chunk.enabled)
+        .map((chunk) => ({ chunk, document: state.knowledgeDocuments.find((document) => document.id === chunk.documentId) }))
+        .filter(({ document }) =>
+          document?.customerId === customerId &&
+          document.status === KnowledgeDocumentStatus.active &&
+          isValidNormalizedKnowledgeDocumentAccessPolicy(document)
+        )
+        .filter(({ document }) =>
+          document?.visibility === KnowledgeVisibility.CUSTOMER ||
+          (document?.visibility === KnowledgeVisibility.ORGANIZATION &&
+            Array.isArray(document.organizationIds) &&
+            document.organizationIds.includes(organizationId))
+        )
+        .filter(({ document }) =>
+          Array.isArray(document?.requiredPermissionScopes) &&
+          document.requiredPermissionScopes.every((scope) => permissionScopes.includes(scope))
+        )
+        .sort((left, right) =>
+          left.chunk.documentId.localeCompare(right.chunk.documentId) || left.chunk.chunkIndex - right.chunk.chunkIndex
+        )
+        .map(({ chunk, document }) => ({
+          id: chunk.id,
+          customerId: chunk.customerId,
+          documentId: chunk.documentId,
+          chunkIndex: chunk.chunkIndex,
+          heading: chunk.heading,
+          content: chunk.content,
+          title: document!.title,
+          sourceKey: document!.sourceKey
+        }));
+    }),
     assistantSession: {
       create: jest.fn(async ({ data }: { data: Partial<SessionRecord> }) => {
         const now = nextDate();
         const record: SessionRecord = {
           id: `session-created-${state.sessions.length + 1}`,
+          customerId: data.customerId,
           hostApp: data.hostApp ?? 'erp',
           organizationId: data.organizationId ?? 'org-001',
           actorId: data.actorId ?? 'actor-001',
@@ -465,26 +663,39 @@ function createPrismaMock(state: MockState) {
         state.sessions.push(record);
         return record;
       }),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.sessions.find((item) => item.id === where.id) ?? null),
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => state.sessions.find((item) => matchesWhere(item, where)) ?? null),
       findFirst: jest.fn(
         async ({
           where
         }: {
-          where: {
-            id: string;
-            organizationId: string;
-            hostApp: string;
-            actorId: string;
-          };
+          where: Record<string, unknown>;
         }) =>
-          state.sessions.find(
-            (item) =>
-              item.id === where.id &&
-              item.organizationId === where.organizationId &&
-              item.hostApp === where.hostApp &&
-              item.actorId === where.actorId
-          ) ?? null
-      )
+          state.sessions.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.sessions.filter((item) => !where || matchesWhere(item, where))
+      ),
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<SessionRecord> }) => {
+        const session = state.sessions.find((item) => matchesWhere(item, where));
+        if (!session) throw new Error('AssistantSession not found.');
+        Object.assign(session, data, { updatedAt: nextDate() });
+        return session;
+      }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<SessionRecord> }) => {
+        const matches = state.sessions.filter((item) => matchesWhere(item, where));
+        matches.forEach((item) => Object.assign(item, data, { updatedAt: nextDate() }));
+        return { count: matches.length };
+      }),
+      delete: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        const index = state.sessions.findIndex((item) => matchesWhere(item, where));
+        if (index < 0) throw new Error('AssistantSession not found.');
+        return state.sessions.splice(index, 1)[0];
+      }),
+      deleteMany: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        const matches = state.sessions.filter((item) => matchesWhere(item, where));
+        state.sessions.splice(0, state.sessions.length, ...state.sessions.filter((item) => !matches.includes(item)));
+        return { count: matches.length };
+      })
     },
     toolDefinition: {
       findMany: jest.fn(
@@ -538,6 +749,7 @@ function createPrismaMock(state: MockState) {
         const now = nextDate();
         const record: ContextStateRecord = {
           id: `context-${state.contextStates.length + 1}`,
+          customerId: data.customerId,
           sessionId: data.sessionId ?? 'session-owned-001',
           currentTask: (data.currentTask as string | null | undefined) ?? null,
           currentModule: (data.currentModule as string | null | undefined) ?? null,
@@ -561,16 +773,15 @@ function createPrismaMock(state: MockState) {
         async ({
           where
         }: {
-          where: { sessionId: string };
+          where: Record<string, unknown>;
           orderBy?: { updatedAt: 'desc' | 'asc' };
         }) =>
           [...state.contextStates]
-            .filter((item) => item.sessionId === where.sessionId)
+            .filter((item) => matchesWhere(item, where))
             .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())[0] ?? null
       ),
-      upsert: jest.fn(async ({ where, create, update }: { where: { sessionId?: string }; create: Partial<ContextStateRecord>; update: Partial<ContextStateRecord> }) => {
-        const key = where.sessionId ?? create.sessionId;
-        const existing = state.contextStates.find((item) => item.sessionId === key);
+      upsert: jest.fn(async ({ where, create, update }: { where: Record<string, unknown>; create: Partial<ContextStateRecord>; update: Partial<ContextStateRecord> }) => {
+        const existing = state.contextStates.find((item) => matchesWhere(item, where));
         if (existing) {
           Object.assign(existing, update, { updatedAt: nextDate() });
           return existing;
@@ -578,7 +789,8 @@ function createPrismaMock(state: MockState) {
 
         const record = {
           id: `context-${state.contextStates.length + 1}`,
-          sessionId: create.sessionId ?? key ?? 'session-owned-001',
+          customerId: create.customerId,
+          sessionId: create.sessionId ?? 'session-owned-001',
           currentTask: (create.currentTask as string | null | undefined) ?? null,
           currentModule: (create.currentModule as string | null | undefined) ?? null,
           currentPage: create.currentPage ?? null,
@@ -597,8 +809,8 @@ function createPrismaMock(state: MockState) {
         state.contextStates.push(record);
         return record;
       }),
-      updateMany: jest.fn(async ({ where, data }: { where: { sessionId: string }; data: Partial<ContextStateRecord> }) => {
-        const matching = state.contextStates.filter((item) => item.sessionId === where.sessionId);
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ContextStateRecord> }) => {
+        const matching = state.contextStates.filter((item) => matchesWhere(item, where));
         matching.forEach((item) => Object.assign(item, data, { updatedAt: nextDate() }));
         return {
           count: matching.length
@@ -610,6 +822,7 @@ function createPrismaMock(state: MockState) {
         const now = nextDate();
         const record: MessageRecord = {
           id: `message-${state.messages.length + 1}`,
+          customerId: data.customerId,
           sessionId: data.sessionId ?? 'session-owned-001',
           requestId: data.requestId ?? 'req-generated',
           role: (data.role as AssistantMessageRole) ?? AssistantMessageRole.user,
@@ -634,14 +847,14 @@ function createPrismaMock(state: MockState) {
           cursor,
           skip
         }: {
-          where: { sessionId: string };
+          where: Record<string, unknown>;
           orderBy?: { createdAt: 'asc' | 'desc' };
           take?: number;
           cursor?: { id: string };
           skip?: number;
         }) => {
         const sorted = [...state.messages]
-          .filter((item) => item.sessionId === where.sessionId)
+          .filter((item) => matchesWhere(item, where))
           .sort((left, right) =>
             (orderBy?.createdAt ?? 'asc') === 'asc'
               ? left.createdAt.getTime() - right.createdAt.getTime()
@@ -652,8 +865,8 @@ function createPrismaMock(state: MockState) {
         const paginated = sorted.slice(startIndex);
         return typeof take === 'number' ? paginated.slice(0, take) : paginated;
       }),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<MessageRecord> }) => {
-        const message = state.messages.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<MessageRecord> }) => {
+        const message = state.messages.find((item) => matchesWhere(item, where));
         if (!message) {
           throw new Error(`Message ${where.id} not found.`);
         }
@@ -661,13 +874,21 @@ function createPrismaMock(state: MockState) {
         Object.assign(message, data);
         return message;
       }),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>
-        state.messages.find((item) => item.id === where.id) ?? null
-      )
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.messages.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.messages.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<MessageRecord> }) => {
+        const matching = state.messages.filter((item) => matchesWhere(item, where));
+        matching.forEach((item) => Object.assign(item, data));
+        return { count: matching.length };
+      })
     },
     queryUnderstandingResult: {
-      upsert: jest.fn(async ({ where, create, update }: { where: { messageId: string }; create: Partial<QueryUnderstandingRecord>; update: Partial<QueryUnderstandingRecord> }) => {
-        const existing = state.queryUnderstandingResults.find((item) => item.messageId === where.messageId);
+      upsert: jest.fn(async ({ where, create, update }: { where: Record<string, unknown>; create: Partial<QueryUnderstandingRecord>; update: Partial<QueryUnderstandingRecord> }) => {
+        const existing = state.queryUnderstandingResults.find((item) => matchesWhere(item, where));
         if (existing) {
           Object.assign(existing, update);
           return existing;
@@ -675,8 +896,9 @@ function createPrismaMock(state: MockState) {
 
         const record: QueryUnderstandingRecord = {
           id: `qu-${state.queryUnderstandingResults.length + 1}`,
+          customerId: create.customerId,
           requestId: create.requestId ?? 'req-generated',
-          messageId: create.messageId ?? where.messageId,
+          messageId: create.messageId ?? 'message-generated',
           sentences: create.sentences ?? [],
           tokens: create.tokens ?? [],
           phrases: create.phrases ?? [],
@@ -697,6 +919,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<ExecutionPlanRecord> }) => {
         const record: ExecutionPlanRecord = {
           id: `plan-${state.executionPlans.length + 1}`,
+          customerId: data.customerId,
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
           taskType: data.taskType ?? 'general_lookup',
@@ -718,6 +941,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<ActionDraftRecord> }) => {
         const record: ActionDraftRecord = {
           id: `action-draft-created-${state.actionDrafts.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'ActionDraft'),
           requestId: data.requestId ?? 'req-generated',
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
@@ -738,57 +962,43 @@ function createPrismaMock(state: MockState) {
         state.actionDrafts.push(record);
         return record;
       }),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.actionDrafts.find((item) => item.id === where.id) ?? null),
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => state.actionDrafts.find((item) => matchesWhere(item, where)) ?? null),
       findFirst: jest.fn(
         async ({
           where
         }: {
-          where: {
-            id?: string;
-            sessionId?: string;
-            actorId?: string;
-            status?: ActionDraftStatus;
-          };
+          where: Record<string, unknown>;
         }) =>
-          state.actionDrafts.find(
-            (item) =>
-              (!where.id || item.id === where.id) &&
-              (!where.sessionId || item.sessionId === where.sessionId) &&
-              (!where.actorId || item.actorId === where.actorId) &&
-              (!where.status || item.status === where.status)
-          ) ?? null
+          state.actionDrafts.find((item) => matchesWhere(item, where)) ?? null
       ),
       findMany: jest.fn(
         async ({
           where
         }: {
-          where?: {
-            sessionId?: string;
-            actorId?: string;
-            status?: ActionDraftStatus;
-          };
+          where?: Record<string, unknown>;
         } = {}) =>
-          state.actionDrafts.filter(
-            (item) =>
-              (!where?.sessionId || item.sessionId === where.sessionId) &&
-              (!where?.actorId || item.actorId === where.actorId) &&
-              (!where?.status || item.status === where.status)
-          )
+          state.actionDrafts.filter((item) => !where || matchesWhere(item, where))
       ),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ActionDraftRecord> }) => {
-        const draft = state.actionDrafts.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ActionDraftRecord> }) => {
+        const draft = state.actionDrafts.find((item) => matchesWhere(item, where));
         if (!draft) {
-          throw new Error(`ActionDraft ${where.id} not found.`);
+          throw new Error('ActionDraft not found.');
         }
 
         Object.assign(draft, data);
         return draft;
+      }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ActionDraftRecord> }) => {
+        const records = state.actionDrafts.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
       })
     },
     approvalRequest: {
       create: jest.fn(async ({ data }: { data: Partial<ApprovalRequestRecord> }) => {
         const record: ApprovalRequestRecord = {
           id: `approval-request-created-${state.approvalRequests.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'ApprovalRequest'),
           requestId: data.requestId ?? 'req-generated',
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
@@ -809,72 +1019,59 @@ function createPrismaMock(state: MockState) {
         state.approvalRequests.push(record);
         return record;
       }),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.approvalRequests.find((item) => item.id === where.id) ?? null),
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => state.approvalRequests.find((item) => matchesWhere(item, where)) ?? null),
       findFirst: jest.fn(
         async ({
           where
         }: {
-          where: {
-            id?: string;
-            sessionId?: string;
-            requesterActorId?: string;
-            approverActorId?: string;
-            status?: ApprovalRequestStatus;
-          };
+          where: Record<string, unknown>;
         }) =>
-          state.approvalRequests.find(
-            (item) =>
-              (!where.id || item.id === where.id) &&
-              (!where.sessionId || item.sessionId === where.sessionId) &&
-              (!where.requesterActorId || item.requesterActorId === where.requesterActorId) &&
-              (!where.approverActorId || item.approverActorId === where.approverActorId) &&
-              (!where.status || item.status === where.status)
-          ) ?? null
+          state.approvalRequests.find((item) => matchesWhere(item, where)) ?? null
       ),
       findMany: jest.fn(
         async ({
           where,
           orderBy
         }: {
-          where?: {
-            status?: ApprovalRequestStatus;
-            riskLevel?: RiskLevel;
-            requesterActorId?: string;
-            approverActorId?: string;
-            createdAt?: { gte?: Date; lte?: Date };
-          };
+          where?: Record<string, unknown>;
           orderBy?: { createdAt: 'asc' | 'desc' };
         } = {}) =>
           state.approvalRequests
-            .filter(
-              (item) =>
-                (!where?.status || item.status === where.status) &&
-                (!where?.riskLevel || item.riskLevel === where.riskLevel) &&
-                (!where?.requesterActorId || item.requesterActorId === where.requesterActorId) &&
-                (!where?.approverActorId || item.approverActorId === where.approverActorId) &&
-                (!where?.createdAt?.gte || item.createdAt.getTime() >= where.createdAt.gte.getTime()) &&
-                (!where?.createdAt?.lte || item.createdAt.getTime() <= where.createdAt.lte.getTime())
-            )
+            .filter((item) => !where || matchesWhere(item, where))
             .sort((left, right) =>
               (orderBy?.createdAt ?? 'desc') === 'desc'
                 ? right.createdAt.getTime() - left.createdAt.getTime()
                 : left.createdAt.getTime() - right.createdAt.getTime()
             )
       ),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ApprovalRequestRecord> }) => {
-        const approvalRequest = state.approvalRequests.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ApprovalRequestRecord> }) => {
+        const approvalRequest = state.approvalRequests.find((item) => matchesWhere(item, where));
         if (!approvalRequest) {
-          throw new Error(`ApprovalRequest ${where.id} not found.`);
+          throw new Error('ApprovalRequest not found.');
         }
 
         Object.assign(approvalRequest, data);
         return approvalRequest;
+      }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ApprovalRequestRecord> }) => {
+        const records = state.approvalRequests.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
+      }),
+      delete: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        const index = state.approvalRequests.findIndex((item) => matchesWhere(item, where));
+        if (index < 0) {
+          throw new Error('ApprovalRequest not found.');
+        }
+
+        return state.approvalRequests.splice(index, 1)[0];
       })
     },
     escalationRequest: {
       create: jest.fn(async ({ data }: { data: Partial<EscalationRequestRecord> }) => {
         const record: EscalationRequestRecord = {
           id: `escalation-request-created-${state.escalationRequests.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'EscalationRequest'),
           requestId: data.requestId ?? 'req-generated',
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
@@ -888,56 +1085,51 @@ function createPrismaMock(state: MockState) {
         state.escalationRequests.push(record);
         return record;
       }),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.escalationRequests.find((item) => item.id === where.id) ?? null),
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => state.escalationRequests.find((item) => matchesWhere(item, where)) ?? null),
       findFirst: jest.fn(
         async ({
           where
         }: {
-          where: {
-            id?: string;
-            sessionId?: string;
-            status?: EscalationStatus;
-          };
+          where: Record<string, unknown>;
         }) =>
-          state.escalationRequests.find(
-            (item) =>
-              (!where.id || item.id === where.id) &&
-              (!where.sessionId || item.sessionId === where.sessionId) &&
-              (!where.status || item.status === where.status)
-          ) ?? null
+          state.escalationRequests.find((item) => matchesWhere(item, where)) ?? null
       ),
       findMany: jest.fn(
         async ({
           where,
           orderBy
         }: {
-          where?: {
-            status?: EscalationStatus;
-          };
+          where?: Record<string, unknown>;
           orderBy?: { createdAt: 'asc' | 'desc' };
         } = {}) =>
           state.escalationRequests
-            .filter((item) => !where?.status || item.status === where.status)
+            .filter((item) => !where || matchesWhere(item, where))
             .sort((left, right) =>
               (orderBy?.createdAt ?? 'desc') === 'desc'
                 ? right.createdAt.getTime() - left.createdAt.getTime()
                 : left.createdAt.getTime() - right.createdAt.getTime()
             )
       ),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<EscalationRequestRecord> }) => {
-        const escalationRequest = state.escalationRequests.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<EscalationRequestRecord> }) => {
+        const escalationRequest = state.escalationRequests.find((item) => matchesWhere(item, where));
         if (!escalationRequest) {
-          throw new Error(`EscalationRequest ${where.id} not found.`);
+          throw new Error('EscalationRequest not found.');
         }
 
         Object.assign(escalationRequest, data);
         return escalationRequest;
+      }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<EscalationRequestRecord> }) => {
+        const records = state.escalationRequests.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
       })
     },
     toolCall: {
       create: jest.fn(async ({ data }: { data: Partial<ToolCallRecord> }) => {
         const record: ToolCallRecord = {
           id: `tool-call-${state.toolCalls.length + 1}`,
+          customerId: data.customerId,
           requestId: data.requestId ?? 'req-generated',
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
@@ -958,8 +1150,8 @@ function createPrismaMock(state: MockState) {
         state.toolCalls.push(record);
         return record;
       }),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ToolCallRecord> }) => {
-        const toolCall = state.toolCalls.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ToolCallRecord> }) => {
+        const toolCall = state.toolCalls.find((item) => matchesWhere(item, where));
         if (!toolCall) {
           throw new Error(`ToolCall ${where.id} not found.`);
         }
@@ -967,20 +1159,37 @@ function createPrismaMock(state: MockState) {
         Object.assign(toolCall, data);
         return toolCall;
       }),
-      findMany: jest.fn(async ({ where }: { where: { sessionId?: string; messageId?: string } }) =>
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ToolCallRecord> }) => {
+        const matches = state.toolCalls.filter((item) => matchesWhere(item, where));
+        matches.forEach((item) => Object.assign(item, data));
+        return { count: matches.length };
+      }),
+      findMany: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
         state.toolCalls
-          .filter((item) => (!where.sessionId || item.sessionId === where.sessionId) && (!where.messageId || item.messageId === where.messageId))
+          .filter((item) => matchesWhere(item, where))
           .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
       ),
       findFirst: jest.fn(
-        async ({ where }: { where: { idempotencyKey?: string | null } }) =>
-          state.toolCalls.find((item) => where.idempotencyKey && item.idempotencyKey === where.idempotencyKey) ?? null
+        async ({ where }: { where: Record<string, unknown> }) => state.toolCalls.find((item) => matchesWhere(item, where)) ?? null
+      )
+    },
+    customerToolPolicy: {
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        const selector = where.customerId_toolDefinitionId;
+        if (!isRecord(selector)) return null;
+        return state.customerToolPolicies.find(
+          (item) => item.customerId === selector.customerId && item.toolDefinitionId === selector.toolDefinitionId
+        ) ?? null;
+      }),
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.customerToolPolicies.find((item) => matchesWhere(item, where)) ?? null
       )
     },
     evidenceRef: {
       create: jest.fn(async ({ data }: { data: Partial<EvidenceRefRecord> }) => {
         const record: EvidenceRefRecord = {
           id: `evidence-${state.evidenceRefs.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'EvidenceRef'),
           requestId: (data.requestId as string | null | undefined) ?? null,
           messageId: (data.messageId as string | null | undefined) ?? null,
           sourceType: (data.sourceType as EvidenceSourceType) ?? EvidenceSourceType.structured_record,
@@ -998,16 +1207,22 @@ function createPrismaMock(state: MockState) {
         state.evidenceRefs.push(record);
         return record;
       }),
-      findMany: jest.fn(async ({ where }: { where: { messageId: { in: string[] } } }) =>
+      findMany: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
         state.evidenceRefs
-          .filter((item) => item.messageId && where.messageId.in.includes(item.messageId))
+          .filter((item) => matchesWhere(item, where))
           .sort((left, right) => left.timestamp.getTime() - right.timestamp.getTime())
       )
     },
     auditEvent: {
       create: jest.fn(async ({ data }: { data: Partial<AuditEventRecord> }) => {
+        const failureIndex = state.workflowAuditFailureEventTypes.indexOf(data.eventType ?? '');
+        if (failureIndex >= 0) {
+          state.workflowAuditFailureEventTypes.splice(failureIndex, 1);
+          throw new Error(`test-only workflow audit failure: ${data.eventType}`);
+        }
         const record: AuditEventRecord = {
           id: `audit-${state.auditEvents.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'AuditEvent'),
           requestId: data.requestId ?? 'req-generated',
           timestamp: nextDate(),
           organizationId: data.organizationId ?? 'org-001',
@@ -1026,12 +1241,24 @@ function createPrismaMock(state: MockState) {
         };
         state.auditEvents.push(record);
         return record;
+      }),
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.auditEvents.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.auditEvents.filter((item) => !where || matchesWhere(item, where))
+      ),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<AuditEventRecord> }) => {
+        const records = state.auditEvents.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
       })
     },
     groundingCheck: {
       create: jest.fn(async ({ data }: { data: Partial<GroundingCheckRecord> }) => {
         const record: GroundingCheckRecord = {
           id: `grounding-${state.groundingChecks.length + 1}`,
+          customerId: data.customerId,
           requestId: data.requestId ?? 'req-generated',
           messageId: data.messageId ?? 'message-generated',
           covered: data.covered ?? false,
@@ -1049,6 +1276,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<AnswerDecisionRecord> }) => {
         const record: AnswerDecisionRecord = {
           id: `answer-decision-${state.answerDecisions.length + 1}`,
+          customerId: data.customerId,
           requestId: data.requestId ?? 'req-generated',
           messageId: data.messageId ?? 'message-generated',
           status: data.status ?? 'answered',
@@ -1060,12 +1288,16 @@ function createPrismaMock(state: MockState) {
         };
         state.answerDecisions.push(record);
         return record;
-      })
+      }),
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.answerDecisions.find((item) => matchesWhere(item, where)) ?? null
+      )
     },
     clarificationQuestion: {
       create: jest.fn(async ({ data }: { data: Partial<ClarificationQuestionRecord> }) => {
         const record: ClarificationQuestionRecord = {
           id: `clarification-question-${state.clarificationQuestions.length + 1}`,
+          customerId: data.customerId,
           requestId: data.requestId ?? 'req-generated',
           messageId: data.messageId ?? 'message-generated',
           question: data.question ?? '請補充查詢目標。',
@@ -1101,6 +1333,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<ReviewItemRecord> }) => {
         const record: ReviewItemRecord = {
           id: `review-item-${state.reviewItems.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'ReviewItem'),
           sourceType: (data.sourceType as ReviewSourceType | undefined) ?? ReviewSourceType.no_answer,
           sourceId: data.sourceId ?? 'source-generated',
           status: (data.status as ReviewItemStatus | undefined) ?? ReviewItemStatus.open,
@@ -1113,41 +1346,35 @@ function createPrismaMock(state: MockState) {
         state.reviewItems.push(record);
         return record;
       }),
-      findMany: jest.fn(
-        async ({ where }: { where?: { sourceType?: ReviewSourceType; sourceId?: string; status?: ReviewItemStatus; priority?: ReviewPriority } } = {}) =>
-          state.reviewItems.filter(
-            (item) =>
-              (!where?.sourceType || item.sourceType === where.sourceType) &&
-              (!where?.sourceId || item.sourceId === where.sourceId) &&
-              (!where?.status || item.status === where.status) &&
-              (!where?.priority || item.priority === where.priority)
-          )
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.reviewItems.filter((item) => !where || matchesWhere(item, where))
       ),
-      findFirst: jest.fn(
-        async ({ where }: { where?: { sourceType?: ReviewSourceType; sourceId?: string } } = {}) =>
-          state.reviewItems.find(
-            (item) =>
-              (!where?.sourceType || item.sourceType === where.sourceType) &&
-              (!where?.sourceId || item.sourceId === where.sourceId)
-          ) ?? null
+      findFirst: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.reviewItems.find((item) => !where || matchesWhere(item, where)) ?? null
       ),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>
-        state.reviewItems.find((item) => item.id === where.id) ?? null
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.reviewItems.find((item) => matchesWhere(item, where)) ?? null
       ),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ReviewItemRecord> }) => {
-        const reviewItem = state.reviewItems.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ReviewItemRecord> }) => {
+        const reviewItem = state.reviewItems.find((item) => matchesWhere(item, where));
         if (!reviewItem) {
           throw new Error(`ReviewItem ${where.id} not found.`);
         }
 
         Object.assign(reviewItem, data);
         return reviewItem;
+      }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ReviewItemRecord> }) => {
+        const records = state.reviewItems.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
       })
     },
     feedbackEvent: {
       create: jest.fn(async ({ data }: { data: Partial<FeedbackEventRecord> }) => {
         const record: FeedbackEventRecord = {
           id: `feedback-event-${state.feedbackEvents.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'FeedbackEvent'),
           requestId: data.requestId ?? 'req-generated',
           messageId: data.messageId ?? 'message-owned-assistant-001',
           rating: (data.rating as FeedbackRating | undefined) ?? FeedbackRating.positive,
@@ -1162,22 +1389,22 @@ function createPrismaMock(state: MockState) {
         state.feedbackEvents.push(record);
         return record;
       }),
-      findMany: jest.fn(async ({ where }: { where?: { messageId?: string; rating?: FeedbackRating } } = {}) =>
-        state.feedbackEvents.filter(
-          (item) =>
-            (!where?.messageId || item.messageId === where.messageId) &&
-            (!where?.rating || item.rating === where.rating)
-        )
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.feedbackEvents.filter((item) => !where || matchesWhere(item, where))
       ),
-      findFirst: jest.fn(async ({ where }: { where?: { id?: string; messageId?: string } } = {}) =>
-        state.feedbackEvents.find(
-          (item) =>
-            (!where?.id || item.id === where.id) &&
-            (!where?.messageId || item.messageId === where.messageId)
-        ) ?? null
-      )
+      findFirst: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.feedbackEvents.find((item) => !where || matchesWhere(item, where)) ?? null
+      ),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<FeedbackEventRecord> }) => {
+        const records = state.feedbackEvents.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
+      })
     },
     knowledgeDocument: {
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.knowledgeDocuments.find((item) => matchesWhere(item, where)) ?? null
+      ),
       findMany: jest.fn(
         async ({ where }: { where?: { status?: KnowledgeDocumentStatus; sourceType?: KnowledgeSourceType } } = {}) =>
           state.knowledgeDocuments.filter(
@@ -1189,12 +1416,16 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<KnowledgeDocumentRecord> }) => {
         const record: KnowledgeDocumentRecord = {
           id: data.id ?? `knowledge-document-${state.knowledgeDocuments.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'KnowledgeDocument'),
           title: data.title ?? 'Knowledge document',
           sourceType: (data.sourceType as KnowledgeSourceType | undefined) ?? KnowledgeSourceType.sop,
           sourceKey: data.sourceKey ?? `knowledge-source-${state.knowledgeDocuments.length + 1}`,
           version: data.version ?? '1.0.0',
           language: data.language ?? 'zh-TW',
           status: (data.status as KnowledgeDocumentStatus | undefined) ?? KnowledgeDocumentStatus.active,
+          visibility: (data.visibility as KnowledgeVisibility | undefined) ?? KnowledgeVisibility.CUSTOMER,
+          organizationIds: (data.organizationIds as string[] | undefined) ?? [],
+          requiredPermissionScopes: (data.requiredPermissionScopes as string[] | undefined) ?? [],
           metadata: data.metadata ?? null,
           createdAt: nextDate(),
           updatedAt: nextDate()
@@ -1204,6 +1435,9 @@ function createPrismaMock(state: MockState) {
       })
     },
     knowledgeChunk: {
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.knowledgeChunks.find((item) => matchesWhere(item, where)) ?? null
+      ),
       findMany: jest.fn(
         async ({
           where,
@@ -1253,6 +1487,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<KnowledgeChunkRecord> }) => {
         const record: KnowledgeChunkRecord = {
           id: data.id ?? `knowledge-chunk-${state.knowledgeChunks.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'KnowledgeChunk'),
           documentId: data.documentId ?? 'knowledge-document-sop-return-001',
           chunkIndex: data.chunkIndex ?? state.knowledgeChunks.length,
           heading: (data.heading as string | null | undefined) ?? null,
@@ -1273,6 +1508,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<RetrievalRunRecord> }) => {
         const record: RetrievalRunRecord = {
           id: `retrieval-run-${state.retrievalRuns.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'RetrievalRun'),
           requestId: data.requestId ?? 'req-generated',
           messageId: (data.messageId as string | null | undefined) ?? null,
           query: data.query ?? '',
@@ -1287,27 +1523,23 @@ function createPrismaMock(state: MockState) {
         state.retrievalRuns.push(record);
         return record;
       }),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<RetrievalRunRecord> }) => {
-        const retrievalRun = state.retrievalRuns.find((item) => item.id === where.id);
-        if (!retrievalRun) {
-          throw new Error(`RetrievalRun ${where.id} not found.`);
-        }
-
-        Object.assign(retrievalRun, data);
-        return retrievalRun;
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<RetrievalRunRecord> }) => {
+        const records = state.retrievalRuns.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
       }),
-      findMany: jest.fn(async ({ where }: { where?: { requestId?: string; messageId?: string } } = {}) =>
-        state.retrievalRuns.filter(
-          (item) =>
-            (!where?.requestId || item.requestId === where.requestId) &&
-            (!where?.messageId || item.messageId === where.messageId)
-        )
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.retrievalRuns.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.retrievalRuns.filter((item) => !where || matchesWhere(item, where))
       )
     },
     retrievalCandidate: {
       create: jest.fn(async ({ data }: { data: Partial<RetrievalCandidateRecord> }) => {
         const record: RetrievalCandidateRecord = {
           id: `retrieval-candidate-${state.retrievalCandidates.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'RetrievalCandidate'),
           retrievalRunId: data.retrievalRunId ?? 'retrieval-run-1',
           chunkId: (data.chunkId as string | null | undefined) ?? null,
           sourceId: data.sourceId ?? 'source-001',
@@ -1320,15 +1552,52 @@ function createPrismaMock(state: MockState) {
         state.retrievalCandidates.push(record);
         return record;
       }),
-      findMany: jest.fn(async ({ where }: { where?: { retrievalRunId?: string; selected?: boolean } } = {}) =>
-        state.retrievalCandidates.filter(
-          (item) =>
-            (!where?.retrievalRunId || item.retrievalRunId === where.retrievalRunId) &&
-            (where?.selected === undefined || item.selected === where.selected)
-        )
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.retrievalCandidates.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.retrievalCandidates.filter((item) => !where || matchesWhere(item, where))
       )
     }
   };
+  prismaMock.$transaction = jest.fn(async (callback: (transaction: Record<string, any>) => Promise<unknown>) => {
+    const snapshot = structuredClone({
+      sessions: state.sessions,
+      messages: state.messages,
+      approvalRequests: state.approvalRequests,
+      actionDrafts: state.actionDrafts,
+      escalationRequests: state.escalationRequests,
+      feedbackEvents: state.feedbackEvents,
+      reviewItems: state.reviewItems,
+      evidenceRefs: state.evidenceRefs,
+      auditEvents: state.auditEvents,
+      toolCalls: state.toolCalls
+    });
+    try {
+      return await callback(prismaMock);
+    } catch (error) {
+      restoreStateArray(state.sessions, snapshot.sessions);
+      restoreStateArray(state.messages, snapshot.messages);
+      restoreStateArray(state.approvalRequests, snapshot.approvalRequests);
+      restoreStateArray(state.actionDrafts, snapshot.actionDrafts);
+      restoreStateArray(state.escalationRequests, snapshot.escalationRequests);
+      restoreStateArray(state.feedbackEvents, snapshot.feedbackEvents);
+      restoreStateArray(state.reviewItems, snapshot.reviewItems);
+      restoreStateArray(state.evidenceRefs, snapshot.evidenceRefs);
+      restoreStateArray(state.auditEvents, snapshot.auditEvents);
+      restoreStateArray(state.toolCalls, snapshot.toolCalls);
+      throw error;
+    }
+  });
+  return prismaMock;
+}
+
+function restoreStateArray(target: unknown[], snapshot: unknown[]) {
+  target.splice(0, target.length, ...snapshot);
+}
+
+function isAuthorizedKnowledgeChunkQuery(query: unknown): boolean {
+  return Array.isArray(query) && query.join('').includes('FROM "KnowledgeChunk" AS chunk');
 }
 
 function createInitialState(): MockState {
@@ -1337,9 +1606,10 @@ function createInitialState(): MockState {
     sessions: [
       {
         id: 'session-owned-001',
+        customerId: 'customer-a',
         hostApp: 'erp',
-        organizationId: 'org-001',
-        actorId: 'actor-001',
+        organizationId: 'org-shared',
+        actorId: 'actor-shared',
         status: AssistantSessionStatus.active,
         createdAt: new Date(baseDate),
         updatedAt: new Date('2026-06-16T00:00:04.000Z'),
@@ -1347,9 +1617,10 @@ function createInitialState(): MockState {
       },
       {
         id: 'session-hidden-001',
+        customerId: 'customer-b',
         hostApp: 'erp',
-        organizationId: 'org-001',
-        actorId: 'actor-002',
+        organizationId: 'org-shared',
+        actorId: 'actor-shared',
         status: AssistantSessionStatus.active,
         createdAt: new Date(baseDate),
         updatedAt: new Date('2026-06-16T00:00:01.000Z'),
@@ -1357,9 +1628,10 @@ function createInitialState(): MockState {
       },
       {
         id: 'session-closed-001',
+        customerId: 'customer-a',
         hostApp: 'erp',
-        organizationId: 'org-001',
-        actorId: 'actor-001',
+        organizationId: 'org-shared',
+        actorId: 'actor-shared',
         status: AssistantSessionStatus.closed,
         createdAt: new Date(baseDate),
         updatedAt: new Date('2026-06-16T00:00:05.000Z'),
@@ -1367,18 +1639,31 @@ function createInitialState(): MockState {
       },
       {
         id: 'session-expired-001',
+        customerId: 'customer-a',
         hostApp: 'erp',
-        organizationId: 'org-001',
-        actorId: 'actor-001',
+        organizationId: 'org-shared',
+        actorId: 'actor-shared',
         status: AssistantSessionStatus.expired,
         createdAt: new Date(baseDate),
         updatedAt: new Date('2026-06-16T00:00:06.000Z'),
         lastMessageAt: new Date('2026-06-16T00:00:06.000Z')
+      },
+      {
+        id: 'session-flow-error-001',
+        customerId: 'customer-a',
+        hostApp: 'erp',
+        organizationId: 'org-shared',
+        actorId: 'actor-shared',
+        status: AssistantSessionStatus.active,
+        createdAt: new Date(baseDate),
+        updatedAt: new Date('2026-06-16T00:00:07.000Z'),
+        lastMessageAt: null
       }
     ],
     contextStates: [
       {
         id: 'context-owned-001',
+        customerId: 'customer-a',
         sessionId: 'session-owned-001',
         currentTask: 'order_status_lookup',
         currentModule: 'orders',
@@ -1403,6 +1688,7 @@ function createInitialState(): MockState {
       },
       {
         id: 'context-hidden-001',
+        customerId: 'customer-b',
         sessionId: 'session-hidden-001',
         currentTask: 'order_status_lookup',
         currentModule: 'orders',
@@ -1423,6 +1709,7 @@ function createInitialState(): MockState {
     messages: [
       {
         id: 'message-owned-user-001',
+        customerId: 'customer-a',
         sessionId: 'session-owned-001',
         requestId: 'req-history-seed-001',
         role: AssistantMessageRole.user,
@@ -1433,6 +1720,7 @@ function createInitialState(): MockState {
       },
       {
         id: 'message-owned-assistant-001',
+        customerId: 'customer-a',
         sessionId: 'session-owned-001',
         requestId: 'req-history-seed-001',
         role: AssistantMessageRole.assistant,
@@ -1440,15 +1728,70 @@ function createInitialState(): MockState {
         answerDecision: 'answered',
         pageContext: null,
         createdAt: new Date('2026-06-16T00:00:04.000Z')
+      },
+      {
+        id: 'message-hidden-user-001',
+        customerId: 'customer-b',
+        sessionId: 'session-hidden-001',
+        requestId: 'req-history-seed-hidden-001',
+        role: AssistantMessageRole.user,
+        content: 'Customer B private message.',
+        answerDecision: null,
+        pageContext: null,
+        createdAt: new Date('2026-06-16T00:00:02.000Z')
+      },
+      {
+        id: 'message-hidden-assistant-001',
+        customerId: 'customer-b',
+        sessionId: 'session-hidden-001',
+        requestId: 'req-history-seed-hidden-001',
+        role: AssistantMessageRole.assistant,
+        content: 'Customer B private answer.',
+        answerDecision: 'answered',
+        pageContext: null,
+        createdAt: new Date('2026-06-16T00:00:04.000Z')
       }
     ],
     toolDefinitions: createToolDefinitions(baseDate),
+    customerToolPolicies: [
+      {
+        customerId: 'customer-a',
+        toolDefinitionId: 'tool-definition-orders-001',
+        enabled: true,
+        requiredRoles: [],
+        requiredPermissionScopes: []
+      },
+      {
+        customerId: 'customer-b',
+        toolDefinitionId: 'tool-definition-orders-001',
+        enabled: false,
+        requiredRoles: [],
+        requiredPermissionScopes: []
+      },
+      ...['tool-definition-orders-update-001', 'tool-definition-orders-cancel-001'].flatMap((toolDefinitionId) => [
+        {
+          customerId: 'customer-a',
+          toolDefinitionId,
+          enabled: true,
+          requiredRoles: [],
+          requiredPermissionScopes: []
+        },
+        {
+          customerId: 'customer-b',
+          toolDefinitionId,
+          enabled: true,
+          requiredRoles: [],
+          requiredPermissionScopes: []
+        }
+      ])
+    ],
     actionDrafts: createActionDrafts(baseDate),
     approvalRequests: createApprovalRequests(baseDate),
     escalationRequests: createEscalationRequests(baseDate),
     toolCalls: [
       {
         id: 'tool-call-owned-001',
+        customerId: 'customer-a',
         requestId: 'req-history-seed-001',
         sessionId: 'session-owned-001',
         messageId: 'message-owned-assistant-001',
@@ -1465,11 +1808,32 @@ function createInitialState(): MockState {
         errorCode: null,
         createdAt: new Date('2026-06-16T00:00:03.000Z'),
         executedAt: new Date('2026-06-16T00:00:03.000Z')
+      },
+      {
+        id: 'tool-call-hidden-001',
+        customerId: 'customer-b',
+        requestId: 'req-history-seed-hidden-001',
+        sessionId: 'session-hidden-001',
+        messageId: 'message-hidden-assistant-001',
+        toolDefinitionId: 'tool-definition-orders-001',
+        toolName: 'mock.orders.status.lookup',
+        toolVersion: '1.0.0',
+        inputSummary: { entityId: 'SO-20002' },
+        permissionResult: { scopes: ['orders:read'] },
+        outputSummary: { status: 'private' },
+        status: ToolCallStatus.success,
+        executionStatus: ToolExecutionStatus.executed,
+        idempotencyKey: null,
+        durationMs: 1,
+        errorCode: null,
+        createdAt: new Date('2026-06-16T00:00:03.000Z'),
+        executedAt: new Date('2026-06-16T00:00:03.000Z')
       }
     ],
     evidenceRefs: [
       {
         id: 'evidence-owned-001',
+        customerId: 'customer-a',
         requestId: 'req-history-seed-001',
         messageId: 'message-owned-assistant-001',
         sourceType: EvidenceSourceType.structured_record,
@@ -1483,27 +1847,131 @@ function createInitialState(): MockState {
         timestamp: new Date('2026-06-16T00:00:03.500Z'),
         permissionSnapshot: { visibleFields: ['status', 'customerName'] },
         summary: { fields: { status: '已確認', customerName: '王小明企業' } }
+      },
+      {
+        id: 'evidence-hidden-001',
+        customerId: 'customer-b',
+        requestId: 'req-history-seed-hidden-001',
+        messageId: 'message-hidden-assistant-001',
+        sourceType: EvidenceSourceType.structured_record,
+        sourceId: 'SO-20002',
+        toolCallId: 'tool-call-hidden-001',
+        documentId: null,
+        chunkId: null,
+        entityType: 'order',
+        entityId: 'SO-20002',
+        fieldPaths: ['status'],
+        timestamp: new Date('2026-06-16T00:00:03.500Z'),
+        permissionSnapshot: { visibleFields: ['status'] },
+        summary: { fields: { status: 'private' } }
       }
     ],
     auditEvents: [],
+    workflowAuditFailureEventTypes: [],
     queryUnderstandingResults: [],
     executionPlans: [],
     groundingChecks: [],
     answerDecisions: [],
     clarificationQuestions: [],
     reviewItems: createReviewItems(baseDate),
-    feedbackEvents: [],
+    feedbackEvents: [
+      {
+        id: 'feedback-event-seed-001', customerId: 'customer-a', requestId: 'workflow-shared-idempotency-key', messageId: 'message-owned-assistant-001', rating: FeedbackRating.negative, reason: null, comment: null, intent: 'not_helpful', toolCallIds: ['tool-call-owned-001'], evidenceRefIds: ['evidence-owned-001'], answerDecision: 'answered', createdAt: new Date(baseDate)
+      },
+      {
+        id: 'feedback-event-hidden-001', customerId: 'customer-b', requestId: 'workflow-shared-idempotency-key', messageId: 'message-hidden-assistant-001', rating: FeedbackRating.negative, reason: null, comment: null, intent: 'not_helpful', toolCallIds: ['tool-call-hidden-001'], evidenceRefIds: ['evidence-hidden-001'], answerDecision: 'answered', createdAt: new Date(baseDate)
+      }
+    ],
     knowledgeDocuments: createKnowledgeDocuments(baseDate),
     knowledgeChunks: createKnowledgeChunks(baseDate),
     retrievalRuns: [],
-    retrievalCandidates: []
+    retrievalCandidates: [],
+    orchestration: {
+      sendMessage: jest.fn(),
+      sseEventBuilds: jest.fn()
+    }
   };
+}
+
+/**
+ * The in-memory delegates intentionally apply only predicates supplied by the
+ * runtime. They never synthesize a Customer predicate, so an unscoped query
+ * remains observable as an expected-red Customer isolation failure.
+ */
+/**
+ * Test delegates deliberately implement only explicit Prisma-style predicates.
+ * They never add a Customer condition or infer one from a parent, organization,
+ * actor, HostApp, request, or fixture.
+ */
+function matchesWhere(record: Record<string, unknown>, where: Record<string, unknown>): boolean {
+  return Object.entries(where).every(([key, value]) => {
+    // A supplied undefined value is an invalid predicate, never a wildcard.
+    // Absence of the key remains observable as the legacy bare-ID behavior.
+    if (value === undefined) return false;
+
+    if (key === 'AND') {
+      return Array.isArray(value) && value.every((predicate) => isRecord(predicate) && matchesWhere(record, predicate));
+    }
+
+    const compound = compoundSelectorFields(key, value);
+    if (compound) {
+      return compound.every(([field, expected]) => record[field] === expected);
+    }
+
+    if (key.startsWith('customerId_')) {
+      return false;
+    }
+
+    if (isRecord(value)) {
+      if (Array.isArray(value.in)) return value.in.includes(record[key]);
+      if (value.gte instanceof Date || value.lte instanceof Date) {
+        const actual = record[key];
+        if (!(actual instanceof Date)) return false;
+        return (
+          (!(value.gte instanceof Date) || actual.getTime() >= value.gte.getTime()) &&
+          (!(value.lte instanceof Date) || actual.getTime() <= value.lte.getTime())
+        );
+      }
+      return false;
+    }
+
+    return record[key] === value;
+  });
+}
+
+function compoundSelectorFields(
+  key: string,
+  value: unknown
+): Array<[string, unknown]> | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const expectedFields: Record<string, readonly string[]> = {
+    customerId_id: ['customerId', 'id'],
+    customerId_sessionId: ['customerId', 'sessionId'],
+    customerId_messageId: ['customerId', 'messageId']
+  };
+  const fields = expectedFields[key];
+  if (!fields || Object.keys(value).some((field) => !fields.includes(field))) return undefined;
+  if (fields.some((field) => !(field in value) || value[field] === undefined)) return undefined;
+  return fields.map((field) => [field, value[field]]);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function requireCustomerId(value: unknown, model: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`${model}.customerId must be provided by production data.`);
+  }
+  return value;
 }
 
 function createReviewItems(baseDate: Date): ReviewItemRecord[] {
   return [
     {
       id: 'review-item-open-feedback-001',
+      customerId: 'customer-a',
       sourceType: ReviewSourceType.negative_feedback,
       sourceId: 'feedback-event-seed-001',
       status: ReviewItemStatus.open,
@@ -1528,6 +1996,7 @@ function createReviewItems(baseDate: Date): ReviewItemRecord[] {
     },
     {
       id: 'review-item-hidden-org-001',
+      customerId: 'customer-b',
       sourceType: ReviewSourceType.negative_feedback,
       sourceId: 'feedback-event-hidden-001',
       status: ReviewItemStatus.open,
@@ -1549,6 +2018,7 @@ function createReviewItems(baseDate: Date): ReviewItemRecord[] {
     },
     {
       id: 'review-item-open-feedback-002',
+      customerId: 'customer-a',
       sourceType: ReviewSourceType.missing_evidence,
       sourceId: 'feedback-event-seed-002',
       status: ReviewItemStatus.open,
@@ -1570,6 +2040,46 @@ function createReviewItems(baseDate: Date): ReviewItemRecord[] {
       },
       createdAt: new Date(baseDate),
       resolvedAt: null
+    },
+    {
+      id: 'review-item-customer-a-shared-001',
+      customerId: 'customer-a',
+      sourceType: ReviewSourceType.negative_feedback,
+      sourceId: 'feedback-event-seed-001',
+      status: ReviewItemStatus.open,
+      priority: ReviewPriority.medium,
+      summary: 'customer-a review with shared lower-level fields',
+      suggestedImprovement: {
+        organizationId: 'org-shared',
+        hostApp: 'erp',
+        requestId: 'workflow-shared-idempotency-key',
+        messageId: 'message-owned-assistant-001',
+        feedbackEventId: 'feedback-event-seed-001',
+        rating: 'negative',
+        intent: 'not_helpful'
+      },
+      createdAt: new Date(baseDate),
+      resolvedAt: null
+    },
+    {
+      id: 'review-item-customer-b-shared-001',
+      customerId: 'customer-b',
+      sourceType: ReviewSourceType.negative_feedback,
+      sourceId: 'feedback-event-seed-001',
+      status: ReviewItemStatus.open,
+      priority: ReviewPriority.medium,
+      summary: 'customer-b review with shared lower-level fields',
+      suggestedImprovement: {
+        organizationId: 'org-shared',
+        hostApp: 'erp',
+        requestId: 'workflow-shared-idempotency-key',
+        messageId: 'message-hidden-assistant-001',
+        feedbackEventId: 'feedback-event-seed-001',
+        rating: 'negative',
+        intent: 'not_helpful'
+      },
+      createdAt: new Date(baseDate),
+      resolvedAt: null
     }
   ];
 }
@@ -1578,12 +2088,16 @@ function createKnowledgeDocuments(baseDate: Date): KnowledgeDocumentRecord[] {
   return [
     {
       id: 'knowledge-document-sop-return-001',
+      customerId: 'customer-a',
       title: '退貨處理 SOP',
       sourceType: KnowledgeSourceType.sop,
       sourceKey: 'sop-return-process',
       version: '1.0.0',
       language: 'zh-TW',
       status: KnowledgeDocumentStatus.active,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
       metadata: {
         domain: 'orders'
       },
@@ -1592,12 +2106,16 @@ function createKnowledgeDocuments(baseDate: Date): KnowledgeDocumentRecord[] {
     },
     {
       id: 'knowledge-document-field-order-status-001',
+      customerId: 'customer-a',
       title: '訂單狀態欄位說明',
       sourceType: KnowledgeSourceType.field_guide,
       sourceKey: 'field-order-status',
       version: '1.0.0',
       language: 'zh-TW',
       status: KnowledgeDocumentStatus.active,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
       metadata: {
         domain: 'orders'
       },
@@ -1606,13 +2124,65 @@ function createKnowledgeDocuments(baseDate: Date): KnowledgeDocumentRecord[] {
     },
     {
       id: 'knowledge-document-archived-001',
+      customerId: 'customer-a',
       title: '封存文件',
       sourceType: KnowledgeSourceType.manual,
       sourceKey: 'archived-manual',
       version: '1.0.0',
       language: 'zh-TW',
       status: KnowledgeDocumentStatus.archived,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
       metadata: null,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-document-customer-a-return-001',
+      customerId: 'customer-a',
+      title: 'Shared Return SOP',
+      sourceType: KnowledgeSourceType.sop,
+      sourceKey: 'shared-return-sop',
+      version: '1.0.0',
+      language: 'en',
+      status: KnowledgeDocumentStatus.active,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
+      metadata: { fixture: 'customer-a-own-match' },
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-document-customer-b-return-001',
+      customerId: 'customer-b',
+      title: 'Shared Return SOP',
+      sourceType: KnowledgeSourceType.sop,
+      sourceKey: 'shared-return-sop',
+      version: '1.0.0',
+      language: 'en',
+      status: KnowledgeDocumentStatus.active,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
+      metadata: { fixture: 'customer-b-own-match' },
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-document-customer-b-foreign-only-001',
+      customerId: 'customer-b',
+      title: 'Foreign-only Return SOP',
+      sourceType: KnowledgeSourceType.sop,
+      sourceKey: 'customer-b-foreign-only-return-sop',
+      version: '1.0.0',
+      language: 'en',
+      status: KnowledgeDocumentStatus.active,
+      visibility: KnowledgeVisibility.CUSTOMER,
+      organizationIds: [],
+      requiredPermissionScopes: [],
+      metadata: { fixture: 'customer-b-foreign-only' },
       createdAt: new Date(baseDate),
       updatedAt: new Date(baseDate)
     }
@@ -1623,6 +2193,7 @@ function createKnowledgeChunks(baseDate: Date): KnowledgeChunkRecord[] {
   return [
     {
       id: 'knowledge-chunk-sop-return-001',
+      customerId: 'customer-a',
       documentId: 'knowledge-document-sop-return-001',
       chunkIndex: 0,
       heading: '退貨流程',
@@ -1639,6 +2210,7 @@ function createKnowledgeChunks(baseDate: Date): KnowledgeChunkRecord[] {
     },
     {
       id: 'knowledge-chunk-field-order-status-001',
+      customerId: 'customer-a',
       documentId: 'knowledge-document-field-order-status-001',
       chunkIndex: 0,
       heading: 'status 欄位',
@@ -1655,12 +2227,58 @@ function createKnowledgeChunks(baseDate: Date): KnowledgeChunkRecord[] {
     },
     {
       id: 'knowledge-chunk-archived-001',
+      customerId: 'customer-a',
       documentId: 'knowledge-document-archived-001',
       chunkIndex: 0,
       heading: '封存',
       content: '這段封存內容不應被 retrieval 使用。',
       tokenCount: 15,
       metadata: null,
+      embeddingRef: null,
+      vectorId: null,
+      enabled: true,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-chunk-customer-a-return-001',
+      customerId: 'customer-a',
+      documentId: 'knowledge-document-customer-a-return-001',
+      chunkIndex: 0,
+      heading: 'Shared Return SOP',
+      content: 'shared return SOP policy CUSTOMER_A_RETURN_RULE',
+      tokenCount: 6,
+      metadata: { fixture: 'customer-a-own-match' },
+      embeddingRef: null,
+      vectorId: null,
+      enabled: true,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-chunk-customer-b-return-001',
+      customerId: 'customer-b',
+      documentId: 'knowledge-document-customer-b-return-001',
+      chunkIndex: 0,
+      heading: 'Shared Return SOP',
+      content: 'shared return SOP policy CUSTOMER_B_PRIVATE_RETURN_RULE',
+      tokenCount: 6,
+      metadata: { fixture: 'customer-b-own-match' },
+      embeddingRef: null,
+      vectorId: null,
+      enabled: true,
+      createdAt: new Date(baseDate),
+      updatedAt: new Date(baseDate)
+    },
+    {
+      id: 'knowledge-chunk-customer-b-foreign-only-001',
+      customerId: 'customer-b',
+      documentId: 'knowledge-document-customer-b-foreign-only-001',
+      chunkIndex: 0,
+      heading: 'Foreign-only Return SOP',
+      content: 'foreign-only-return-sop CUSTOMER_B_FOREIGN_ONLY_RETURN_RULE',
+      tokenCount: 4,
+      metadata: { fixture: 'customer-b-foreign-only' },
       embeddingRef: null,
       vectorId: null,
       enabled: true,
@@ -1682,10 +2300,11 @@ function createActionDrafts(baseDate: Date): ActionDraftRecord[] {
     requiresApproval: false
   };
   const common = {
+    customerId: 'customer-a',
     requestId: 'req-us3-action-draft-fixture',
     sessionId: 'session-owned-001',
     messageId: 'message-owned-assistant-001',
-    actorId: 'actor-001',
+    actorId: 'actor-shared',
     toolName: 'mock.orders.status.update',
     resource: 'orders',
     operation: ToolOperation.update,
@@ -1745,6 +2364,16 @@ function createActionDrafts(baseDate: Date): ActionDraftRecord[] {
       idempotencyKey: 'idem-action-draft-executed-001',
       executedAt: new Date('2026-06-16T00:00:07.000Z'),
       expiresAt: new Date('2026-12-31T00:00:00.000Z')
+    },
+    {
+      ...common,
+      id: 'action-draft-customer-b-waiting-001',
+      customerId: 'customer-b',
+      sessionId: 'session-hidden-001',
+      messageId: 'message-hidden-assistant-001',
+      idempotencyKey: 'workflow-shared-idempotency-key',
+      status: ActionDraftStatus.waiting_confirmation,
+      expiresAt: new Date('2026-12-31T00:00:00.000Z')
     }
   ];
 }
@@ -1761,10 +2390,11 @@ function createApprovalRequests(baseDate: Date): ApprovalRequestRecord[] {
     requiresApproval: true
   };
   const common = {
+    customerId: 'customer-a',
     requestId: 'req-us3-approval-fixture',
     sessionId: 'session-owned-001',
     messageId: 'message-owned-assistant-001',
-    requesterActorId: 'actor-001',
+    requesterActorId: 'actor-shared',
     approverActorId: 'approver-001',
     riskLevel: RiskLevel.high,
     status: ApprovalRequestStatus.pending,
@@ -1818,12 +2448,21 @@ function createApprovalRequests(baseDate: Date): ApprovalRequestRecord[] {
     {
       ...common,
       id: 'approval-request-pending-cancel-001'
+    },
+    {
+      ...common,
+      id: 'approval-request-customer-b-pending-001',
+      customerId: 'customer-b',
+      sessionId: 'session-hidden-001',
+      messageId: 'message-hidden-assistant-001',
+      idempotencyKey: 'workflow-shared-idempotency-key'
     }
   ];
 }
 
 function createEscalationRequests(baseDate: Date): EscalationRequestRecord[] {
   const common = {
+    customerId: 'customer-a',
     requestId: 'req-us3-escalation-fixture',
     sessionId: 'session-owned-001',
     messageId: 'message-owned-assistant-001',
@@ -1833,7 +2472,7 @@ function createEscalationRequests(baseDate: Date): EscalationRequestRecord[] {
       riskLevel: RiskLevel.critical,
       reasonCode: EscalationReason.policy_required,
       reasonSummary: 'Critical-risk action requires manual escalation before any system side effect.',
-      requesterActorId: 'actor-001',
+      requesterActorId: 'actor-shared',
       assignedActorId: null,
       status: EscalationStatus.open,
       actionSummary: {
@@ -1902,6 +2541,23 @@ function createEscalationRequests(baseDate: Date): EscalationRequestRecord[] {
       summary: {
         ...common.summary,
         requesterActorId: 'actor-002',
+        contextSummary: {
+          module: 'orders',
+          entityType: 'order',
+          entityId: 'SO-20002',
+          visibleFieldCount: 1
+        }
+      }
+    },
+    {
+      ...common,
+      id: 'escalation-request-customer-b-open-001',
+      customerId: 'customer-b',
+      sessionId: 'session-hidden-001',
+      messageId: 'message-hidden-assistant-001',
+      status: EscalationStatus.open,
+      summary: {
+        ...common.summary,
         contextSummary: {
           module: 'orders',
           entityType: 'order',

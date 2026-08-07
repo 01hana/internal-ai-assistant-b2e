@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
 describe('US3 escalation request flow', () => {
   let app: INestApplication;
@@ -23,10 +24,7 @@ describe('US3 escalation request flow', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-escalation-create',
-          'x-permission-scopes': 'orders:read,orders:update'
-        })
+        requesterHeaders('req-us3-escalation-create')
       )
       .send({
         message: '請緊急升級取消 SO-10001 訂單，這是重大風險操作',
@@ -65,23 +63,31 @@ describe('US3 escalation request flow', () => {
       })
     );
     expect(state.toolCalls.slice(initialToolCallCount)).toHaveLength(0);
-    expect(state.escalationRequests).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: finalEvent?.data?.data?.escalationRequestId,
-          status: 'open'
-        })
-      ])
+    const createdEscalation = state.escalationRequests.find(
+      (item) => item.id === finalEvent?.data?.data?.escalationRequestId
     );
+    const executionPlan = state.executionPlans.at(-1);
+    const planningMessage = state.messages.find((message) => message.id === executionPlan?.messageId);
+    const workflowMessage = state.messages.find((message) => message.id === createdEscalation?.messageId);
+    expect(createdEscalation).toEqual(
+      expect.objectContaining({ customerId: 'customer-a', sessionId: 'session-owned-001', status: 'open' })
+    );
+    expect(executionPlan).toEqual(expect.objectContaining({ customerId: 'customer-a', sessionId: 'session-owned-001' }));
+    expect(planningMessage).toEqual(expect.objectContaining({ role: 'user', customerId: 'customer-a' }));
+    expect(workflowMessage).toEqual(expect.objectContaining({ role: 'assistant', customerId: 'customer-a' }));
+    expect(executionPlan?.messageId).not.toBe(createdEscalation?.messageId);
     expect(newAuditEvents).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           eventType: 'escalation_request_created',
+          customerId: 'customer-a',
+          sessionId: 'session-owned-001',
+          messageId: createdEscalation?.messageId,
           metadata: expect.objectContaining({
             escalationRequestId: finalEvent?.data?.data?.escalationRequestId,
             riskLevel: 'critical',
             reasonCode: 'policy_required',
-            requesterActorId: 'actor-001',
+            requesterActorId: 'actor-shared',
             status: 'open',
             toolName: 'mock.orders.cancel',
             resource: 'orders',
@@ -102,7 +108,7 @@ describe('US3 escalation request flow', () => {
   it('allows requester to get own escalation and managers to list and resolve it', async () => {
     const getResponse = await request(app.getHttpServer())
       .get('/api/v1/assistant/escalation-requests/escalation-request-open-001')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-escalation-get' }));
+      .set(requesterHeaders('req-us3-escalation-get'));
 
     expect(getResponse.status).toBe(200);
     expect(getResponse.body.data).toEqual(
@@ -116,12 +122,7 @@ describe('US3 escalation request flow', () => {
     const listResponse = await request(app.getHttpServer())
       .get('/api/v1/assistant/escalation-requests?status=open')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-escalation-list',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
+        approverHeaders('req-us3-escalation-list')
       );
 
     expect(listResponse.status).toBe(200);
@@ -136,12 +137,7 @@ describe('US3 escalation request flow', () => {
     const resolveResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/escalation-requests/escalation-request-open-001/resolve')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-escalation-resolve',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
+        approverHeaders('req-us3-escalation-resolve')
       )
       .send({ reason: '人工已完成確認，不由系統執行 side effect' });
 
@@ -159,7 +155,7 @@ describe('US3 escalation request flow', () => {
           eventType: 'escalation_request_resolved',
           metadata: expect.objectContaining({
             escalationRequestId: 'escalation-request-open-001',
-            assignedActorId: 'approver-001',
+            assignedActorId: 'actor-shared',
             status: 'resolved',
             reasonProvided: true
           })
@@ -173,11 +169,7 @@ describe('US3 escalation request flow', () => {
     const deniedResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/escalation-requests/escalation-request-open-001/resolve')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-escalation-denied',
-          'x-role': 'planner',
-          'x-permission-scopes': 'orders:read'
-        })
+        plannerHeaders('req-us3-escalation-denied')
       )
       .send({ reason: 'try resolve' });
 
@@ -186,12 +178,7 @@ describe('US3 escalation request flow', () => {
     const resolvedAgain = await request(app.getHttpServer())
       .post('/api/v1/assistant/escalation-requests/escalation-request-resolved-001/resolve')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-escalation-resolved-again',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
+        approverHeaders('req-us3-escalation-resolved-again')
       )
       .send({ reason: 'again' });
 
@@ -200,12 +187,7 @@ describe('US3 escalation request flow', () => {
     const expiredResolve = await request(app.getHttpServer())
       .post('/api/v1/assistant/escalation-requests/escalation-request-expired-001/resolve')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-escalation-expired',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
+        approverHeaders('req-us3-escalation-expired')
       )
       .send({ reason: 'expired' });
 
@@ -213,14 +195,14 @@ describe('US3 escalation request flow', () => {
 
     const expiredCancel = await request(app.getHttpServer())
       .post('/api/v1/assistant/escalation-requests/escalation-request-expired-001/cancel')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-escalation-expired-cancel' }))
+      .set(requesterHeaders('req-us3-escalation-expired-cancel'))
       .send({ reason: 'expired cancel' });
 
     expect(expiredCancel.status).toBe(409);
 
     const expiredGet = await request(app.getHttpServer())
       .get('/api/v1/assistant/escalation-requests/escalation-request-expired-001')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-escalation-expired-get' }));
+      .set(requesterHeaders('req-us3-escalation-expired-get'));
 
     expect(expiredGet.status).toBe(200);
     expect(expiredGet.body.data).toEqual(
@@ -234,7 +216,7 @@ describe('US3 escalation request flow', () => {
   it('allows requester to cancel pending escalation and writes minimized audit metadata', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/escalation-requests/escalation-request-open-001/cancel')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-escalation-cancel' }))
+      .set(requesterHeaders('req-us3-escalation-cancel'))
       .send({ reason: '不用處理了' });
 
     expect(response.status).toBe(200);
@@ -262,7 +244,7 @@ describe('US3 escalation request flow', () => {
   it('keeps high-risk approval and medium-risk action draft flows unchanged', async () => {
     const highRiskResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-escalation-high', 'x-permission-scopes': 'orders:read,orders:update' }))
+      .set(requesterHeaders('req-us3-escalation-high'))
       .send({
         message: '請取消 SO-10001 訂單',
         pageContext: {
@@ -276,7 +258,7 @@ describe('US3 escalation request flow', () => {
 
     const mediumRiskResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-escalation-medium', 'x-permission-scopes': 'orders:read,orders:update' }))
+      .set(requesterHeaders('req-us3-escalation-medium'))
       .send({
         message: '請更新 SO-10001 訂單狀態',
         pageContext: {
@@ -289,3 +271,41 @@ describe('US3 escalation request flow', () => {
     expect(parseSseResponse(mediumRiskResponse.text).map((event) => event.event)).toContain('confirmation_required');
   });
 });
+
+function requesterHeaders(requestId: string) {
+  return {
+    ...createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+      claims: { permission_scopes: ['orders:read', 'orders:update'] },
+      requestId
+    }),
+    'x-actor-id': 'public-header-actor',
+    'x-role': 'approver',
+    'x-permission-scopes': 'orders:approve'
+  };
+}
+
+function approverHeaders(requestId: string) {
+  return {
+    ...createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+      claims: {
+        roles: ['approver'],
+        permission_scopes: ['orders:read', 'orders:approve']
+      },
+      requestId
+    }),
+    'x-actor-id': 'public-header-requester',
+    'x-role': 'planner',
+    'x-permission-scopes': 'orders:read'
+  };
+}
+
+function plannerHeaders(requestId: string) {
+  return {
+    ...createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+      claims: { roles: ['planner'], permission_scopes: ['orders:read'] },
+      requestId
+    }),
+    'x-role': 'approver',
+    'x-permission-scopes': 'orders:approve'
+  };
+}

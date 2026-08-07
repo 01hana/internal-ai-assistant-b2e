@@ -1,6 +1,7 @@
 import { Prisma } from '../../generated/prisma/client';
 import { AnswerDecisionStatus, NoAnswerReason } from '../../generated/prisma/enums';
 import { PersistedExecutionPlan } from '../planning/assistant-planning.types';
+import { CustomerScope } from '../../identity/customer-scope.types';
 
 export interface AnswerPlan {
   answerType: 'grounded_text' | 'clarification' | 'no_answer';
@@ -12,6 +13,7 @@ export interface AnswerPlan {
 }
 
 export interface BuildAnswerDecisionInput {
+  customerScope: CustomerScope;
   requestId: string;
   messageId: string;
   executionPlan: PersistedExecutionPlan;
@@ -22,6 +24,7 @@ export interface BuildAnswerDecisionInput {
 }
 
 export interface RecordSafeAnswerDecisionInput {
+  customerScope: CustomerScope;
   requestId: string;
   messageId: string;
   status: AnswerDecisionStatus;

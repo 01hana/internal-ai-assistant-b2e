@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestApp } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createIdentityHeaders, createUs1TestApp } from '../support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
 describe('assistant message history contract', () => {
   let app: INestApplication;
@@ -75,12 +76,15 @@ describe('assistant message history contract', () => {
       .get('/api/v1/assistant/sessions/session-owned-001/messages')
       .query({ limit: 20, order: 'asc' })
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us1-history-hidden',
+        {
+          ...createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+            claims: { ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA, sub: 'actor-777', host_app: 'crm', org_id: 'org-777' },
+            requestId: 'req-us1-history-hidden'
+          }),
           'x-actor-id': 'actor-777',
           'x-host-app': 'crm',
           'x-organization-id': 'org-777'
-        })
+        }
       );
 
     expect(response.status).toBe(404);

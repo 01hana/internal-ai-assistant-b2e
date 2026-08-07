@@ -3,6 +3,11 @@ import { RiskLevel, ExecutionDecision } from '../../src/generated/prisma/enums';
 import { AuditWriterService } from '../../src/audit/audit-writer.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { QueryUnderstandingService } from '../../src/query-understanding/query-understanding.service';
+import {
+  CUSTOMER_SCOPE_FIXTURES,
+  createCustomerScopeFixtureIdentityContext,
+  createCustomerScopeFixtureScope
+} from '../support/customer-scope-fixtures';
 
 describe('assistant planning integration', () => {
   it('creates and persists an ExecutionPlan aligned with the Prisma schema', async () => {
@@ -42,6 +47,7 @@ describe('assistant planning integration', () => {
     });
     const create = jest.fn().mockResolvedValue({
       id: 'plan-001',
+      customerId: 'customer-a',
       sessionId: 'session-001',
       messageId: 'message-001',
       taskType: 'order_status_lookup',
@@ -72,29 +78,18 @@ describe('assistant planning integration', () => {
     );
 
     const result = await service.createPlan({
+      customerScope: createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerA),
       requestId: 'req-plan-int',
       sessionId: 'session-001',
       messageId: 'message-001',
       text: '查 SO-10001 訂單狀態',
-      identityContext: {
-        requestId: 'req-plan-int',
-        actor: {
-          actorId: 'actor-001',
-          role: 'planner',
-          permissionScopes: ['orders:read']
-        },
-        hostApp: {
-          hostApp: 'erp'
-        },
-        company: {
-          organizationId: 'org-001'
-        }
-      }
+      identityContext: createCustomerScopeFixtureIdentityContext(CUSTOMER_SCOPE_FIXTURES.customerA)
     });
 
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
+          customerId: 'customer-a',
           sessionId: 'session-001',
           taskType: 'order_status_lookup',
           riskAssessment: RiskLevel.low,

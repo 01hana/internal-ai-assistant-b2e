@@ -1,6 +1,7 @@
 import { AnswerDecisionService } from '../../src/assistant/answer/answer-decision.service';
 import { AnswerDecisionStatus, ExecutionDecision, RiskLevel } from '../../src/generated/prisma/enums';
 import { PrismaService } from '../../src/prisma/prisma.service';
+import { CUSTOMER_SCOPE_FIXTURES, createCustomerScopeFixtureScope } from '../support/customer-scope-fixtures';
 
 describe('AnswerDecisionService', () => {
   it('persists an answered decision when sanitized evidence covers allowed claims', async () => {
@@ -14,6 +15,7 @@ describe('AnswerDecisionService', () => {
     } as unknown as PrismaService);
 
     const result = await service.decide({
+      customerScope: createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerA),
       requestId: 'req-answer',
       messageId: 'message-001',
       executionPlan: createPlan(ExecutionDecision.continue),
@@ -25,9 +27,15 @@ describe('AnswerDecisionService', () => {
     expect(groundingCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
+          customerId: 'customer-a',
           covered: true,
           evidenceRefIds: ['evidence-001']
         })
+      })
+    );
+    expect(answerCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ customerId: 'customer-a', messageId: 'message-001' })
       })
     );
   });
@@ -35,6 +43,7 @@ describe('AnswerDecisionService', () => {
   it('returns clarification when execution planning says clarify', async () => {
     const service = createService();
     const result = await service.decide({
+      customerScope: createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerA),
       requestId: 'req-answer',
       messageId: 'message-001',
       executionPlan: createPlan(ExecutionDecision.clarify),
@@ -47,6 +56,7 @@ describe('AnswerDecisionService', () => {
   it('returns no-answer when evidence is missing', async () => {
     const service = createService();
     const result = await service.decide({
+      customerScope: createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerA),
       requestId: 'req-answer',
       messageId: 'message-001',
       executionPlan: createPlan(ExecutionDecision.continue),
@@ -69,6 +79,7 @@ function createService() {
 function createPlan(decision: ExecutionDecision) {
   return {
     id: 'plan-001',
+    customerId: 'customer-a',
     sessionId: 'session-001',
     messageId: 'message-001',
     taskType: 'order_status_lookup',

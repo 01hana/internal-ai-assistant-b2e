@@ -3,6 +3,7 @@ import { getRequestId } from '../common/request-id/request-id.util';
 import { ReviewItemStatus, ReviewPriority, ReviewSourceType } from '../generated/prisma/enums';
 import { getIdentityContext, IdentityRequest } from '../identity/identity-context.extractor';
 import { IdentityGuard } from '../identity/identity.guard';
+import { createCustomerScopeFromIdentityContext } from '../identity/customer-scope.factory';
 import { ReviewItemDecisionDto, ReviewItemsQueryDto } from './feedback.dto';
 import { ReviewItemService } from './review-item.service';
 
@@ -14,8 +15,10 @@ export class ReviewItemController {
   @Get()
   async listReviewItems(@Req() request: IdentityRequest, @Query() query: ReviewItemsQueryDto) {
     const identityContext = getRequiredReviewerIdentity(request);
+    const customerScope = createCustomerScopeFromIdentityContext(identityContext);
     return {
       items: await this.reviewItemService.listForReview({
+        customerScope,
         identityContext,
         status: query.status as ReviewItemStatus | undefined,
         sourceType: query.sourceType as ReviewSourceType | undefined,
@@ -27,7 +30,7 @@ export class ReviewItemController {
   @Get(':id')
   async getReviewItem(@Req() request: IdentityRequest, @Param('id') reviewItemId: string) {
     const identityContext = getRequiredReviewerIdentity(request);
-    const item = await this.reviewItemService.getForReview({ identityContext, reviewItemId });
+    const item = await this.reviewItemService.getForReview({ customerScope: createCustomerScopeFromIdentityContext(identityContext), identityContext, reviewItemId });
     if (!item) {
       throw new NotFoundException('Review item not found');
     }
@@ -42,6 +45,7 @@ export class ReviewItemController {
   ) {
     const identityContext = getRequiredReviewerIdentity(request);
     const item = await this.reviewItemService.markResolved({
+      customerScope: createCustomerScopeFromIdentityContext(identityContext),
       requestId: getRequestId(request),
       identityContext,
       reviewItemId,
@@ -61,6 +65,7 @@ export class ReviewItemController {
   ) {
     const identityContext = getRequiredReviewerIdentity(request);
     const item = await this.reviewItemService.markDismissed({
+      customerScope: createCustomerScopeFromIdentityContext(identityContext),
       requestId: getRequestId(request),
       identityContext,
       reviewItemId,
@@ -80,7 +85,7 @@ function getRequiredReviewerIdentity(request: IdentityRequest) {
   }
 
   if (
-    identityContext.actor.role !== 'admin' &&
+    !identityContext.actor.roles.includes('admin') &&
     !identityContext.actor.permissionScopes.includes('assistant:review')
   ) {
     throw new ForbiddenException('Review item access denied');

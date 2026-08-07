@@ -2,16 +2,24 @@ import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understandi
 
 const identityContext = {
   requestId: 'req-normalization-001',
+  customer: {
+    customerId: 'customer-a',
+    integrationId: 'integration-erp'
+  },
+  organization: {
+    organizationId: 'org-001'
+  },
   actor: {
     actorId: 'actor-001',
-    role: 'planner',
+    roles: ['planner'],
     permissionScopes: ['orders:read', 'inventory:read', 'work-orders:read']
   },
   hostApp: {
     hostApp: 'erp'
   },
-  company: {
-    organizationId: 'org-001'
+  auth: {
+    tokenId: 'jwt-normalization-001',
+    gatewayIssuer: 'https://gateway.test.internal'
   }
 };
 

@@ -12,12 +12,12 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { Response } from "express";
-import { getRequestId } from "../common/request-id/request-id.util";
 import {
   getIdentityContext,
   IdentityRequest,
 } from "../identity/identity-context.extractor";
 import { IdentityGuard } from "../identity/identity.guard";
+import { createCustomerScopeFromIdentityContext } from "../identity/customer-scope.factory";
 import {
   CreateAssistantSessionDto,
   SendAssistantMessageDto,
@@ -43,7 +43,7 @@ export class AssistantController {
   ) {
     const identityContext = getRequiredIdentityContext(request);
     return this.assistantSessionService.createSession({
-      requestId: getRequestId(request),
+      requestId: identityContext.requestId,
       identityContext,
       pageContext: body.pageContext,
     });
@@ -56,7 +56,7 @@ export class AssistantController {
   ) {
     const identityContext = getRequiredIdentityContext(request);
     return this.assistantSessionService.getVisibleSessionSummary({
-      requestId: getRequestId(request),
+      requestId: identityContext.requestId,
       sessionId,
       identityContext,
     });
@@ -70,12 +70,16 @@ export class AssistantController {
     @Body() body: SendAssistantMessageDto,
     @Res() response: Response,
   ) {
-    const requestId = getRequestId(request);
+    const identityContext = getRequiredIdentityContext(request);
+    const requestId = identityContext.requestId;
+
+    const customerScope = createCustomerScopeFromIdentityContext(identityContext);
+    await this.assistantSessionService.getVisibleSession(sessionId, customerScope);
+
     response.status(HttpStatus.OK);
     response.setHeader("Content-Type", "text/event-stream; charset=utf-8");
 
     try {
-      const identityContext = getRequiredIdentityContext(request);
       const events = await this.assistantMessageService.sendMessage({
         requestId,
         sessionId,
@@ -114,7 +118,7 @@ export class AssistantController {
   ) {
     const identityContext = getRequiredIdentityContext(request);
     return this.assistantHistoryService.listMessages({
-      requestId: getRequestId(request),
+      requestId: identityContext.requestId,
       sessionId,
       identityContext,
       limit: query.limit ? Number(query.limit) : undefined,
@@ -144,17 +148,6 @@ function extractErrorCode(error: unknown): string {
   return "ERROR";
 }
 
-function extractErrorMessage(error: unknown): string {
-  if (typeof error === "object" && error && "response" in error) {
-    const response = (error as { response?: { message?: string } }).response;
-    if (typeof response?.message === "string") {
-      return response.message;
-    }
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Unexpected error.";
+function extractErrorMessage(_error: unknown): string {
+  return "Assistant message processing failed.";
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AuditWriterService } from '../../audit/audit-writer.service';
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { createCustomerScopeFromIdentityContext } from '../../identity/customer-scope.factory';
 import { AssistantMessageRepository } from '../message/assistant-message.repository';
 import { AssistantHistoryAccessService } from './assistant-history-access.service';
 import { mapAssistantHistoryMessage } from './assistant-history.mapper';
@@ -18,8 +19,17 @@ export class AssistantHistoryService {
 
   async listMessages(input: ListAssistantMessagesInput): Promise<AssistantHistoryResult> {
     const session = await this.historyAccessService.ensureVisibleActiveSession(input);
+    const customerScope = createCustomerScopeFromIdentityContext(input.identityContext);
     const limit = Math.min(Math.max(input.limit ?? 50, 1), 50);
+    if (input.cursor) {
+      await this.messageRepository.getVisibleMessageForSession({
+        customerScope,
+        sessionId: session.id,
+        messageId: input.cursor
+      });
+    }
     const messages = await this.messageRepository.findMessagesForSession({
+      customerScope,
       sessionId: session.id,
       limit: limit + 1,
       cursor: input.cursor
@@ -29,6 +39,7 @@ export class AssistantHistoryService {
 
     const toolCalls = await this.prisma.db.toolCall.findMany({
       where: {
+        customerId: customerScope.customerId,
         sessionId: session.id
       },
       orderBy: {
@@ -37,6 +48,7 @@ export class AssistantHistoryService {
     });
     const evidenceRefs = await this.prisma.db.evidenceRef.findMany({
       where: {
+        customerId: customerScope.customerId,
         messageId: {
           in: visibleMessages.map((message) => message.id)
         }
@@ -47,10 +59,8 @@ export class AssistantHistoryService {
     });
 
     await this.auditWriter.append({
+      customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: session.id,
       eventType: 'session_history_viewed',
       metadata: toJsonInput({

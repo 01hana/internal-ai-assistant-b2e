@@ -1,14 +1,16 @@
-import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { MockConnectorAdapter } from '../connectors/mock/mock-connector.adapter';
 import { Prisma } from '../generated/prisma/client';
 import { RiskLevel, ToolCallStatus, ToolExecutionStatus, ToolOperation } from '../generated/prisma/enums';
 import { RequestIdentityContext } from '../identity/identity-context.types';
+import { CustomerScope } from '../identity/customer-scope.types';
 import { ToolPermissionPrecheckService } from '../permissions/tool-permission-precheck.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisteredToolDefinition, ToolPermissionDeniedReason } from '../tools/tool-registry.types';
 import { ToolRegistryService } from '../tools/tool-registry.service';
 import { PersistedSideEffectToolContract } from './side-effect-tool-contract.resolver';
+import { assertCustomerWorkflowIdentityConsistency } from './customer-workflow-context';
 
 type SideEffectSourceType = 'action_draft' | 'approval_request';
 
@@ -17,6 +19,7 @@ interface ExecuteSideEffectInput {
   sessionId: string;
   messageId?: string | null;
   identityContext: RequestIdentityContext;
+  customerScope: CustomerScope;
   sourceType: SideEffectSourceType;
   sourceId: string;
   requesterActorId: string;
@@ -51,18 +54,58 @@ export class SideEffectExecutionGuardService {
   ) {}
 
   async execute(input: ExecuteSideEffectInput): Promise<SideEffectExecutionResult> {
+    const customerScope = input.customerScope;
+    assertCustomerWorkflowIdentityConsistency(customerScope, input.identityContext);
+    await this.assertCustomerParents(input, customerScope);
+
     if (!input.idempotencyKey) {
-      await this.recordDenied(input, 'idempotency_required');
+      await this.recordDenied(input, customerScope, 'idempotency_required');
       throw new ConflictException('idempotencyKey is required before side-effect execution.');
     }
 
+    const toolResolution = await this.toolRegistry.resolveToolForCustomer(input.toolName, customerScope);
+    if (!toolResolution.resolved) {
+      await this.recordDenied(input, customerScope, toolResolution.deniedReason ?? 'tool_not_registered');
+      throw new ForbiddenException('Side-effect tool is not executable.');
+    }
+
+    const tool = toolResolution.resolved.tool;
+    const contractDenial = validateToolContract(input, tool);
+    if (contractDenial) {
+      await this.recordDenied(input, customerScope, contractDenial, tool);
+      throw new ForbiddenException('Side-effect tool contract mismatch.');
+    }
+
+    const permission = await this.permissionPrecheck.checkResolvedCustomerTool({
+      requestId: input.requestId,
+      sessionId: input.sessionId,
+      messageId: input.messageId ?? input.sourceId,
+      identityContext: input.identityContext,
+      customerScope,
+      resolvedTool: toolResolution.resolved
+    });
+    if (!permission.allowed) {
+      await this.recordDenied(input, customerScope, permission.reason ?? 'missing_scope', tool);
+      throw new ForbiddenException('Side-effect permission check failed.');
+    }
+
+    // A replay is safe only after the caller has passed the same parent, tool,
+    // contract, and permission gates as a new execution.
     const duplicateToolCall = await this.prisma.db.toolCall.findFirst({
       where: {
+        customerId: customerScope.customerId,
         idempotencyKey: input.idempotencyKey
       }
     });
     if (duplicateToolCall) {
-      await this.recordSkippedDuplicate(input, duplicateToolCall.id);
+      if (
+        duplicateToolCall.customerId !== customerScope.customerId ||
+        duplicateToolCall.sessionId !== input.sessionId ||
+        duplicateToolCall.messageId !== (input.messageId ?? null)
+      ) {
+        throw this.notFound();
+      }
+      await this.recordSkippedDuplicate(input, customerScope, duplicateToolCall.id);
       return {
         toolCallId: duplicateToolCall.id,
         duplicateSafe: true,
@@ -72,36 +115,10 @@ export class SideEffectExecutionGuardService {
       };
     }
 
-    const toolResolution = await this.toolRegistry.resolveRegisteredTool(input.toolName);
-    if (!toolResolution.tool) {
-      await this.recordDenied(input, toolResolution.deniedReason ?? 'tool_not_registered');
-      throw new ForbiddenException('Side-effect tool is not executable.');
-    }
-
-    const tool = toolResolution.tool;
-    const contractDenial = validateToolContract(input, tool);
-    if (contractDenial) {
-      await this.recordDenied(input, contractDenial, tool);
-      throw new ForbiddenException('Side-effect tool contract mismatch.');
-    }
-
-    const permission = await this.permissionPrecheck.check({
-      requestId: input.requestId,
-      sessionId: input.sessionId,
-      messageId: input.messageId ?? input.sourceId,
-      identityContext: input.identityContext,
-      toolName: tool.key,
-      operation: tool.operation,
-      requiredPermissionScopes: tool.requiredPermissionScopes
-    });
-    if (!permission.allowed) {
-      await this.recordDenied(input, permission.reason ?? 'missing_scope', tool);
-      throw new ForbiddenException('Side-effect permission check failed.');
-    }
-
     const startedAt = Date.now();
     const toolCall = await this.prisma.db.toolCall.create({
       data: {
+        customerId: customerScope.customerId,
         requestId: input.requestId,
         sessionId: input.sessionId,
         messageId: input.messageId ?? null,
@@ -125,11 +142,18 @@ export class SideEffectExecutionGuardService {
         executedAt: null
       }
     });
+    if (
+      toolCall.customerId !== customerScope.customerId ||
+      toolCall.sessionId !== input.sessionId ||
+      toolCall.messageId !== (input.messageId ?? null)
+    ) {
+      throw this.notFound();
+    }
 
     const connectorResult = await this.mockConnector.execute({
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
-      actorId: input.identityContext.actor.actorId,
+      organizationId: customerScope.organizationId,
+      actorId: customerScope.actorId,
       toolKey: tool.key,
       arguments: {
         entityId: input.entityId
@@ -140,7 +164,7 @@ export class SideEffectExecutionGuardService {
     const durationMs = Math.max(1, Date.now() - startedAt);
     if (connectorResult.status !== 'succeeded') {
       const failed = await this.prisma.db.toolCall.update({
-        where: { id: toolCall.id },
+        where: { customerId_id: { customerId: customerScope.customerId, id: toolCall.id } },
         data: {
           status: ToolCallStatus.failed,
           executionStatus: ToolExecutionStatus.failed,
@@ -150,7 +174,8 @@ export class SideEffectExecutionGuardService {
           executedAt: new Date()
         }
       });
-      await this.recordFailed(input, tool, failed.id, connectorResult.error?.code ?? connectorResult.status, durationMs);
+      if (failed.customerId !== customerScope.customerId) throw this.notFound();
+      await this.recordFailed(input, customerScope, tool, failed.id, connectorResult.error?.code ?? connectorResult.status, durationMs);
       return {
         toolCallId: failed.id,
         duplicateSafe: false,
@@ -161,7 +186,7 @@ export class SideEffectExecutionGuardService {
     }
 
     const completed = await this.prisma.db.toolCall.update({
-      where: { id: toolCall.id },
+      where: { customerId_id: { customerId: customerScope.customerId, id: toolCall.id } },
       data: {
         status: ToolCallStatus.success,
         executionStatus: ToolExecutionStatus.executed,
@@ -173,7 +198,8 @@ export class SideEffectExecutionGuardService {
       }
     });
 
-    await this.recordExecuted(input, tool, completed.id, durationMs);
+    if (completed.customerId !== customerScope.customerId) throw this.notFound();
+    await this.recordExecuted(input, customerScope, tool, completed.id, durationMs);
 
     return {
       toolCallId: completed.id,
@@ -184,8 +210,8 @@ export class SideEffectExecutionGuardService {
     };
   }
 
-  private recordExecuted(input: ExecuteSideEffectInput, tool: RegisteredToolDefinition, toolCallId: string, durationMs: number) {
-    return this.appendExecutionAudit(input, {
+  private recordExecuted(input: ExecuteSideEffectInput, customerScope: CustomerScope, tool: RegisteredToolDefinition, toolCallId: string, durationMs: number) {
+    return this.appendExecutionAudit(input, customerScope, {
       eventType: input.sourceType === 'action_draft' ? 'action_draft_executed' : 'approval_request_executed',
       tool,
       toolCallId,
@@ -196,13 +222,13 @@ export class SideEffectExecutionGuardService {
   }
 
   private recordFailed(
-    input: ExecuteSideEffectInput,
+    input: ExecuteSideEffectInput, customerScope: CustomerScope,
     tool: RegisteredToolDefinition,
     toolCallId: string,
     errorCode: string,
     durationMs: number
   ) {
-    return this.appendExecutionAudit(input, {
+    return this.appendExecutionAudit(input, customerScope, {
       eventType: input.sourceType === 'action_draft' ? 'action_draft_failed' : 'approval_request_failed',
       tool,
       toolCallId,
@@ -213,8 +239,8 @@ export class SideEffectExecutionGuardService {
     });
   }
 
-  private recordDenied(input: ExecuteSideEffectInput, deniedReason: ToolPermissionDeniedReason, tool?: RegisteredToolDefinition) {
-    return this.appendExecutionAudit(input, {
+  private recordDenied(input: ExecuteSideEffectInput, customerScope: CustomerScope, deniedReason: ToolPermissionDeniedReason, tool?: RegisteredToolDefinition) {
+    return this.appendExecutionAudit(input, customerScope, {
       eventType: 'side_effect_execution_denied',
       tool,
       executionStatus: ToolExecutionStatus.not_started,
@@ -223,8 +249,8 @@ export class SideEffectExecutionGuardService {
     });
   }
 
-  private recordSkippedDuplicate(input: ExecuteSideEffectInput, toolCallId: string) {
-    return this.appendExecutionAudit(input, {
+  private recordSkippedDuplicate(input: ExecuteSideEffectInput, customerScope: CustomerScope, toolCallId: string) {
+    return this.appendExecutionAudit(input, customerScope, {
       eventType: 'side_effect_execution_skipped_duplicate',
       toolCallId,
       executionStatus: ToolExecutionStatus.skipped_duplicate,
@@ -233,7 +259,7 @@ export class SideEffectExecutionGuardService {
   }
 
   private appendExecutionAudit(
-    input: ExecuteSideEffectInput,
+    input: ExecuteSideEffectInput, customerScope: CustomerScope,
     event: {
       eventType: string;
       tool?: RegisteredToolDefinition;
@@ -244,11 +270,9 @@ export class SideEffectExecutionGuardService {
       idempotencyStatus: 'executed' | 'duplicate';
     }
   ) {
-    return this.auditWriter.append({
+    return this.auditWriter.appendCustomerToolEvent({
+      customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId ?? undefined,
       toolCallId: event.toolCallId,
@@ -270,6 +294,30 @@ export class SideEffectExecutionGuardService {
         executionStatus: event.executionStatus
       })
     });
+  }
+
+  private async assertCustomerParents(input: ExecuteSideEffectInput, scope: CustomerScope): Promise<void> {
+    const session = await this.prisma.db.assistantSession.findFirst({
+      where: {
+        customerId: scope.customerId,
+        id: input.sessionId,
+        organizationId: scope.organizationId,
+        hostApp: scope.hostApp,
+        actorId: scope.actorId
+      }
+    });
+    if (!session) throw this.notFound();
+
+    if (input.messageId) {
+      const message = await this.prisma.db.assistantMessage.findFirst({
+        where: { customerId: scope.customerId, id: input.messageId, sessionId: input.sessionId }
+      });
+      if (!message) throw this.notFound();
+    }
+  }
+
+  private notFound(): NotFoundException {
+    return new NotFoundException({ error: 'NOT_FOUND', message: 'Tool call not found.' });
   }
 }
 

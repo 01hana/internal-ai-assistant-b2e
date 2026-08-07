@@ -1,38 +1,39 @@
 export const IDENTITY_CONTEXT_REQUEST_PROPERTY = 'identityContext';
 
-export interface ActorContext {
-  actorId: string;
-  role: string;
-  permissionScopes: string[];
+export interface CustomerContext {
+  customerId: string;
+  integrationId: string;
+}
+
+export interface OrganizationContext {
+  organizationId: string;
 }
 
 export interface HostAppContext {
   hostApp: string;
 }
 
-export interface CompanyBoundary {
-  organizationId: string;
+export interface ActorContext {
+  actorId: string;
+  roles: string[];
+  permissionScopes: string[];
 }
 
-export interface RequestIdentityContext {
-  requestId: string;
-  actor: ActorContext;
+export interface IdentityAuthContext {
+  tokenId: string;
+  gatewayIssuer: string;
+}
+
+export interface CanonicalIdentityContext {
+  customer: CustomerContext;
+  organization: OrganizationContext;
   hostApp: HostAppContext;
-  company: CompanyBoundary;
+  actor: ActorContext;
+  auth: IdentityAuthContext;
 }
 
-export interface IdentityHeaders {
-  actorId?: string;
-  hostApp?: string;
-  organizationId?: string;
-  role?: string;
-  permissionScopes?: string[];
-  requestId?: string;
-}
-
-export interface BoundaryResource {
-  organizationId: string;
-  hostApp: string;
+export interface RequestIdentityContext extends CanonicalIdentityContext {
+  requestId: string;
 }
 
 export type RequestWithIdentityContext = {

@@ -3,11 +3,13 @@ import request = require('supertest');
 import { RiskLevel } from '../../src/generated/prisma/enums';
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 import {
+  createAuthorizedInternalIdentityHeaders,
   createIdentityHeaders,
   createUs1TestAppWithState,
   parseSseResponse,
   Us1TestState
 } from '../support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
 type TestApp = {
   app: INestApplication;
@@ -17,16 +19,24 @@ type TestApp = {
 describe('internal assistant core deterministic eval baseline', () => {
   const identityContext = {
     requestId: 'req-eval-query-understanding',
+    customer: {
+      customerId: 'customer-a',
+      integrationId: 'integration-erp'
+    },
     actor: {
       actorId: 'actor-001',
-      role: 'planner',
+      roles: ['planner'],
       permissionScopes: ['orders:read', 'inventory:read']
     },
     hostApp: {
       hostApp: 'erp'
     },
-    company: {
+    organization: {
       organizationId: 'org-001'
+    },
+    auth: {
+      tokenId: 'jti-eval-query-understanding',
+      gatewayIssuer: 'https://gateway.test.internal'
     }
   };
 
@@ -224,10 +234,9 @@ describe('internal assistant core deterministic eval baseline', () => {
       );
       expect(newState.reviewItems).toEqual([
         expect.objectContaining({
+          customerId: 'customer-a',
           sourceType: 'no_answer',
           suggestedImprovement: expect.objectContaining({
-            organizationId: 'org-001',
-            hostApp: 'erp',
             noAnswerReason: 'no_evidence'
           })
         })
@@ -243,7 +252,14 @@ describe('internal assistant core deterministic eval baseline', () => {
     it('permission-denied-does-not-answer', async () => {
       const { response, finalData, eventNames, newState } = await sendAssistantMessage(testApp, {
         requestId: 'req-eval-permission-denied',
-        headers: { 'x-permission-scopes': 'inventory:read' },
+        headers: createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+          claims: {
+            ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA,
+            permission_scopes: ['inventory:read'],
+            jti: 'jwt-eval-permission-denied'
+          },
+          requestId: 'req-eval-permission-denied'
+        }),
         message: '請查 SO-10001 訂單狀態',
         pageContext: {
           module: 'orders',
@@ -447,9 +463,24 @@ describe('internal assistant core deterministic eval baseline', () => {
       expect(negativeResponse.status).toBe(201);
       expect(duplicateNegativeResponse.status).toBe(201);
       expect(positiveResponse.body.data.reviewItemId).toBeNull();
-      expect(duplicateNegativeResponse.body.data.reviewItemId).toBe(negativeResponse.body.data.reviewItemId);
+      expect(duplicateNegativeResponse.body.data.reviewItemId).not.toBe(negativeResponse.body.data.reviewItemId);
       expect(testApp.state.feedbackEvents).toHaveLength(initialFeedbackCount + 3);
-      expect(testApp.state.reviewItems).toHaveLength(initialReviewCount);
+      const newReviews = testApp.state.reviewItems.slice(initialReviewCount);
+      expect(newReviews).toHaveLength(2);
+      expect(newReviews).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            customerId: 'customer-a',
+            sourceType: 'negative_feedback',
+            sourceId: negativeResponse.body.data.feedbackEventId
+          }),
+          expect.objectContaining({
+            customerId: 'customer-a',
+            sourceType: 'negative_feedback',
+            sourceId: duplicateNegativeResponse.body.data.feedbackEventId
+          })
+        ])
+      );
       expect(testApp.state.auditEvents).toEqual(
         expect.arrayContaining([
           expect.objectContaining({

@@ -26,6 +26,7 @@ export type AggregateFeedbackEvent = {
 
 export type FeedbackEventMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   rating: $Enums.FeedbackRating | null
@@ -38,6 +39,7 @@ export type FeedbackEventMinAggregateOutputType = {
 
 export type FeedbackEventMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   rating: $Enums.FeedbackRating | null
@@ -50,6 +52,7 @@ export type FeedbackEventMaxAggregateOutputType = {
 
 export type FeedbackEventCountAggregateOutputType = {
   id: number
+  customerId: number
   requestId: number
   messageId: number
   rating: number
@@ -66,6 +69,7 @@ export type FeedbackEventCountAggregateOutputType = {
 
 export type FeedbackEventMinAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   rating?: true
@@ -78,6 +82,7 @@ export type FeedbackEventMinAggregateInputType = {
 
 export type FeedbackEventMaxAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   rating?: true
@@ -90,6 +95,7 @@ export type FeedbackEventMaxAggregateInputType = {
 
 export type FeedbackEventCountAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   rating?: true
@@ -177,6 +183,7 @@ export type FeedbackEventGroupByArgs<ExtArgs extends runtime.Types.Extensions.In
 
 export type FeedbackEventGroupByOutputType = {
   id: string
+  customerId: string
   requestId: string
   messageId: string
   rating: $Enums.FeedbackRating
@@ -212,6 +219,7 @@ export type FeedbackEventWhereInput = {
   OR?: Prisma.FeedbackEventWhereInput[]
   NOT?: Prisma.FeedbackEventWhereInput | Prisma.FeedbackEventWhereInput[]
   id?: Prisma.StringFilter<"FeedbackEvent"> | string
+  customerId?: Prisma.StringFilter<"FeedbackEvent"> | string
   requestId?: Prisma.StringFilter<"FeedbackEvent"> | string
   messageId?: Prisma.StringFilter<"FeedbackEvent"> | string
   rating?: Prisma.EnumFeedbackRatingFilter<"FeedbackEvent"> | $Enums.FeedbackRating
@@ -222,11 +230,13 @@ export type FeedbackEventWhereInput = {
   evidenceRefIds?: Prisma.StringNullableListFilter<"FeedbackEvent">
   answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"FeedbackEvent"> | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFilter<"FeedbackEvent"> | Date | string
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageScalarRelationFilter, Prisma.AssistantMessageWhereInput>
 }
 
 export type FeedbackEventOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   rating?: Prisma.SortOrder
@@ -237,14 +247,17 @@ export type FeedbackEventOrderByWithRelationInput = {
   evidenceRefIds?: Prisma.SortOrder
   answerDecision?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  customer?: Prisma.CustomerOrderByWithRelationInput
   message?: Prisma.AssistantMessageOrderByWithRelationInput
 }
 
 export type FeedbackEventWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  customerId_id?: Prisma.FeedbackEventCustomerIdIdCompoundUniqueInput
   AND?: Prisma.FeedbackEventWhereInput | Prisma.FeedbackEventWhereInput[]
   OR?: Prisma.FeedbackEventWhereInput[]
   NOT?: Prisma.FeedbackEventWhereInput | Prisma.FeedbackEventWhereInput[]
+  customerId?: Prisma.StringFilter<"FeedbackEvent"> | string
   requestId?: Prisma.StringFilter<"FeedbackEvent"> | string
   messageId?: Prisma.StringFilter<"FeedbackEvent"> | string
   rating?: Prisma.EnumFeedbackRatingFilter<"FeedbackEvent"> | $Enums.FeedbackRating
@@ -255,11 +268,13 @@ export type FeedbackEventWhereUniqueInput = Prisma.AtLeast<{
   evidenceRefIds?: Prisma.StringNullableListFilter<"FeedbackEvent">
   answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"FeedbackEvent"> | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFilter<"FeedbackEvent"> | Date | string
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageScalarRelationFilter, Prisma.AssistantMessageWhereInput>
-}, "id">
+}, "id" | "customerId_id">
 
 export type FeedbackEventOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   rating?: Prisma.SortOrder
@@ -280,6 +295,7 @@ export type FeedbackEventScalarWhereWithAggregatesInput = {
   OR?: Prisma.FeedbackEventScalarWhereWithAggregatesInput[]
   NOT?: Prisma.FeedbackEventScalarWhereWithAggregatesInput | Prisma.FeedbackEventScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"FeedbackEvent"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"FeedbackEvent"> | string
   requestId?: Prisma.StringWithAggregatesFilter<"FeedbackEvent"> | string
   messageId?: Prisma.StringWithAggregatesFilter<"FeedbackEvent"> | string
   rating?: Prisma.EnumFeedbackRatingWithAggregatesFilter<"FeedbackEvent"> | $Enums.FeedbackRating
@@ -303,11 +319,13 @@ export type FeedbackEventCreateInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutFeedbackEventsInput
   message: Prisma.AssistantMessageCreateNestedOneWithoutFeedbackEventsInput
 }
 
 export type FeedbackEventUncheckedCreateInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   rating: $Enums.FeedbackRating
@@ -331,11 +349,13 @@ export type FeedbackEventUpdateInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutFeedbackEventsNestedInput
   message?: Prisma.AssistantMessageUpdateOneRequiredWithoutFeedbackEventsNestedInput
 }
 
 export type FeedbackEventUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   rating?: Prisma.EnumFeedbackRatingFieldUpdateOperationsInput | $Enums.FeedbackRating
@@ -350,6 +370,7 @@ export type FeedbackEventUncheckedUpdateInput = {
 
 export type FeedbackEventCreateManyInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   rating: $Enums.FeedbackRating
@@ -377,6 +398,7 @@ export type FeedbackEventUpdateManyMutationInput = {
 
 export type FeedbackEventUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   rating?: Prisma.EnumFeedbackRatingFieldUpdateOperationsInput | $Enums.FeedbackRating
@@ -399,8 +421,14 @@ export type FeedbackEventOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type FeedbackEventCustomerIdIdCompoundUniqueInput = {
+  customerId: string
+  id: string
+}
+
 export type FeedbackEventCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   rating?: Prisma.SortOrder
@@ -415,6 +443,7 @@ export type FeedbackEventCountOrderByAggregateInput = {
 
 export type FeedbackEventMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   rating?: Prisma.SortOrder
@@ -427,6 +456,7 @@ export type FeedbackEventMaxOrderByAggregateInput = {
 
 export type FeedbackEventMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   rating?: Prisma.SortOrder
@@ -435,6 +465,48 @@ export type FeedbackEventMinOrderByAggregateInput = {
   intent?: Prisma.SortOrder
   answerDecision?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+}
+
+export type FeedbackEventCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.FeedbackEventCreateWithoutCustomerInput, Prisma.FeedbackEventUncheckedCreateWithoutCustomerInput> | Prisma.FeedbackEventCreateWithoutCustomerInput[] | Prisma.FeedbackEventUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.FeedbackEventCreateOrConnectWithoutCustomerInput | Prisma.FeedbackEventCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.FeedbackEventCreateManyCustomerInputEnvelope
+  connect?: Prisma.FeedbackEventWhereUniqueInput | Prisma.FeedbackEventWhereUniqueInput[]
+}
+
+export type FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.FeedbackEventCreateWithoutCustomerInput, Prisma.FeedbackEventUncheckedCreateWithoutCustomerInput> | Prisma.FeedbackEventCreateWithoutCustomerInput[] | Prisma.FeedbackEventUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.FeedbackEventCreateOrConnectWithoutCustomerInput | Prisma.FeedbackEventCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.FeedbackEventCreateManyCustomerInputEnvelope
+  connect?: Prisma.FeedbackEventWhereUniqueInput | Prisma.FeedbackEventWhereUniqueInput[]
+}
+
+export type FeedbackEventUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.FeedbackEventCreateWithoutCustomerInput, Prisma.FeedbackEventUncheckedCreateWithoutCustomerInput> | Prisma.FeedbackEventCreateWithoutCustomerInput[] | Prisma.FeedbackEventUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.FeedbackEventCreateOrConnectWithoutCustomerInput | Prisma.FeedbackEventCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.FeedbackEventUpsertWithWhereUniqueWithoutCustomerInput | Prisma.FeedbackEventUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.FeedbackEventCreateManyCustomerInputEnvelope
+  set?: Prisma.FeedbackEventWhereUniqueInput | Prisma.FeedbackEventWhereUniqueInput[]
+  disconnect?: Prisma.FeedbackEventWhereUniqueInput | Prisma.FeedbackEventWhereUniqueInput[]
+  delete?: Prisma.FeedbackEventWhereUniqueInput | Prisma.FeedbackEventWhereUniqueInput[]
+  connect?: Prisma.FeedbackEventWhereUniqueInput | Prisma.FeedbackEventWhereUniqueInput[]
+  update?: Prisma.FeedbackEventUpdateWithWhereUniqueWithoutCustomerInput | Prisma.FeedbackEventUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.FeedbackEventUpdateManyWithWhereWithoutCustomerInput | Prisma.FeedbackEventUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.FeedbackEventScalarWhereInput | Prisma.FeedbackEventScalarWhereInput[]
+}
+
+export type FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.FeedbackEventCreateWithoutCustomerInput, Prisma.FeedbackEventUncheckedCreateWithoutCustomerInput> | Prisma.FeedbackEventCreateWithoutCustomerInput[] | Prisma.FeedbackEventUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.FeedbackEventCreateOrConnectWithoutCustomerInput | Prisma.FeedbackEventCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.FeedbackEventUpsertWithWhereUniqueWithoutCustomerInput | Prisma.FeedbackEventUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.FeedbackEventCreateManyCustomerInputEnvelope
+  set?: Prisma.FeedbackEventWhereUniqueInput | Prisma.FeedbackEventWhereUniqueInput[]
+  disconnect?: Prisma.FeedbackEventWhereUniqueInput | Prisma.FeedbackEventWhereUniqueInput[]
+  delete?: Prisma.FeedbackEventWhereUniqueInput | Prisma.FeedbackEventWhereUniqueInput[]
+  connect?: Prisma.FeedbackEventWhereUniqueInput | Prisma.FeedbackEventWhereUniqueInput[]
+  update?: Prisma.FeedbackEventUpdateWithWhereUniqueWithoutCustomerInput | Prisma.FeedbackEventUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.FeedbackEventUpdateManyWithWhereWithoutCustomerInput | Prisma.FeedbackEventUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.FeedbackEventScalarWhereInput | Prisma.FeedbackEventScalarWhereInput[]
 }
 
 export type FeedbackEventCreateNestedManyWithoutMessageInput = {
@@ -501,6 +573,78 @@ export type FeedbackEventUpdateevidenceRefIdsInput = {
   push?: string | string[]
 }
 
+export type FeedbackEventCreateWithoutCustomerInput = {
+  id?: string
+  requestId: string
+  rating: $Enums.FeedbackRating
+  reason?: string | null
+  comment?: string | null
+  intent?: string | null
+  toolCallIds?: Prisma.FeedbackEventCreatetoolCallIdsInput | string[]
+  evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
+  answerDecision?: $Enums.AnswerDecisionStatus | null
+  createdAt?: Date | string
+  message: Prisma.AssistantMessageCreateNestedOneWithoutFeedbackEventsInput
+}
+
+export type FeedbackEventUncheckedCreateWithoutCustomerInput = {
+  id?: string
+  requestId: string
+  messageId: string
+  rating: $Enums.FeedbackRating
+  reason?: string | null
+  comment?: string | null
+  intent?: string | null
+  toolCallIds?: Prisma.FeedbackEventCreatetoolCallIdsInput | string[]
+  evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
+  answerDecision?: $Enums.AnswerDecisionStatus | null
+  createdAt?: Date | string
+}
+
+export type FeedbackEventCreateOrConnectWithoutCustomerInput = {
+  where: Prisma.FeedbackEventWhereUniqueInput
+  create: Prisma.XOR<Prisma.FeedbackEventCreateWithoutCustomerInput, Prisma.FeedbackEventUncheckedCreateWithoutCustomerInput>
+}
+
+export type FeedbackEventCreateManyCustomerInputEnvelope = {
+  data: Prisma.FeedbackEventCreateManyCustomerInput | Prisma.FeedbackEventCreateManyCustomerInput[]
+  skipDuplicates?: boolean
+}
+
+export type FeedbackEventUpsertWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.FeedbackEventWhereUniqueInput
+  update: Prisma.XOR<Prisma.FeedbackEventUpdateWithoutCustomerInput, Prisma.FeedbackEventUncheckedUpdateWithoutCustomerInput>
+  create: Prisma.XOR<Prisma.FeedbackEventCreateWithoutCustomerInput, Prisma.FeedbackEventUncheckedCreateWithoutCustomerInput>
+}
+
+export type FeedbackEventUpdateWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.FeedbackEventWhereUniqueInput
+  data: Prisma.XOR<Prisma.FeedbackEventUpdateWithoutCustomerInput, Prisma.FeedbackEventUncheckedUpdateWithoutCustomerInput>
+}
+
+export type FeedbackEventUpdateManyWithWhereWithoutCustomerInput = {
+  where: Prisma.FeedbackEventScalarWhereInput
+  data: Prisma.XOR<Prisma.FeedbackEventUpdateManyMutationInput, Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerInput>
+}
+
+export type FeedbackEventScalarWhereInput = {
+  AND?: Prisma.FeedbackEventScalarWhereInput | Prisma.FeedbackEventScalarWhereInput[]
+  OR?: Prisma.FeedbackEventScalarWhereInput[]
+  NOT?: Prisma.FeedbackEventScalarWhereInput | Prisma.FeedbackEventScalarWhereInput[]
+  id?: Prisma.StringFilter<"FeedbackEvent"> | string
+  customerId?: Prisma.StringFilter<"FeedbackEvent"> | string
+  requestId?: Prisma.StringFilter<"FeedbackEvent"> | string
+  messageId?: Prisma.StringFilter<"FeedbackEvent"> | string
+  rating?: Prisma.EnumFeedbackRatingFilter<"FeedbackEvent"> | $Enums.FeedbackRating
+  reason?: Prisma.StringNullableFilter<"FeedbackEvent"> | string | null
+  comment?: Prisma.StringNullableFilter<"FeedbackEvent"> | string | null
+  intent?: Prisma.StringNullableFilter<"FeedbackEvent"> | string | null
+  toolCallIds?: Prisma.StringNullableListFilter<"FeedbackEvent">
+  evidenceRefIds?: Prisma.StringNullableListFilter<"FeedbackEvent">
+  answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"FeedbackEvent"> | $Enums.AnswerDecisionStatus | null
+  createdAt?: Prisma.DateTimeFilter<"FeedbackEvent"> | Date | string
+}
+
 export type FeedbackEventCreateWithoutMessageInput = {
   id?: string
   requestId: string
@@ -512,6 +656,7 @@ export type FeedbackEventCreateWithoutMessageInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutFeedbackEventsInput
 }
 
 export type FeedbackEventUncheckedCreateWithoutMessageInput = {
@@ -553,21 +698,60 @@ export type FeedbackEventUpdateManyWithWhereWithoutMessageInput = {
   data: Prisma.XOR<Prisma.FeedbackEventUpdateManyMutationInput, Prisma.FeedbackEventUncheckedUpdateManyWithoutMessageInput>
 }
 
-export type FeedbackEventScalarWhereInput = {
-  AND?: Prisma.FeedbackEventScalarWhereInput | Prisma.FeedbackEventScalarWhereInput[]
-  OR?: Prisma.FeedbackEventScalarWhereInput[]
-  NOT?: Prisma.FeedbackEventScalarWhereInput | Prisma.FeedbackEventScalarWhereInput[]
-  id?: Prisma.StringFilter<"FeedbackEvent"> | string
-  requestId?: Prisma.StringFilter<"FeedbackEvent"> | string
-  messageId?: Prisma.StringFilter<"FeedbackEvent"> | string
-  rating?: Prisma.EnumFeedbackRatingFilter<"FeedbackEvent"> | $Enums.FeedbackRating
-  reason?: Prisma.StringNullableFilter<"FeedbackEvent"> | string | null
-  comment?: Prisma.StringNullableFilter<"FeedbackEvent"> | string | null
-  intent?: Prisma.StringNullableFilter<"FeedbackEvent"> | string | null
-  toolCallIds?: Prisma.StringNullableListFilter<"FeedbackEvent">
-  evidenceRefIds?: Prisma.StringNullableListFilter<"FeedbackEvent">
-  answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"FeedbackEvent"> | $Enums.AnswerDecisionStatus | null
-  createdAt?: Prisma.DateTimeFilter<"FeedbackEvent"> | Date | string
+export type FeedbackEventCreateManyCustomerInput = {
+  id?: string
+  requestId: string
+  messageId: string
+  rating: $Enums.FeedbackRating
+  reason?: string | null
+  comment?: string | null
+  intent?: string | null
+  toolCallIds?: Prisma.FeedbackEventCreatetoolCallIdsInput | string[]
+  evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
+  answerDecision?: $Enums.AnswerDecisionStatus | null
+  createdAt?: Date | string
+}
+
+export type FeedbackEventUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  rating?: Prisma.EnumFeedbackRatingFieldUpdateOperationsInput | $Enums.FeedbackRating
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  intent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallIds?: Prisma.FeedbackEventUpdatetoolCallIdsInput | string[]
+  evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
+  answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  message?: Prisma.AssistantMessageUpdateOneRequiredWithoutFeedbackEventsNestedInput
+}
+
+export type FeedbackEventUncheckedUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.StringFieldUpdateOperationsInput | string
+  rating?: Prisma.EnumFeedbackRatingFieldUpdateOperationsInput | $Enums.FeedbackRating
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  intent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallIds?: Prisma.FeedbackEventUpdatetoolCallIdsInput | string[]
+  evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
+  answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type FeedbackEventUncheckedUpdateManyWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.StringFieldUpdateOperationsInput | string
+  rating?: Prisma.EnumFeedbackRatingFieldUpdateOperationsInput | $Enums.FeedbackRating
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  intent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallIds?: Prisma.FeedbackEventUpdatetoolCallIdsInput | string[]
+  evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
+  answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FeedbackEventCreateManyMessageInput = {
@@ -594,6 +778,7 @@ export type FeedbackEventUpdateWithoutMessageInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutFeedbackEventsNestedInput
 }
 
 export type FeedbackEventUncheckedUpdateWithoutMessageInput = {
@@ -626,6 +811,7 @@ export type FeedbackEventUncheckedUpdateManyWithoutMessageInput = {
 
 export type FeedbackEventSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   rating?: boolean
@@ -636,11 +822,13 @@ export type FeedbackEventSelect<ExtArgs extends runtime.Types.Extensions.Interna
   evidenceRefIds?: boolean
   answerDecision?: boolean
   createdAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["feedbackEvent"]>
 
 export type FeedbackEventSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   rating?: boolean
@@ -651,11 +839,13 @@ export type FeedbackEventSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   evidenceRefIds?: boolean
   answerDecision?: boolean
   createdAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["feedbackEvent"]>
 
 export type FeedbackEventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   rating?: boolean
@@ -666,11 +856,13 @@ export type FeedbackEventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   evidenceRefIds?: boolean
   answerDecision?: boolean
   createdAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["feedbackEvent"]>
 
 export type FeedbackEventSelectScalar = {
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   rating?: boolean
@@ -683,24 +875,29 @@ export type FeedbackEventSelectScalar = {
   createdAt?: boolean
 }
 
-export type FeedbackEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "messageId" | "rating" | "reason" | "comment" | "intent" | "toolCallIds" | "evidenceRefIds" | "answerDecision" | "createdAt", ExtArgs["result"]["feedbackEvent"]>
+export type FeedbackEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "messageId" | "rating" | "reason" | "comment" | "intent" | "toolCallIds" | "evidenceRefIds" | "answerDecision" | "createdAt", ExtArgs["result"]["feedbackEvent"]>
 export type FeedbackEventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
 }
 export type FeedbackEventIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
 }
 export type FeedbackEventIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
 }
 
 export type $FeedbackEventPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "FeedbackEvent"
   objects: {
+    customer: Prisma.$CustomerPayload<ExtArgs>
     message: Prisma.$AssistantMessagePayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     requestId: string
     messageId: string
     rating: $Enums.FeedbackRating
@@ -1105,6 +1302,7 @@ readonly fields: FeedbackEventFieldRefs;
  */
 export interface Prisma__FeedbackEventClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   message<T extends Prisma.AssistantMessageDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AssistantMessageDefaultArgs<ExtArgs>>): Prisma.Prisma__AssistantMessageClient<runtime.Types.Result.GetResult<Prisma.$AssistantMessagePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1136,6 +1334,7 @@ export interface Prisma__FeedbackEventClient<T, Null = never, ExtArgs extends ru
  */
 export interface FeedbackEventFieldRefs {
   readonly id: Prisma.FieldRef<"FeedbackEvent", 'String'>
+  readonly customerId: Prisma.FieldRef<"FeedbackEvent", 'String'>
   readonly requestId: Prisma.FieldRef<"FeedbackEvent", 'String'>
   readonly messageId: Prisma.FieldRef<"FeedbackEvent", 'String'>
   readonly rating: Prisma.FieldRef<"FeedbackEvent", 'FeedbackRating'>

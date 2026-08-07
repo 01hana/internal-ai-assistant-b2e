@@ -2,6 +2,7 @@ import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { getRequestId } from '../common/request-id/request-id.util';
 import { getIdentityContext, IdentityRequest } from '../identity/identity-context.extractor';
 import { IdentityGuard } from '../identity/identity.guard';
+import { createCustomerScopeFromIdentityContext } from '../identity/customer-scope.factory';
 import { FeedbackRating } from '../generated/prisma/enums';
 import { FeedbackEventService } from './feedback-event.service';
 import { SubmitFeedbackDto } from './feedback.dto';
@@ -19,6 +20,7 @@ export class FeedbackController {
   ) {
     const identityContext = getRequiredIdentityContext(request);
     return this.feedbackEventService.submitFeedback({
+      customerScope: createCustomerScopeFromIdentityContext(identityContext),
       requestId: getRequestId(request),
       messageId,
       identityContext,

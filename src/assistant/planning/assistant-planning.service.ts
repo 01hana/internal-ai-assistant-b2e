@@ -24,10 +24,8 @@ export class AssistantPlanningService {
     });
 
     await this.auditWriter.append({
+      customerScope: input.customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId,
       eventType: 'execution_plan_created',
@@ -69,6 +67,7 @@ function toExecutionPlanCreateInput(
   output: QueryUnderstandingOutput
 ): Prisma.ExecutionPlanUncheckedCreateInput {
   return {
+    customerId: input.customerScope.customerId,
     sessionId: input.sessionId,
     messageId: input.messageId,
     taskType: output.taskType,
@@ -76,7 +75,7 @@ function toExecutionPlanCreateInput(
     candidateTools: toJsonInput(output.candidateTools),
     permissionChecks: toJsonInput([
       {
-        organizationId: input.identityContext.company.organizationId,
+        organizationId: input.identityContext.organization.organizationId,
         hostApp: input.identityContext.hostApp.hostApp,
         actorId: input.identityContext.actor.actorId,
         scopes: input.identityContext.actor.permissionScopes
@@ -96,6 +95,7 @@ function toExecutionPlanCreateInput(
 function mapExecutionPlan(plan: ExecutionPlan): PersistedExecutionPlan {
   return {
     id: plan.id,
+    customerId: plan.customerId,
     sessionId: plan.sessionId,
     messageId: plan.messageId ?? undefined,
     taskType: plan.taskType,

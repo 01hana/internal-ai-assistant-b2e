@@ -1,9 +1,10 @@
 import { ToolRegistryService } from '../../src/tools/tool-registry.service';
+import { CustomerToolPolicyService } from '../../src/tools/customer-tool-policy.service';
 import { RiskLevel, ToolOperation } from '../../src/generated/prisma/enums';
 
 describe('ToolRegistryService', () => {
   it('loads active registered read tools from Prisma ToolDefinition records', async () => {
-    const service = new ToolRegistryService(createPrismaServiceMock([toolDefinition({ name: 'mock.inventory.availability.lookup' })]));
+    const service = new ToolRegistryService(createPrismaServiceMock([toolDefinition({ name: 'mock.inventory.availability.lookup' })]), customerToolPolicyMock());
 
     await expect(service.getExecutableTool('mock.inventory.availability.lookup')).resolves.toEqual(
       expect.objectContaining({
@@ -23,7 +24,8 @@ describe('ToolRegistryService', () => {
           name: 'mock.inventory.availability.lookup',
           isActive: false
         })
-      ])
+      ]),
+      customerToolPolicyMock()
     );
 
     await expect(service.resolveExecutableTool('mock.unknown.lookup')).resolves.toEqual({
@@ -35,7 +37,7 @@ describe('ToolRegistryService', () => {
   });
 
   it('normalizes DB records without consulting connector listTools capability reports', async () => {
-    const service = new ToolRegistryService(createPrismaServiceMock([toolDefinition({ name: 'mock.orders.status.lookup' })]));
+    const service = new ToolRegistryService(createPrismaServiceMock([toolDefinition({ name: 'mock.orders.status.lookup' })]), customerToolPolicyMock());
 
     await expect(service.listTools()).resolves.toEqual([
       expect.objectContaining({
@@ -51,7 +53,7 @@ describe('ToolRegistryService', () => {
   });
 
   it('returns schema_invalid with a stable schema error reason when required input is missing', async () => {
-    const service = new ToolRegistryService(createPrismaServiceMock([toolDefinition({ name: 'mock.orders.status.lookup' })]));
+    const service = new ToolRegistryService(createPrismaServiceMock([toolDefinition({ name: 'mock.orders.status.lookup' })]), customerToolPolicyMock());
     const tool = await service.getExecutableTool('mock.orders.status.lookup');
 
     expect(tool).toBeDefined();
@@ -73,6 +75,12 @@ function createPrismaServiceMock(tools: ReturnType<typeof toolDefinition>[]) {
       }
     }
   } as never;
+}
+
+function customerToolPolicyMock() {
+  return {
+    resolve: jest.fn()
+  } as unknown as CustomerToolPolicyService;
 }
 
 function toolDefinition(overrides: Partial<ReturnType<typeof toolDefinitionShape>>) {

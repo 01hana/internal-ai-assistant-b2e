@@ -6,6 +6,7 @@ describe('knowledge chunking service', () => {
   it('chunks documents by heading and paragraph with stable indexes', () => {
     const chunks = service.chunkDocument({
       documentId: 'knowledge-document-001',
+      customerId: 'customer-a',
       content: [
         '# 退貨流程',
         '',
@@ -17,6 +18,7 @@ describe('knowledge chunking service', () => {
 
     expect(chunks).toEqual([
       expect.objectContaining({
+        customerId: 'customer-a',
         documentId: 'knowledge-document-001',
         chunkIndex: 0,
         heading: '退貨流程',
@@ -38,6 +40,7 @@ describe('knowledge chunking service', () => {
   it('splits oversized paragraphs deterministically', () => {
     const chunks = service.chunkDocument({
       documentId: 'knowledge-document-001',
+      customerId: 'customer-a',
       content: 'A'.repeat(12),
       maxChars: 5
     });
@@ -50,8 +53,28 @@ describe('knowledge chunking service', () => {
     expect(
       service.chunkDocument({
         documentId: 'knowledge-document-001',
+        customerId: 'customer-a',
         content: '\n\n   \n'
       })
     ).toEqual([]);
+  });
+
+  it('rejects missing canonical customer ownership and a cross-Customer document parent', () => {
+    expect(() =>
+      service.chunkDocument({
+        documentId: 'knowledge-document-001',
+        customerId: '   ',
+        content: 'content'
+      })
+    ).toThrow('Knowledge document access policy is invalid.');
+
+    expect(() =>
+      service.chunkDocument({
+        documentId: 'knowledge-document-001',
+        customerId: 'customer-a',
+        documentCustomerId: 'customer-b',
+        content: 'content'
+      })
+    ).toThrow('Knowledge document access policy is invalid.');
   });
 });

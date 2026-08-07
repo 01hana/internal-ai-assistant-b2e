@@ -26,6 +26,7 @@ export type AggregateEscalationRequest = {
 
 export type EscalationRequestMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   sessionId: string | null
   messageId: string | null
@@ -38,6 +39,7 @@ export type EscalationRequestMinAggregateOutputType = {
 
 export type EscalationRequestMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   sessionId: string | null
   messageId: string | null
@@ -50,6 +52,7 @@ export type EscalationRequestMaxAggregateOutputType = {
 
 export type EscalationRequestCountAggregateOutputType = {
   id: number
+  customerId: number
   requestId: number
   sessionId: number
   messageId: number
@@ -65,6 +68,7 @@ export type EscalationRequestCountAggregateOutputType = {
 
 export type EscalationRequestMinAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   sessionId?: true
   messageId?: true
@@ -77,6 +81,7 @@ export type EscalationRequestMinAggregateInputType = {
 
 export type EscalationRequestMaxAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   sessionId?: true
   messageId?: true
@@ -89,6 +94,7 @@ export type EscalationRequestMaxAggregateInputType = {
 
 export type EscalationRequestCountAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   sessionId?: true
   messageId?: true
@@ -175,6 +181,7 @@ export type EscalationRequestGroupByArgs<ExtArgs extends runtime.Types.Extension
 
 export type EscalationRequestGroupByOutputType = {
   id: string
+  customerId: string
   requestId: string
   sessionId: string
   messageId: string | null
@@ -209,6 +216,7 @@ export type EscalationRequestWhereInput = {
   OR?: Prisma.EscalationRequestWhereInput[]
   NOT?: Prisma.EscalationRequestWhereInput | Prisma.EscalationRequestWhereInput[]
   id?: Prisma.StringFilter<"EscalationRequest"> | string
+  customerId?: Prisma.StringFilter<"EscalationRequest"> | string
   requestId?: Prisma.StringFilter<"EscalationRequest"> | string
   sessionId?: Prisma.StringFilter<"EscalationRequest"> | string
   messageId?: Prisma.StringNullableFilter<"EscalationRequest"> | string | null
@@ -218,12 +226,14 @@ export type EscalationRequestWhereInput = {
   summary?: Prisma.JsonFilter<"EscalationRequest">
   createdAt?: Prisma.DateTimeFilter<"EscalationRequest"> | Date | string
   resolvedAt?: Prisma.DateTimeNullableFilter<"EscalationRequest"> | Date | string | null
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   session?: Prisma.XOR<Prisma.AssistantSessionScalarRelationFilter, Prisma.AssistantSessionWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageNullableScalarRelationFilter, Prisma.AssistantMessageWhereInput> | null
 }
 
 export type EscalationRequestOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -233,15 +243,18 @@ export type EscalationRequestOrderByWithRelationInput = {
   summary?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  customer?: Prisma.CustomerOrderByWithRelationInput
   session?: Prisma.AssistantSessionOrderByWithRelationInput
   message?: Prisma.AssistantMessageOrderByWithRelationInput
 }
 
 export type EscalationRequestWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  customerId_id?: Prisma.EscalationRequestCustomerIdIdCompoundUniqueInput
   AND?: Prisma.EscalationRequestWhereInput | Prisma.EscalationRequestWhereInput[]
   OR?: Prisma.EscalationRequestWhereInput[]
   NOT?: Prisma.EscalationRequestWhereInput | Prisma.EscalationRequestWhereInput[]
+  customerId?: Prisma.StringFilter<"EscalationRequest"> | string
   requestId?: Prisma.StringFilter<"EscalationRequest"> | string
   sessionId?: Prisma.StringFilter<"EscalationRequest"> | string
   messageId?: Prisma.StringNullableFilter<"EscalationRequest"> | string | null
@@ -251,12 +264,14 @@ export type EscalationRequestWhereUniqueInput = Prisma.AtLeast<{
   summary?: Prisma.JsonFilter<"EscalationRequest">
   createdAt?: Prisma.DateTimeFilter<"EscalationRequest"> | Date | string
   resolvedAt?: Prisma.DateTimeNullableFilter<"EscalationRequest"> | Date | string | null
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   session?: Prisma.XOR<Prisma.AssistantSessionScalarRelationFilter, Prisma.AssistantSessionWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageNullableScalarRelationFilter, Prisma.AssistantMessageWhereInput> | null
-}, "id">
+}, "id" | "customerId_id">
 
 export type EscalationRequestOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -276,6 +291,7 @@ export type EscalationRequestScalarWhereWithAggregatesInput = {
   OR?: Prisma.EscalationRequestScalarWhereWithAggregatesInput[]
   NOT?: Prisma.EscalationRequestScalarWhereWithAggregatesInput | Prisma.EscalationRequestScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"EscalationRequest"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"EscalationRequest"> | string
   requestId?: Prisma.StringWithAggregatesFilter<"EscalationRequest"> | string
   sessionId?: Prisma.StringWithAggregatesFilter<"EscalationRequest"> | string
   messageId?: Prisma.StringNullableWithAggregatesFilter<"EscalationRequest"> | string | null
@@ -296,12 +312,14 @@ export type EscalationRequestCreateInput = {
   summary: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   resolvedAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutEscalationRequestsInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutEscalationRequestsInput
   message?: Prisma.AssistantMessageCreateNestedOneWithoutEscalationRequestsInput
 }
 
 export type EscalationRequestUncheckedCreateInput = {
   id?: string
+  customerId: string
   requestId: string
   sessionId: string
   messageId?: string | null
@@ -322,12 +340,14 @@ export type EscalationRequestUpdateInput = {
   summary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutEscalationRequestsNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutEscalationRequestsNestedInput
   message?: Prisma.AssistantMessageUpdateOneWithoutEscalationRequestsNestedInput
 }
 
 export type EscalationRequestUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -341,6 +361,7 @@ export type EscalationRequestUncheckedUpdateInput = {
 
 export type EscalationRequestCreateManyInput = {
   id?: string
+  customerId: string
   requestId: string
   sessionId: string
   messageId?: string | null
@@ -365,6 +386,7 @@ export type EscalationRequestUpdateManyMutationInput = {
 
 export type EscalationRequestUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -386,8 +408,14 @@ export type EscalationRequestOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type EscalationRequestCustomerIdIdCompoundUniqueInput = {
+  customerId: string
+  id: string
+}
+
 export type EscalationRequestCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
@@ -401,6 +429,7 @@ export type EscalationRequestCountOrderByAggregateInput = {
 
 export type EscalationRequestMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
@@ -413,6 +442,7 @@ export type EscalationRequestMaxOrderByAggregateInput = {
 
 export type EscalationRequestMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
@@ -421,6 +451,48 @@ export type EscalationRequestMinOrderByAggregateInput = {
   ownerType?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrder
+}
+
+export type EscalationRequestCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.EscalationRequestCreateWithoutCustomerInput, Prisma.EscalationRequestUncheckedCreateWithoutCustomerInput> | Prisma.EscalationRequestCreateWithoutCustomerInput[] | Prisma.EscalationRequestUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.EscalationRequestCreateOrConnectWithoutCustomerInput | Prisma.EscalationRequestCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.EscalationRequestCreateManyCustomerInputEnvelope
+  connect?: Prisma.EscalationRequestWhereUniqueInput | Prisma.EscalationRequestWhereUniqueInput[]
+}
+
+export type EscalationRequestUncheckedCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.EscalationRequestCreateWithoutCustomerInput, Prisma.EscalationRequestUncheckedCreateWithoutCustomerInput> | Prisma.EscalationRequestCreateWithoutCustomerInput[] | Prisma.EscalationRequestUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.EscalationRequestCreateOrConnectWithoutCustomerInput | Prisma.EscalationRequestCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.EscalationRequestCreateManyCustomerInputEnvelope
+  connect?: Prisma.EscalationRequestWhereUniqueInput | Prisma.EscalationRequestWhereUniqueInput[]
+}
+
+export type EscalationRequestUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.EscalationRequestCreateWithoutCustomerInput, Prisma.EscalationRequestUncheckedCreateWithoutCustomerInput> | Prisma.EscalationRequestCreateWithoutCustomerInput[] | Prisma.EscalationRequestUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.EscalationRequestCreateOrConnectWithoutCustomerInput | Prisma.EscalationRequestCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.EscalationRequestUpsertWithWhereUniqueWithoutCustomerInput | Prisma.EscalationRequestUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.EscalationRequestCreateManyCustomerInputEnvelope
+  set?: Prisma.EscalationRequestWhereUniqueInput | Prisma.EscalationRequestWhereUniqueInput[]
+  disconnect?: Prisma.EscalationRequestWhereUniqueInput | Prisma.EscalationRequestWhereUniqueInput[]
+  delete?: Prisma.EscalationRequestWhereUniqueInput | Prisma.EscalationRequestWhereUniqueInput[]
+  connect?: Prisma.EscalationRequestWhereUniqueInput | Prisma.EscalationRequestWhereUniqueInput[]
+  update?: Prisma.EscalationRequestUpdateWithWhereUniqueWithoutCustomerInput | Prisma.EscalationRequestUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.EscalationRequestUpdateManyWithWhereWithoutCustomerInput | Prisma.EscalationRequestUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.EscalationRequestScalarWhereInput | Prisma.EscalationRequestScalarWhereInput[]
+}
+
+export type EscalationRequestUncheckedUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.EscalationRequestCreateWithoutCustomerInput, Prisma.EscalationRequestUncheckedCreateWithoutCustomerInput> | Prisma.EscalationRequestCreateWithoutCustomerInput[] | Prisma.EscalationRequestUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.EscalationRequestCreateOrConnectWithoutCustomerInput | Prisma.EscalationRequestCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.EscalationRequestUpsertWithWhereUniqueWithoutCustomerInput | Prisma.EscalationRequestUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.EscalationRequestCreateManyCustomerInputEnvelope
+  set?: Prisma.EscalationRequestWhereUniqueInput | Prisma.EscalationRequestWhereUniqueInput[]
+  disconnect?: Prisma.EscalationRequestWhereUniqueInput | Prisma.EscalationRequestWhereUniqueInput[]
+  delete?: Prisma.EscalationRequestWhereUniqueInput | Prisma.EscalationRequestWhereUniqueInput[]
+  connect?: Prisma.EscalationRequestWhereUniqueInput | Prisma.EscalationRequestWhereUniqueInput[]
+  update?: Prisma.EscalationRequestUpdateWithWhereUniqueWithoutCustomerInput | Prisma.EscalationRequestUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.EscalationRequestUpdateManyWithWhereWithoutCustomerInput | Prisma.EscalationRequestUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.EscalationRequestScalarWhereInput | Prisma.EscalationRequestScalarWhereInput[]
 }
 
 export type EscalationRequestCreateNestedManyWithoutSessionInput = {
@@ -519,6 +591,75 @@ export type EnumEscalationOwnerTypeFieldUpdateOperationsInput = {
   set?: $Enums.EscalationOwnerType
 }
 
+export type EscalationRequestCreateWithoutCustomerInput = {
+  id?: string
+  requestId: string
+  reason: $Enums.EscalationReason
+  status?: $Enums.EscalationStatus
+  ownerType: $Enums.EscalationOwnerType
+  summary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  resolvedAt?: Date | string | null
+  session: Prisma.AssistantSessionCreateNestedOneWithoutEscalationRequestsInput
+  message?: Prisma.AssistantMessageCreateNestedOneWithoutEscalationRequestsInput
+}
+
+export type EscalationRequestUncheckedCreateWithoutCustomerInput = {
+  id?: string
+  requestId: string
+  sessionId: string
+  messageId?: string | null
+  reason: $Enums.EscalationReason
+  status?: $Enums.EscalationStatus
+  ownerType: $Enums.EscalationOwnerType
+  summary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  resolvedAt?: Date | string | null
+}
+
+export type EscalationRequestCreateOrConnectWithoutCustomerInput = {
+  where: Prisma.EscalationRequestWhereUniqueInput
+  create: Prisma.XOR<Prisma.EscalationRequestCreateWithoutCustomerInput, Prisma.EscalationRequestUncheckedCreateWithoutCustomerInput>
+}
+
+export type EscalationRequestCreateManyCustomerInputEnvelope = {
+  data: Prisma.EscalationRequestCreateManyCustomerInput | Prisma.EscalationRequestCreateManyCustomerInput[]
+  skipDuplicates?: boolean
+}
+
+export type EscalationRequestUpsertWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.EscalationRequestWhereUniqueInput
+  update: Prisma.XOR<Prisma.EscalationRequestUpdateWithoutCustomerInput, Prisma.EscalationRequestUncheckedUpdateWithoutCustomerInput>
+  create: Prisma.XOR<Prisma.EscalationRequestCreateWithoutCustomerInput, Prisma.EscalationRequestUncheckedCreateWithoutCustomerInput>
+}
+
+export type EscalationRequestUpdateWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.EscalationRequestWhereUniqueInput
+  data: Prisma.XOR<Prisma.EscalationRequestUpdateWithoutCustomerInput, Prisma.EscalationRequestUncheckedUpdateWithoutCustomerInput>
+}
+
+export type EscalationRequestUpdateManyWithWhereWithoutCustomerInput = {
+  where: Prisma.EscalationRequestScalarWhereInput
+  data: Prisma.XOR<Prisma.EscalationRequestUpdateManyMutationInput, Prisma.EscalationRequestUncheckedUpdateManyWithoutCustomerInput>
+}
+
+export type EscalationRequestScalarWhereInput = {
+  AND?: Prisma.EscalationRequestScalarWhereInput | Prisma.EscalationRequestScalarWhereInput[]
+  OR?: Prisma.EscalationRequestScalarWhereInput[]
+  NOT?: Prisma.EscalationRequestScalarWhereInput | Prisma.EscalationRequestScalarWhereInput[]
+  id?: Prisma.StringFilter<"EscalationRequest"> | string
+  customerId?: Prisma.StringFilter<"EscalationRequest"> | string
+  requestId?: Prisma.StringFilter<"EscalationRequest"> | string
+  sessionId?: Prisma.StringFilter<"EscalationRequest"> | string
+  messageId?: Prisma.StringNullableFilter<"EscalationRequest"> | string | null
+  reason?: Prisma.EnumEscalationReasonFilter<"EscalationRequest"> | $Enums.EscalationReason
+  status?: Prisma.EnumEscalationStatusFilter<"EscalationRequest"> | $Enums.EscalationStatus
+  ownerType?: Prisma.EnumEscalationOwnerTypeFilter<"EscalationRequest"> | $Enums.EscalationOwnerType
+  summary?: Prisma.JsonFilter<"EscalationRequest">
+  createdAt?: Prisma.DateTimeFilter<"EscalationRequest"> | Date | string
+  resolvedAt?: Prisma.DateTimeNullableFilter<"EscalationRequest"> | Date | string | null
+}
+
 export type EscalationRequestCreateWithoutSessionInput = {
   id?: string
   requestId: string
@@ -528,6 +669,7 @@ export type EscalationRequestCreateWithoutSessionInput = {
   summary: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   resolvedAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutEscalationRequestsInput
   message?: Prisma.AssistantMessageCreateNestedOneWithoutEscalationRequestsInput
 }
 
@@ -569,22 +711,6 @@ export type EscalationRequestUpdateManyWithWhereWithoutSessionInput = {
   data: Prisma.XOR<Prisma.EscalationRequestUpdateManyMutationInput, Prisma.EscalationRequestUncheckedUpdateManyWithoutSessionInput>
 }
 
-export type EscalationRequestScalarWhereInput = {
-  AND?: Prisma.EscalationRequestScalarWhereInput | Prisma.EscalationRequestScalarWhereInput[]
-  OR?: Prisma.EscalationRequestScalarWhereInput[]
-  NOT?: Prisma.EscalationRequestScalarWhereInput | Prisma.EscalationRequestScalarWhereInput[]
-  id?: Prisma.StringFilter<"EscalationRequest"> | string
-  requestId?: Prisma.StringFilter<"EscalationRequest"> | string
-  sessionId?: Prisma.StringFilter<"EscalationRequest"> | string
-  messageId?: Prisma.StringNullableFilter<"EscalationRequest"> | string | null
-  reason?: Prisma.EnumEscalationReasonFilter<"EscalationRequest"> | $Enums.EscalationReason
-  status?: Prisma.EnumEscalationStatusFilter<"EscalationRequest"> | $Enums.EscalationStatus
-  ownerType?: Prisma.EnumEscalationOwnerTypeFilter<"EscalationRequest"> | $Enums.EscalationOwnerType
-  summary?: Prisma.JsonFilter<"EscalationRequest">
-  createdAt?: Prisma.DateTimeFilter<"EscalationRequest"> | Date | string
-  resolvedAt?: Prisma.DateTimeNullableFilter<"EscalationRequest"> | Date | string | null
-}
-
 export type EscalationRequestCreateWithoutMessageInput = {
   id?: string
   requestId: string
@@ -594,6 +720,7 @@ export type EscalationRequestCreateWithoutMessageInput = {
   summary: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   resolvedAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutEscalationRequestsInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutEscalationRequestsInput
 }
 
@@ -635,6 +762,58 @@ export type EscalationRequestUpdateManyWithWhereWithoutMessageInput = {
   data: Prisma.XOR<Prisma.EscalationRequestUpdateManyMutationInput, Prisma.EscalationRequestUncheckedUpdateManyWithoutMessageInput>
 }
 
+export type EscalationRequestCreateManyCustomerInput = {
+  id?: string
+  requestId: string
+  sessionId: string
+  messageId?: string | null
+  reason: $Enums.EscalationReason
+  status?: $Enums.EscalationStatus
+  ownerType: $Enums.EscalationOwnerType
+  summary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  resolvedAt?: Date | string | null
+}
+
+export type EscalationRequestUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  reason?: Prisma.EnumEscalationReasonFieldUpdateOperationsInput | $Enums.EscalationReason
+  status?: Prisma.EnumEscalationStatusFieldUpdateOperationsInput | $Enums.EscalationStatus
+  ownerType?: Prisma.EnumEscalationOwnerTypeFieldUpdateOperationsInput | $Enums.EscalationOwnerType
+  summary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  session?: Prisma.AssistantSessionUpdateOneRequiredWithoutEscalationRequestsNestedInput
+  message?: Prisma.AssistantMessageUpdateOneWithoutEscalationRequestsNestedInput
+}
+
+export type EscalationRequestUncheckedUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reason?: Prisma.EnumEscalationReasonFieldUpdateOperationsInput | $Enums.EscalationReason
+  status?: Prisma.EnumEscalationStatusFieldUpdateOperationsInput | $Enums.EscalationStatus
+  ownerType?: Prisma.EnumEscalationOwnerTypeFieldUpdateOperationsInput | $Enums.EscalationOwnerType
+  summary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type EscalationRequestUncheckedUpdateManyWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reason?: Prisma.EnumEscalationReasonFieldUpdateOperationsInput | $Enums.EscalationReason
+  status?: Prisma.EnumEscalationStatusFieldUpdateOperationsInput | $Enums.EscalationStatus
+  ownerType?: Prisma.EnumEscalationOwnerTypeFieldUpdateOperationsInput | $Enums.EscalationOwnerType
+  summary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
 export type EscalationRequestCreateManySessionInput = {
   id?: string
   requestId: string
@@ -656,6 +835,7 @@ export type EscalationRequestUpdateWithoutSessionInput = {
   summary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutEscalationRequestsNestedInput
   message?: Prisma.AssistantMessageUpdateOneWithoutEscalationRequestsNestedInput
 }
 
@@ -704,6 +884,7 @@ export type EscalationRequestUpdateWithoutMessageInput = {
   summary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutEscalationRequestsNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutEscalationRequestsNestedInput
 }
 
@@ -735,6 +916,7 @@ export type EscalationRequestUncheckedUpdateManyWithoutMessageInput = {
 
 export type EscalationRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
@@ -744,12 +926,14 @@ export type EscalationRequestSelect<ExtArgs extends runtime.Types.Extensions.Int
   summary?: boolean
   createdAt?: boolean
   resolvedAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EscalationRequest$messageArgs<ExtArgs>
 }, ExtArgs["result"]["escalationRequest"]>
 
 export type EscalationRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
@@ -759,12 +943,14 @@ export type EscalationRequestSelectCreateManyAndReturn<ExtArgs extends runtime.T
   summary?: boolean
   createdAt?: boolean
   resolvedAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EscalationRequest$messageArgs<ExtArgs>
 }, ExtArgs["result"]["escalationRequest"]>
 
 export type EscalationRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
@@ -774,12 +960,14 @@ export type EscalationRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   summary?: boolean
   createdAt?: boolean
   resolvedAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EscalationRequest$messageArgs<ExtArgs>
 }, ExtArgs["result"]["escalationRequest"]>
 
 export type EscalationRequestSelectScalar = {
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
@@ -791,16 +979,19 @@ export type EscalationRequestSelectScalar = {
   resolvedAt?: boolean
 }
 
-export type EscalationRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "sessionId" | "messageId" | "reason" | "status" | "ownerType" | "summary" | "createdAt" | "resolvedAt", ExtArgs["result"]["escalationRequest"]>
+export type EscalationRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "sessionId" | "messageId" | "reason" | "status" | "ownerType" | "summary" | "createdAt" | "resolvedAt", ExtArgs["result"]["escalationRequest"]>
 export type EscalationRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EscalationRequest$messageArgs<ExtArgs>
 }
 export type EscalationRequestIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EscalationRequest$messageArgs<ExtArgs>
 }
 export type EscalationRequestIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.EscalationRequest$messageArgs<ExtArgs>
 }
@@ -808,11 +999,13 @@ export type EscalationRequestIncludeUpdateManyAndReturn<ExtArgs extends runtime.
 export type $EscalationRequestPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "EscalationRequest"
   objects: {
+    customer: Prisma.$CustomerPayload<ExtArgs>
     session: Prisma.$AssistantSessionPayload<ExtArgs>
     message: Prisma.$AssistantMessagePayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     requestId: string
     sessionId: string
     messageId: string | null
@@ -1216,6 +1409,7 @@ readonly fields: EscalationRequestFieldRefs;
  */
 export interface Prisma__EscalationRequestClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   session<T extends Prisma.AssistantSessionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AssistantSessionDefaultArgs<ExtArgs>>): Prisma.Prisma__AssistantSessionClient<runtime.Types.Result.GetResult<Prisma.$AssistantSessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   message<T extends Prisma.EscalationRequest$messageArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EscalationRequest$messageArgs<ExtArgs>>): Prisma.Prisma__AssistantMessageClient<runtime.Types.Result.GetResult<Prisma.$AssistantMessagePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
@@ -1248,6 +1442,7 @@ export interface Prisma__EscalationRequestClient<T, Null = never, ExtArgs extend
  */
 export interface EscalationRequestFieldRefs {
   readonly id: Prisma.FieldRef<"EscalationRequest", 'String'>
+  readonly customerId: Prisma.FieldRef<"EscalationRequest", 'String'>
   readonly requestId: Prisma.FieldRef<"EscalationRequest", 'String'>
   readonly sessionId: Prisma.FieldRef<"EscalationRequest", 'String'>
   readonly messageId: Prisma.FieldRef<"EscalationRequest", 'String'>

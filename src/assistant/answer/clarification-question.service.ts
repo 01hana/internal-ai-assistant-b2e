@@ -3,9 +3,11 @@ import { AuditWriterService } from '../../audit/audit-writer.service';
 import { Prisma } from '../../generated/prisma/client';
 import { ClarificationQuestionStatus } from '../../generated/prisma/enums';
 import { RequestIdentityContext } from '../../identity/identity-context.types';
+import { CustomerScope } from '../../identity/customer-scope.types';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CreateClarificationQuestionInput {
+  customerScope: CustomerScope;
   requestId: string;
   sessionId: string;
   messageId: string;
@@ -27,6 +29,7 @@ export class ClarificationQuestionService {
   async create(input: CreateClarificationQuestionInput) {
     const question = await this.prisma.db.clarificationQuestion.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         messageId: input.messageId,
         question: input.question,
@@ -42,10 +45,8 @@ export class ClarificationQuestionService {
     });
 
     await this.auditWriter.append({
+      customerScope: input.customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId,
       eventType: 'clarification_question_created',

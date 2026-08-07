@@ -1,13 +1,25 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { IdentityContextExtractor, IdentityRequest } from './identity-context.extractor';
+import { CanActivate, ExecutionContext, Inject, Injectable } from '@nestjs/common';
+import { getRequestId } from '../common/request-id/request-id.util';
+import { attachIdentityContext } from './identity-context.accessor';
+import { IdentityRequest } from './identity-context.extractor';
+import { validateVerifiedInternalIdentityClaims } from './identity-context.validator';
+import { INTERNAL_IDENTITY_TOKEN_VERIFIER, InternalIdentityTokenVerifier } from './identity-token.types';
 
 @Injectable()
 export class IdentityGuard implements CanActivate {
-  constructor(private readonly extractor: IdentityContextExtractor) {}
+  constructor(
+    @Inject(INTERNAL_IDENTITY_TOKEN_VERIFIER)
+    private readonly verifier: InternalIdentityTokenVerifier
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<IdentityRequest>();
-    this.extractor.extract(request);
+    const verified = await this.verifier.verify({ authorization: request.header('authorization') });
+    const canonical = validateVerifiedInternalIdentityClaims(verified);
+    attachIdentityContext(request, {
+      ...canonical,
+      requestId: getRequestId(request)
+    });
     return true;
   }
 }

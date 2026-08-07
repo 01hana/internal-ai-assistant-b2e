@@ -26,9 +26,11 @@ export type AggregateApprovalRequest = {
 
 export type ApprovalRequestMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   sessionId: string | null
   messageId: string | null
+  toolCallId: string | null
   requesterActorId: string | null
   approverActorId: string | null
   riskLevel: $Enums.RiskLevel | null
@@ -42,9 +44,11 @@ export type ApprovalRequestMinAggregateOutputType = {
 
 export type ApprovalRequestMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   sessionId: string | null
   messageId: string | null
+  toolCallId: string | null
   requesterActorId: string | null
   approverActorId: string | null
   riskLevel: $Enums.RiskLevel | null
@@ -58,9 +62,11 @@ export type ApprovalRequestMaxAggregateOutputType = {
 
 export type ApprovalRequestCountAggregateOutputType = {
   id: number
+  customerId: number
   requestId: number
   sessionId: number
   messageId: number
+  toolCallId: number
   requesterActorId: number
   approverActorId: number
   riskLevel: number
@@ -80,9 +86,11 @@ export type ApprovalRequestCountAggregateOutputType = {
 
 export type ApprovalRequestMinAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   sessionId?: true
   messageId?: true
+  toolCallId?: true
   requesterActorId?: true
   approverActorId?: true
   riskLevel?: true
@@ -96,9 +104,11 @@ export type ApprovalRequestMinAggregateInputType = {
 
 export type ApprovalRequestMaxAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   sessionId?: true
   messageId?: true
+  toolCallId?: true
   requesterActorId?: true
   approverActorId?: true
   riskLevel?: true
@@ -112,9 +122,11 @@ export type ApprovalRequestMaxAggregateInputType = {
 
 export type ApprovalRequestCountAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   sessionId?: true
   messageId?: true
+  toolCallId?: true
   requesterActorId?: true
   approverActorId?: true
   riskLevel?: true
@@ -205,9 +217,11 @@ export type ApprovalRequestGroupByArgs<ExtArgs extends runtime.Types.Extensions.
 
 export type ApprovalRequestGroupByOutputType = {
   id: string
+  customerId: string
   requestId: string
   sessionId: string
   messageId: string | null
+  toolCallId: string | null
   requesterActorId: string
   approverActorId: string | null
   riskLevel: $Enums.RiskLevel
@@ -246,9 +260,11 @@ export type ApprovalRequestWhereInput = {
   OR?: Prisma.ApprovalRequestWhereInput[]
   NOT?: Prisma.ApprovalRequestWhereInput | Prisma.ApprovalRequestWhereInput[]
   id?: Prisma.StringFilter<"ApprovalRequest"> | string
+  customerId?: Prisma.StringFilter<"ApprovalRequest"> | string
   requestId?: Prisma.StringFilter<"ApprovalRequest"> | string
   sessionId?: Prisma.StringFilter<"ApprovalRequest"> | string
   messageId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
+  toolCallId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
   requesterActorId?: Prisma.StringFilter<"ApprovalRequest"> | string
   approverActorId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
   riskLevel?: Prisma.EnumRiskLevelFilter<"ApprovalRequest"> | $Enums.RiskLevel
@@ -262,15 +278,19 @@ export type ApprovalRequestWhereInput = {
   expiresAt?: Prisma.DateTimeNullableFilter<"ApprovalRequest"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ApprovalRequest"> | Date | string
   decidedAt?: Prisma.DateTimeNullableFilter<"ApprovalRequest"> | Date | string | null
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   session?: Prisma.XOR<Prisma.AssistantSessionScalarRelationFilter, Prisma.AssistantSessionWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageNullableScalarRelationFilter, Prisma.AssistantMessageWhereInput> | null
+  toolCall?: Prisma.XOR<Prisma.ToolCallNullableScalarRelationFilter, Prisma.ToolCallWhereInput> | null
 }
 
 export type ApprovalRequestOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrderInput | Prisma.SortOrder
+  toolCallId?: Prisma.SortOrderInput | Prisma.SortOrder
   requesterActorId?: Prisma.SortOrder
   approverActorId?: Prisma.SortOrderInput | Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
@@ -284,19 +304,24 @@ export type ApprovalRequestOrderByWithRelationInput = {
   expiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   decidedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  customer?: Prisma.CustomerOrderByWithRelationInput
   session?: Prisma.AssistantSessionOrderByWithRelationInput
   message?: Prisma.AssistantMessageOrderByWithRelationInput
+  toolCall?: Prisma.ToolCallOrderByWithRelationInput
 }
 
 export type ApprovalRequestWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  idempotencyKey?: string
+  customerId_id?: Prisma.ApprovalRequestCustomerIdIdCompoundUniqueInput
+  customerId_idempotencyKey?: Prisma.ApprovalRequestCustomerIdIdempotencyKeyCompoundUniqueInput
   AND?: Prisma.ApprovalRequestWhereInput | Prisma.ApprovalRequestWhereInput[]
   OR?: Prisma.ApprovalRequestWhereInput[]
   NOT?: Prisma.ApprovalRequestWhereInput | Prisma.ApprovalRequestWhereInput[]
+  customerId?: Prisma.StringFilter<"ApprovalRequest"> | string
   requestId?: Prisma.StringFilter<"ApprovalRequest"> | string
   sessionId?: Prisma.StringFilter<"ApprovalRequest"> | string
   messageId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
+  toolCallId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
   requesterActorId?: Prisma.StringFilter<"ApprovalRequest"> | string
   approverActorId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
   riskLevel?: Prisma.EnumRiskLevelFilter<"ApprovalRequest"> | $Enums.RiskLevel
@@ -305,19 +330,24 @@ export type ApprovalRequestWhereUniqueInput = Prisma.AtLeast<{
   payloadSummary?: Prisma.JsonFilter<"ApprovalRequest">
   evidenceRefIds?: Prisma.StringNullableListFilter<"ApprovalRequest">
   decisionReason?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
+  idempotencyKey?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
   auditEventIds?: Prisma.StringNullableListFilter<"ApprovalRequest">
   expiresAt?: Prisma.DateTimeNullableFilter<"ApprovalRequest"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ApprovalRequest"> | Date | string
   decidedAt?: Prisma.DateTimeNullableFilter<"ApprovalRequest"> | Date | string | null
+  customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   session?: Prisma.XOR<Prisma.AssistantSessionScalarRelationFilter, Prisma.AssistantSessionWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageNullableScalarRelationFilter, Prisma.AssistantMessageWhereInput> | null
-}, "id" | "idempotencyKey">
+  toolCall?: Prisma.XOR<Prisma.ToolCallNullableScalarRelationFilter, Prisma.ToolCallWhereInput> | null
+}, "id" | "customerId_id" | "customerId_idempotencyKey">
 
 export type ApprovalRequestOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrderInput | Prisma.SortOrder
+  toolCallId?: Prisma.SortOrderInput | Prisma.SortOrder
   requesterActorId?: Prisma.SortOrder
   approverActorId?: Prisma.SortOrderInput | Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
@@ -341,9 +371,11 @@ export type ApprovalRequestScalarWhereWithAggregatesInput = {
   OR?: Prisma.ApprovalRequestScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ApprovalRequestScalarWhereWithAggregatesInput | Prisma.ApprovalRequestScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"ApprovalRequest"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"ApprovalRequest"> | string
   requestId?: Prisma.StringWithAggregatesFilter<"ApprovalRequest"> | string
   sessionId?: Prisma.StringWithAggregatesFilter<"ApprovalRequest"> | string
   messageId?: Prisma.StringNullableWithAggregatesFilter<"ApprovalRequest"> | string | null
+  toolCallId?: Prisma.StringNullableWithAggregatesFilter<"ApprovalRequest"> | string | null
   requesterActorId?: Prisma.StringWithAggregatesFilter<"ApprovalRequest"> | string
   approverActorId?: Prisma.StringNullableWithAggregatesFilter<"ApprovalRequest"> | string | null
   riskLevel?: Prisma.EnumRiskLevelWithAggregatesFilter<"ApprovalRequest"> | $Enums.RiskLevel
@@ -375,15 +407,19 @@ export type ApprovalRequestCreateInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string
   decidedAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutApprovalRequestsInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutApprovalRequestsInput
   message?: Prisma.AssistantMessageCreateNestedOneWithoutApprovalRequestsInput
+  toolCall?: Prisma.ToolCallCreateNestedOneWithoutApprovalRequestsInput
 }
 
 export type ApprovalRequestUncheckedCreateInput = {
   id?: string
+  customerId: string
   requestId: string
   sessionId: string
   messageId?: string | null
+  toolCallId?: string | null
   requesterActorId: string
   approverActorId?: string | null
   riskLevel: $Enums.RiskLevel
@@ -415,15 +451,19 @@ export type ApprovalRequestUpdateInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutApprovalRequestsNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutApprovalRequestsNestedInput
   message?: Prisma.AssistantMessageUpdateOneWithoutApprovalRequestsNestedInput
+  toolCall?: Prisma.ToolCallUpdateOneWithoutApprovalRequestsNestedInput
 }
 
 export type ApprovalRequestUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
   approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
@@ -441,9 +481,11 @@ export type ApprovalRequestUncheckedUpdateInput = {
 
 export type ApprovalRequestCreateManyInput = {
   id?: string
+  customerId: string
   requestId: string
   sessionId: string
   messageId?: string | null
+  toolCallId?: string | null
   requesterActorId: string
   approverActorId?: string | null
   riskLevel: $Enums.RiskLevel
@@ -479,9 +521,11 @@ export type ApprovalRequestUpdateManyMutationInput = {
 
 export type ApprovalRequestUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
   approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
@@ -507,11 +551,23 @@ export type ApprovalRequestOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type ApprovalRequestCustomerIdIdCompoundUniqueInput = {
+  customerId: string
+  id: string
+}
+
+export type ApprovalRequestCustomerIdIdempotencyKeyCompoundUniqueInput = {
+  customerId: string
+  idempotencyKey: string
+}
+
 export type ApprovalRequestCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
+  toolCallId?: Prisma.SortOrder
   requesterActorId?: Prisma.SortOrder
   approverActorId?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
@@ -529,9 +585,11 @@ export type ApprovalRequestCountOrderByAggregateInput = {
 
 export type ApprovalRequestMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
+  toolCallId?: Prisma.SortOrder
   requesterActorId?: Prisma.SortOrder
   approverActorId?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
@@ -545,9 +603,11 @@ export type ApprovalRequestMaxOrderByAggregateInput = {
 
 export type ApprovalRequestMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
+  toolCallId?: Prisma.SortOrder
   requesterActorId?: Prisma.SortOrder
   approverActorId?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
@@ -557,6 +617,48 @@ export type ApprovalRequestMinOrderByAggregateInput = {
   expiresAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   decidedAt?: Prisma.SortOrder
+}
+
+export type ApprovalRequestCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutCustomerInput, Prisma.ApprovalRequestUncheckedCreateWithoutCustomerInput> | Prisma.ApprovalRequestCreateWithoutCustomerInput[] | Prisma.ApprovalRequestUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.ApprovalRequestCreateOrConnectWithoutCustomerInput | Prisma.ApprovalRequestCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.ApprovalRequestCreateManyCustomerInputEnvelope
+  connect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+}
+
+export type ApprovalRequestUncheckedCreateNestedManyWithoutCustomerInput = {
+  create?: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutCustomerInput, Prisma.ApprovalRequestUncheckedCreateWithoutCustomerInput> | Prisma.ApprovalRequestCreateWithoutCustomerInput[] | Prisma.ApprovalRequestUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.ApprovalRequestCreateOrConnectWithoutCustomerInput | Prisma.ApprovalRequestCreateOrConnectWithoutCustomerInput[]
+  createMany?: Prisma.ApprovalRequestCreateManyCustomerInputEnvelope
+  connect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+}
+
+export type ApprovalRequestUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutCustomerInput, Prisma.ApprovalRequestUncheckedCreateWithoutCustomerInput> | Prisma.ApprovalRequestCreateWithoutCustomerInput[] | Prisma.ApprovalRequestUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.ApprovalRequestCreateOrConnectWithoutCustomerInput | Prisma.ApprovalRequestCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.ApprovalRequestUpsertWithWhereUniqueWithoutCustomerInput | Prisma.ApprovalRequestUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.ApprovalRequestCreateManyCustomerInputEnvelope
+  set?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  disconnect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  delete?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  connect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  update?: Prisma.ApprovalRequestUpdateWithWhereUniqueWithoutCustomerInput | Prisma.ApprovalRequestUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.ApprovalRequestUpdateManyWithWhereWithoutCustomerInput | Prisma.ApprovalRequestUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.ApprovalRequestScalarWhereInput | Prisma.ApprovalRequestScalarWhereInput[]
+}
+
+export type ApprovalRequestUncheckedUpdateManyWithoutCustomerNestedInput = {
+  create?: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutCustomerInput, Prisma.ApprovalRequestUncheckedCreateWithoutCustomerInput> | Prisma.ApprovalRequestCreateWithoutCustomerInput[] | Prisma.ApprovalRequestUncheckedCreateWithoutCustomerInput[]
+  connectOrCreate?: Prisma.ApprovalRequestCreateOrConnectWithoutCustomerInput | Prisma.ApprovalRequestCreateOrConnectWithoutCustomerInput[]
+  upsert?: Prisma.ApprovalRequestUpsertWithWhereUniqueWithoutCustomerInput | Prisma.ApprovalRequestUpsertWithWhereUniqueWithoutCustomerInput[]
+  createMany?: Prisma.ApprovalRequestCreateManyCustomerInputEnvelope
+  set?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  disconnect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  delete?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  connect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  update?: Prisma.ApprovalRequestUpdateWithWhereUniqueWithoutCustomerInput | Prisma.ApprovalRequestUpdateWithWhereUniqueWithoutCustomerInput[]
+  updateMany?: Prisma.ApprovalRequestUpdateManyWithWhereWithoutCustomerInput | Prisma.ApprovalRequestUpdateManyWithWhereWithoutCustomerInput[]
+  deleteMany?: Prisma.ApprovalRequestScalarWhereInput | Prisma.ApprovalRequestScalarWhereInput[]
 }
 
 export type ApprovalRequestCreateNestedManyWithoutSessionInput = {
@@ -643,6 +745,48 @@ export type ApprovalRequestUncheckedUpdateManyWithoutMessageNestedInput = {
   deleteMany?: Prisma.ApprovalRequestScalarWhereInput | Prisma.ApprovalRequestScalarWhereInput[]
 }
 
+export type ApprovalRequestCreateNestedManyWithoutToolCallInput = {
+  create?: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutToolCallInput, Prisma.ApprovalRequestUncheckedCreateWithoutToolCallInput> | Prisma.ApprovalRequestCreateWithoutToolCallInput[] | Prisma.ApprovalRequestUncheckedCreateWithoutToolCallInput[]
+  connectOrCreate?: Prisma.ApprovalRequestCreateOrConnectWithoutToolCallInput | Prisma.ApprovalRequestCreateOrConnectWithoutToolCallInput[]
+  createMany?: Prisma.ApprovalRequestCreateManyToolCallInputEnvelope
+  connect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+}
+
+export type ApprovalRequestUncheckedCreateNestedManyWithoutToolCallInput = {
+  create?: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutToolCallInput, Prisma.ApprovalRequestUncheckedCreateWithoutToolCallInput> | Prisma.ApprovalRequestCreateWithoutToolCallInput[] | Prisma.ApprovalRequestUncheckedCreateWithoutToolCallInput[]
+  connectOrCreate?: Prisma.ApprovalRequestCreateOrConnectWithoutToolCallInput | Prisma.ApprovalRequestCreateOrConnectWithoutToolCallInput[]
+  createMany?: Prisma.ApprovalRequestCreateManyToolCallInputEnvelope
+  connect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+}
+
+export type ApprovalRequestUpdateManyWithoutToolCallNestedInput = {
+  create?: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutToolCallInput, Prisma.ApprovalRequestUncheckedCreateWithoutToolCallInput> | Prisma.ApprovalRequestCreateWithoutToolCallInput[] | Prisma.ApprovalRequestUncheckedCreateWithoutToolCallInput[]
+  connectOrCreate?: Prisma.ApprovalRequestCreateOrConnectWithoutToolCallInput | Prisma.ApprovalRequestCreateOrConnectWithoutToolCallInput[]
+  upsert?: Prisma.ApprovalRequestUpsertWithWhereUniqueWithoutToolCallInput | Prisma.ApprovalRequestUpsertWithWhereUniqueWithoutToolCallInput[]
+  createMany?: Prisma.ApprovalRequestCreateManyToolCallInputEnvelope
+  set?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  disconnect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  delete?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  connect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  update?: Prisma.ApprovalRequestUpdateWithWhereUniqueWithoutToolCallInput | Prisma.ApprovalRequestUpdateWithWhereUniqueWithoutToolCallInput[]
+  updateMany?: Prisma.ApprovalRequestUpdateManyWithWhereWithoutToolCallInput | Prisma.ApprovalRequestUpdateManyWithWhereWithoutToolCallInput[]
+  deleteMany?: Prisma.ApprovalRequestScalarWhereInput | Prisma.ApprovalRequestScalarWhereInput[]
+}
+
+export type ApprovalRequestUncheckedUpdateManyWithoutToolCallNestedInput = {
+  create?: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutToolCallInput, Prisma.ApprovalRequestUncheckedCreateWithoutToolCallInput> | Prisma.ApprovalRequestCreateWithoutToolCallInput[] | Prisma.ApprovalRequestUncheckedCreateWithoutToolCallInput[]
+  connectOrCreate?: Prisma.ApprovalRequestCreateOrConnectWithoutToolCallInput | Prisma.ApprovalRequestCreateOrConnectWithoutToolCallInput[]
+  upsert?: Prisma.ApprovalRequestUpsertWithWhereUniqueWithoutToolCallInput | Prisma.ApprovalRequestUpsertWithWhereUniqueWithoutToolCallInput[]
+  createMany?: Prisma.ApprovalRequestCreateManyToolCallInputEnvelope
+  set?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  disconnect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  delete?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  connect?: Prisma.ApprovalRequestWhereUniqueInput | Prisma.ApprovalRequestWhereUniqueInput[]
+  update?: Prisma.ApprovalRequestUpdateWithWhereUniqueWithoutToolCallInput | Prisma.ApprovalRequestUpdateWithWhereUniqueWithoutToolCallInput[]
+  updateMany?: Prisma.ApprovalRequestUpdateManyWithWhereWithoutToolCallInput | Prisma.ApprovalRequestUpdateManyWithWhereWithoutToolCallInput[]
+  deleteMany?: Prisma.ApprovalRequestScalarWhereInput | Prisma.ApprovalRequestScalarWhereInput[]
+}
+
 export type ApprovalRequestCreateevidenceRefIdsInput = {
   set: string[]
 }
@@ -665,6 +809,99 @@ export type ApprovalRequestUpdateauditEventIdsInput = {
   push?: string | string[]
 }
 
+export type ApprovalRequestCreateWithoutCustomerInput = {
+  id?: string
+  requestId: string
+  requesterActorId: string
+  approverActorId?: string | null
+  riskLevel: $Enums.RiskLevel
+  status?: $Enums.ApprovalRequestStatus
+  actionSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestCreateevidenceRefIdsInput | string[]
+  decisionReason?: string | null
+  idempotencyKey?: string | null
+  auditEventIds?: Prisma.ApprovalRequestCreateauditEventIdsInput | string[]
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  decidedAt?: Date | string | null
+  session: Prisma.AssistantSessionCreateNestedOneWithoutApprovalRequestsInput
+  message?: Prisma.AssistantMessageCreateNestedOneWithoutApprovalRequestsInput
+  toolCall?: Prisma.ToolCallCreateNestedOneWithoutApprovalRequestsInput
+}
+
+export type ApprovalRequestUncheckedCreateWithoutCustomerInput = {
+  id?: string
+  requestId: string
+  sessionId: string
+  messageId?: string | null
+  toolCallId?: string | null
+  requesterActorId: string
+  approverActorId?: string | null
+  riskLevel: $Enums.RiskLevel
+  status?: $Enums.ApprovalRequestStatus
+  actionSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestCreateevidenceRefIdsInput | string[]
+  decisionReason?: string | null
+  idempotencyKey?: string | null
+  auditEventIds?: Prisma.ApprovalRequestCreateauditEventIdsInput | string[]
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  decidedAt?: Date | string | null
+}
+
+export type ApprovalRequestCreateOrConnectWithoutCustomerInput = {
+  where: Prisma.ApprovalRequestWhereUniqueInput
+  create: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutCustomerInput, Prisma.ApprovalRequestUncheckedCreateWithoutCustomerInput>
+}
+
+export type ApprovalRequestCreateManyCustomerInputEnvelope = {
+  data: Prisma.ApprovalRequestCreateManyCustomerInput | Prisma.ApprovalRequestCreateManyCustomerInput[]
+  skipDuplicates?: boolean
+}
+
+export type ApprovalRequestUpsertWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.ApprovalRequestWhereUniqueInput
+  update: Prisma.XOR<Prisma.ApprovalRequestUpdateWithoutCustomerInput, Prisma.ApprovalRequestUncheckedUpdateWithoutCustomerInput>
+  create: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutCustomerInput, Prisma.ApprovalRequestUncheckedCreateWithoutCustomerInput>
+}
+
+export type ApprovalRequestUpdateWithWhereUniqueWithoutCustomerInput = {
+  where: Prisma.ApprovalRequestWhereUniqueInput
+  data: Prisma.XOR<Prisma.ApprovalRequestUpdateWithoutCustomerInput, Prisma.ApprovalRequestUncheckedUpdateWithoutCustomerInput>
+}
+
+export type ApprovalRequestUpdateManyWithWhereWithoutCustomerInput = {
+  where: Prisma.ApprovalRequestScalarWhereInput
+  data: Prisma.XOR<Prisma.ApprovalRequestUpdateManyMutationInput, Prisma.ApprovalRequestUncheckedUpdateManyWithoutCustomerInput>
+}
+
+export type ApprovalRequestScalarWhereInput = {
+  AND?: Prisma.ApprovalRequestScalarWhereInput | Prisma.ApprovalRequestScalarWhereInput[]
+  OR?: Prisma.ApprovalRequestScalarWhereInput[]
+  NOT?: Prisma.ApprovalRequestScalarWhereInput | Prisma.ApprovalRequestScalarWhereInput[]
+  id?: Prisma.StringFilter<"ApprovalRequest"> | string
+  customerId?: Prisma.StringFilter<"ApprovalRequest"> | string
+  requestId?: Prisma.StringFilter<"ApprovalRequest"> | string
+  sessionId?: Prisma.StringFilter<"ApprovalRequest"> | string
+  messageId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
+  toolCallId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
+  requesterActorId?: Prisma.StringFilter<"ApprovalRequest"> | string
+  approverActorId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
+  riskLevel?: Prisma.EnumRiskLevelFilter<"ApprovalRequest"> | $Enums.RiskLevel
+  status?: Prisma.EnumApprovalRequestStatusFilter<"ApprovalRequest"> | $Enums.ApprovalRequestStatus
+  actionSummary?: Prisma.JsonFilter<"ApprovalRequest">
+  payloadSummary?: Prisma.JsonFilter<"ApprovalRequest">
+  evidenceRefIds?: Prisma.StringNullableListFilter<"ApprovalRequest">
+  decisionReason?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
+  idempotencyKey?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
+  auditEventIds?: Prisma.StringNullableListFilter<"ApprovalRequest">
+  expiresAt?: Prisma.DateTimeNullableFilter<"ApprovalRequest"> | Date | string | null
+  createdAt?: Prisma.DateTimeFilter<"ApprovalRequest"> | Date | string
+  decidedAt?: Prisma.DateTimeNullableFilter<"ApprovalRequest"> | Date | string | null
+}
+
 export type ApprovalRequestCreateWithoutSessionInput = {
   id?: string
   requestId: string
@@ -681,13 +918,16 @@ export type ApprovalRequestCreateWithoutSessionInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string
   decidedAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutApprovalRequestsInput
   message?: Prisma.AssistantMessageCreateNestedOneWithoutApprovalRequestsInput
+  toolCall?: Prisma.ToolCallCreateNestedOneWithoutApprovalRequestsInput
 }
 
 export type ApprovalRequestUncheckedCreateWithoutSessionInput = {
   id?: string
   requestId: string
   messageId?: string | null
+  toolCallId?: string | null
   requesterActorId: string
   approverActorId?: string | null
   riskLevel: $Enums.RiskLevel
@@ -729,29 +969,6 @@ export type ApprovalRequestUpdateManyWithWhereWithoutSessionInput = {
   data: Prisma.XOR<Prisma.ApprovalRequestUpdateManyMutationInput, Prisma.ApprovalRequestUncheckedUpdateManyWithoutSessionInput>
 }
 
-export type ApprovalRequestScalarWhereInput = {
-  AND?: Prisma.ApprovalRequestScalarWhereInput | Prisma.ApprovalRequestScalarWhereInput[]
-  OR?: Prisma.ApprovalRequestScalarWhereInput[]
-  NOT?: Prisma.ApprovalRequestScalarWhereInput | Prisma.ApprovalRequestScalarWhereInput[]
-  id?: Prisma.StringFilter<"ApprovalRequest"> | string
-  requestId?: Prisma.StringFilter<"ApprovalRequest"> | string
-  sessionId?: Prisma.StringFilter<"ApprovalRequest"> | string
-  messageId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
-  requesterActorId?: Prisma.StringFilter<"ApprovalRequest"> | string
-  approverActorId?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
-  riskLevel?: Prisma.EnumRiskLevelFilter<"ApprovalRequest"> | $Enums.RiskLevel
-  status?: Prisma.EnumApprovalRequestStatusFilter<"ApprovalRequest"> | $Enums.ApprovalRequestStatus
-  actionSummary?: Prisma.JsonFilter<"ApprovalRequest">
-  payloadSummary?: Prisma.JsonFilter<"ApprovalRequest">
-  evidenceRefIds?: Prisma.StringNullableListFilter<"ApprovalRequest">
-  decisionReason?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
-  idempotencyKey?: Prisma.StringNullableFilter<"ApprovalRequest"> | string | null
-  auditEventIds?: Prisma.StringNullableListFilter<"ApprovalRequest">
-  expiresAt?: Prisma.DateTimeNullableFilter<"ApprovalRequest"> | Date | string | null
-  createdAt?: Prisma.DateTimeFilter<"ApprovalRequest"> | Date | string
-  decidedAt?: Prisma.DateTimeNullableFilter<"ApprovalRequest"> | Date | string | null
-}
-
 export type ApprovalRequestCreateWithoutMessageInput = {
   id?: string
   requestId: string
@@ -768,13 +985,16 @@ export type ApprovalRequestCreateWithoutMessageInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string
   decidedAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutApprovalRequestsInput
   session: Prisma.AssistantSessionCreateNestedOneWithoutApprovalRequestsInput
+  toolCall?: Prisma.ToolCallCreateNestedOneWithoutApprovalRequestsInput
 }
 
 export type ApprovalRequestUncheckedCreateWithoutMessageInput = {
   id?: string
   requestId: string
   sessionId: string
+  toolCallId?: string | null
   requesterActorId: string
   approverActorId?: string | null
   riskLevel: $Enums.RiskLevel
@@ -816,10 +1036,162 @@ export type ApprovalRequestUpdateManyWithWhereWithoutMessageInput = {
   data: Prisma.XOR<Prisma.ApprovalRequestUpdateManyMutationInput, Prisma.ApprovalRequestUncheckedUpdateManyWithoutMessageInput>
 }
 
+export type ApprovalRequestCreateWithoutToolCallInput = {
+  id?: string
+  requestId: string
+  requesterActorId: string
+  approverActorId?: string | null
+  riskLevel: $Enums.RiskLevel
+  status?: $Enums.ApprovalRequestStatus
+  actionSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestCreateevidenceRefIdsInput | string[]
+  decisionReason?: string | null
+  idempotencyKey?: string | null
+  auditEventIds?: Prisma.ApprovalRequestCreateauditEventIdsInput | string[]
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  decidedAt?: Date | string | null
+  customer: Prisma.CustomerCreateNestedOneWithoutApprovalRequestsInput
+  session: Prisma.AssistantSessionCreateNestedOneWithoutApprovalRequestsInput
+  message?: Prisma.AssistantMessageCreateNestedOneWithoutApprovalRequestsInput
+}
+
+export type ApprovalRequestUncheckedCreateWithoutToolCallInput = {
+  id?: string
+  requestId: string
+  sessionId: string
+  messageId?: string | null
+  requesterActorId: string
+  approverActorId?: string | null
+  riskLevel: $Enums.RiskLevel
+  status?: $Enums.ApprovalRequestStatus
+  actionSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestCreateevidenceRefIdsInput | string[]
+  decisionReason?: string | null
+  idempotencyKey?: string | null
+  auditEventIds?: Prisma.ApprovalRequestCreateauditEventIdsInput | string[]
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  decidedAt?: Date | string | null
+}
+
+export type ApprovalRequestCreateOrConnectWithoutToolCallInput = {
+  where: Prisma.ApprovalRequestWhereUniqueInput
+  create: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutToolCallInput, Prisma.ApprovalRequestUncheckedCreateWithoutToolCallInput>
+}
+
+export type ApprovalRequestCreateManyToolCallInputEnvelope = {
+  data: Prisma.ApprovalRequestCreateManyToolCallInput | Prisma.ApprovalRequestCreateManyToolCallInput[]
+  skipDuplicates?: boolean
+}
+
+export type ApprovalRequestUpsertWithWhereUniqueWithoutToolCallInput = {
+  where: Prisma.ApprovalRequestWhereUniqueInput
+  update: Prisma.XOR<Prisma.ApprovalRequestUpdateWithoutToolCallInput, Prisma.ApprovalRequestUncheckedUpdateWithoutToolCallInput>
+  create: Prisma.XOR<Prisma.ApprovalRequestCreateWithoutToolCallInput, Prisma.ApprovalRequestUncheckedCreateWithoutToolCallInput>
+}
+
+export type ApprovalRequestUpdateWithWhereUniqueWithoutToolCallInput = {
+  where: Prisma.ApprovalRequestWhereUniqueInput
+  data: Prisma.XOR<Prisma.ApprovalRequestUpdateWithoutToolCallInput, Prisma.ApprovalRequestUncheckedUpdateWithoutToolCallInput>
+}
+
+export type ApprovalRequestUpdateManyWithWhereWithoutToolCallInput = {
+  where: Prisma.ApprovalRequestScalarWhereInput
+  data: Prisma.XOR<Prisma.ApprovalRequestUpdateManyMutationInput, Prisma.ApprovalRequestUncheckedUpdateManyWithoutToolCallInput>
+}
+
+export type ApprovalRequestCreateManyCustomerInput = {
+  id?: string
+  requestId: string
+  sessionId: string
+  messageId?: string | null
+  toolCallId?: string | null
+  requesterActorId: string
+  approverActorId?: string | null
+  riskLevel: $Enums.RiskLevel
+  status?: $Enums.ApprovalRequestStatus
+  actionSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestCreateevidenceRefIdsInput | string[]
+  decisionReason?: string | null
+  idempotencyKey?: string | null
+  auditEventIds?: Prisma.ApprovalRequestCreateauditEventIdsInput | string[]
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  decidedAt?: Date | string | null
+}
+
+export type ApprovalRequestUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
+  approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  status?: Prisma.EnumApprovalRequestStatusFieldUpdateOperationsInput | $Enums.ApprovalRequestStatus
+  actionSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestUpdateevidenceRefIdsInput | string[]
+  decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  auditEventIds?: Prisma.ApprovalRequestUpdateauditEventIdsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  session?: Prisma.AssistantSessionUpdateOneRequiredWithoutApprovalRequestsNestedInput
+  message?: Prisma.AssistantMessageUpdateOneWithoutApprovalRequestsNestedInput
+  toolCall?: Prisma.ToolCallUpdateOneWithoutApprovalRequestsNestedInput
+}
+
+export type ApprovalRequestUncheckedUpdateWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
+  approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  status?: Prisma.EnumApprovalRequestStatusFieldUpdateOperationsInput | $Enums.ApprovalRequestStatus
+  actionSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestUpdateevidenceRefIdsInput | string[]
+  decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  auditEventIds?: Prisma.ApprovalRequestUpdateauditEventIdsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type ApprovalRequestUncheckedUpdateManyWithoutCustomerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
+  approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  status?: Prisma.EnumApprovalRequestStatusFieldUpdateOperationsInput | $Enums.ApprovalRequestStatus
+  actionSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestUpdateevidenceRefIdsInput | string[]
+  decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  auditEventIds?: Prisma.ApprovalRequestUpdateauditEventIdsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
 export type ApprovalRequestCreateManySessionInput = {
   id?: string
   requestId: string
   messageId?: string | null
+  toolCallId?: string | null
   requesterActorId: string
   approverActorId?: string | null
   riskLevel: $Enums.RiskLevel
@@ -851,13 +1223,16 @@ export type ApprovalRequestUpdateWithoutSessionInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutApprovalRequestsNestedInput
   message?: Prisma.AssistantMessageUpdateOneWithoutApprovalRequestsNestedInput
+  toolCall?: Prisma.ToolCallUpdateOneWithoutApprovalRequestsNestedInput
 }
 
 export type ApprovalRequestUncheckedUpdateWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
   approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
@@ -877,6 +1252,7 @@ export type ApprovalRequestUncheckedUpdateManyWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
   approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
@@ -896,6 +1272,7 @@ export type ApprovalRequestCreateManyMessageInput = {
   id?: string
   requestId: string
   sessionId: string
+  toolCallId?: string | null
   requesterActorId: string
   approverActorId?: string | null
   riskLevel: $Enums.RiskLevel
@@ -927,13 +1304,16 @@ export type ApprovalRequestUpdateWithoutMessageInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutApprovalRequestsNestedInput
   session?: Prisma.AssistantSessionUpdateOneRequiredWithoutApprovalRequestsNestedInput
+  toolCall?: Prisma.ToolCallUpdateOneWithoutApprovalRequestsNestedInput
 }
 
 export type ApprovalRequestUncheckedUpdateWithoutMessageInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
   approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
@@ -953,6 +1333,88 @@ export type ApprovalRequestUncheckedUpdateManyWithoutMessageInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  toolCallId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
+  approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  status?: Prisma.EnumApprovalRequestStatusFieldUpdateOperationsInput | $Enums.ApprovalRequestStatus
+  actionSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestUpdateevidenceRefIdsInput | string[]
+  decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  auditEventIds?: Prisma.ApprovalRequestUpdateauditEventIdsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type ApprovalRequestCreateManyToolCallInput = {
+  id?: string
+  requestId: string
+  sessionId: string
+  messageId?: string | null
+  requesterActorId: string
+  approverActorId?: string | null
+  riskLevel: $Enums.RiskLevel
+  status?: $Enums.ApprovalRequestStatus
+  actionSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestCreateevidenceRefIdsInput | string[]
+  decisionReason?: string | null
+  idempotencyKey?: string | null
+  auditEventIds?: Prisma.ApprovalRequestCreateauditEventIdsInput | string[]
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  decidedAt?: Date | string | null
+}
+
+export type ApprovalRequestUpdateWithoutToolCallInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
+  approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  status?: Prisma.EnumApprovalRequestStatusFieldUpdateOperationsInput | $Enums.ApprovalRequestStatus
+  actionSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestUpdateevidenceRefIdsInput | string[]
+  decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  auditEventIds?: Prisma.ApprovalRequestUpdateauditEventIdsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutApprovalRequestsNestedInput
+  session?: Prisma.AssistantSessionUpdateOneRequiredWithoutApprovalRequestsNestedInput
+  message?: Prisma.AssistantMessageUpdateOneWithoutApprovalRequestsNestedInput
+}
+
+export type ApprovalRequestUncheckedUpdateWithoutToolCallInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
+  approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  status?: Prisma.EnumApprovalRequestStatusFieldUpdateOperationsInput | $Enums.ApprovalRequestStatus
+  actionSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  payloadSummary?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  evidenceRefIds?: Prisma.ApprovalRequestUpdateevidenceRefIdsInput | string[]
+  decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  auditEventIds?: Prisma.ApprovalRequestUpdateauditEventIdsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type ApprovalRequestUncheckedUpdateManyWithoutToolCallInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requesterActorId?: Prisma.StringFieldUpdateOperationsInput | string
   approverActorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
@@ -972,9 +1434,11 @@ export type ApprovalRequestUncheckedUpdateManyWithoutMessageInput = {
 
 export type ApprovalRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
+  toolCallId?: boolean
   requesterActorId?: boolean
   approverActorId?: boolean
   riskLevel?: boolean
@@ -988,15 +1452,19 @@ export type ApprovalRequestSelect<ExtArgs extends runtime.Types.Extensions.Inter
   expiresAt?: boolean
   createdAt?: boolean
   decidedAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ApprovalRequest$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ApprovalRequest$toolCallArgs<ExtArgs>
 }, ExtArgs["result"]["approvalRequest"]>
 
 export type ApprovalRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
+  toolCallId?: boolean
   requesterActorId?: boolean
   approverActorId?: boolean
   riskLevel?: boolean
@@ -1010,15 +1478,19 @@ export type ApprovalRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   expiresAt?: boolean
   createdAt?: boolean
   decidedAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ApprovalRequest$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ApprovalRequest$toolCallArgs<ExtArgs>
 }, ExtArgs["result"]["approvalRequest"]>
 
 export type ApprovalRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
+  toolCallId?: boolean
   requesterActorId?: boolean
   approverActorId?: boolean
   riskLevel?: boolean
@@ -1032,15 +1504,19 @@ export type ApprovalRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   expiresAt?: boolean
   createdAt?: boolean
   decidedAt?: boolean
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ApprovalRequest$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ApprovalRequest$toolCallArgs<ExtArgs>
 }, ExtArgs["result"]["approvalRequest"]>
 
 export type ApprovalRequestSelectScalar = {
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   sessionId?: boolean
   messageId?: boolean
+  toolCallId?: boolean
   requesterActorId?: boolean
   approverActorId?: boolean
   riskLevel?: boolean
@@ -1056,31 +1532,41 @@ export type ApprovalRequestSelectScalar = {
   decidedAt?: boolean
 }
 
-export type ApprovalRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "sessionId" | "messageId" | "requesterActorId" | "approverActorId" | "riskLevel" | "status" | "actionSummary" | "payloadSummary" | "evidenceRefIds" | "decisionReason" | "idempotencyKey" | "auditEventIds" | "expiresAt" | "createdAt" | "decidedAt", ExtArgs["result"]["approvalRequest"]>
+export type ApprovalRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "sessionId" | "messageId" | "toolCallId" | "requesterActorId" | "approverActorId" | "riskLevel" | "status" | "actionSummary" | "payloadSummary" | "evidenceRefIds" | "decisionReason" | "idempotencyKey" | "auditEventIds" | "expiresAt" | "createdAt" | "decidedAt", ExtArgs["result"]["approvalRequest"]>
 export type ApprovalRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ApprovalRequest$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ApprovalRequest$toolCallArgs<ExtArgs>
 }
 export type ApprovalRequestIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ApprovalRequest$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ApprovalRequest$toolCallArgs<ExtArgs>
 }
 export type ApprovalRequestIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
   message?: boolean | Prisma.ApprovalRequest$messageArgs<ExtArgs>
+  toolCall?: boolean | Prisma.ApprovalRequest$toolCallArgs<ExtArgs>
 }
 
 export type $ApprovalRequestPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ApprovalRequest"
   objects: {
+    customer: Prisma.$CustomerPayload<ExtArgs>
     session: Prisma.$AssistantSessionPayload<ExtArgs>
     message: Prisma.$AssistantMessagePayload<ExtArgs> | null
+    toolCall: Prisma.$ToolCallPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     requestId: string
     sessionId: string
     messageId: string | null
+    toolCallId: string | null
     requesterActorId: string
     approverActorId: string | null
     riskLevel: $Enums.RiskLevel
@@ -1488,8 +1974,10 @@ readonly fields: ApprovalRequestFieldRefs;
  */
 export interface Prisma__ApprovalRequestClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   session<T extends Prisma.AssistantSessionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AssistantSessionDefaultArgs<ExtArgs>>): Prisma.Prisma__AssistantSessionClient<runtime.Types.Result.GetResult<Prisma.$AssistantSessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   message<T extends Prisma.ApprovalRequest$messageArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ApprovalRequest$messageArgs<ExtArgs>>): Prisma.Prisma__AssistantMessageClient<runtime.Types.Result.GetResult<Prisma.$AssistantMessagePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  toolCall<T extends Prisma.ApprovalRequest$toolCallArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ApprovalRequest$toolCallArgs<ExtArgs>>): Prisma.Prisma__ToolCallClient<runtime.Types.Result.GetResult<Prisma.$ToolCallPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1520,9 +2008,11 @@ export interface Prisma__ApprovalRequestClient<T, Null = never, ExtArgs extends 
  */
 export interface ApprovalRequestFieldRefs {
   readonly id: Prisma.FieldRef<"ApprovalRequest", 'String'>
+  readonly customerId: Prisma.FieldRef<"ApprovalRequest", 'String'>
   readonly requestId: Prisma.FieldRef<"ApprovalRequest", 'String'>
   readonly sessionId: Prisma.FieldRef<"ApprovalRequest", 'String'>
   readonly messageId: Prisma.FieldRef<"ApprovalRequest", 'String'>
+  readonly toolCallId: Prisma.FieldRef<"ApprovalRequest", 'String'>
   readonly requesterActorId: Prisma.FieldRef<"ApprovalRequest", 'String'>
   readonly approverActorId: Prisma.FieldRef<"ApprovalRequest", 'String'>
   readonly riskLevel: Prisma.FieldRef<"ApprovalRequest", 'RiskLevel'>
@@ -1953,6 +2443,25 @@ export type ApprovalRequest$messageArgs<ExtArgs extends runtime.Types.Extensions
    */
   include?: Prisma.AssistantMessageInclude<ExtArgs> | null
   where?: Prisma.AssistantMessageWhereInput
+}
+
+/**
+ * ApprovalRequest.toolCall
+ */
+export type ApprovalRequest$toolCallArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ToolCall
+   */
+  select?: Prisma.ToolCallSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ToolCall
+   */
+  omit?: Prisma.ToolCallOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ToolCallInclude<ExtArgs> | null
+  where?: Prisma.ToolCallWhereInput
 }
 
 /**

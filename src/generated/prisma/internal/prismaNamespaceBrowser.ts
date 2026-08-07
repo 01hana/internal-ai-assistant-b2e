@@ -51,6 +51,7 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  Customer: 'Customer',
   AssistantSession: 'AssistantSession',
   AssistantMessage: 'AssistantMessage',
   AssistantContextState: 'AssistantContextState',
@@ -59,6 +60,7 @@ export const ModelName = {
   ClarificationQuestion: 'ClarificationQuestion',
   GroundingCheck: 'GroundingCheck',
   ToolDefinition: 'ToolDefinition',
+  CustomerToolPolicy: 'CustomerToolPolicy',
   ToolCall: 'ToolCall',
   EvidenceRef: 'EvidenceRef',
   AuditEvent: 'AuditEvent',
@@ -90,8 +92,16 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const CustomerScalarFieldEnum = {
+  id: 'id'
+} as const
+
+export type CustomerScalarFieldEnum = (typeof CustomerScalarFieldEnum)[keyof typeof CustomerScalarFieldEnum]
+
+
 export const AssistantSessionScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   hostApp: 'hostApp',
   organizationId: 'organizationId',
   actorId: 'actorId',
@@ -106,6 +116,7 @@ export type AssistantSessionScalarFieldEnum = (typeof AssistantSessionScalarFiel
 
 export const AssistantMessageScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   sessionId: 'sessionId',
   requestId: 'requestId',
   role: 'role',
@@ -120,6 +131,7 @@ export type AssistantMessageScalarFieldEnum = (typeof AssistantMessageScalarFiel
 
 export const AssistantContextStateScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   sessionId: 'sessionId',
   currentTask: 'currentTask',
   currentModule: 'currentModule',
@@ -142,6 +154,7 @@ export type AssistantContextStateScalarFieldEnum = (typeof AssistantContextState
 
 export const ExecutionPlanScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   sessionId: 'sessionId',
   messageId: 'messageId',
   taskType: 'taskType',
@@ -161,6 +174,7 @@ export type ExecutionPlanScalarFieldEnum = (typeof ExecutionPlanScalarFieldEnum)
 
 export const AnswerDecisionScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   status: 'status',
@@ -176,6 +190,7 @@ export type AnswerDecisionScalarFieldEnum = (typeof AnswerDecisionScalarFieldEnu
 
 export const ClarificationQuestionScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   question: 'question',
@@ -191,6 +206,7 @@ export type ClarificationQuestionScalarFieldEnum = (typeof ClarificationQuestion
 
 export const GroundingCheckScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   covered: 'covered',
@@ -229,8 +245,22 @@ export const ToolDefinitionScalarFieldEnum = {
 export type ToolDefinitionScalarFieldEnum = (typeof ToolDefinitionScalarFieldEnum)[keyof typeof ToolDefinitionScalarFieldEnum]
 
 
+export const CustomerToolPolicyScalarFieldEnum = {
+  customerId: 'customerId',
+  toolDefinitionId: 'toolDefinitionId',
+  enabled: 'enabled',
+  requiredRoles: 'requiredRoles',
+  requiredPermissionScopes: 'requiredPermissionScopes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CustomerToolPolicyScalarFieldEnum = (typeof CustomerToolPolicyScalarFieldEnum)[keyof typeof CustomerToolPolicyScalarFieldEnum]
+
+
 export const ToolCallScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   sessionId: 'sessionId',
   messageId: 'messageId',
@@ -254,6 +284,7 @@ export type ToolCallScalarFieldEnum = (typeof ToolCallScalarFieldEnum)[keyof typ
 
 export const EvidenceRefScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   sourceType: 'sourceType',
@@ -274,6 +305,7 @@ export type EvidenceRefScalarFieldEnum = (typeof EvidenceRefScalarFieldEnum)[key
 
 export const AuditEventScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   timestamp: 'timestamp',
   organizationId: 'organizationId',
@@ -296,6 +328,7 @@ export type AuditEventScalarFieldEnum = (typeof AuditEventScalarFieldEnum)[keyof
 
 export const FeedbackEventScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   rating: 'rating',
@@ -313,6 +346,7 @@ export type FeedbackEventScalarFieldEnum = (typeof FeedbackEventScalarFieldEnum)
 
 export const ReviewItemScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   sourceType: 'sourceType',
   sourceId: 'sourceId',
   status: 'status',
@@ -328,9 +362,11 @@ export type ReviewItemScalarFieldEnum = (typeof ReviewItemScalarFieldEnum)[keyof
 
 export const ApprovalRequestScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   sessionId: 'sessionId',
   messageId: 'messageId',
+  toolCallId: 'toolCallId',
   requesterActorId: 'requesterActorId',
   approverActorId: 'approverActorId',
   riskLevel: 'riskLevel',
@@ -351,9 +387,11 @@ export type ApprovalRequestScalarFieldEnum = (typeof ApprovalRequestScalarFieldE
 
 export const ActionDraftScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   sessionId: 'sessionId',
   messageId: 'messageId',
+  toolCallId: 'toolCallId',
   actorId: 'actorId',
   toolName: 'toolName',
   resource: 'resource',
@@ -374,6 +412,7 @@ export type ActionDraftScalarFieldEnum = (typeof ActionDraftScalarFieldEnum)[key
 
 export const EscalationRequestScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   sessionId: 'sessionId',
   messageId: 'messageId',
@@ -390,6 +429,7 @@ export type EscalationRequestScalarFieldEnum = (typeof EscalationRequestScalarFi
 
 export const QueryUnderstandingResultScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   sentences: 'sentences',
@@ -410,12 +450,16 @@ export type QueryUnderstandingResultScalarFieldEnum = (typeof QueryUnderstanding
 
 export const KnowledgeDocumentScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   title: 'title',
   sourceType: 'sourceType',
   sourceKey: 'sourceKey',
   version: 'version',
   language: 'language',
   status: 'status',
+  visibility: 'visibility',
+  organizationIds: 'organizationIds',
+  requiredPermissionScopes: 'requiredPermissionScopes',
   metadata: 'metadata',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -426,6 +470,7 @@ export type KnowledgeDocumentScalarFieldEnum = (typeof KnowledgeDocumentScalarFi
 
 export const KnowledgeChunkScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   documentId: 'documentId',
   chunkIndex: 'chunkIndex',
   heading: 'heading',
@@ -444,6 +489,7 @@ export type KnowledgeChunkScalarFieldEnum = (typeof KnowledgeChunkScalarFieldEnu
 
 export const RetrievalRunScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   requestId: 'requestId',
   messageId: 'messageId',
   query: 'query',
@@ -461,6 +507,7 @@ export type RetrievalRunScalarFieldEnum = (typeof RetrievalRunScalarFieldEnum)[k
 
 export const RetrievalCandidateScalarFieldEnum = {
   id: 'id',
+  customerId: 'customerId',
   retrievalRunId: 'retrievalRunId',
   chunkId: 'chunkId',
   sourceId: 'sourceId',

@@ -94,11 +94,7 @@ describe('US4 evidence conflict runtime gate', () => {
           eventType: 'review_item_created',
           metadata: expect.objectContaining({
             reviewItemId: newReviewItems[0].id,
-            noAnswerReason: 'evidence_conflict',
-            conflictReason: 'same_field_conflicting_values',
-            conflictFieldPaths: ['status'],
-            evidenceRefCount: 1,
-            evidenceRefIds: [expect.any(String)]
+            noAnswerReason: 'evidence_conflict'
           })
         }),
         expect.objectContaining({

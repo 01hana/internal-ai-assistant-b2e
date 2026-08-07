@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditWriterService } from '../../audit/audit-writer.service';
 import { Prisma, ToolCall } from '../../generated/prisma/client';
 import { RiskLevel, ToolCallStatus, ToolExecutionStatus } from '../../generated/prisma/enums';
@@ -9,7 +9,8 @@ import {
   CompleteToolCallInput,
   CreateToolCallInput,
   FailToolCallInput,
-  StartToolCallInput
+  StartToolCallInput,
+  VisibleToolCallInput
 } from './runtime.types';
 
 @Injectable()
@@ -20,8 +21,10 @@ export class ToolCallService {
   ) {}
 
   async startToolCall(input: StartToolCallInput): Promise<{ toolCall: ToolCall }> {
+    await this.assertCustomerParents(input);
     const toolCall = await this.prisma.db.toolCall.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         sessionId: input.sessionId,
         messageId: input.messageId,
@@ -59,17 +62,12 @@ export class ToolCallService {
   }
 
   async completeToolCall(input: CompleteToolCallInput): Promise<{ toolCall: ToolCall }> {
-    const toolCall = await this.prisma.db.toolCall.update({
-      where: {
-        id: input.toolCallId
-      },
-      data: {
+    const toolCall = await this.transition(input, {
         outputSummary: toJsonInput(input.sanitizedResult),
         status: ToolCallStatus.success,
         executionStatus: ToolExecutionStatus.executed,
         durationMs: input.durationMs ?? 1,
         executedAt: new Date()
-      }
     });
 
     await this.appendToolAudit(input, {
@@ -91,18 +89,13 @@ export class ToolCallService {
   }
 
   async failToolCall(input: FailToolCallInput): Promise<{ toolCall: ToolCall }> {
-    const toolCall = await this.prisma.db.toolCall.update({
-      where: {
-        id: input.toolCallId
-      },
-      data: {
+    const toolCall = await this.transition(input, {
         outputSummary: toJsonInput({}),
         status: ToolCallStatus.failed,
         executionStatus: ToolExecutionStatus.failed,
         durationMs: input.durationMs ?? 1,
         errorCode: input.errorCode,
         executedAt: new Date()
-      }
     });
 
     await this.appendToolAudit(input, {
@@ -123,8 +116,10 @@ export class ToolCallService {
   }
 
   async blockToolCall(input: BlockToolCallInput): Promise<{ toolCall: ToolCall }> {
+    await this.assertCustomerParents(input);
     const toolCall = await this.prisma.db.toolCall.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         sessionId: input.sessionId,
         messageId: input.messageId,
@@ -174,6 +169,15 @@ export class ToolCallService {
     return { toolCall };
   }
 
+  async getVisibleToolCall(input: VisibleToolCallInput): Promise<ToolCall> {
+    const where = this.visibleToolCallWhere(input);
+    const toolCall = await this.prisma.db.toolCall.findFirst({ where });
+    if (!toolCall || toolCall.customerId !== input.customerScope.customerId) {
+      throw new NotFoundException({ error: 'NOT_FOUND', message: 'Tool call not found.' });
+    }
+    return toolCall;
+  }
+
   private async appendToolAudit(
     input: StartToolCallInput | CompleteToolCallInput | FailToolCallInput | BlockToolCallInput,
     event: {
@@ -183,11 +187,9 @@ export class ToolCallService {
       metadata: Record<string, unknown>;
     }
   ) {
-    await this.auditWriter.append({
+    await this.auditWriter.appendCustomerToolEvent({
+      customerScope: input.customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId,
       toolCallId: event.toolCallId,
@@ -196,6 +198,32 @@ export class ToolCallService {
       durationMs: event.durationMs,
       metadata: toJsonInput(event.metadata)
     });
+  }
+
+  private async assertCustomerParents(input: StartToolCallInput | BlockToolCallInput): Promise<void> {
+    const scope = input.customerScope;
+    const session = await this.prisma.db.assistantSession.findFirst({ where: { customerId: scope.customerId, id: input.sessionId, organizationId: scope.organizationId, hostApp: scope.hostApp, actorId: scope.actorId } });
+    const message = await this.prisma.db.assistantMessage.findFirst({ where: { customerId: scope.customerId, id: input.messageId, sessionId: input.sessionId } });
+    if (!session || !message) throw new NotFoundException({ error: 'NOT_FOUND', message: 'Tool call context not found.' });
+  }
+
+  private async transition(input: CompleteToolCallInput | FailToolCallInput, data: Prisma.ToolCallUpdateManyMutationInput): Promise<ToolCall> {
+    const where = this.visibleToolCallWhere(input);
+    await this.getVisibleToolCall(input);
+    const updated = await this.prisma.db.toolCall.updateMany({ where, data });
+    if (updated.count !== 1) throw new NotFoundException({ error: 'NOT_FOUND', message: 'Tool call not found.' });
+    const toolCall = await this.prisma.db.toolCall.findFirst({ where });
+    if (!toolCall || toolCall.customerId !== input.customerScope.customerId) throw new NotFoundException({ error: 'NOT_FOUND', message: 'Tool call not found.' });
+    return toolCall;
+  }
+
+  private visibleToolCallWhere(input: VisibleToolCallInput) {
+    return {
+      customerId: input.customerScope.customerId,
+      id: input.toolCallId,
+      sessionId: input.sessionId,
+      messageId: input.messageId
+    };
   }
 }
 

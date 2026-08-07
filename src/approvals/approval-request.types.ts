@@ -3,8 +3,10 @@ import { ApprovalRequestStatus, RiskLevel, ToolOperation } from '../generated/pr
 import { PageContextDto } from '../assistant/page-context/page-context.dto';
 import { PersistedExecutionPlan } from '../assistant/planning/assistant-planning.types';
 import { RequestIdentityContext } from '../identity/identity-context.types';
+import { CustomerScope } from '../identity/customer-scope.types';
 
 export interface CreateApprovalRequestInput {
+  customerScope: CustomerScope;
   requestId: string;
   sessionId: string;
   messageId: string;
@@ -14,6 +16,7 @@ export interface CreateApprovalRequestInput {
 }
 
 export interface ApprovalRequestDecisionInput {
+  customerScope: CustomerScope;
   requestId: string;
   approvalRequestId: string;
   identityContext: RequestIdentityContext;
@@ -22,6 +25,7 @@ export interface ApprovalRequestDecisionInput {
 }
 
 export interface ListApprovalRequestsInput {
+  customerScope: CustomerScope;
   requestId: string;
   identityContext: RequestIdentityContext;
   filters: ApprovalRequestListFilters;

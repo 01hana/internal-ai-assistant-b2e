@@ -18,6 +18,7 @@ import {
   EscalationRequestResponse,
   ListEscalationRequestsInput
 } from './escalation-request.types';
+import { assertCustomerWorkflowCreateParents, assertCustomerWorkflowIdentityConsistency, workflowNotFound } from './customer-workflow-context';
 
 @Injectable()
 export class EscalationRequestService {
@@ -27,9 +28,13 @@ export class EscalationRequestService {
   ) {}
 
   async createForCriticalRisk(input: CreateEscalationRequestInput): Promise<EscalationRequestResponse> {
+    assertCustomerWorkflowIdentityConsistency(input.customerScope, input.identityContext);
+    await assertCustomerWorkflowCreateParents({ db: this.prisma.db, ...input });
     const summary = buildEscalationSummary(input);
-    const escalationRequest = await this.prisma.db.escalationRequest.create({
+    const escalationRequest = await this.prisma.db.$transaction(async (db) => {
+      const created = await db.escalationRequest.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         sessionId: input.sessionId,
         messageId: input.messageId,
@@ -38,28 +43,31 @@ export class EscalationRequestService {
         ownerType: EscalationOwnerType.approver,
         summary: toJsonInput(summary)
       }
-    });
-
-    await this.appendAudit({
+      });
+      await this.appendAudit({
       requestId: input.requestId,
       sessionId: input.sessionId,
       messageId: input.messageId,
-      identityContext: input.identityContext,
+      customerScope: input.customerScope,
       eventType: 'escalation_request_created',
-      metadata: buildEscalationAuditMetadata(escalationRequest)
+      metadata: buildEscalationAuditMetadata(created)
+      }, db);
+      return created;
     });
 
     return toEscalationRequestResponse(escalationRequest);
   }
 
   async getVisibleRequest(input: EscalationRequestDecisionInput): Promise<EscalationRequestResponse> {
-    const escalationRequest = await this.loadVisibleRequest(input.escalationRequestId, input.identityContext);
+    assertCustomerWorkflowIdentityConsistency(input.customerScope, input.identityContext);
+    const escalationRequest = await this.loadVisibleRequest(input.escalationRequestId, input.customerScope);
     return toEscalationRequestResponse(escalationRequest);
   }
 
   async listVisibleRequests(input: ListEscalationRequestsInput) {
+    assertCustomerWorkflowIdentityConsistency(input.customerScope, input.identityContext);
     const items = await this.prisma.db.escalationRequest.findMany({
-      where: buildListWhere(input.filters),
+      where: buildListWhere(input.customerScope, input.filters),
       orderBy: {
         createdAt: 'desc'
       }
@@ -69,14 +77,15 @@ export class EscalationRequestService {
       const session = await this.prisma.db.assistantSession.findFirst({
         where: {
           id: item.sessionId,
-          organizationId: input.identityContext.company.organizationId,
-          hostApp: input.identityContext.hostApp.hostApp,
-          actorId: extractSummaryString(item.summary, 'requesterActorId') ?? input.identityContext.actor.actorId
+          customerId: input.customerScope.customerId,
+          organizationId: input.customerScope.organizationId,
+          hostApp: input.customerScope.hostApp,
+          actorId: extractSummaryString(item.summary, 'requesterActorId') ?? input.customerScope.actorId
         }
       });
       if (
         session &&
-        isEscalationVisibleToActor(item.summary, input.identityContext) &&
+        isEscalationVisibleToActor(item.summary, input.customerScope) &&
         matchesListFilters(item, input.filters)
       ) {
         visibleItems.push(item);
@@ -90,46 +99,48 @@ export class EscalationRequestService {
   }
 
   async resolve(input: EscalationRequestDecisionInput): Promise<EscalationRequestResponse> {
-    const escalationRequest = await this.loadVisibleRequest(input.escalationRequestId, input.identityContext);
-    ensureActorCanManageEscalation(input.identityContext);
+    assertCustomerWorkflowIdentityConsistency(input.customerScope, input.identityContext);
+    const escalationRequest = await this.loadVisibleRequest(input.escalationRequestId, input.customerScope);
+    ensureActorCanManageEscalation(input.customerScope);
     ensureOpenAndFresh(escalationRequest, 'resolved');
 
-    const updated = await this.prisma.db.escalationRequest.update({
-      where: { id: escalationRequest.id },
-      data: {
+    const updated = await this.prisma.db.$transaction(async (database) => {
+      const transitioned = await this.transition(database, escalationRequest, input.customerScope, {
         status: EscalationStatus.resolved,
         resolvedAt: new Date(),
         summary: toJsonInput({
           ...toSummaryObject(escalationRequest.summary),
           status: EscalationStatus.resolved,
-          assignedActorId: input.identityContext.actor.actorId,
+          assignedActorId: input.customerScope.actorId,
           reasonProvided: Boolean(input.reason)
         })
-      }
-    });
+      });
 
-    await this.appendAudit({
-      requestId: input.requestId,
-      sessionId: updated.sessionId,
-      messageId: updated.messageId,
-      identityContext: input.identityContext,
-      eventType: 'escalation_request_resolved',
-      metadata: buildEscalationAuditMetadata(updated, { reasonProvided: Boolean(input.reason) })
+      await this.appendAudit({
+        requestId: input.requestId,
+        sessionId: transitioned.sessionId,
+        messageId: transitioned.messageId,
+        customerScope: input.customerScope,
+        eventType: 'escalation_request_resolved',
+        metadata: buildEscalationAuditMetadata(transitioned, { reasonProvided: Boolean(input.reason) })
+      }, database);
+
+      return transitioned;
     });
 
     return toEscalationRequestResponse(updated);
   }
 
   async cancel(input: EscalationRequestDecisionInput): Promise<EscalationRequestResponse> {
-    const escalationRequest = await this.loadVisibleRequest(input.escalationRequestId, input.identityContext);
-    if (!canCancelEscalation(escalationRequest.summary, input.identityContext)) {
+    assertCustomerWorkflowIdentityConsistency(input.customerScope, input.identityContext);
+    const escalationRequest = await this.loadVisibleRequest(input.escalationRequestId, input.customerScope);
+    if (!canCancelEscalation(escalationRequest.summary, input.customerScope)) {
       throw new ForbiddenException('Escalation request cannot be cancelled by this actor.');
     }
     ensureOpenAndFresh(escalationRequest, 'cancelled');
 
-    const updated = await this.prisma.db.escalationRequest.update({
-      where: { id: escalationRequest.id },
-      data: {
+    const updated = await this.prisma.db.$transaction(async (database) => {
+      const transitioned = await this.transition(database, escalationRequest, input.customerScope, {
         status: EscalationStatus.cancelled,
         resolvedAt: new Date(),
         summary: toJsonInput({
@@ -137,40 +148,43 @@ export class EscalationRequestService {
           status: EscalationStatus.cancelled,
           reasonProvided: Boolean(input.reason)
         })
-      }
-    });
+      });
 
-    await this.appendAudit({
-      requestId: input.requestId,
-      sessionId: updated.sessionId,
-      messageId: updated.messageId,
-      identityContext: input.identityContext,
-      eventType: 'escalation_request_cancelled',
-      metadata: buildEscalationAuditMetadata(updated, { reasonProvided: Boolean(input.reason) })
+      await this.appendAudit({
+        requestId: input.requestId,
+        sessionId: transitioned.sessionId,
+        messageId: transitioned.messageId,
+        customerScope: input.customerScope,
+        eventType: 'escalation_request_cancelled',
+        metadata: buildEscalationAuditMetadata(transitioned, { reasonProvided: Boolean(input.reason) })
+      }, database);
+
+      return transitioned;
     });
 
     return toEscalationRequestResponse(updated);
   }
 
-  private async loadVisibleRequest(escalationRequestId: string, identityContext: RequestIdentityContext) {
-    const escalationRequest = await this.prisma.db.escalationRequest.findUnique({
-      where: { id: escalationRequestId }
+  private async loadVisibleRequest(escalationRequestId: string, customerScope: EscalationRequestDecisionInput['customerScope']) {
+    const escalationRequest = await this.prisma.db.escalationRequest.findFirst({
+      where: { customerId: customerScope.customerId, id: escalationRequestId }
     });
     if (!escalationRequest) {
-      throw new NotFoundException('Escalation request not found.');
+      throw workflowNotFound();
     }
 
     const requesterActorId = extractSummaryString(escalationRequest.summary, 'requesterActorId');
     const session = await this.prisma.db.assistantSession.findFirst({
       where: {
         id: escalationRequest.sessionId,
-        organizationId: identityContext.company.organizationId,
-        hostApp: identityContext.hostApp.hostApp,
-        actorId: requesterActorId ?? identityContext.actor.actorId
+        customerId: customerScope.customerId,
+        organizationId: customerScope.organizationId,
+        hostApp: customerScope.hostApp,
+        actorId: requesterActorId ?? customerScope.actorId
       }
     });
-    if (!session || !isEscalationVisibleToActor(escalationRequest.summary, identityContext)) {
-      throw new NotFoundException('Escalation request not found.');
+    if (!session || !isEscalationVisibleToActor(escalationRequest.summary, customerScope)) {
+      throw workflowNotFound();
     }
 
     return escalationRequest;
@@ -180,21 +194,32 @@ export class EscalationRequestService {
     requestId: string;
     sessionId: string;
     messageId?: string | null;
-    identityContext: RequestIdentityContext;
+    customerScope: EscalationRequestDecisionInput['customerScope'];
     eventType: string;
     metadata: Prisma.InputJsonValue;
-  }) {
-    return this.auditWriter.append({
+  }, database?: Parameters<typeof this.auditWriter.appendCustomerWorkflowEvent>[1]) {
+    return this.auditWriter.appendCustomerWorkflowEvent({
+      customerScope: input.customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId ?? undefined,
       eventType: input.eventType,
       riskLevel: RiskLevel.critical,
       metadata: input.metadata
-    });
+    }, database);
+  }
+
+  private async transition(
+    database: Pick<Prisma.TransactionClient, 'escalationRequest'>,
+    request: { id: string; status: EscalationStatus },
+    customerScope: EscalationRequestDecisionInput['customerScope'],
+    data: Prisma.EscalationRequestUpdateManyMutationInput
+  ) {
+    const result = await database.escalationRequest.updateMany({ where: { customerId: customerScope.customerId, id: request.id, status: request.status }, data });
+    if (result.count !== 1) throw new ConflictException('Escalation request transition conflict.');
+    const updated = await database.escalationRequest.findFirst({ where: { customerId: customerScope.customerId, id: request.id } });
+    if (!updated) throw workflowNotFound();
+    return updated;
   }
 }
 
@@ -262,8 +287,9 @@ function buildEscalationAuditMetadata(
   });
 }
 
-function buildListWhere(filters: EscalationRequestListFilters) {
+function buildListWhere(customerScope: EscalationRequestDecisionInput['customerScope'], filters: EscalationRequestListFilters) {
   return {
+    customerId: customerScope.customerId,
     ...(filters.status ? { status: filters.status } : {})
   };
 }
@@ -294,29 +320,29 @@ function ensureOpenAndFresh(
   }
 }
 
-function ensureActorCanManageEscalation(identityContext: RequestIdentityContext) {
+function ensureActorCanManageEscalation(identityContext: EscalationRequestDecisionInput['customerScope']) {
   if (!hasEscalationManageAuthority(identityContext)) {
     throw new ForbiddenException('Escalation management permission is required.');
   }
 }
 
-function canCancelEscalation(summary: Prisma.JsonValue, identityContext: RequestIdentityContext) {
-  return extractSummaryString(summary, 'requesterActorId') === identityContext.actor.actorId || hasEscalationManageAuthority(identityContext);
+function canCancelEscalation(summary: Prisma.JsonValue, identityContext: EscalationRequestDecisionInput['customerScope']) {
+  return extractSummaryString(summary, 'requesterActorId') === identityContext.actorId || hasEscalationManageAuthority(identityContext);
 }
 
-function isEscalationVisibleToActor(summary: Prisma.JsonValue, identityContext: RequestIdentityContext) {
+function isEscalationVisibleToActor(summary: Prisma.JsonValue, identityContext: EscalationRequestDecisionInput['customerScope']) {
   return (
-    extractSummaryString(summary, 'requesterActorId') === identityContext.actor.actorId ||
-    extractSummaryString(summary, 'assignedActorId') === identityContext.actor.actorId ||
+    extractSummaryString(summary, 'requesterActorId') === identityContext.actorId ||
+    extractSummaryString(summary, 'assignedActorId') === identityContext.actorId ||
     hasEscalationManageAuthority(identityContext)
   );
 }
 
-export function hasEscalationManageAuthority(identityContext: RequestIdentityContext) {
+export function hasEscalationManageAuthority(identityContext: EscalationRequestDecisionInput['customerScope']) {
   return (
-    identityContext.actor.role === 'admin' ||
-    identityContext.actor.role === 'approver' ||
-    identityContext.actor.permissionScopes.some((scope) => scope === 'escalation:manage' || scope === 'orders:approve')
+    identityContext.roles.includes( 'admin' ) ||
+    identityContext.roles.includes( 'approver' ) ||
+    identityContext.permissionScopes.some((scope) => scope === 'escalation:manage' || scope === 'orders:approve')
   );
 }
 

@@ -29,8 +29,8 @@ export * from "./enums"
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more AssistantSessions
- * const assistantSessions = await prisma.assistantSession.findMany()
+ * // Fetch zero or more Customers
+ * const customers = await prisma.customer.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -39,6 +39,11 @@ export const PrismaClient = $Class.getPrismaClientClass()
 export type PrismaClient<LogOpts extends Prisma.LogLevel = never, OmitOpts extends Prisma.PrismaClientOptions["omit"] = Prisma.PrismaClientOptions["omit"], ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = $Class.PrismaClient<LogOpts, OmitOpts, ExtArgs>
 export { Prisma }
 
+/**
+ * Model Customer
+ * 
+ */
+export type Customer = Prisma.CustomerModel
 /**
  * Model AssistantSession
  * 
@@ -79,6 +84,11 @@ export type GroundingCheck = Prisma.GroundingCheckModel
  * 
  */
 export type ToolDefinition = Prisma.ToolDefinitionModel
+/**
+ * Model CustomerToolPolicy
+ * 
+ */
+export type CustomerToolPolicy = Prisma.CustomerToolPolicyModel
 /**
  * Model ToolCall
  * 

@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
 describe('US3 medium-risk action draft confirmation baseline', () => {
   let app: INestApplication;
@@ -23,9 +24,9 @@ describe('US3 medium-risk action draft confirmation baseline', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-action-draft-create',
-          'x-permission-scopes': 'orders:read,orders:update'
+        createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+          claims: { permission_scopes: ['orders:read', 'orders:update'] },
+          requestId: 'req-us3-action-draft-create'
         })
       )
       .send({
@@ -59,12 +60,22 @@ describe('US3 medium-risk action draft confirmation baseline', () => {
     );
     expect(newToolCalls).toHaveLength(0);
     const createdDraft = state.actionDrafts.find((draft) => draft.id === finalEvent?.data?.data?.actionDraftId);
+    const executionPlan = state.executionPlans.at(-1);
+    const planningMessage = state.messages.find((message) => message.id === executionPlan?.messageId);
+    const workflowMessage = state.messages.find((message) => message.id === createdDraft?.messageId);
     expect(createdDraft).toEqual(
       expect.objectContaining({
+        customerId: 'customer-a',
+        messageId: expect.any(String),
+        actorId: 'actor-shared',
         operation: 'update',
         riskLevel: 'medium'
       })
     );
+    expect(executionPlan).toEqual(expect.objectContaining({ customerId: 'customer-a', sessionId: 'session-owned-001' }));
+    expect(planningMessage).toEqual(expect.objectContaining({ role: 'user', customerId: 'customer-a' }));
+    expect(workflowMessage).toEqual(expect.objectContaining({ role: 'assistant', customerId: 'customer-a' }));
+    expect(executionPlan?.messageId).not.toBe(createdDraft?.messageId);
     expect(createdDraft?.payloadSummary).toEqual(
       expect.objectContaining({
         toolContract: expect.objectContaining({
@@ -82,7 +93,10 @@ describe('US3 medium-risk action draft confirmation baseline', () => {
     expect(newAuditEvents).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          eventType: 'action_draft_created'
+          eventType: 'action_draft_created',
+          customerId: 'customer-a',
+          sessionId: 'session-owned-001',
+          messageId: createdDraft?.messageId
         })
       ])
     );
@@ -93,9 +107,9 @@ describe('US3 medium-risk action draft confirmation baseline', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-action-draft-recheck',
-          'x-permission-scopes': 'orders:read,orders:update'
+        createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+          claims: { permission_scopes: ['orders:read', 'orders:update'] },
+          requestId: 'req-us3-action-draft-recheck'
         })
       )
       .send({

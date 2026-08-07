@@ -38,6 +38,7 @@ export type GroundingCheckSumAggregateOutputType = {
 
 export type GroundingCheckMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   covered: boolean | null
@@ -48,6 +49,7 @@ export type GroundingCheckMinAggregateOutputType = {
 
 export type GroundingCheckMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   covered: boolean | null
@@ -58,6 +60,7 @@ export type GroundingCheckMaxAggregateOutputType = {
 
 export type GroundingCheckCountAggregateOutputType = {
   id: number
+  customerId: number
   requestId: number
   messageId: number
   covered: number
@@ -82,6 +85,7 @@ export type GroundingCheckSumAggregateInputType = {
 
 export type GroundingCheckMinAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   covered?: true
@@ -92,6 +96,7 @@ export type GroundingCheckMinAggregateInputType = {
 
 export type GroundingCheckMaxAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   covered?: true
@@ -102,6 +107,7 @@ export type GroundingCheckMaxAggregateInputType = {
 
 export type GroundingCheckCountAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   covered?: true
@@ -201,6 +207,7 @@ export type GroundingCheckGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 
 export type GroundingCheckGroupByOutputType = {
   id: string
+  customerId: string
   requestId: string
   messageId: string
   covered: boolean
@@ -236,6 +243,7 @@ export type GroundingCheckWhereInput = {
   OR?: Prisma.GroundingCheckWhereInput[]
   NOT?: Prisma.GroundingCheckWhereInput | Prisma.GroundingCheckWhereInput[]
   id?: Prisma.StringFilter<"GroundingCheck"> | string
+  customerId?: Prisma.StringFilter<"GroundingCheck"> | string
   requestId?: Prisma.StringFilter<"GroundingCheck"> | string
   messageId?: Prisma.StringFilter<"GroundingCheck"> | string
   covered?: Prisma.BoolFilter<"GroundingCheck"> | boolean
@@ -250,6 +258,7 @@ export type GroundingCheckWhereInput = {
 
 export type GroundingCheckOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   covered?: Prisma.SortOrder
@@ -267,6 +276,7 @@ export type GroundingCheckWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.GroundingCheckWhereInput | Prisma.GroundingCheckWhereInput[]
   OR?: Prisma.GroundingCheckWhereInput[]
   NOT?: Prisma.GroundingCheckWhereInput | Prisma.GroundingCheckWhereInput[]
+  customerId?: Prisma.StringFilter<"GroundingCheck"> | string
   requestId?: Prisma.StringFilter<"GroundingCheck"> | string
   messageId?: Prisma.StringFilter<"GroundingCheck"> | string
   covered?: Prisma.BoolFilter<"GroundingCheck"> | boolean
@@ -281,6 +291,7 @@ export type GroundingCheckWhereUniqueInput = Prisma.AtLeast<{
 
 export type GroundingCheckOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   covered?: Prisma.SortOrder
@@ -301,6 +312,7 @@ export type GroundingCheckScalarWhereWithAggregatesInput = {
   OR?: Prisma.GroundingCheckScalarWhereWithAggregatesInput[]
   NOT?: Prisma.GroundingCheckScalarWhereWithAggregatesInput | Prisma.GroundingCheckScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"GroundingCheck"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"GroundingCheck"> | string
   requestId?: Prisma.StringWithAggregatesFilter<"GroundingCheck"> | string
   messageId?: Prisma.StringWithAggregatesFilter<"GroundingCheck"> | string
   covered?: Prisma.BoolWithAggregatesFilter<"GroundingCheck"> | boolean
@@ -326,6 +338,7 @@ export type GroundingCheckCreateInput = {
 
 export type GroundingCheckUncheckedCreateInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   covered: boolean
@@ -352,6 +365,7 @@ export type GroundingCheckUpdateInput = {
 
 export type GroundingCheckUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   covered?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -365,6 +379,7 @@ export type GroundingCheckUncheckedUpdateInput = {
 
 export type GroundingCheckCreateManyInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   covered: boolean
@@ -388,6 +403,7 @@ export type GroundingCheckUpdateManyMutationInput = {
 
 export type GroundingCheckUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   covered?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -415,6 +431,7 @@ export type GroundingCheckNullableScalarRelationFilter = {
 
 export type GroundingCheckCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   covered?: Prisma.SortOrder
@@ -432,6 +449,7 @@ export type GroundingCheckAvgOrderByAggregateInput = {
 
 export type GroundingCheckMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   covered?: Prisma.SortOrder
@@ -442,6 +460,7 @@ export type GroundingCheckMaxOrderByAggregateInput = {
 
 export type GroundingCheckMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   covered?: Prisma.SortOrder
@@ -585,6 +604,7 @@ export type GroundingCheckScalarWhereInput = {
   OR?: Prisma.GroundingCheckScalarWhereInput[]
   NOT?: Prisma.GroundingCheckScalarWhereInput | Prisma.GroundingCheckScalarWhereInput[]
   id?: Prisma.StringFilter<"GroundingCheck"> | string
+  customerId?: Prisma.StringFilter<"GroundingCheck"> | string
   requestId?: Prisma.StringFilter<"GroundingCheck"> | string
   messageId?: Prisma.StringFilter<"GroundingCheck"> | string
   covered?: Prisma.BoolFilter<"GroundingCheck"> | boolean
@@ -609,6 +629,7 @@ export type GroundingCheckCreateWithoutAnswerDecisionsInput = {
 
 export type GroundingCheckUncheckedCreateWithoutAnswerDecisionsInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   covered: boolean
@@ -649,6 +670,7 @@ export type GroundingCheckUpdateWithoutAnswerDecisionsInput = {
 
 export type GroundingCheckUncheckedUpdateWithoutAnswerDecisionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   covered?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -738,6 +760,7 @@ export type GroundingCheckCountOutputTypeCountAnswerDecisionsArgs<ExtArgs extend
 
 export type GroundingCheckSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   covered?: boolean
@@ -753,6 +776,7 @@ export type GroundingCheckSelect<ExtArgs extends runtime.Types.Extensions.Intern
 
 export type GroundingCheckSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   covered?: boolean
@@ -766,6 +790,7 @@ export type GroundingCheckSelectCreateManyAndReturn<ExtArgs extends runtime.Type
 
 export type GroundingCheckSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   covered?: boolean
@@ -779,6 +804,7 @@ export type GroundingCheckSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
 
 export type GroundingCheckSelectScalar = {
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   covered?: boolean
@@ -789,7 +815,7 @@ export type GroundingCheckSelectScalar = {
   createdAt?: boolean
 }
 
-export type GroundingCheckOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "messageId" | "covered" | "checkedClaimCount" | "unsupportedClaimCount" | "evidenceRefIds" | "metadata" | "createdAt", ExtArgs["result"]["groundingCheck"]>
+export type GroundingCheckOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "messageId" | "covered" | "checkedClaimCount" | "unsupportedClaimCount" | "evidenceRefIds" | "metadata" | "createdAt", ExtArgs["result"]["groundingCheck"]>
 export type GroundingCheckInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
   answerDecisions?: boolean | Prisma.GroundingCheck$answerDecisionsArgs<ExtArgs>
@@ -810,6 +836,7 @@ export type $GroundingCheckPayload<ExtArgs extends runtime.Types.Extensions.Inte
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     requestId: string
     messageId: string
     covered: boolean
@@ -1244,6 +1271,7 @@ export interface Prisma__GroundingCheckClient<T, Null = never, ExtArgs extends r
  */
 export interface GroundingCheckFieldRefs {
   readonly id: Prisma.FieldRef<"GroundingCheck", 'String'>
+  readonly customerId: Prisma.FieldRef<"GroundingCheck", 'String'>
   readonly requestId: Prisma.FieldRef<"GroundingCheck", 'String'>
   readonly messageId: Prisma.FieldRef<"GroundingCheck", 'String'>
   readonly covered: Prisma.FieldRef<"GroundingCheck", 'Boolean'>

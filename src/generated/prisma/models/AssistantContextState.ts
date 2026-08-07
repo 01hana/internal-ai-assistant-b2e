@@ -26,6 +26,7 @@ export type AggregateAssistantContextState = {
 
 export type AssistantContextStateMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   sessionId: string | null
   currentTask: string | null
   currentModule: string | null
@@ -40,6 +41,7 @@ export type AssistantContextStateMinAggregateOutputType = {
 
 export type AssistantContextStateMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   sessionId: string | null
   currentTask: string | null
   currentModule: string | null
@@ -54,6 +56,7 @@ export type AssistantContextStateMaxAggregateOutputType = {
 
 export type AssistantContextStateCountAggregateOutputType = {
   id: number
+  customerId: number
   sessionId: number
   currentTask: number
   currentModule: number
@@ -75,6 +78,7 @@ export type AssistantContextStateCountAggregateOutputType = {
 
 export type AssistantContextStateMinAggregateInputType = {
   id?: true
+  customerId?: true
   sessionId?: true
   currentTask?: true
   currentModule?: true
@@ -89,6 +93,7 @@ export type AssistantContextStateMinAggregateInputType = {
 
 export type AssistantContextStateMaxAggregateInputType = {
   id?: true
+  customerId?: true
   sessionId?: true
   currentTask?: true
   currentModule?: true
@@ -103,6 +108,7 @@ export type AssistantContextStateMaxAggregateInputType = {
 
 export type AssistantContextStateCountAggregateInputType = {
   id?: true
+  customerId?: true
   sessionId?: true
   currentTask?: true
   currentModule?: true
@@ -195,6 +201,7 @@ export type AssistantContextStateGroupByArgs<ExtArgs extends runtime.Types.Exten
 
 export type AssistantContextStateGroupByOutputType = {
   id: string
+  customerId: string
   sessionId: string
   currentTask: string | null
   currentModule: string | null
@@ -235,6 +242,7 @@ export type AssistantContextStateWhereInput = {
   OR?: Prisma.AssistantContextStateWhereInput[]
   NOT?: Prisma.AssistantContextStateWhereInput | Prisma.AssistantContextStateWhereInput[]
   id?: Prisma.StringFilter<"AssistantContextState"> | string
+  customerId?: Prisma.StringFilter<"AssistantContextState"> | string
   sessionId?: Prisma.StringFilter<"AssistantContextState"> | string
   currentTask?: Prisma.StringNullableFilter<"AssistantContextState"> | string | null
   currentModule?: Prisma.StringNullableFilter<"AssistantContextState"> | string | null
@@ -255,6 +263,7 @@ export type AssistantContextStateWhereInput = {
 
 export type AssistantContextStateOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   currentTask?: Prisma.SortOrderInput | Prisma.SortOrder
   currentModule?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -278,6 +287,7 @@ export type AssistantContextStateWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.AssistantContextStateWhereInput | Prisma.AssistantContextStateWhereInput[]
   OR?: Prisma.AssistantContextStateWhereInput[]
   NOT?: Prisma.AssistantContextStateWhereInput | Prisma.AssistantContextStateWhereInput[]
+  customerId?: Prisma.StringFilter<"AssistantContextState"> | string
   sessionId?: Prisma.StringFilter<"AssistantContextState"> | string
   currentTask?: Prisma.StringNullableFilter<"AssistantContextState"> | string | null
   currentModule?: Prisma.StringNullableFilter<"AssistantContextState"> | string | null
@@ -298,6 +308,7 @@ export type AssistantContextStateWhereUniqueInput = Prisma.AtLeast<{
 
 export type AssistantContextStateOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   currentTask?: Prisma.SortOrderInput | Prisma.SortOrder
   currentModule?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -323,6 +334,7 @@ export type AssistantContextStateScalarWhereWithAggregatesInput = {
   OR?: Prisma.AssistantContextStateScalarWhereWithAggregatesInput[]
   NOT?: Prisma.AssistantContextStateScalarWhereWithAggregatesInput | Prisma.AssistantContextStateScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"AssistantContextState"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"AssistantContextState"> | string
   sessionId?: Prisma.StringWithAggregatesFilter<"AssistantContextState"> | string
   currentTask?: Prisma.StringNullableWithAggregatesFilter<"AssistantContextState"> | string | null
   currentModule?: Prisma.StringNullableWithAggregatesFilter<"AssistantContextState"> | string | null
@@ -361,6 +373,7 @@ export type AssistantContextStateCreateInput = {
 
 export type AssistantContextStateUncheckedCreateInput = {
   id?: string
+  customerId: string
   sessionId: string
   currentTask?: string | null
   currentModule?: string | null
@@ -399,6 +412,7 @@ export type AssistantContextStateUpdateInput = {
 
 export type AssistantContextStateUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   currentTask?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentModule?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -418,6 +432,7 @@ export type AssistantContextStateUncheckedUpdateInput = {
 
 export type AssistantContextStateCreateManyInput = {
   id?: string
+  customerId: string
   sessionId: string
   currentTask?: string | null
   currentModule?: string | null
@@ -455,6 +470,7 @@ export type AssistantContextStateUpdateManyMutationInput = {
 
 export type AssistantContextStateUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   currentTask?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentModule?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -492,6 +508,7 @@ export type StringNullableListFilter<$PrismaModel = never> = {
 
 export type AssistantContextStateCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   currentTask?: Prisma.SortOrder
   currentModule?: Prisma.SortOrder
@@ -511,6 +528,7 @@ export type AssistantContextStateCountOrderByAggregateInput = {
 
 export type AssistantContextStateMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   currentTask?: Prisma.SortOrder
   currentModule?: Prisma.SortOrder
@@ -525,6 +543,7 @@ export type AssistantContextStateMaxOrderByAggregateInput = {
 
 export type AssistantContextStateMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   currentTask?: Prisma.SortOrder
   currentModule?: Prisma.SortOrder
@@ -672,6 +691,7 @@ export type AssistantContextStateScalarWhereInput = {
   OR?: Prisma.AssistantContextStateScalarWhereInput[]
   NOT?: Prisma.AssistantContextStateScalarWhereInput | Prisma.AssistantContextStateScalarWhereInput[]
   id?: Prisma.StringFilter<"AssistantContextState"> | string
+  customerId?: Prisma.StringFilter<"AssistantContextState"> | string
   sessionId?: Prisma.StringFilter<"AssistantContextState"> | string
   currentTask?: Prisma.StringNullableFilter<"AssistantContextState"> | string | null
   currentModule?: Prisma.StringNullableFilter<"AssistantContextState"> | string | null
@@ -765,6 +785,7 @@ export type AssistantContextStateUncheckedUpdateManyWithoutSessionInput = {
 
 export type AssistantContextStateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   currentTask?: boolean
   currentModule?: boolean
@@ -785,6 +806,7 @@ export type AssistantContextStateSelect<ExtArgs extends runtime.Types.Extensions
 
 export type AssistantContextStateSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   currentTask?: boolean
   currentModule?: boolean
@@ -805,6 +827,7 @@ export type AssistantContextStateSelectCreateManyAndReturn<ExtArgs extends runti
 
 export type AssistantContextStateSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   currentTask?: boolean
   currentModule?: boolean
@@ -825,6 +848,7 @@ export type AssistantContextStateSelectUpdateManyAndReturn<ExtArgs extends runti
 
 export type AssistantContextStateSelectScalar = {
   id?: boolean
+  customerId?: boolean
   sessionId?: boolean
   currentTask?: boolean
   currentModule?: boolean
@@ -842,7 +866,7 @@ export type AssistantContextStateSelectScalar = {
   createdAt?: boolean
 }
 
-export type AssistantContextStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "sessionId" | "currentTask" | "currentModule" | "currentPage" | "currentEntityType" | "currentEntityId" | "lastIntent" | "lastEntities" | "lastToolCallIds" | "lastEvidenceRefIds" | "pendingClarification" | "pendingApprovalRequestId" | "taskState" | "updatedAt" | "createdAt", ExtArgs["result"]["assistantContextState"]>
+export type AssistantContextStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "sessionId" | "currentTask" | "currentModule" | "currentPage" | "currentEntityType" | "currentEntityId" | "lastIntent" | "lastEntities" | "lastToolCallIds" | "lastEvidenceRefIds" | "pendingClarification" | "pendingApprovalRequestId" | "taskState" | "updatedAt" | "createdAt", ExtArgs["result"]["assistantContextState"]>
 export type AssistantContextStateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   session?: boolean | Prisma.AssistantSessionDefaultArgs<ExtArgs>
 }
@@ -860,6 +884,7 @@ export type $AssistantContextStatePayload<ExtArgs extends runtime.Types.Extensio
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     sessionId: string
     currentTask: string | null
     currentModule: string | null
@@ -1300,6 +1325,7 @@ export interface Prisma__AssistantContextStateClient<T, Null = never, ExtArgs ex
  */
 export interface AssistantContextStateFieldRefs {
   readonly id: Prisma.FieldRef<"AssistantContextState", 'String'>
+  readonly customerId: Prisma.FieldRef<"AssistantContextState", 'String'>
   readonly sessionId: Prisma.FieldRef<"AssistantContextState", 'String'>
   readonly currentTask: Prisma.FieldRef<"AssistantContextState", 'String'>
   readonly currentModule: Prisma.FieldRef<"AssistantContextState", 'String'>

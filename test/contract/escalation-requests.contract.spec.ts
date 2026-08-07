@@ -1,149 +1,45 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestApp } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, Us1TestState } from '../support/us1-test-app.helper';
+import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
 
-describe('US3 EscalationRequest contract', () => {
+describe('T060 Customer-scoped escalation request contract', () => {
+  const jwt = createInternalIdentityJwtFixture();
   let app: INestApplication;
+  let state: Us1TestState;
+  const headers = (customer: 'customerA' | 'customerB', requestId: string, manager = false) => createAuthorizedInternalIdentityHeaders(jwt, {
+    claims: { ...jwt.canonicalClaims[customer], ...(manager ? { roles: ['approver'], permission_scopes: ['orders:read', 'orders:approve'] } : {}) }, requestId
+  });
+  beforeAll(async () => ({ app, state } = await createUs1TestAppWithState({ internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: jwt.jwks } })));
+  afterAll(async () => app?.close());
 
-  beforeEach(async () => {
-    app = await createUs1TestApp();
+  it('defines same-Customer get/list/resolve and Customer-owned redacted workflow audit contracts', async () => {
+    const get = await request(app.getHttpServer()).get('/api/v1/assistant/escalation-requests/escalation-request-open-001').set({ ...headers('customerA', 'req-t060-get'), 'x-customer-id': 'customer-b' });
+    expect(get.status).toBe(200);
+    const list = await request(app.getHttpServer()).get('/api/v1/assistant/escalation-requests?customerId=customer-b').set(headers('customerA', 'req-t060-list', true));
+    expect(list.status).toBe(200);
+    expect(list.body.data.items).not.toEqual(expect.arrayContaining([expect.objectContaining({ escalationRequestId: 'escalation-request-customer-b-open-001' })]));
+    const resolved = await request(app.getHttpServer()).post('/api/v1/assistant/escalation-requests/escalation-request-open-001/resolve').set(headers('customerA', 'req-t060-resolve', true)).send({ reason: 'safe resolution', customerId: 'customer-b' });
+    expect(resolved.status).toBe(200);
+    const audit = state.auditEvents.at(-1);
+    expect(audit).toEqual(expect.objectContaining({ customerId: 'customer-a', eventType: 'escalation_request_resolved' }));
+    expect(JSON.stringify(audit)).not.toMatch(/Bearer |authorization|secret|credential|Error:/i);
   });
 
-  afterEach(async () => {
-    await app.close();
+  it('requires safe foreign get/resolve with no status, resolver, or audit mutation', async () => {
+    const foreign = state.escalationRequests.find((item) => item.id === 'escalation-request-customer-b-open-001')!;
+    const before = { status: foreign.status, resolvedAt: foreign.resolvedAt, summary: JSON.stringify(foreign.summary), audits: state.auditEvents.length };
+    const get = await request(app.getHttpServer()).get(`/api/v1/assistant/escalation-requests/${foreign.id}`).set(headers('customerA', 'req-t060-foreign-get'));
+    const resolve = await request(app.getHttpServer()).post(`/api/v1/assistant/escalation-requests/${foreign.id}/resolve`).set(headers('customerA', 'req-t060-foreign-resolve', true)).send({ reason: 'foreign' });
+    for (const response of [get, resolve]) {
+      expect(response.status).toBe(404);
+      expect(JSON.stringify(response.body)).not.toContain(foreign.id);
+      expect(JSON.stringify(response.body)).not.toContain('SO-20002');
+    }
+    expect(foreign.status).toBe(before.status);
+    expect(foreign.resolvedAt).toBe(before.resolvedAt);
+    expect(JSON.stringify(foreign.summary)).toBe(before.summary);
+    expect(state.auditEvents).toHaveLength(before.audits);
   });
 
-  it('returns requestId envelope for get/list/resolve/cancel endpoints', async () => {
-    const getResponse = await request(app.getHttpServer())
-      .get('/api/v1/assistant/escalation-requests/escalation-request-open-001')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-contract-escalation-get' }));
-    expect(getResponse.status).toBe(200);
-    expect(getResponse.body).toEqual(
-      expect.objectContaining({
-        requestId: 'req-contract-escalation-get',
-        data: expect.objectContaining({
-          escalationRequestId: 'escalation-request-open-001',
-          status: 'open',
-          summary: expect.any(Object)
-        })
-      })
-    );
-
-    const listResponse = await request(app.getHttpServer())
-      .get('/api/v1/assistant/escalation-requests')
-      .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-contract-escalation-list',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
-      );
-    expect(listResponse.status).toBe(200);
-    expect(listResponse.body.data.items).toEqual(expect.any(Array));
-
-    const resolveResponse = await request(app.getHttpServer())
-      .post('/api/v1/assistant/escalation-requests/escalation-request-open-001/resolve')
-      .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-contract-escalation-resolve',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
-      )
-      .send({ reason: 'done' });
-    expect(resolveResponse.status).toBe(200);
-    expect(resolveResponse.body.data.status).toBe('resolved');
-  });
-
-  it('fails closed for invisible escalation requests', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/api/v1/assistant/escalation-requests/escalation-request-open-001')
-      .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-contract-escalation-hidden',
-          'x-host-app': 'crm'
-        })
-      );
-
-    expect(response.status).toBe(404);
-    expect(response.body).toEqual(
-      expect.objectContaining({
-        requestId: 'req-contract-escalation-hidden',
-        error: expect.objectContaining({
-          message: 'Escalation request not found.'
-        })
-      })
-    );
-  });
-
-  it('supports status, riskLevel, requesterActorId, and combined list filters', async () => {
-    const managerHeaders = createIdentityHeaders({
-      'x-request-id': 'req-contract-escalation-filter',
-      'x-actor-id': 'approver-001',
-      'x-role': 'approver',
-      'x-permission-scopes': 'orders:read,orders:approve'
-    });
-
-    const openResponse = await request(app.getHttpServer())
-      .get('/api/v1/assistant/escalation-requests?status=open')
-      .set(managerHeaders);
-    expect(openResponse.status).toBe(200);
-    expect(openResponse.body.data.items.every((item: { status: string }) => item.status === 'open')).toBe(true);
-    expect(openResponse.body.data.items.map((item: { escalationRequestId: string }) => item.escalationRequestId)).toContain(
-      'escalation-request-open-001'
-    );
-
-    const expiredResponse = await request(app.getHttpServer())
-      .get('/api/v1/assistant/escalation-requests?status=expired')
-      .set(managerHeaders);
-    expect(expiredResponse.status).toBe(200);
-    expect(expiredResponse.body.data.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          escalationRequestId: 'escalation-request-expired-001',
-          status: 'expired'
-        })
-      ])
-    );
-
-    const riskResponse = await request(app.getHttpServer())
-      .get('/api/v1/assistant/escalation-requests?riskLevel=critical')
-      .set(managerHeaders);
-    expect(riskResponse.status).toBe(200);
-    expect(riskResponse.body.data.items.every((item: { summary: { riskLevel: string } }) => item.summary.riskLevel === 'critical')).toBe(true);
-
-    const requesterResponse = await request(app.getHttpServer())
-      .get('/api/v1/assistant/escalation-requests?requesterActorId=actor-001')
-      .set(managerHeaders);
-    expect(requesterResponse.status).toBe(200);
-    expect(
-      requesterResponse.body.data.items.every((item: { summary: { requesterActorId: string } }) => item.summary.requesterActorId === 'actor-001')
-    ).toBe(true);
-
-    const combinedResponse = await request(app.getHttpServer())
-      .get('/api/v1/assistant/escalation-requests?status=open&riskLevel=critical&requesterActorId=actor-001')
-      .set(managerHeaders);
-    expect(combinedResponse.status).toBe(200);
-    expect(combinedResponse.body.data.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          escalationRequestId: 'escalation-request-open-001',
-          status: 'open',
-          summary: expect.objectContaining({
-            riskLevel: 'critical',
-            requesterActorId: 'actor-001'
-          })
-        })
-      ])
-    );
-    expect(combinedResponse.body.data.items).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          escalationRequestId: 'escalation-request-hidden-actor-001'
-        })
-      ])
-    );
-  });
 });

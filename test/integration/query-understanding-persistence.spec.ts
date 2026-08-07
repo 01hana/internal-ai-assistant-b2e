@@ -2,11 +2,13 @@ import { Prisma } from '../../src/generated/prisma/client';
 import { QueryUnderstandingRepository } from '../../src/query-understanding/query-understanding.repository';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { RiskLevel } from '../../src/generated/prisma/enums';
+import { CUSTOMER_SCOPE_FIXTURES, createCustomerScopeFixtureScope } from '../support/customer-scope-fixtures';
 
 describe('query understanding persistence integration', () => {
   it('persists query-understanding output through the Prisma-backed repository', async () => {
     const upsert = jest.fn().mockResolvedValue({
       id: 'qu-001',
+      customerId: 'customer-a',
       requestId: 'req-qu-persist',
       messageId: 'message-001',
       sentences: [{ index: 0, text: '查 SO-10001 訂單狀態' }],
@@ -30,6 +32,7 @@ describe('query understanding persistence integration', () => {
     } as unknown as PrismaService);
 
     const result = await repository.save({
+      customerScope: createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerA),
       requestId: 'req-qu-persist',
       messageId: 'message-001',
       output: {
@@ -60,8 +63,11 @@ describe('query understanding persistence integration', () => {
 
     expect(upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { messageId: 'message-001' },
+        where: {
+          customerId_messageId: { customerId: 'customer-a', messageId: 'message-001' }
+        },
         create: expect.objectContaining({
+          customerId: 'customer-a',
           requestId: 'req-qu-persist',
           messageId: 'message-001',
           confidence: 0.92

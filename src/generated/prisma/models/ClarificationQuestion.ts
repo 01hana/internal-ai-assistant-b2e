@@ -26,6 +26,7 @@ export type AggregateClarificationQuestion = {
 
 export type ClarificationQuestionMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   question: string | null
@@ -37,6 +38,7 @@ export type ClarificationQuestionMinAggregateOutputType = {
 
 export type ClarificationQuestionMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   question: string | null
@@ -48,6 +50,7 @@ export type ClarificationQuestionMaxAggregateOutputType = {
 
 export type ClarificationQuestionCountAggregateOutputType = {
   id: number
+  customerId: number
   requestId: number
   messageId: number
   question: number
@@ -62,6 +65,7 @@ export type ClarificationQuestionCountAggregateOutputType = {
 
 export type ClarificationQuestionMinAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   question?: true
@@ -73,6 +77,7 @@ export type ClarificationQuestionMinAggregateInputType = {
 
 export type ClarificationQuestionMaxAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   question?: true
@@ -84,6 +89,7 @@ export type ClarificationQuestionMaxAggregateInputType = {
 
 export type ClarificationQuestionCountAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   question?: true
@@ -169,6 +175,7 @@ export type ClarificationQuestionGroupByArgs<ExtArgs extends runtime.Types.Exten
 
 export type ClarificationQuestionGroupByOutputType = {
   id: string
+  customerId: string
   requestId: string
   messageId: string
   question: string
@@ -202,6 +209,7 @@ export type ClarificationQuestionWhereInput = {
   OR?: Prisma.ClarificationQuestionWhereInput[]
   NOT?: Prisma.ClarificationQuestionWhereInput | Prisma.ClarificationQuestionWhereInput[]
   id?: Prisma.StringFilter<"ClarificationQuestion"> | string
+  customerId?: Prisma.StringFilter<"ClarificationQuestion"> | string
   requestId?: Prisma.StringFilter<"ClarificationQuestion"> | string
   messageId?: Prisma.StringFilter<"ClarificationQuestion"> | string
   question?: Prisma.StringFilter<"ClarificationQuestion"> | string
@@ -216,6 +224,7 @@ export type ClarificationQuestionWhereInput = {
 
 export type ClarificationQuestionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   question?: Prisma.SortOrder
@@ -233,6 +242,7 @@ export type ClarificationQuestionWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.ClarificationQuestionWhereInput | Prisma.ClarificationQuestionWhereInput[]
   OR?: Prisma.ClarificationQuestionWhereInput[]
   NOT?: Prisma.ClarificationQuestionWhereInput | Prisma.ClarificationQuestionWhereInput[]
+  customerId?: Prisma.StringFilter<"ClarificationQuestion"> | string
   requestId?: Prisma.StringFilter<"ClarificationQuestion"> | string
   messageId?: Prisma.StringFilter<"ClarificationQuestion"> | string
   question?: Prisma.StringFilter<"ClarificationQuestion"> | string
@@ -247,6 +257,7 @@ export type ClarificationQuestionWhereUniqueInput = Prisma.AtLeast<{
 
 export type ClarificationQuestionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   question?: Prisma.SortOrder
@@ -265,6 +276,7 @@ export type ClarificationQuestionScalarWhereWithAggregatesInput = {
   OR?: Prisma.ClarificationQuestionScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ClarificationQuestionScalarWhereWithAggregatesInput | Prisma.ClarificationQuestionScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"ClarificationQuestion"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"ClarificationQuestion"> | string
   requestId?: Prisma.StringWithAggregatesFilter<"ClarificationQuestion"> | string
   messageId?: Prisma.StringWithAggregatesFilter<"ClarificationQuestion"> | string
   question?: Prisma.StringWithAggregatesFilter<"ClarificationQuestion"> | string
@@ -290,6 +302,7 @@ export type ClarificationQuestionCreateInput = {
 
 export type ClarificationQuestionUncheckedCreateInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   question: string
@@ -316,6 +329,7 @@ export type ClarificationQuestionUpdateInput = {
 
 export type ClarificationQuestionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   question?: Prisma.StringFieldUpdateOperationsInput | string
@@ -329,6 +343,7 @@ export type ClarificationQuestionUncheckedUpdateInput = {
 
 export type ClarificationQuestionCreateManyInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   question: string
@@ -352,6 +367,7 @@ export type ClarificationQuestionUpdateManyMutationInput = {
 
 export type ClarificationQuestionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   question?: Prisma.StringFieldUpdateOperationsInput | string
@@ -379,6 +395,7 @@ export type ClarificationQuestionNullableScalarRelationFilter = {
 
 export type ClarificationQuestionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   question?: Prisma.SortOrder
@@ -391,6 +408,7 @@ export type ClarificationQuestionCountOrderByAggregateInput = {
 
 export type ClarificationQuestionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   question?: Prisma.SortOrder
@@ -402,6 +420,7 @@ export type ClarificationQuestionMaxOrderByAggregateInput = {
 
 export type ClarificationQuestionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   question?: Prisma.SortOrder
@@ -528,6 +547,7 @@ export type ClarificationQuestionScalarWhereInput = {
   OR?: Prisma.ClarificationQuestionScalarWhereInput[]
   NOT?: Prisma.ClarificationQuestionScalarWhereInput | Prisma.ClarificationQuestionScalarWhereInput[]
   id?: Prisma.StringFilter<"ClarificationQuestion"> | string
+  customerId?: Prisma.StringFilter<"ClarificationQuestion"> | string
   requestId?: Prisma.StringFilter<"ClarificationQuestion"> | string
   messageId?: Prisma.StringFilter<"ClarificationQuestion"> | string
   question?: Prisma.StringFilter<"ClarificationQuestion"> | string
@@ -552,6 +572,7 @@ export type ClarificationQuestionCreateWithoutAnswerDecisionsInput = {
 
 export type ClarificationQuestionUncheckedCreateWithoutAnswerDecisionsInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   question: string
@@ -592,6 +613,7 @@ export type ClarificationQuestionUpdateWithoutAnswerDecisionsInput = {
 
 export type ClarificationQuestionUncheckedUpdateWithoutAnswerDecisionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   question?: Prisma.StringFieldUpdateOperationsInput | string
@@ -681,6 +703,7 @@ export type ClarificationQuestionCountOutputTypeCountAnswerDecisionsArgs<ExtArgs
 
 export type ClarificationQuestionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   question?: boolean
@@ -696,6 +719,7 @@ export type ClarificationQuestionSelect<ExtArgs extends runtime.Types.Extensions
 
 export type ClarificationQuestionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   question?: boolean
@@ -709,6 +733,7 @@ export type ClarificationQuestionSelectCreateManyAndReturn<ExtArgs extends runti
 
 export type ClarificationQuestionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   question?: boolean
@@ -722,6 +747,7 @@ export type ClarificationQuestionSelectUpdateManyAndReturn<ExtArgs extends runti
 
 export type ClarificationQuestionSelectScalar = {
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   question?: boolean
@@ -732,7 +758,7 @@ export type ClarificationQuestionSelectScalar = {
   answeredAt?: boolean
 }
 
-export type ClarificationQuestionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "messageId" | "question" | "reason" | "status" | "metadata" | "createdAt" | "answeredAt", ExtArgs["result"]["clarificationQuestion"]>
+export type ClarificationQuestionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "messageId" | "question" | "reason" | "status" | "metadata" | "createdAt" | "answeredAt", ExtArgs["result"]["clarificationQuestion"]>
 export type ClarificationQuestionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
   answerDecisions?: boolean | Prisma.ClarificationQuestion$answerDecisionsArgs<ExtArgs>
@@ -753,6 +779,7 @@ export type $ClarificationQuestionPayload<ExtArgs extends runtime.Types.Extensio
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     requestId: string
     messageId: string
     question: string
@@ -1187,6 +1214,7 @@ export interface Prisma__ClarificationQuestionClient<T, Null = never, ExtArgs ex
  */
 export interface ClarificationQuestionFieldRefs {
   readonly id: Prisma.FieldRef<"ClarificationQuestion", 'String'>
+  readonly customerId: Prisma.FieldRef<"ClarificationQuestion", 'String'>
   readonly requestId: Prisma.FieldRef<"ClarificationQuestion", 'String'>
   readonly messageId: Prisma.FieldRef<"ClarificationQuestion", 'String'>
   readonly question: Prisma.FieldRef<"ClarificationQuestion", 'String'>

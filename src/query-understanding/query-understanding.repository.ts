@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, QueryUnderstandingResult } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CustomerScope } from '../identity/customer-scope.types';
 import { PersistedQueryUnderstandingResult, QueryUnderstandingOutput } from './query-understanding.types';
 
 @Injectable()
@@ -8,16 +9,20 @@ export class QueryUnderstandingRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async save(input: {
+    customerScope: CustomerScope;
     requestId: string;
     messageId: string;
     output: QueryUnderstandingOutput;
   }): Promise<PersistedQueryUnderstandingResult> {
     const result = await this.prisma.db.queryUnderstandingResult.upsert({
       where: {
-        messageId: input.messageId
+        customerId_messageId: {
+          customerId: input.customerScope.customerId,
+          messageId: input.messageId
+        }
       },
-      update: toQueryUnderstandingPersistence(input.requestId, input.messageId, input.output),
-      create: toQueryUnderstandingPersistence(input.requestId, input.messageId, input.output)
+      update: toQueryUnderstandingPersistence(input.customerScope, input.requestId, input.messageId, input.output),
+      create: toQueryUnderstandingPersistence(input.customerScope, input.requestId, input.messageId, input.output)
     });
 
     return mapPersistedQueryUnderstandingResult(result);
@@ -25,11 +30,13 @@ export class QueryUnderstandingRepository {
 }
 
 function toQueryUnderstandingPersistence(
+  customerScope: CustomerScope,
   requestId: string,
   messageId: string,
   output: QueryUnderstandingOutput
 ) {
   return {
+    customerId: customerScope.customerId,
     requestId,
     messageId,
     sentences: toJsonInput(output.sentences),

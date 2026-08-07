@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestApp } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestApp } from '../support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
 describe('session history permission boundary integration', () => {
   let app: INestApplication;
@@ -18,12 +19,15 @@ describe('session history permission boundary integration', () => {
       .get('/api/v1/assistant/sessions/session-owned-001/messages')
       .query({ limit: 50, order: 'asc' })
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us1-history-boundary',
+        {
+          ...createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+            claims: { sub: 'actor-222', host_app: 'wms', org_id: 'org-222' },
+            requestId: 'req-us1-history-boundary'
+          }),
           'x-actor-id': 'actor-222',
           'x-host-app': 'wms',
           'x-organization-id': 'org-222'
-        })
+        }
       );
 
     expect(response.status).toBe(404);

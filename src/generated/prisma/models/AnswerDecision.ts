@@ -26,6 +26,7 @@ export type AggregateAnswerDecision = {
 
 export type AnswerDecisionMinAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   status: $Enums.AnswerDecisionStatus | null
@@ -37,6 +38,7 @@ export type AnswerDecisionMinAggregateOutputType = {
 
 export type AnswerDecisionMaxAggregateOutputType = {
   id: string | null
+  customerId: string | null
   requestId: string | null
   messageId: string | null
   status: $Enums.AnswerDecisionStatus | null
@@ -48,6 +50,7 @@ export type AnswerDecisionMaxAggregateOutputType = {
 
 export type AnswerDecisionCountAggregateOutputType = {
   id: number
+  customerId: number
   requestId: number
   messageId: number
   status: number
@@ -62,6 +65,7 @@ export type AnswerDecisionCountAggregateOutputType = {
 
 export type AnswerDecisionMinAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   status?: true
@@ -73,6 +77,7 @@ export type AnswerDecisionMinAggregateInputType = {
 
 export type AnswerDecisionMaxAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   status?: true
@@ -84,6 +89,7 @@ export type AnswerDecisionMaxAggregateInputType = {
 
 export type AnswerDecisionCountAggregateInputType = {
   id?: true
+  customerId?: true
   requestId?: true
   messageId?: true
   status?: true
@@ -169,6 +175,7 @@ export type AnswerDecisionGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 
 export type AnswerDecisionGroupByOutputType = {
   id: string
+  customerId: string
   requestId: string
   messageId: string
   status: $Enums.AnswerDecisionStatus
@@ -202,6 +209,7 @@ export type AnswerDecisionWhereInput = {
   OR?: Prisma.AnswerDecisionWhereInput[]
   NOT?: Prisma.AnswerDecisionWhereInput | Prisma.AnswerDecisionWhereInput[]
   id?: Prisma.StringFilter<"AnswerDecision"> | string
+  customerId?: Prisma.StringFilter<"AnswerDecision"> | string
   requestId?: Prisma.StringFilter<"AnswerDecision"> | string
   messageId?: Prisma.StringFilter<"AnswerDecision"> | string
   status?: Prisma.EnumAnswerDecisionStatusFilter<"AnswerDecision"> | $Enums.AnswerDecisionStatus
@@ -217,6 +225,7 @@ export type AnswerDecisionWhereInput = {
 
 export type AnswerDecisionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -235,6 +244,7 @@ export type AnswerDecisionWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.AnswerDecisionWhereInput | Prisma.AnswerDecisionWhereInput[]
   OR?: Prisma.AnswerDecisionWhereInput[]
   NOT?: Prisma.AnswerDecisionWhereInput | Prisma.AnswerDecisionWhereInput[]
+  customerId?: Prisma.StringFilter<"AnswerDecision"> | string
   requestId?: Prisma.StringFilter<"AnswerDecision"> | string
   messageId?: Prisma.StringFilter<"AnswerDecision"> | string
   status?: Prisma.EnumAnswerDecisionStatusFilter<"AnswerDecision"> | $Enums.AnswerDecisionStatus
@@ -250,6 +260,7 @@ export type AnswerDecisionWhereUniqueInput = Prisma.AtLeast<{
 
 export type AnswerDecisionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -268,6 +279,7 @@ export type AnswerDecisionScalarWhereWithAggregatesInput = {
   OR?: Prisma.AnswerDecisionScalarWhereWithAggregatesInput[]
   NOT?: Prisma.AnswerDecisionScalarWhereWithAggregatesInput | Prisma.AnswerDecisionScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"AnswerDecision"> | string
+  customerId?: Prisma.StringWithAggregatesFilter<"AnswerDecision"> | string
   requestId?: Prisma.StringWithAggregatesFilter<"AnswerDecision"> | string
   messageId?: Prisma.StringWithAggregatesFilter<"AnswerDecision"> | string
   status?: Prisma.EnumAnswerDecisionStatusWithAggregatesFilter<"AnswerDecision"> | $Enums.AnswerDecisionStatus
@@ -292,6 +304,7 @@ export type AnswerDecisionCreateInput = {
 
 export type AnswerDecisionUncheckedCreateInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   status: $Enums.AnswerDecisionStatus
@@ -316,6 +329,7 @@ export type AnswerDecisionUpdateInput = {
 
 export type AnswerDecisionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus
@@ -328,6 +342,7 @@ export type AnswerDecisionUncheckedUpdateInput = {
 
 export type AnswerDecisionCreateManyInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   status: $Enums.AnswerDecisionStatus
@@ -349,6 +364,7 @@ export type AnswerDecisionUpdateManyMutationInput = {
 
 export type AnswerDecisionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus
@@ -371,6 +387,7 @@ export type AnswerDecisionOrderByRelationAggregateInput = {
 
 export type AnswerDecisionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -383,6 +400,7 @@ export type AnswerDecisionCountOrderByAggregateInput = {
 
 export type AnswerDecisionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -394,6 +412,7 @@ export type AnswerDecisionMaxOrderByAggregateInput = {
 
 export type AnswerDecisionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  customerId?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   messageId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -590,6 +609,7 @@ export type AnswerDecisionScalarWhereInput = {
   OR?: Prisma.AnswerDecisionScalarWhereInput[]
   NOT?: Prisma.AnswerDecisionScalarWhereInput | Prisma.AnswerDecisionScalarWhereInput[]
   id?: Prisma.StringFilter<"AnswerDecision"> | string
+  customerId?: Prisma.StringFilter<"AnswerDecision"> | string
   requestId?: Prisma.StringFilter<"AnswerDecision"> | string
   messageId?: Prisma.StringFilter<"AnswerDecision"> | string
   status?: Prisma.EnumAnswerDecisionStatusFilter<"AnswerDecision"> | $Enums.AnswerDecisionStatus
@@ -613,6 +633,7 @@ export type AnswerDecisionCreateWithoutClarificationQuestionInput = {
 
 export type AnswerDecisionUncheckedCreateWithoutClarificationQuestionInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   status: $Enums.AnswerDecisionStatus
@@ -661,6 +682,7 @@ export type AnswerDecisionCreateWithoutGroundingCheckInput = {
 
 export type AnswerDecisionUncheckedCreateWithoutGroundingCheckInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   status: $Enums.AnswerDecisionStatus
@@ -742,6 +764,7 @@ export type AnswerDecisionUncheckedUpdateManyWithoutMessageInput = {
 
 export type AnswerDecisionCreateManyClarificationQuestionInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   status: $Enums.AnswerDecisionStatus
@@ -764,6 +787,7 @@ export type AnswerDecisionUpdateWithoutClarificationQuestionInput = {
 
 export type AnswerDecisionUncheckedUpdateWithoutClarificationQuestionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus
@@ -775,6 +799,7 @@ export type AnswerDecisionUncheckedUpdateWithoutClarificationQuestionInput = {
 
 export type AnswerDecisionUncheckedUpdateManyWithoutClarificationQuestionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus
@@ -786,6 +811,7 @@ export type AnswerDecisionUncheckedUpdateManyWithoutClarificationQuestionInput =
 
 export type AnswerDecisionCreateManyGroundingCheckInput = {
   id?: string
+  customerId: string
   requestId: string
   messageId: string
   status: $Enums.AnswerDecisionStatus
@@ -808,6 +834,7 @@ export type AnswerDecisionUpdateWithoutGroundingCheckInput = {
 
 export type AnswerDecisionUncheckedUpdateWithoutGroundingCheckInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus
@@ -819,6 +846,7 @@ export type AnswerDecisionUncheckedUpdateWithoutGroundingCheckInput = {
 
 export type AnswerDecisionUncheckedUpdateManyWithoutGroundingCheckInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   messageId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus
@@ -832,6 +860,7 @@ export type AnswerDecisionUncheckedUpdateManyWithoutGroundingCheckInput = {
 
 export type AnswerDecisionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   status?: boolean
@@ -847,6 +876,7 @@ export type AnswerDecisionSelect<ExtArgs extends runtime.Types.Extensions.Intern
 
 export type AnswerDecisionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   status?: boolean
@@ -862,6 +892,7 @@ export type AnswerDecisionSelectCreateManyAndReturn<ExtArgs extends runtime.Type
 
 export type AnswerDecisionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   status?: boolean
@@ -877,6 +908,7 @@ export type AnswerDecisionSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
 
 export type AnswerDecisionSelectScalar = {
   id?: boolean
+  customerId?: boolean
   requestId?: boolean
   messageId?: boolean
   status?: boolean
@@ -887,7 +919,7 @@ export type AnswerDecisionSelectScalar = {
   createdAt?: boolean
 }
 
-export type AnswerDecisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "messageId" | "status" | "noAnswerReason" | "clarificationQuestionId" | "groundingCheckId" | "metadata" | "createdAt", ExtArgs["result"]["answerDecision"]>
+export type AnswerDecisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "messageId" | "status" | "noAnswerReason" | "clarificationQuestionId" | "groundingCheckId" | "metadata" | "createdAt", ExtArgs["result"]["answerDecision"]>
 export type AnswerDecisionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
   clarificationQuestion?: boolean | Prisma.AnswerDecision$clarificationQuestionArgs<ExtArgs>
@@ -913,6 +945,7 @@ export type $AnswerDecisionPayload<ExtArgs extends runtime.Types.Extensions.Inte
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    customerId: string
     requestId: string
     messageId: string
     status: $Enums.AnswerDecisionStatus
@@ -1348,6 +1381,7 @@ export interface Prisma__AnswerDecisionClient<T, Null = never, ExtArgs extends r
  */
 export interface AnswerDecisionFieldRefs {
   readonly id: Prisma.FieldRef<"AnswerDecision", 'String'>
+  readonly customerId: Prisma.FieldRef<"AnswerDecision", 'String'>
   readonly requestId: Prisma.FieldRef<"AnswerDecision", 'String'>
   readonly messageId: Prisma.FieldRef<"AnswerDecision", 'String'>
   readonly status: Prisma.FieldRef<"AnswerDecision", 'AnswerDecisionStatus'>

@@ -1,14 +1,18 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { ToolOperation } from '../../src/generated/prisma/enums';
-import { createIdentityHeaders, createUs1TestAppWithState, Us1TestState } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, Us1TestState } from '../support/us1-test-app.helper';
+import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
 
 describe('US3 side-effect execution guard', () => {
+  const jwt = createInternalIdentityJwtFixture();
   let app: INestApplication;
   let state: Us1TestState;
 
   beforeEach(async () => {
-    const testApp = await createUs1TestAppWithState();
+    const testApp = await createUs1TestAppWithState({
+      internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: jwt.jwks }
+    });
     app = testApp.app;
     state = testApp.state;
   });
@@ -22,12 +26,12 @@ describe('US3 side-effect execution guard', () => {
 
     const firstResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-duplicate-confirm-1', 'x-permission-scopes': 'orders:read,orders:update' }))
+      .set(headers('req-us3-duplicate-confirm-1', ['orders:read', 'orders:update']))
       .send({ idempotencyKey: 'idem-us3-duplicate-confirm' });
 
     const duplicateResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-duplicate-confirm-2', 'x-permission-scopes': 'orders:read,orders:update' }))
+      .set(headers('req-us3-duplicate-confirm-2', ['orders:read', 'orders:update']))
       .send({ idempotencyKey: 'idem-us3-duplicate-confirm' });
 
     expect(firstResponse.status).toBe(200);
@@ -58,38 +62,17 @@ describe('US3 side-effect execution guard', () => {
 
     const firstResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/approval-requests/approval-request-pending-approve-001/approve')
-      .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-duplicate-approve-1',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
-      )
+      .set(headers('req-us3-duplicate-approve-1', ['orders:read', 'orders:approve'], { roles: ['approver'] }))
       .send({ idempotencyKey: 'idem-us3-duplicate-approve' });
 
     const duplicateResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/approval-requests/approval-request-pending-approve-001/approve')
-      .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-duplicate-approve-2',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
-      )
+      .set(headers('req-us3-duplicate-approve-2', ['orders:read', 'orders:approve'], { roles: ['approver'] }))
       .send({ idempotencyKey: 'idem-us3-duplicate-approve' });
 
     const conflictingRetry = await request(app.getHttpServer())
       .post('/api/v1/assistant/approval-requests/approval-request-pending-approve-001/approve')
-      .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-duplicate-approve-3',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
-      )
+      .set(headers('req-us3-duplicate-approve-3', ['orders:read', 'orders:approve'], { roles: ['approver'] }))
       .send({ idempotencyKey: 'idem-us3-duplicate-approve-new' });
 
     expect(firstResponse.status).toBe(200);
@@ -105,7 +88,7 @@ describe('US3 side-effect execution guard', () => {
 
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-permission-denied', 'x-permission-scopes': 'orders:read' }))
+      .set(headers('req-us3-action-permission-denied', ['orders:read']))
       .send({ idempotencyKey: 'idem-us3-action-permission-denied' });
 
     expect(response.status).toBe(403);
@@ -129,7 +112,7 @@ describe('US3 side-effect execution guard', () => {
 
     const inactiveResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-tool-inactive', 'x-permission-scopes': 'orders:read,orders:update' }))
+      .set(headers('req-us3-action-tool-inactive', ['orders:read', 'orders:update']))
       .send({ idempotencyKey: 'idem-us3-action-tool-inactive' });
 
     expect(inactiveResponse.status).toBe(403);
@@ -147,7 +130,7 @@ describe('US3 side-effect execution guard', () => {
 
     const mismatchResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-draft-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-tool-mismatch', 'x-permission-scopes': 'orders:read,orders:update' }))
+      .set(headers('req-us3-action-tool-mismatch', ['orders:read', 'orders:update']))
       .send({ idempotencyKey: 'idem-us3-action-tool-mismatch' });
 
     expect(mismatchResponse.status).toBe(403);
@@ -171,7 +154,7 @@ describe('US3 side-effect execution guard', () => {
 
     const versionResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-tool-version', 'x-permission-scopes': 'orders:read,orders:update' }))
+      .set(headers('req-us3-action-tool-version', ['orders:read', 'orders:update']))
       .send({ idempotencyKey: 'idem-us3-action-tool-version' });
 
     expect(versionResponse.status).toBe(403);
@@ -182,7 +165,7 @@ describe('US3 side-effect execution guard', () => {
 
     const contractResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-draft-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-tool-contract', 'x-permission-scopes': 'orders:read,orders:update' }))
+      .set(headers('req-us3-action-tool-contract', ['orders:read', 'orders:update']))
       .send({ idempotencyKey: 'idem-us3-action-tool-contract' });
 
     expect(contractResponse.status).toBe(403);
@@ -209,14 +192,7 @@ describe('US3 side-effect execution guard', () => {
 
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/approval-requests/approval-request-pending-approve-001/approve')
-      .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-approval-tool-inactive',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
-      )
+      .set(headers('req-us3-approval-tool-inactive', ['orders:read', 'orders:approve'], { roles: ['approver'] }))
       .send({ idempotencyKey: 'idem-us3-approval-tool-inactive' });
 
     expect(response.status).toBe(403);
@@ -241,14 +217,7 @@ describe('US3 side-effect execution guard', () => {
 
     const operationResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/approval-requests/approval-request-pending-approve-001/approve')
-      .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-approval-tool-operation',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
-      )
+      .set(headers('req-us3-approval-tool-operation', ['orders:read', 'orders:approve'], { roles: ['approver'] }))
       .send({ idempotencyKey: 'idem-us3-approval-tool-operation' });
 
     expect(operationResponse.status).toBe(403);
@@ -258,14 +227,7 @@ describe('US3 side-effect execution guard', () => {
 
     const versionResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/approval-requests/approval-request-pending-denied-001/approve')
-      .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-approval-tool-version',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
-      )
+      .set(headers('req-us3-approval-tool-version', ['orders:read', 'orders:approve'], { roles: ['approver'] }))
       .send({ idempotencyKey: 'idem-us3-approval-tool-version' });
 
     expect(versionResponse.status).toBe(403);
@@ -275,14 +237,7 @@ describe('US3 side-effect execution guard', () => {
 
     const contractResponse = await request(app.getHttpServer())
       .post('/api/v1/assistant/approval-requests/approval-request-pending-get-001/approve')
-      .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-approval-tool-contract',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
-        })
-      )
+      .set(headers('req-us3-approval-tool-contract', ['orders:read', 'orders:approve'], { roles: ['approver'] }))
       .send({ idempotencyKey: 'idem-us3-approval-tool-contract' });
 
     expect(contractResponse.status).toBe(403);
@@ -304,10 +259,26 @@ describe('US3 side-effect execution guard', () => {
 
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-boundary', 'x-host-app': 'crm', 'x-permission-scopes': 'orders:read,orders:update' }))
+      .set(headers('req-us3-action-boundary', ['orders:read', 'orders:update'], { hostApp: 'crm' }))
       .send({ idempotencyKey: 'idem-us3-action-boundary' });
 
     expect(response.status).toBe(404);
     expect(state.toolCalls.slice(initialToolCallCount)).toHaveLength(0);
   });
+
+  function headers(
+    requestId: string,
+    permissionScopes: string[],
+    options: { roles?: string[]; hostApp?: string } = {}
+  ) {
+    return createAuthorizedInternalIdentityHeaders(jwt, {
+      claims: {
+        ...jwt.canonicalClaims.customerA,
+        host_app: options.hostApp ?? 'erp',
+        roles: options.roles ?? ['planner'],
+        permission_scopes: permissionScopes
+      },
+      requestId
+    });
+  }
 });

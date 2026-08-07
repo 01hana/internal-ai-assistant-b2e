@@ -7,6 +7,7 @@ import { getPageEntityRef } from '../assistant/page-context/page-context.mapper'
 import { CreateActionDraftInput, ActionDraftDecisionInput, ActionDraftResponse } from './action-draft.types';
 import { SideEffectExecutionGuardService } from './side-effect-execution-guard.service';
 import { SideEffectToolContractResolver, toPersistedSideEffectToolContract } from './side-effect-tool-contract.resolver';
+import { assertCustomerWorkflowCreateParents, assertCustomerWorkflowIdentityConsistency, workflowNotFound } from './customer-workflow-context';
 
 const CONFIRMABLE_STATUSES = new Set<ActionDraftStatus>([
   ActionDraftStatus.draft,
@@ -23,6 +24,8 @@ export class ActionDraftService {
   ) {}
 
   async createForMediumRisk(input: CreateActionDraftInput): Promise<ActionDraftResponse> {
+    assertCustomerWorkflowIdentityConsistency(input.customerScope, input.identityContext);
+    await assertCustomerWorkflowCreateParents({ db: this.prisma.db, ...input });
     const entityRef = getPageEntityRef(input.pageContext);
     const tool = await this.toolContractResolver.resolveForActionDraft(input);
     const toolContract = toPersistedSideEffectToolContract(tool);
@@ -45,8 +48,10 @@ export class ActionDraftService {
       toolContract
     });
 
-    const draft = await this.prisma.db.actionDraft.create({
+    const draft = await this.prisma.db.$transaction(async (db) => {
+      const created = await db.actionDraft.create({
       data: {
+        customerId: input.customerScope.customerId,
         requestId: input.requestId,
         sessionId: input.sessionId,
         messageId: input.messageId,
@@ -60,35 +65,38 @@ export class ActionDraftService {
         status: ActionDraftStatus.waiting_confirmation,
         expiresAt
       }
-    });
-
-    await this.appendAudit({
+      });
+      await this.appendAudit({
       requestId: input.requestId,
       sessionId: input.sessionId,
       messageId: input.messageId,
-      identityContext: input.identityContext,
+      customerScope: input.customerScope,
       eventType: 'action_draft_created',
       metadata: {
-        actionDraftId: draft.id,
-        riskLevel: draft.riskLevel,
-        toolName: draft.toolName,
+        actionDraftId: created.id,
+        riskLevel: created.riskLevel,
+        toolName: created.toolName,
         toolVersion: tool.version,
-        resource: draft.resource,
-        operation: draft.operation,
-        expiresAt: draft.expiresAt?.toISOString() ?? null
+        resource: created.resource,
+        operation: created.operation,
+        expiresAt: created.expiresAt?.toISOString() ?? null
       }
+      }, db);
+      return created;
     });
 
     return toActionDraftResponse(draft);
   }
 
   async getVisibleDraft(input: ActionDraftDecisionInput): Promise<ActionDraftResponse> {
-    const draft = await this.loadVisibleDraft(input.actionDraftId, input.identityContext);
+    assertCustomerWorkflowIdentityConsistency(input.customerScope, input.identityContext);
+    const draft = await this.loadVisibleDraft(input.actionDraftId, input.customerScope);
     return toActionDraftResponse(draft);
   }
 
   async confirm(input: ActionDraftDecisionInput): Promise<ActionDraftResponse & { recheck: Record<string, string> }> {
-    const draft = await this.loadVisibleDraft(input.actionDraftId, input.identityContext);
+    assertCustomerWorkflowIdentityConsistency(input.customerScope, input.identityContext);
+    const draft = await this.loadVisibleDraft(input.actionDraftId, input.customerScope);
 
     if (draft.status === ActionDraftStatus.executed) {
       if (input.idempotencyKey && draft.idempotencyKey === input.idempotencyKey) {
@@ -97,6 +105,7 @@ export class ActionDraftService {
           sessionId: draft.sessionId,
           messageId: draft.messageId,
           identityContext: input.identityContext,
+          customerScope: input.customerScope,
           sourceType: 'action_draft',
           sourceId: draft.id,
           requesterActorId: draft.actorId,
@@ -152,6 +161,7 @@ export class ActionDraftService {
       sessionId: draft.sessionId,
       messageId: draft.messageId,
       identityContext: input.identityContext,
+      customerScope: input.customerScope,
       sourceType: 'action_draft',
       sourceId: draft.id,
       requesterActorId: draft.actorId,
@@ -166,30 +176,31 @@ export class ActionDraftService {
       requiresApproval: false
     });
 
-    const updated = await this.prisma.db.actionDraft.update({
-      where: { id: draft.id },
-      data: {
+    const updated = await this.prisma.db.$transaction(async (database) => {
+      const transitioned = await this.transition(database, draft, input.customerScope, {
         status: ActionDraftStatus.executed,
         confirmedAt: new Date(),
         executedAt: new Date(),
         idempotencyKey: input.idempotencyKey ?? draft.idempotencyKey
-      }
-    });
+      });
 
-    await this.appendAudit({
-      requestId: input.requestId,
-      sessionId: updated.sessionId,
-      messageId: updated.messageId,
-      identityContext: input.identityContext,
-      eventType: 'action_draft_confirmed',
-      metadata: {
-        actionDraftId: updated.id,
-        riskLevel: updated.riskLevel,
-        toolName: updated.toolName,
-        resource: updated.resource,
-        operation: updated.operation,
-        idempotencyKeyPresent: Boolean(input.idempotencyKey)
-      }
+      await this.appendAudit({
+        requestId: input.requestId,
+        sessionId: transitioned.sessionId,
+        messageId: transitioned.messageId,
+        customerScope: input.customerScope,
+        eventType: 'action_draft_confirmed',
+        metadata: {
+          actionDraftId: transitioned.id,
+          riskLevel: transitioned.riskLevel,
+          toolName: transitioned.toolName,
+          resource: transitioned.resource,
+          operation: transitioned.operation,
+          idempotencyKeyPresent: Boolean(input.idempotencyKey)
+        }
+      }, database);
+
+      return transitioned;
     });
 
     return {
@@ -199,54 +210,57 @@ export class ActionDraftService {
   }
 
   async cancel(input: ActionDraftDecisionInput): Promise<ActionDraftResponse> {
-    const draft = await this.loadVisibleDraft(input.actionDraftId, input.identityContext);
+    assertCustomerWorkflowIdentityConsistency(input.customerScope, input.identityContext);
+    const draft = await this.loadVisibleDraft(input.actionDraftId, input.customerScope);
     if (!CONFIRMABLE_STATUSES.has(draft.status)) {
       throw new ConflictException(`Action draft cannot be cancelled from ${draft.status} status.`);
     }
 
-    const updated = await this.prisma.db.actionDraft.update({
-      where: { id: draft.id },
-      data: {
+    const updated = await this.prisma.db.$transaction(async (database) => {
+      const transitioned = await this.transition(database, draft, input.customerScope, {
         status: ActionDraftStatus.cancelled
-      }
-    });
+      });
 
-    await this.appendAudit({
-      requestId: input.requestId,
-      sessionId: updated.sessionId,
-      messageId: updated.messageId,
-      identityContext: input.identityContext,
-      eventType: 'action_draft_cancelled',
-      metadata: {
-        actionDraftId: updated.id,
-        riskLevel: updated.riskLevel,
-        toolName: updated.toolName,
-        resource: updated.resource,
-        operation: updated.operation
-      }
+      await this.appendAudit({
+        requestId: input.requestId,
+        sessionId: transitioned.sessionId,
+        messageId: transitioned.messageId,
+        customerScope: input.customerScope,
+        eventType: 'action_draft_cancelled',
+        metadata: {
+          actionDraftId: transitioned.id,
+          riskLevel: transitioned.riskLevel,
+          toolName: transitioned.toolName,
+          resource: transitioned.resource,
+          operation: transitioned.operation
+        }
+      }, database);
+
+      return transitioned;
     });
 
     return toActionDraftResponse(updated);
   }
 
-  private async loadVisibleDraft(actionDraftId: string, identityContext: ActionDraftDecisionInput['identityContext']) {
-    const draft = await this.prisma.db.actionDraft.findUnique({
-      where: { id: actionDraftId }
+  private async loadVisibleDraft(actionDraftId: string, customerScope: ActionDraftDecisionInput['customerScope']) {
+    const draft = await this.prisma.db.actionDraft.findFirst({
+      where: { customerId: customerScope.customerId, id: actionDraftId }
     });
     if (!draft) {
-      throw new NotFoundException('Action draft not found.');
+      throw workflowNotFound();
     }
 
     const session = await this.prisma.db.assistantSession.findFirst({
       where: {
         id: draft.sessionId,
-        organizationId: identityContext.company.organizationId,
-        hostApp: identityContext.hostApp.hostApp,
-        actorId: identityContext.actor.actorId
+        customerId: customerScope.customerId,
+        organizationId: customerScope.organizationId,
+        hostApp: customerScope.hostApp,
+        actorId: customerScope.actorId
       }
     });
-    if (!session || draft.actorId !== identityContext.actor.actorId) {
-      throw new NotFoundException('Action draft not found.');
+    if (!session || draft.actorId !== customerScope.actorId) {
+      throw workflowNotFound();
     }
 
     return draft;
@@ -256,21 +270,32 @@ export class ActionDraftService {
     requestId: string;
     sessionId: string;
     messageId?: string | null;
-    identityContext: ActionDraftDecisionInput['identityContext'];
+    customerScope: ActionDraftDecisionInput['customerScope'];
     eventType: string;
     metadata: Prisma.InputJsonValue;
-  }) {
-    return this.auditWriter.append({
+  }, database?: Parameters<typeof this.auditWriter.appendCustomerWorkflowEvent>[1]) {
+    return this.auditWriter.appendCustomerWorkflowEvent({
+      customerScope: input.customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.company.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId ?? undefined,
       eventType: input.eventType,
       riskLevel: RiskLevel.medium,
       metadata: input.metadata
-    });
+    }, database);
+  }
+
+  private async transition(
+    database: Pick<Prisma.TransactionClient, 'actionDraft'>,
+    draft: { id: string; status: ActionDraftStatus },
+    customerScope: ActionDraftDecisionInput['customerScope'],
+    data: Prisma.ActionDraftUpdateManyMutationInput
+  ) {
+    const result = await database.actionDraft.updateMany({ where: { customerId: customerScope.customerId, id: draft.id, status: draft.status }, data });
+    if (result.count !== 1) throw new ConflictException('Action draft transition conflict.');
+    const updated = await database.actionDraft.findFirst({ where: { customerId: customerScope.customerId, id: draft.id } });
+    if (!updated) throw workflowNotFound();
+    return updated;
   }
 }
 

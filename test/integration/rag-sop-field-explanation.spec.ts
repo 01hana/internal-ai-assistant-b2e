@@ -1,18 +1,22 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import {
-  createIdentityHeaders,
+  createAuthorizedInternalIdentityHeaders,
   createUs1TestAppWithState,
   parseSseResponse,
   Us1TestState
 } from '../support/us1-test-app.helper';
+import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
 
 describe('US4 deterministic document retrieval integration', () => {
+  const fixture = createInternalIdentityJwtFixture();
   let app: INestApplication;
   let state: Us1TestState;
 
   beforeAll(async () => {
-    const testApp = await createUs1TestAppWithState();
+    const testApp = await createUs1TestAppWithState({
+      internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: fixture.jwks }
+    });
     app = testApp.app;
     state = testApp.state;
   });
@@ -26,7 +30,7 @@ describe('US4 deterministic document retrieval integration', () => {
 
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us4-retrieval-sop' }))
+      .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims.customerA, requestId: 'req-us4-retrieval-sop' }))
       .send({
         message: '退貨流程 SOP 怎麼說？',
         pageContext: {
@@ -63,7 +67,7 @@ describe('US4 deterministic document retrieval integration', () => {
   it('answers field explanation questions with document chunks', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us4-retrieval-field' }))
+      .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims.customerA, requestId: 'req-us4-retrieval-field' }))
       .send({
         message: 'status 欄位是什麼意思？',
         pageContext: {
@@ -83,12 +87,13 @@ describe('US4 deterministic document retrieval integration', () => {
     expect(finalEvent?.data?.data.answer).toContain('status 欄位');
   });
 
-  it('keeps live structured lookup on the tool path instead of retrieval', async () => {
+  it('attaches Customer-owned structured ToolCall evidence without disclosure', async () => {
     const initialRetrievalRunCount = state.retrievalRuns.length;
+    const initialToolCallCount = state.toolCalls.length;
 
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us4-structured-regression' }))
+      .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims.customerA, requestId: 'req-us4-structured-regression' }))
       .send({
         message: '請查 SO-10001 訂單狀態',
         pageContext: {
@@ -100,9 +105,32 @@ describe('US4 deterministic document retrieval integration', () => {
       });
 
     expect(response.status).toBe(200);
-    const eventNames = parseSseResponse(response.text).map((event) => event.event);
-    expect(eventNames).toContain('tool_call_started');
-    expect(eventNames).toContain('tool_call_completed');
+    const events = parseSseResponse(response.text);
+    expect(events.map((event) => event.event)).toEqual([
+      'tool_call_started',
+      'tool_call_completed',
+      'evidence_attached',
+      'answer_delta',
+      'final'
+    ]);
+    expect(events.map((event) => event.event)).not.toContain('error');
+
+    const toolCall = state.toolCalls.at(-1);
+    const evidence = state.evidenceRefs.find((item) => item.requestId === 'req-us4-structured-regression');
+    expect(state.toolCalls).toHaveLength(initialToolCallCount + 1);
+    expect(toolCall).toEqual(expect.objectContaining({
+      customerId: 'customer-a',
+      sessionId: 'session-owned-001',
+      status: 'success',
+      executionStatus: 'executed'
+    }));
+    expect(evidence).toEqual(expect.objectContaining({
+      customerId: 'customer-a',
+      toolCallId: toolCall?.id,
+      messageId: toolCall?.messageId
+    }));
     expect(state.retrievalRuns).toHaveLength(initialRetrievalRunCount);
+    expect(response.text).not.toContain('customer-b');
+    expect(response.text).not.toContain('sanitizerRemoved');
   });
 });

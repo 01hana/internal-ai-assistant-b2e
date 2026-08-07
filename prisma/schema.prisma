@@ -178,6 +178,11 @@ enum KnowledgeDocumentStatus {
   archived
 }
 
+enum KnowledgeVisibility {
+  CUSTOMER
+  ORGANIZATION
+}
+
 enum RetrievalStrategy {
   keyword
   vector
@@ -202,8 +207,29 @@ enum ClarificationQuestionStatus {
   expired
 }
 
+model Customer {
+  id String @id
+
+  assistantSessions   AssistantSession[]
+  assistantMessages   AssistantMessage[]
+  knowledgeDocuments  KnowledgeDocument[]
+  knowledgeChunks     KnowledgeChunk[]
+  retrievalRuns       RetrievalRun[]
+  retrievalCandidates RetrievalCandidate[]
+  evidenceRefs        EvidenceRef[]
+  toolPolicies        CustomerToolPolicy[]
+  toolCalls           ToolCall[]
+  approvalRequests    ApprovalRequest[]
+  actionDrafts        ActionDraft[]
+  escalationRequests  EscalationRequest[]
+  feedbackEvents      FeedbackEvent[]
+  reviewItems         ReviewItem[]
+  auditEvents         AuditEvent[]
+}
+
 model AssistantSession {
   id             String                 @id @default(cuid())
+  customerId     String
   hostApp        String
   organizationId String
   actorId        String
@@ -212,6 +238,7 @@ model AssistantSession {
   updatedAt      DateTime               @updatedAt
   lastMessageAt  DateTime?
 
+  customer           Customer                @relation(fields: [customerId], references: [id], onDelete: Restrict)
   messages           AssistantMessage[]
   contextStates      AssistantContextState[]
   executionPlans     ExecutionPlan[]
@@ -221,12 +248,17 @@ model AssistantSession {
   escalationRequests EscalationRequest[]
   auditEvents        AuditEvent[]
 
+  @@unique([customerId, id])
   @@index([organizationId, hostApp, actorId])
   @@index([status, updatedAt])
+  @@index([customerId, organizationId, hostApp, actorId])
+  @@index([customerId, status])
+  @@index([customerId, updatedAt])
 }
 
 model AssistantMessage {
   id             String                @id @default(cuid())
+  customerId     String
   sessionId      String
   requestId      String
   role           AssistantMessageRole
@@ -235,7 +267,8 @@ model AssistantMessage {
   pageContext    Json?
   createdAt      DateTime              @default(now())
 
-  session                AssistantSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  customer               Customer                  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  session                AssistantSession          @relation(fields: [customerId, sessionId], references: [customerId, id], onDelete: Cascade)
   executionPlans         ExecutionPlan[]
   answerDecisions        AnswerDecision[]
   clarificationQuestions ClarificationQuestion[]
@@ -250,13 +283,16 @@ model AssistantMessage {
   auditEvents            AuditEvent[]
   retrievalRuns          RetrievalRun[]
 
+  @@unique([customerId, id])
   @@index([sessionId, createdAt])
   @@index([requestId])
   @@index([answerDecision])
+  @@index([customerId, sessionId, createdAt])
 }
 
 model AssistantContextState {
   id                       String             @id @default(cuid())
+  customerId               String
   sessionId                String
   currentTask              String?
   currentModule            String?
@@ -273,14 +309,16 @@ model AssistantContextState {
   updatedAt                DateTime           @updatedAt
   createdAt                DateTime           @default(now())
 
-  session AssistantSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session AssistantSession @relation(fields: [customerId, sessionId], references: [customerId, id], onDelete: Cascade)
 
   @@index([sessionId, updatedAt])
   @@index([taskState])
+  @@index([customerId, sessionId, updatedAt])
 }
 
 model ExecutionPlan {
   id                       String            @id @default(cuid())
+  customerId               String
   sessionId                String
   messageId                String?
   taskType                 String
@@ -294,16 +332,19 @@ model ExecutionPlan {
   decision                 ExecutionDecision
   createdAt                DateTime          @default(now())
 
-  session AssistantSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  message AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  session AssistantSession  @relation(fields: [customerId, sessionId], references: [customerId, id], onDelete: Cascade)
+  message AssistantMessage? @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Restrict)
 
   @@index([sessionId, createdAt])
   @@index([messageId])
   @@index([riskAssessment, decision])
+  @@index([customerId, sessionId, createdAt])
+  @@index([customerId, messageId])
 }
 
 model AnswerDecision {
   id                      String               @id @default(cuid())
+  customerId              String
   requestId               String
   messageId               String
   status                  AnswerDecisionStatus
@@ -313,16 +354,18 @@ model AnswerDecision {
   metadata                Json?
   createdAt               DateTime             @default(now())
 
-  message               AssistantMessage       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  message               AssistantMessage       @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Cascade)
   clarificationQuestion ClarificationQuestion? @relation(fields: [clarificationQuestionId], references: [id], onDelete: SetNull)
   groundingCheck        GroundingCheck?        @relation(fields: [groundingCheckId], references: [id], onDelete: SetNull)
 
   @@index([requestId])
   @@index([messageId, status])
+  @@index([customerId, messageId, status])
 }
 
 model ClarificationQuestion {
   id         String                      @id @default(cuid())
+  customerId String
   requestId  String
   messageId  String
   question   String
@@ -332,15 +375,17 @@ model ClarificationQuestion {
   createdAt  DateTime                    @default(now())
   answeredAt DateTime?
 
-  message         AssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  message         AssistantMessage @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Cascade)
   answerDecisions AnswerDecision[]
 
   @@index([requestId])
   @@index([messageId, status])
+  @@index([customerId, messageId, status])
 }
 
 model GroundingCheck {
   id                    String   @id @default(cuid())
+  customerId            String
   requestId             String
   messageId             String
   covered               Boolean
@@ -350,11 +395,12 @@ model GroundingCheck {
   metadata              Json?
   createdAt             DateTime @default(now())
 
-  message         AssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  message         AssistantMessage @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Cascade)
   answerDecisions AnswerDecision[]
 
   @@index([requestId])
   @@index([messageId, covered])
+  @@index([customerId, messageId, covered])
 }
 
 model ToolDefinition {
@@ -378,15 +424,38 @@ model ToolDefinition {
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 
-  toolCalls ToolCall[]
+  toolCalls        ToolCall[]
+  customerPolicies CustomerToolPolicy[]
 
   @@unique([name, version])
   @@index([connectorKey, isActive])
   @@index([riskLevel, hasSideEffect])
 }
 
+model CustomerToolPolicy {
+  customerId               String
+  toolDefinitionId         String
+  enabled                  Boolean
+  requiredRoles            String[]
+  requiredPermissionScopes String[]
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  customer       Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  toolDefinition ToolDefinition @relation(fields: [toolDefinitionId], references: [id], onDelete: Restrict)
+
+  /// T053–T055 runtime contract: a tool requires an active ToolDefinition, an existing enabled CustomerToolPolicy,
+  /// and permission evaluation against ToolDefinition.requiredPermissions plus requiredPermissionScopes.
+  /// No CustomerToolPolicy row is deny; empty policy arrays add no restrictions and grant no permissions.
+
+  @@id([customerId, toolDefinitionId])
+  @@index([customerId, enabled])
+  @@index([toolDefinitionId])
+}
+
 model ToolCall {
   id               String              @id @default(cuid())
+  customerId       String
   requestId        String
   sessionId        String
   messageId        String?
@@ -404,22 +473,33 @@ model ToolCall {
   createdAt        DateTime            @default(now())
   executedAt       DateTime?
 
-  session        AssistantSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  message        AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
-  toolDefinition ToolDefinition?   @relation(fields: [toolDefinitionId], references: [id], onDelete: SetNull)
-  evidenceRefs   EvidenceRef[]
-  auditEvents    AuditEvent[]
+  customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  session          AssistantSession  @relation(fields: [customerId, sessionId], references: [customerId, id], onDelete: Cascade)
+  message          AssistantMessage? @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Restrict)
+  toolDefinition   ToolDefinition?   @relation(fields: [toolDefinitionId], references: [id], onDelete: SetNull)
+  evidenceRefs     EvidenceRef[]
+  auditEvents      AuditEvent[]
+  approvalRequests ApprovalRequest[]
+  actionDrafts     ActionDraft[]
 
-  @@unique([idempotencyKey])
+  @@unique([customerId, id])
+  @@unique([customerId, idempotencyKey])
   @@index([requestId])
   @@index([sessionId, createdAt])
   @@index([messageId])
   @@index([toolName, toolVersion])
   @@index([status, executionStatus])
+  @@index([customerId, requestId])
+  @@index([customerId, sessionId, createdAt])
+  @@index([customerId, messageId])
+  @@index([customerId, toolDefinitionId])
+  @@index([customerId, toolName, toolVersion])
+  @@index([customerId, status, executionStatus])
 }
 
 model EvidenceRef {
   id                 String             @id @default(cuid())
+  customerId         String
   requestId          String?
   messageId          String?
   sourceType         EvidenceSourceType
@@ -434,20 +514,29 @@ model EvidenceRef {
   permissionSnapshot Json?
   summary            Json?
 
-  message  AssistantMessage?  @relation(fields: [messageId], references: [id], onDelete: SetNull)
-  toolCall ToolCall?          @relation(fields: [toolCallId], references: [id], onDelete: SetNull)
-  document KnowledgeDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
-  chunk    KnowledgeChunk?    @relation(fields: [chunkId], references: [id], onDelete: SetNull)
+  customer Customer           @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  message  AssistantMessage?  @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Restrict)
+  toolCall ToolCall?          @relation(fields: [customerId, toolCallId], references: [customerId, id], onDelete: Restrict)
+  document KnowledgeDocument? @relation(fields: [customerId, documentId], references: [customerId, id], onDelete: Restrict)
+  chunk    KnowledgeChunk?    @relation(fields: [customerId, chunkId], references: [customerId, id], onDelete: Restrict)
 
+  @@unique([customerId, id])
   @@index([requestId])
   @@index([messageId])
   @@index([sourceType, sourceId])
   @@index([toolCallId])
   @@index([documentId])
+  @@index([customerId, requestId])
+  @@index([customerId, messageId])
+  @@index([customerId, sourceType, sourceId])
+  @@index([customerId, toolCallId])
+  @@index([customerId, documentId])
+  @@index([customerId, chunkId])
 }
 
 model AuditEvent {
   id               String                @id @default(cuid())
+  customerId       String
   requestId        String
   timestamp        DateTime              @default(now())
   organizationId   String
@@ -464,18 +553,27 @@ model AuditEvent {
   durationMs       Int?
   metadata         Json?
 
-  session  AssistantSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-  message  AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
-  toolCall ToolCall?         @relation(fields: [toolCallId], references: [id], onDelete: SetNull)
+  customer Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  session  AssistantSession? @relation(fields: [customerId, sessionId], references: [customerId, id], onDelete: Restrict)
+  message  AssistantMessage? @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Restrict)
+  toolCall ToolCall?         @relation(fields: [customerId, toolCallId], references: [customerId, id], onDelete: Restrict)
 
+  @@unique([customerId, id])
   @@index([requestId])
   @@index([organizationId, hostApp, actorId])
   @@index([sessionId, timestamp])
   @@index([eventType, timestamp])
+  @@index([customerId, requestId])
+  @@index([customerId, organizationId, hostApp, actorId])
+  @@index([customerId, sessionId, timestamp])
+  @@index([customerId, messageId, timestamp])
+  @@index([customerId, toolCallId, timestamp])
+  @@index([customerId, eventType, timestamp])
 }
 
 model FeedbackEvent {
   id             String                @id @default(cuid())
+  customerId     String
   requestId      String
   messageId      String
   rating         FeedbackRating
@@ -487,14 +585,19 @@ model FeedbackEvent {
   answerDecision AnswerDecisionStatus?
   createdAt      DateTime              @default(now())
 
-  message AssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  customer Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  message  AssistantMessage @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Cascade)
 
+  @@unique([customerId, id])
   @@index([requestId])
   @@index([messageId, rating])
+  @@index([customerId, requestId])
+  @@index([customerId, messageId, rating])
 }
 
 model ReviewItem {
   id                   String           @id @default(cuid())
+  customerId           String
   sourceType           ReviewSourceType
   sourceId             String
   status               ReviewItemStatus @default(open)
@@ -504,15 +607,22 @@ model ReviewItem {
   createdAt            DateTime         @default(now())
   resolvedAt           DateTime?
 
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@unique([customerId, id])
   @@index([sourceType, sourceId])
   @@index([status, priority])
+  @@index([customerId, sourceType, sourceId])
+  @@index([customerId, status, priority])
 }
 
 model ApprovalRequest {
   id               String                @id @default(cuid())
+  customerId       String
   requestId        String
   sessionId        String
   messageId        String?
+  toolCallId       String?
   requesterActorId String
   approverActorId  String?
   riskLevel        RiskLevel
@@ -527,21 +637,32 @@ model ApprovalRequest {
   createdAt        DateTime              @default(now())
   decidedAt        DateTime?
 
-  session AssistantSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  message AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  customer Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  session  AssistantSession  @relation(fields: [customerId, sessionId], references: [customerId, id], onDelete: Cascade)
+  message  AssistantMessage? @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Restrict)
+  toolCall ToolCall?         @relation(fields: [customerId, toolCallId], references: [customerId, id], onDelete: Restrict)
 
-  @@unique([idempotencyKey])
+  @@unique([customerId, id])
+  @@unique([customerId, idempotencyKey])
   @@index([requestId])
   @@index([sessionId, status])
   @@index([requesterActorId, status])
   @@index([approverActorId, status])
+  @@index([customerId, requestId])
+  @@index([customerId, sessionId, status])
+  @@index([customerId, messageId])
+  @@index([customerId, toolCallId])
+  @@index([customerId, requesterActorId, status])
+  @@index([customerId, approverActorId, status])
 }
 
 model ActionDraft {
   id             String            @id @default(cuid())
+  customerId     String
   requestId      String
   sessionId      String
   messageId      String?
+  toolCallId     String?
   actorId        String
   toolName       String
   resource       String
@@ -556,17 +677,26 @@ model ActionDraft {
   executedAt     DateTime?
   expiresAt      DateTime?
 
-  session AssistantSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  message AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  customer Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  session  AssistantSession  @relation(fields: [customerId, sessionId], references: [customerId, id], onDelete: Cascade)
+  message  AssistantMessage? @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Restrict)
+  toolCall ToolCall?         @relation(fields: [customerId, toolCallId], references: [customerId, id], onDelete: Restrict)
 
-  @@unique([idempotencyKey])
+  @@unique([customerId, id])
+  @@unique([customerId, idempotencyKey])
   @@index([requestId])
   @@index([sessionId, status])
   @@index([actorId, status])
+  @@index([customerId, requestId])
+  @@index([customerId, sessionId, status])
+  @@index([customerId, messageId])
+  @@index([customerId, toolCallId])
+  @@index([customerId, actorId, status])
 }
 
 model EscalationRequest {
   id         String              @id @default(cuid())
+  customerId String
   requestId  String
   sessionId  String
   messageId  String?
@@ -577,18 +707,25 @@ model EscalationRequest {
   createdAt  DateTime            @default(now())
   resolvedAt DateTime?
 
-  session AssistantSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  message AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  customer Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  session  AssistantSession  @relation(fields: [customerId, sessionId], references: [customerId, id], onDelete: Cascade)
+  message  AssistantMessage? @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Restrict)
 
+  @@unique([customerId, id])
   @@index([requestId])
   @@index([sessionId, status])
   @@index([ownerType, status])
+  @@index([customerId, requestId])
+  @@index([customerId, sessionId, status])
+  @@index([customerId, messageId])
+  @@index([customerId, ownerType, status])
 }
 
 model QueryUnderstandingResult {
   id                 String   @id @default(cuid())
+  customerId         String
   requestId          String
-  messageId          String   @unique
+  messageId          String
   sentences          Json
   tokens             Json
   phrases            Json
@@ -601,33 +738,50 @@ model QueryUnderstandingResult {
   clarificationNeeds Json?
   createdAt          DateTime @default(now())
 
-  message AssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  message AssistantMessage @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Cascade)
 
+  @@unique([customerId, messageId])
   @@index([requestId])
   @@index([confidence])
 }
 
 model KnowledgeDocument {
-  id         String                  @id @default(cuid())
-  title      String
-  sourceType KnowledgeSourceType
-  sourceKey  String
-  version    String
-  language   String
-  status     KnowledgeDocumentStatus @default(draft)
-  metadata   Json?
-  createdAt  DateTime                @default(now())
-  updatedAt  DateTime                @updatedAt
+  id                       String                  @id @default(cuid())
+  customerId               String
+  title                    String
+  sourceType               KnowledgeSourceType
+  sourceKey                String
+  version                  String
+  language                 String
+  status                   KnowledgeDocumentStatus @default(draft)
+  visibility               KnowledgeVisibility
+  organizationIds          String[]
+  requiredPermissionScopes String[]
+  metadata                 Json?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
 
   chunks       KnowledgeChunk[]
   evidenceRefs EvidenceRef[]
+  customer     Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
 
-  @@unique([sourceKey, version])
+  /// T030/T031 PostgreSQL CHECK strategy:
+  /// - visibility = 'CUSTOMER' requires cardinality(organizationIds) = 0.
+  /// - visibility = 'ORGANIZATION' requires cardinality(organizationIds) > 0.
+  /// - organizationIds and requiredPermissionScopes must contain normalized non-blank values.
+
+  @@unique([customerId, sourceKey, version])
+  @@unique([customerId, id])
   @@index([status, sourceType])
+  @@index([customerId, status, sourceType])
+  @@index([customerId, visibility, status])
+  @@index([organizationIds], type: Gin)
+  @@index([requiredPermissionScopes], type: Gin)
 }
 
 model KnowledgeChunk {
   id           String   @id @default(cuid())
+  customerId   String
   documentId   String
   chunkIndex   Int
   heading      String?
@@ -640,16 +794,20 @@ model KnowledgeChunk {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  document            KnowledgeDocument    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document            KnowledgeDocument    @relation(fields: [customerId, documentId], references: [customerId, id], onDelete: Cascade)
+  customer            Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
   evidenceRefs        EvidenceRef[]
   retrievalCandidates RetrievalCandidate[]
 
-  @@unique([documentId, chunkIndex])
+  @@unique([customerId, id])
+  @@unique([customerId, documentId, chunkIndex])
   @@index([enabled, documentId])
+  @@index([customerId, enabled, documentId])
 }
 
 model RetrievalRun {
   id                     String            @id @default(cuid())
+  customerId             String
   requestId              String
   messageId              String?
   query                  String
@@ -661,16 +819,24 @@ model RetrievalRun {
   durationMs             Int?
   createdAt              DateTime          @default(now())
 
-  message    AssistantMessage?    @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  customer   Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  message    AssistantMessage?    @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Restrict)
   candidates RetrievalCandidate[]
 
+  /// selectedEvidenceRefIds is non-authoritative; T048 resolves IDs under the same Customer scope.
+
+  @@unique([customerId, id])
   @@index([requestId])
   @@index([messageId])
   @@index([strategy, createdAt])
+  @@index([customerId, requestId])
+  @@index([customerId, messageId])
+  @@index([customerId, strategy, createdAt])
 }
 
 model RetrievalCandidate {
   id             String             @id @default(cuid())
+  customerId     String
   retrievalRunId String
   chunkId        String?
   sourceId       String
@@ -680,9 +846,14 @@ model RetrievalCandidate {
   selected       Boolean            @default(false)
   reason         String?
 
-  retrievalRun RetrievalRun    @relation(fields: [retrievalRunId], references: [id], onDelete: Cascade)
-  chunk        KnowledgeChunk? @relation(fields: [chunkId], references: [id], onDelete: SetNull)
+  customer     Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  retrievalRun RetrievalRun    @relation(fields: [customerId, retrievalRunId], references: [customerId, id], onDelete: Cascade)
+  chunk        KnowledgeChunk? @relation(fields: [customerId, chunkId], references: [customerId, id], onDelete: Restrict)
 
+  @@unique([customerId, id])
   @@index([retrievalRunId, rank])
   @@index([selected])
+  @@index([customerId, retrievalRunId, rank])
+  @@index([customerId, chunkId])
+  @@index([customerId, selected])
 }

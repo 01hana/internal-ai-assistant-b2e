@@ -1,6 +1,7 @@
 import { ToolCall } from '../../generated/prisma/client';
 import { RiskLevel, ToolCallStatus, ToolExecutionStatus } from '../../generated/prisma/enums';
 import { RequestIdentityContext } from '../../identity/identity-context.types';
+import { CustomerScope } from '../../identity/customer-scope.types';
 import { ConnectorExecuteResult } from '../../connectors/connector-adapter.interface';
 import { PageContextDto } from '../page-context/page-context.dto';
 import { PageEntityRef } from '../page-context/page-context.types';
@@ -12,9 +13,11 @@ export interface StructuredBusinessRecord {
 }
 
 export interface AssistantReadonlyRuntimeInput {
+  customerScope: CustomerScope;
   requestId: string;
   sessionId: string;
-  messageId: string;
+  sourceMessageId: string;
+  responseMessageId: string;
   identityContext: RequestIdentityContext;
   executionPlan: PersistedExecutionPlan;
   pageContext?: PageContextDto;
@@ -36,6 +39,7 @@ export interface AssistantReadonlyRuntimeResult {
 }
 
 export interface StartToolCallInput {
+  customerScope: CustomerScope;
   requestId: string;
   sessionId: string;
   messageId: string;
@@ -48,6 +52,7 @@ export interface StartToolCallInput {
 }
 
 export interface CompleteToolCallInput {
+  customerScope: CustomerScope;
   toolCallId: string;
   requestId: string;
   sessionId: string;
@@ -62,6 +67,7 @@ export interface CompleteToolCallInput {
 }
 
 export interface FailToolCallInput {
+  customerScope: CustomerScope;
   toolCallId: string;
   requestId: string;
   sessionId: string;
@@ -75,6 +81,7 @@ export interface FailToolCallInput {
 }
 
 export interface BlockToolCallInput {
+  customerScope: CustomerScope;
   requestId: string;
   sessionId: string;
   messageId: string;
@@ -95,4 +102,12 @@ export interface CreateToolCallInput extends StartToolCallInput {
   sanitizedResult: Record<string, unknown>;
   status?: ToolCallStatus;
   executionStatus?: ToolExecutionStatus;
+}
+
+/** Internal-only result access contract; no HTTP result endpoint is added by T056. */
+export interface VisibleToolCallInput {
+  customerScope: CustomerScope;
+  toolCallId: string;
+  sessionId: string;
+  messageId: string;
 }

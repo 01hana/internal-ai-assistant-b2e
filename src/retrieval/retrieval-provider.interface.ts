@@ -1,3 +1,5 @@
+import { CustomerScope } from '../identity/customer-scope.types';
+
 export interface RetrievalProvider {
   readonly key: string;
   retrieve(input: RetrievalInput): Promise<RetrievalResult>;
@@ -6,7 +8,7 @@ export interface RetrievalProvider {
 
 export interface RetrievalInput {
   requestId: string;
-  organizationId: string;
+  customerScope: Pick<CustomerScope, 'customerId' | 'organizationId' | 'permissionScopes'>;
   query: string;
   filters?: Record<string, unknown>;
   limit?: number;

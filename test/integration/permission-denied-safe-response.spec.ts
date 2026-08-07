@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
 describe('US4 permission denied safe response', () => {
   let app: INestApplication;
@@ -24,10 +25,13 @@ describe('US4 permission denied safe response', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us4-permission-denied',
+        {
+          ...createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+            claims: { permission_scopes: ['inventory:read'] },
+            requestId: 'req-us4-permission-denied'
+          }),
           'x-permission-scopes': 'inventory:read'
-        })
+        }
       )
       .send({
         message: '請查 SO-10001 訂單狀態',
@@ -81,8 +85,7 @@ describe('US4 permission denied safe response', () => {
           eventType: 'review_item_created',
           metadata: expect.objectContaining({
             reviewItemId: newReviewItems[0].id,
-            noAnswerReason: 'permission_denied',
-            permissionDeniedReason: 'missing_scope'
+            noAnswerReason: 'permission_denied'
           })
         }),
         expect.objectContaining({

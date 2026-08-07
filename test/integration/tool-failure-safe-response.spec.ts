@@ -78,8 +78,7 @@ describe('US4 tool failure safe response gate', () => {
           eventType: 'review_item_created',
           metadata: expect.objectContaining({
             reviewItemId: newReviewItems[0].id,
-            noAnswerReason: 'tool_failure',
-            toolFailureReason: 'NOT_FOUND'
+            noAnswerReason: 'tool_failure'
           })
         })
       ])

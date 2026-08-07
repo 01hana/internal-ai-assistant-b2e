@@ -67,16 +67,24 @@ describe('LlmObservabilityService', () => {
 function identityContext() {
   return {
     requestId: 'req-llm',
+    customer: {
+      customerId: 'customer-a',
+      integrationId: 'integration-erp'
+    },
+    organization: {
+      organizationId: 'org-001'
+    },
     actor: {
       actorId: 'actor-001',
-      role: 'planner',
+      roles: ['planner'],
       permissionScopes: ['orders:read']
     },
     hostApp: {
       hostApp: 'erp'
     },
-    company: {
-      organizationId: 'org-001'
+    auth: {
+      tokenId: 'jwt-llm-observability',
+      gatewayIssuer: 'https://gateway.test.internal'
     }
   };
 }

@@ -5,16 +5,24 @@ import { TokenizerAdapter } from '../../src/query-understanding/tokenizer-adapte
 
 const identityContext = {
   requestId: 'req-tokenizer-001',
+  customer: {
+    customerId: 'customer-a',
+    integrationId: 'integration-erp'
+  },
+  organization: {
+    organizationId: 'org-001'
+  },
   actor: {
     actorId: 'actor-001',
-    role: 'planner',
+    roles: ['planner'],
     permissionScopes: ['orders:read', 'inventory:read']
   },
   hostApp: {
     hostApp: 'erp'
   },
-  company: {
-    organizationId: 'org-001'
+  auth: {
+    tokenId: 'jwt-tokenizer-001',
+    gatewayIssuer: 'https://gateway.test.internal'
   }
 };
 
