@@ -3,6 +3,7 @@ import { PersistedExecutionPlan } from '../assistant/planning/assistant-planning
 import { PrismaClient } from '../generated/prisma/client';
 import { CustomerScope } from '../identity/customer-scope.types';
 import { RequestIdentityContext } from '../identity/identity-context.types';
+import { assertCustomerScopeMatchesIdentityContext } from '../identity/customer-scope-consistency';
 
 type WorkflowParentDatabase = Pick<PrismaClient, 'assistantSession' | 'assistantMessage'>;
 
@@ -47,25 +48,5 @@ export function assertCustomerWorkflowIdentityConsistency(
   customerScope: CustomerScope,
   identityContext: RequestIdentityContext
 ): void {
-  const identityRoles = normalize(identityContext.actor.roles);
-  const identityScopes = normalize(identityContext.actor.permissionScopes);
-  if (
-    customerScope.customerId !== identityContext.customer.customerId ||
-    customerScope.integrationId !== identityContext.customer.integrationId ||
-    customerScope.organizationId !== identityContext.organization.organizationId ||
-    customerScope.hostApp !== identityContext.hostApp.hostApp ||
-    customerScope.actorId !== identityContext.actor.actorId ||
-    !same(normalize(customerScope.roles), identityRoles) ||
-    !same(normalize(customerScope.permissionScopes), identityScopes)
-  ) {
-    throw workflowNotFound();
-  }
-}
-
-function normalize(values: readonly string[]) {
-  return [...new Set(values)].sort();
-}
-
-function same(left: string[], right: string[]) {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
+  assertCustomerScopeMatchesIdentityContext(customerScope, identityContext);
 }

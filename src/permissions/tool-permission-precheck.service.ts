@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { Prisma } from '../generated/prisma/client';
 import { RequestIdentityContext } from '../identity/identity-context.types';
+import { createCustomerScopeFromIdentityContext } from '../identity/customer-scope.factory';
 import { CustomerScope } from '../identity/customer-scope.types';
 import { ResolvedCustomerTool, ToolPermissionDeniedReason } from '../tools/tool-registry.types';
 
@@ -97,10 +98,8 @@ export class ToolPermissionPrecheckService {
     };
 
     await this.auditWriter.append({
+      customerScope: createCustomerScopeFromIdentityContext(input.identityContext),
       requestId: input.requestId,
-      organizationId: input.identityContext.organization.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId,
       eventType: 'tool_permission_denied',

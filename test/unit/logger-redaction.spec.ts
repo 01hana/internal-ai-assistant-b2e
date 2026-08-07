@@ -30,6 +30,43 @@ describe('redactSecrets', () => {
     expect(JSON.stringify(redacted)).not.toContain(token);
     expect(JSON.stringify(redacted)).not.toContain(privateMaterial);
   });
+
+  it('redacts nested identity, credential, and raw exception material while retaining safe trace fields', () => {
+    const token = createInternalIdentityJwtFixture().sign();
+    const rawError = 'connector exploded with password=plain-text-password';
+    const redacted = redactSecrets({
+      requestId: 'req-safe-trace',
+      traceId: 'trace-safe',
+      nested: {
+        Authorization: `Bearer ${token}`,
+        claims: { jti: 'jwt-customer-a', signature: token.split('.')[2] },
+        jwks: { privateKey: 'private-jwks-material' },
+        apiKey: 'api-key-material',
+        credential: 'connector-credential',
+        password: 'plain-text-password',
+        rawException: rawError
+      }
+    });
+
+    const serialized = JSON.stringify(redacted);
+    expect(serialized).toContain('req-safe-trace');
+    expect(serialized).toContain('trace-safe');
+    [token, token.split('.')[2], 'private-jwks-material', 'api-key-material', 'connector-credential', 'plain-text-password', rawError].forEach((secret) => {
+      expect(serialized).not.toContain(secret);
+    });
+  });
+
+  it('redacts Error message and stack while preserving a safe error code', () => {
+    const error = Object.assign(new Error('connector password=plain-password'), { code: 'CONNECTOR_FAILURE' });
+    error.stack = 'Error: connector password=plain-password';
+    const redacted = redactSecrets({ rawException: error, requestId: 'req-error-redaction' });
+
+    expect(redacted).toEqual(expect.objectContaining({
+      requestId: 'req-error-redaction',
+      rawException: expect.objectContaining({ code: 'CONNECTOR_FAILURE', message: '[REDACTED]', stack: '[REDACTED]' })
+    }));
+    expect(JSON.stringify(redacted)).not.toContain('plain-password');
+  });
 });
 
 describe('StructuredLoggerService', () => {

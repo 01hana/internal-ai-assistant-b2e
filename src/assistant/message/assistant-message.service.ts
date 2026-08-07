@@ -58,10 +58,8 @@ export class AssistantMessageService {
     });
 
     await this.auditWriter.append({
+      customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.organization.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: session.id,
       messageId: userMessage.id,
       eventType: 'message_received',
@@ -154,10 +152,8 @@ export class AssistantMessageService {
       });
 
       await this.auditWriter.append({
+        customerScope,
         requestId: input.requestId,
-        organizationId: input.identityContext.organization.organizationId,
-        hostApp: input.identityContext.hostApp.hostApp,
-        actorId: input.identityContext.actor.actorId,
         sessionId: session.id,
         messageId: assistantMessage.id,
         eventType: 'answer_generated',
@@ -215,10 +211,8 @@ export class AssistantMessageService {
       });
 
       await this.auditWriter.append({
+        customerScope,
         requestId: input.requestId,
-        organizationId: input.identityContext.organization.organizationId,
-        hostApp: input.identityContext.hostApp.hostApp,
-        actorId: input.identityContext.actor.actorId,
         sessionId: session.id,
         messageId: assistantMessage.id,
         eventType: 'answer_generated',
@@ -279,10 +273,8 @@ export class AssistantMessageService {
       });
 
       await this.auditWriter.append({
+        customerScope,
         requestId: input.requestId,
-        organizationId: input.identityContext.organization.organizationId,
-        hostApp: input.identityContext.hostApp.hostApp,
-        actorId: input.identityContext.actor.actorId,
         sessionId: session.id,
         messageId: assistantMessage.id,
         eventType: 'answer_generated',
@@ -344,10 +336,8 @@ export class AssistantMessageService {
       });
 
       await this.auditWriter.append({
+        customerScope,
         requestId: input.requestId,
-        organizationId: input.identityContext.organization.organizationId,
-        hostApp: input.identityContext.hostApp.hostApp,
-        actorId: input.identityContext.actor.actorId,
         sessionId: session.id,
         messageId: assistantMessage.id,
         eventType: 'answer_generated',
@@ -418,6 +408,7 @@ export class AssistantMessageService {
         });
 
         const reviewItem = await this.reviewItemService.createFromAssistantOutcome({
+          customerScope,
           requestId: input.requestId,
           sessionId: session.id,
           messageId: assistantMessage.id,
@@ -445,10 +436,8 @@ export class AssistantMessageService {
         });
 
         await this.auditWriter.append({
+          customerScope,
           requestId: input.requestId,
-          organizationId: input.identityContext.organization.organizationId,
-          hostApp: input.identityContext.hostApp.hostApp,
-          actorId: input.identityContext.actor.actorId,
           sessionId: session.id,
           messageId: assistantMessage.id,
           eventType: 'answer_generated',
@@ -535,10 +524,8 @@ export class AssistantMessageService {
       });
 
       await this.auditWriter.append({
+        customerScope,
         requestId: input.requestId,
-        organizationId: input.identityContext.organization.organizationId,
-        hostApp: input.identityContext.hostApp.hostApp,
-        actorId: input.identityContext.actor.actorId,
         sessionId: session.id,
         messageId: assistantMessage.id,
         eventType: 'answer_generated',
@@ -606,6 +593,7 @@ export class AssistantMessageService {
 
       const reviewItem = gateDecision?.kind === 'no_answer'
         ? await this.reviewItemService.createFromAssistantOutcome({
+            customerScope,
             requestId: input.requestId,
             sessionId: session.id,
             messageId: assistantMessage.id,
@@ -638,10 +626,8 @@ export class AssistantMessageService {
       });
 
       await this.auditWriter.append({
+        customerScope,
         requestId: input.requestId,
-        organizationId: input.identityContext.organization.organizationId,
-        hostApp: input.identityContext.hostApp.hostApp,
-        actorId: input.identityContext.actor.actorId,
         sessionId: session.id,
         messageId: assistantMessage.id,
         eventType: 'answer_generated',
@@ -720,6 +706,7 @@ export class AssistantMessageService {
       });
 
       const reviewItem = await this.reviewItemService.createFromAssistantOutcome({
+        customerScope,
         requestId: input.requestId,
         sessionId: session.id,
         messageId: assistantMessage.id,
@@ -749,10 +736,8 @@ export class AssistantMessageService {
       });
 
       await this.auditWriter.append({
+        customerScope,
         requestId: input.requestId,
-        organizationId: input.identityContext.organization.organizationId,
-        hostApp: input.identityContext.hostApp.hostApp,
-        actorId: input.identityContext.actor.actorId,
         sessionId: session.id,
         messageId: assistantMessage.id,
         toolCallId: runtimeResult.toolCallId,
@@ -813,6 +798,7 @@ export class AssistantMessageService {
       });
 
       const reviewItem = await this.reviewItemService.createFromAssistantOutcome({
+        customerScope,
         requestId: input.requestId,
         sessionId: session.id,
         messageId: assistantMessage.id,
@@ -845,10 +831,8 @@ export class AssistantMessageService {
       });
 
       await this.auditWriter.append({
+        customerScope,
         requestId: input.requestId,
-        organizationId: input.identityContext.organization.organizationId,
-        hostApp: input.identityContext.hostApp.hostApp,
-        actorId: input.identityContext.actor.actorId,
         sessionId: session.id,
         messageId: assistantMessage.id,
         toolCallId: runtimeResult.toolCallId,
@@ -918,10 +902,8 @@ export class AssistantMessageService {
     });
 
     await this.auditWriter.append({
+      customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.organization.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: session.id,
       messageId: assistantMessage.id,
       toolCallId: runtimeResult.toolCallId,
@@ -1000,6 +982,7 @@ export class AssistantMessageService {
     });
 
     const reviewItem = await this.reviewItemService.createFromAssistantOutcome({
+      customerScope: input.customerScope,
       requestId: input.requestId,
       sessionId: input.sessionId,
       messageId: input.messageId,
@@ -1028,10 +1011,8 @@ export class AssistantMessageService {
     });
 
     await this.auditWriter.append({
+      customerScope: input.customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.organization.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId,
       eventType: 'answer_generated',

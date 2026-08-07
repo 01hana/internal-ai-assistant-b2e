@@ -45,10 +45,8 @@ export class AssistantSessionService {
     });
 
     await this.auditWriter.append({
+      customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.organization.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: session.id,
       eventType: 'session_created',
       metadata: toJsonInput({
@@ -72,10 +70,8 @@ export class AssistantSessionService {
     }
 
     await this.auditWriter.append({
+      customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.organization.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: session.id,
       eventType: 'session_resumed',
       metadata: toJsonInput({

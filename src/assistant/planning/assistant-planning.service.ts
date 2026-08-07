@@ -24,10 +24,8 @@ export class AssistantPlanningService {
     });
 
     await this.auditWriter.append({
+      customerScope: input.customerScope,
       requestId: input.requestId,
-      organizationId: input.identityContext.organization.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId,
       eventType: 'execution_plan_created',

@@ -147,14 +147,14 @@
 
 ## Phase 8: [US5] Feedback, Review, and Audit Isolation
 
-- [ ] T064 [P] [US5] Add Customer feedback create/read/message-link isolation tests in `test/integration/customer-feedback-isolation.spec.ts` and `test/contract/feedback.contract.spec.ts`.
-- [ ] T065 [P] [US5] Add Customer review list/get/transition and status/sourceType non-disclosure tests in `test/integration/customer-review-isolation.spec.ts` and `test/contract/review-items.contract.spec.ts`.
-- [ ] T066 [P] [US5] Add Customer audit write/query traceability, metadata non-authority, and raw-token exclusion tests in `test/integration/customer-audit-isolation.spec.ts`, `test/unit/logger-redaction.spec.ts`, and `test/unit/observability-metadata.spec.ts`.
-- [ ] T067 [US5] Apply CustomerScope to feedback message/evidence lookup and persistence in `src/feedback/feedback-event.service.ts`, `src/feedback/feedback.controller.ts`, and `src/feedback/feedback.dto.ts`.
-- [ ] T068 [US5] Apply CustomerScope to review list/get/decision queries in `src/feedback/review-item.service.ts` and `src/feedback/review-item.controller.ts`; metadata cannot be the isolation filter.
-- [ ] T069 [US5] Apply CustomerScope to audit event writes/reads in `src/audit/audit-writer.service.ts` and `src/audit/audit-writer.interface.ts`, retaining traceability without raw tokens.
+- [x] T064 [P] [US5] Add Customer feedback create/read/message-link isolation tests in `test/integration/customer-feedback-isolation.spec.ts` and `test/contract/feedback.contract.spec.ts`.
+- [x] T065 [P] [US5] Add Customer review list/get/transition and status/sourceType non-disclosure tests in `test/integration/customer-review-isolation.spec.ts` and `test/contract/review-items.contract.spec.ts`.
+- [x] T066 [P] [US5] Add Customer audit write/query traceability, metadata non-authority, and raw-token exclusion tests in `test/integration/customer-audit-isolation.spec.ts`, `test/unit/logger-redaction.spec.ts`, and `test/unit/observability-metadata.spec.ts`.
+- [x] T067 [US5] Apply CustomerScope to feedback message/evidence lookup and persistence in `src/feedback/feedback-event.service.ts`, `src/feedback/feedback.controller.ts`, and `src/feedback/feedback.dto.ts`.
+- [x] T068 [US5] Apply CustomerScope to review list/get/decision queries in `src/feedback/review-item.service.ts` and `src/feedback/review-item.controller.ts`; metadata cannot be the isolation filter.
+- [x] T069 [US5] Apply CustomerScope to audit event writes/reads in `src/audit/audit-writer.service.ts` and `src/audit/audit-writer.interface.ts`, retaining traceability without raw tokens.
 
-**US5 checkpoint**: Run T064–T066. Mark US5 complete only when feedback, review, and audit records remain Customer-first for direct IDs and list filters, preserve required traceability, and never use metadata or raw tokens as an authority/isolation mechanism.
+**US5 checkpoint — complete**: T064–T069 are complete. Feedback, Review, and generic Audit writes are CustomerScope-first for direct IDs and list filters; traceability remains available only as non-authority data; metadata, headers, body/query values, request IDs, and raw tokens cannot establish or override Customer ownership. Customer-qualified parent/relation validation fails closed, and feedback/review lifecycle writes plus audits roll back atomically on audit failure. **T070 remains `[ ]` and US6/Phase 9 has not started.**
 
 ---
 
@@ -204,17 +204,17 @@ All selected user stories and enforcement verification → Phase 10
 
 ## Requirement Traceability Summary
 
-| Specification coverage | Implementation tasks | Test/verification tasks |
-| --- | --- | --- |
-| FR-001–FR-007; SC-002 | T010–T016 | T005–T009, T076, T078 |
-| FR-008, FR-010–FR-015; SC-004–SC-005 | T019–T033, T073–T075 | T017–T018, T021–T024, T070–T072, T080–T081 |
-| US1; FR-009, FR-012–FR-014; SC-001 | T038–T041 | T034–T037 |
-| US2; FR-016–FR-018; SC-003 | T026–T027, T046–T049 | T042–T045, T079 |
-| US3; FR-019–FR-020 | T054–T057 | T050–T053 |
-| US4; FR-021 | T061–T063 | T058–T060 |
-| US5; FR-021–FR-022 | T067–T069 | T064–T066 |
-| US6; FR-025–FR-026; SC-005 | T030–T032, T073–T075 | T024, T070–T072, T081 |
-| FR-023–FR-024, FR-027 | T082 (operational rollout gate only) | T076–T082 |
+| Specification coverage               | Implementation tasks                 | Test/verification tasks                    |
+| ------------------------------------ | ------------------------------------ | ------------------------------------------ |
+| FR-001–FR-007; SC-002                | T010–T016                            | T005–T009, T076, T078                      |
+| FR-008, FR-010–FR-015; SC-004–SC-005 | T019–T033, T073–T075                 | T017–T018, T021–T024, T070–T072, T080–T081 |
+| US1; FR-009, FR-012–FR-014; SC-001   | T038–T041                            | T034–T037                                  |
+| US2; FR-016–FR-018; SC-003           | T026–T027, T046–T049                 | T042–T045, T079                            |
+| US3; FR-019–FR-020                   | T054–T057                            | T050–T053                                  |
+| US4; FR-021                          | T061–T063                            | T058–T060                                  |
+| US5; FR-021–FR-022                   | T067–T069                            | T064–T066                                  |
+| US6; FR-025–FR-026; SC-005           | T030–T032, T073–T075                 | T024, T070–T072, T081                      |
+| FR-023–FR-024, FR-027                | T082 (operational rollout gate only) | T076–T082                                  |
 
 ## Completion Checks
 

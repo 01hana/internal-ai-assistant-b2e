@@ -210,7 +210,7 @@ type EvidenceRefRecord = {
 
 type AuditEventRecord = {
   id: string;
-  customerId?: string;
+  customerId: string;
   requestId: string;
   timestamp: Date;
   organizationId: string;
@@ -287,6 +287,7 @@ type ClarificationQuestionRecord = {
 
 type ReviewItemRecord = {
   id: string;
+  customerId: string;
   sourceType: ReviewSourceType;
   sourceId: string;
   status: ReviewItemStatus;
@@ -299,6 +300,7 @@ type ReviewItemRecord = {
 
 type FeedbackEventRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   messageId: string;
   rating: FeedbackRating;
@@ -1237,6 +1239,17 @@ function createPrismaMock(state: MockState) {
         };
         state.auditEvents.push(record);
         return record;
+      }),
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.auditEvents.find((item) => matchesWhere(item, where)) ?? null
+      ),
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.auditEvents.filter((item) => !where || matchesWhere(item, where))
+      ),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<AuditEventRecord> }) => {
+        const records = state.auditEvents.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
       })
     },
     groundingCheck: {
@@ -1315,6 +1328,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<ReviewItemRecord> }) => {
         const record: ReviewItemRecord = {
           id: `review-item-${state.reviewItems.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'ReviewItem'),
           sourceType: (data.sourceType as ReviewSourceType | undefined) ?? ReviewSourceType.no_answer,
           sourceId: data.sourceId ?? 'source-generated',
           status: (data.status as ReviewItemStatus | undefined) ?? ReviewItemStatus.open,
@@ -1327,41 +1341,35 @@ function createPrismaMock(state: MockState) {
         state.reviewItems.push(record);
         return record;
       }),
-      findMany: jest.fn(
-        async ({ where }: { where?: { sourceType?: ReviewSourceType; sourceId?: string; status?: ReviewItemStatus; priority?: ReviewPriority } } = {}) =>
-          state.reviewItems.filter(
-            (item) =>
-              (!where?.sourceType || item.sourceType === where.sourceType) &&
-              (!where?.sourceId || item.sourceId === where.sourceId) &&
-              (!where?.status || item.status === where.status) &&
-              (!where?.priority || item.priority === where.priority)
-          )
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.reviewItems.filter((item) => !where || matchesWhere(item, where))
       ),
-      findFirst: jest.fn(
-        async ({ where }: { where?: { sourceType?: ReviewSourceType; sourceId?: string } } = {}) =>
-          state.reviewItems.find(
-            (item) =>
-              (!where?.sourceType || item.sourceType === where.sourceType) &&
-              (!where?.sourceId || item.sourceId === where.sourceId)
-          ) ?? null
+      findFirst: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.reviewItems.find((item) => !where || matchesWhere(item, where)) ?? null
       ),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>
-        state.reviewItems.find((item) => item.id === where.id) ?? null
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.reviewItems.find((item) => matchesWhere(item, where)) ?? null
       ),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ReviewItemRecord> }) => {
-        const reviewItem = state.reviewItems.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ReviewItemRecord> }) => {
+        const reviewItem = state.reviewItems.find((item) => matchesWhere(item, where));
         if (!reviewItem) {
           throw new Error(`ReviewItem ${where.id} not found.`);
         }
 
         Object.assign(reviewItem, data);
         return reviewItem;
+      }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ReviewItemRecord> }) => {
+        const records = state.reviewItems.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
       })
     },
     feedbackEvent: {
       create: jest.fn(async ({ data }: { data: Partial<FeedbackEventRecord> }) => {
         const record: FeedbackEventRecord = {
           id: `feedback-event-${state.feedbackEvents.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'FeedbackEvent'),
           requestId: data.requestId ?? 'req-generated',
           messageId: data.messageId ?? 'message-owned-assistant-001',
           rating: (data.rating as FeedbackRating | undefined) ?? FeedbackRating.positive,
@@ -1376,20 +1384,17 @@ function createPrismaMock(state: MockState) {
         state.feedbackEvents.push(record);
         return record;
       }),
-      findMany: jest.fn(async ({ where }: { where?: { messageId?: string; rating?: FeedbackRating } } = {}) =>
-        state.feedbackEvents.filter(
-          (item) =>
-            (!where?.messageId || item.messageId === where.messageId) &&
-            (!where?.rating || item.rating === where.rating)
-        )
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.feedbackEvents.filter((item) => !where || matchesWhere(item, where))
       ),
-      findFirst: jest.fn(async ({ where }: { where?: { id?: string; messageId?: string } } = {}) =>
-        state.feedbackEvents.find(
-          (item) =>
-            (!where?.id || item.id === where.id) &&
-            (!where?.messageId || item.messageId === where.messageId)
-        ) ?? null
-      )
+      findFirst: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.feedbackEvents.find((item) => !where || matchesWhere(item, where)) ?? null
+      ),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<FeedbackEventRecord> }) => {
+        const records = state.feedbackEvents.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
+      })
     },
     knowledgeDocument: {
       findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
@@ -1557,6 +1562,9 @@ function createPrismaMock(state: MockState) {
       approvalRequests: state.approvalRequests,
       actionDrafts: state.actionDrafts,
       escalationRequests: state.escalationRequests,
+      feedbackEvents: state.feedbackEvents,
+      reviewItems: state.reviewItems,
+      evidenceRefs: state.evidenceRefs,
       auditEvents: state.auditEvents,
       toolCalls: state.toolCalls
     });
@@ -1568,6 +1576,9 @@ function createPrismaMock(state: MockState) {
       restoreStateArray(state.approvalRequests, snapshot.approvalRequests);
       restoreStateArray(state.actionDrafts, snapshot.actionDrafts);
       restoreStateArray(state.escalationRequests, snapshot.escalationRequests);
+      restoreStateArray(state.feedbackEvents, snapshot.feedbackEvents);
+      restoreStateArray(state.reviewItems, snapshot.reviewItems);
+      restoreStateArray(state.evidenceRefs, snapshot.evidenceRefs);
       restoreStateArray(state.auditEvents, snapshot.auditEvents);
       restoreStateArray(state.toolCalls, snapshot.toolCalls);
       throw error;
@@ -1858,7 +1869,14 @@ function createInitialState(): MockState {
     answerDecisions: [],
     clarificationQuestions: [],
     reviewItems: createReviewItems(baseDate),
-    feedbackEvents: [],
+    feedbackEvents: [
+      {
+        id: 'feedback-event-seed-001', customerId: 'customer-a', requestId: 'workflow-shared-idempotency-key', messageId: 'message-owned-assistant-001', rating: FeedbackRating.negative, reason: null, comment: null, intent: 'not_helpful', toolCallIds: ['tool-call-owned-001'], evidenceRefIds: ['evidence-owned-001'], answerDecision: 'answered', createdAt: new Date(baseDate)
+      },
+      {
+        id: 'feedback-event-hidden-001', customerId: 'customer-b', requestId: 'workflow-shared-idempotency-key', messageId: 'message-hidden-assistant-001', rating: FeedbackRating.negative, reason: null, comment: null, intent: 'not_helpful', toolCallIds: ['tool-call-hidden-001'], evidenceRefIds: ['evidence-hidden-001'], answerDecision: 'answered', createdAt: new Date(baseDate)
+      }
+    ],
     knowledgeDocuments: createKnowledgeDocuments(baseDate),
     knowledgeChunks: createKnowledgeChunks(baseDate),
     retrievalRuns: [],
@@ -1948,6 +1966,7 @@ function createReviewItems(baseDate: Date): ReviewItemRecord[] {
   return [
     {
       id: 'review-item-open-feedback-001',
+      customerId: 'customer-a',
       sourceType: ReviewSourceType.negative_feedback,
       sourceId: 'feedback-event-seed-001',
       status: ReviewItemStatus.open,
@@ -1972,6 +1991,7 @@ function createReviewItems(baseDate: Date): ReviewItemRecord[] {
     },
     {
       id: 'review-item-hidden-org-001',
+      customerId: 'customer-b',
       sourceType: ReviewSourceType.negative_feedback,
       sourceId: 'feedback-event-hidden-001',
       status: ReviewItemStatus.open,
@@ -1993,6 +2013,7 @@ function createReviewItems(baseDate: Date): ReviewItemRecord[] {
     },
     {
       id: 'review-item-open-feedback-002',
+      customerId: 'customer-a',
       sourceType: ReviewSourceType.missing_evidence,
       sourceId: 'feedback-event-seed-002',
       status: ReviewItemStatus.open,
@@ -2011,6 +2032,46 @@ function createReviewItems(baseDate: Date): ReviewItemRecord[] {
         intent: 'missing_evidence',
         reasonProvided: true,
         commentProvided: false
+      },
+      createdAt: new Date(baseDate),
+      resolvedAt: null
+    },
+    {
+      id: 'review-item-customer-a-shared-001',
+      customerId: 'customer-a',
+      sourceType: ReviewSourceType.negative_feedback,
+      sourceId: 'feedback-event-seed-001',
+      status: ReviewItemStatus.open,
+      priority: ReviewPriority.medium,
+      summary: 'customer-a review with shared lower-level fields',
+      suggestedImprovement: {
+        organizationId: 'org-shared',
+        hostApp: 'erp',
+        requestId: 'workflow-shared-idempotency-key',
+        messageId: 'message-owned-assistant-001',
+        feedbackEventId: 'feedback-event-seed-001',
+        rating: 'negative',
+        intent: 'not_helpful'
+      },
+      createdAt: new Date(baseDate),
+      resolvedAt: null
+    },
+    {
+      id: 'review-item-customer-b-shared-001',
+      customerId: 'customer-b',
+      sourceType: ReviewSourceType.negative_feedback,
+      sourceId: 'feedback-event-seed-001',
+      status: ReviewItemStatus.open,
+      priority: ReviewPriority.medium,
+      summary: 'customer-b review with shared lower-level fields',
+      suggestedImprovement: {
+        organizationId: 'org-shared',
+        hostApp: 'erp',
+        requestId: 'workflow-shared-idempotency-key',
+        messageId: 'message-hidden-assistant-001',
+        feedbackEventId: 'feedback-event-seed-001',
+        rating: 'negative',
+        intent: 'not_helpful'
       },
       createdAt: new Date(baseDate),
       resolvedAt: null

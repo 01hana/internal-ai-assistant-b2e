@@ -3,6 +3,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { redactSecrets } from '../common/logger/redaction.util';
 import { Prisma } from '../generated/prisma/client';
 import { RequestIdentityContext } from '../identity/identity-context.types';
+import { createCustomerScopeFromIdentityContext } from '../identity/customer-scope.factory';
 import { LlmProviderMetadata } from './llm-provider.interface';
 
 export interface RecordLlmProviderDecisionInput {
@@ -28,10 +29,8 @@ export class LlmObservabilityService {
     });
 
     return this.auditWriter.append({
+      customerScope: createCustomerScopeFromIdentityContext(input.identityContext),
       requestId: input.requestId,
-      organizationId: input.identityContext.organization.organizationId,
-      hostApp: input.identityContext.hostApp.hostApp,
-      actorId: input.identityContext.actor.actorId,
       sessionId: input.sessionId,
       messageId: input.messageId,
       eventType,

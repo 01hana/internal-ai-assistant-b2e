@@ -3,14 +3,17 @@ import { Prisma } from '../generated/prisma/client';
 import { CustomerScope } from '../identity/customer-scope.types';
 
 export interface AuditWriter {
-  append(input: AppendAuditEventInput): Promise<AuditEventRecord>;
+  append(input: AppendAuditEventInput, database?: AuditTransactionClient): Promise<AuditEventRecord>;
 }
 
+export type AuditTransactionClient = Pick<
+  Prisma.TransactionClient,
+  'assistantSession' | 'assistantMessage' | 'toolCall' | 'evidenceRef' | 'auditEvent'
+>;
+
 export interface AppendAuditEventInput {
+  customerScope: CustomerScope;
   requestId: string;
-  organizationId: string;
-  hostApp: string;
-  actorId: string;
   eventType: string;
   sessionId?: string;
   messageId?: string;
@@ -23,9 +26,24 @@ export interface AppendAuditEventInput {
   metadata?: Prisma.InputJsonValue;
 }
 
-export interface AuditEventRecord extends AppendAuditEventInput {
+export interface AuditEventRecord {
   id: string;
   timestamp: Date;
+  customerId: string;
+  requestId: string;
+  organizationId: string;
+  hostApp: string;
+  actorId: string;
+  eventType: string;
+  sessionId?: string;
+  messageId?: string;
+  decision?: AnswerDecisionStatus;
+  toolCallId?: string;
+  riskLevel?: RiskLevel;
+  permissionResult?: Prisma.InputJsonValue;
+  evidenceRefIds: string[];
+  durationMs?: number;
+  metadata?: Prisma.InputJsonValue;
 }
 
 export interface AppendCustomerToolAuditInput {
