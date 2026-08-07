@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-本設計文件定義 `ai-assistant.com` 的 v1 核心後端設計：一個可嵌入 ERP / MES / WMS / SCM / CRM 等企業內部系統的 AI 工作助理。它不是對外客服 chatbot，也不處理匿名訪客、公眾知識庫、留資或客服轉接假設。
+本設計文件定義 `internal-ai-assistant.com` 的 v1 核心後端設計：一個可嵌入 ERP / MES / WMS / SCM / CRM 等企業內部系統的 AI 工作助理。它不是對外客服 chatbot，也不處理匿名訪客、公眾知識庫、留資或客服轉接假設。
 
 v1 目標是建立可被不同宿主系統接入的核心後端 API、domain model、tool/connector abstraction、RAG/evidence pipeline、approval/escalation/review workflow、audit trail 與 feedback/improvement loop。
 
@@ -19,7 +19,7 @@ v1 目標是建立可被不同宿主系統接入的核心後端 API、domain mod
 - **Backend framework**: NestJS + TypeScript
 - **Persistence**: Prisma + PostgreSQL
 - **Connector strategy**: v1 使用 Mock connector + Adapter contract，不實作特定 ERP / MES / WMS / SCM / CRM connector
-- **LLM strategy**: v1 預設實作為 `OpenAiProvider`，但仍透過 `LlmProvider` interface 抽象；模型必須透過 `LLM_MODEL` 環境變數切換，不得硬寫死在業務邏輯中
+- **LLM strategy**: v1 預設實作為 `OpenAiProvider`，但仍透過 `LlmProvider` interface 抽象；provider 必須透過 `LLM_PROVIDER` 選擇，v1 支援 `openai`，模型必須透過 `LLM_MODEL` 環境變數切換，不得硬寫死在業務邏輯中
 - **Retrieval strategy**: 文件知識使用 RAG；即時業務資料使用 backend tools / structured lookup / connectors
 - **Local dependency strategy**: v1 local development / test baseline 使用 Docker Compose 管理 app dependencies，至少包含 app 與 PostgreSQL，Redis 僅作為 queue/backpressure/rate limit 的 optional profile；production deployment、Kubernetes、Helm、cloud infra 與 CI/CD 不在本 feature 範圍
 - **Scope**: v1 只設計核心後端 API，不設計前端 SDK/widget UI；AI 回覆即時輸出採 SSE，不採 WebSocket
@@ -53,7 +53,7 @@ src/
 - **Query Understanding**: 負責繁體中文斷句、tokenization、片語抽取、企業術語 normalization、時間範圍解析、代詞/指示詞解析、多意圖拆解、實體候選抽取、信心分數與澄清條件。
 - **Identity & Permission**: 驗證 host app、actor、role、permission scope、company/organization boundary；所有 tool/retrieval 前必須經過 permission filter。
 - **Tool Registry & Execution**: 管理 `ToolDefinition`、risk level、side effect、input/output schema；工具執行前必須完成權限檢查與風險判斷。
-- **LLM Provider**: 管理 `LlmProvider` abstraction 與 `OpenAiProvider` 實作；此 context 不屬於企業系統 connector，模型選擇只能在 config/provider layer 處理。
+- **LLM Provider**: 管理 `LlmProvider` abstraction 與 `OpenAiProvider` 實作；此 context 不屬於企業系統 connector，provider/model 選擇只能在 config/provider layer 處理。
 - **Retrieval & Evidence**: 文件、SOP、政策、欄位說明、手冊使用 RAG；訂單、庫存、工單、客戶、供應商、報價、交易等 live business data 使用 structured lookup 或 connector。
 - **Approval & Escalation**: high/critical risk action 不直接執行，改建立 `ApprovalRequest` 或 `EscalationRequest`。
 - **Audit & Observability**: 每個 request、tool call、permission decision、LLM decision、evidence、approval、feedback 都寫入 append-only audit event。
@@ -817,7 +817,7 @@ Provider/adapter interface 必須靠近各自 domain，避免 `common/` 變成�
 
 ### 9.1 LlmProvider
 
-v1 `LlmProvider` 的預設 adapter 為 `OpenAiProvider`，實作位置為 `src/llm/openai/`。模型選擇必須由 `LLM_MODEL` 環境變數控制，禁止在 controller、service、prompt template 或 domain rule 中硬寫死模型名稱。
+v1 `LlmProvider` 的預設 adapter 為 `OpenAiProvider`，實作位置為 `src/llm/openai/`。Provider 選擇必須由 `LLM_PROVIDER` 環境變數控制，v1 支援值為 `openai`；模型選擇必須由 `LLM_MODEL` 環境變數控制，禁止在 controller、service、prompt template 或 domain rule 中硬寫死 provider 或模型名稱。OpenAI credential 使用 provider-specific `OPENAI_API_KEY`，未來新增 provider 時應新增各自 credential env，不共用泛用 `LLM_API_KEY`。
 
 建議模型用途：
 

@@ -1,0 +1,688 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AssistantSessionStatus {
+  active
+  closed
+  expired
+}
+
+enum AssistantMessageRole {
+  user
+  assistant
+  system
+  tool
+}
+
+enum AnswerDecisionStatus {
+  answered
+  clarification_required
+  no_answer
+  permission_denied
+  tool_failed
+  approval_required
+  confirmation_required
+  escalation_required
+}
+
+enum AssistantTaskState {
+  idle
+  planning
+  waiting_clarification
+  waiting_confirmation
+  waiting_approval
+  waiting_escalation
+  completed
+  failed
+}
+
+enum RiskLevel {
+  low
+  medium
+  high
+  critical
+}
+
+enum ExecutionDecision {
+  continue
+  clarify
+  no_answer
+  permission_denied
+  tool_failed
+  approval_required
+  confirmation_required
+  escalation_required
+}
+
+enum ToolOperation {
+  read
+  create
+  update
+  delete
+  export
+  approve
+  other
+}
+
+enum ToolCallStatus {
+  pending
+  success
+  failed
+  blocked
+}
+
+enum ToolExecutionStatus {
+  not_started
+  in_progress
+  executed
+  skipped_duplicate
+  failed
+}
+
+enum EvidenceSourceType {
+  tool_result
+  structured_record
+  document_chunk
+  approval_decision
+}
+
+enum ApprovalRequestStatus {
+  pending
+  approved
+  rejected
+  expired
+  cancelled
+}
+
+enum ActionDraftStatus {
+  draft
+  waiting_confirmation
+  confirmed
+  executed
+  cancelled
+  expired
+  failed
+}
+
+enum EscalationReason {
+  permission_gap
+  data_owner_required
+  policy_required
+  tool_failure
+  evidence_conflict
+  other
+}
+
+enum EscalationStatus {
+  open
+  resolved
+  cancelled
+  expired
+}
+
+enum EscalationOwnerType {
+  data_owner
+  system_admin
+  approver
+  product_ops
+}
+
+enum FeedbackRating {
+  positive
+  negative
+  neutral
+}
+
+enum ReviewSourceType {
+  failed_query
+  no_answer
+  tool_failure
+  negative_feedback
+  missing_evidence
+  bad_tool_routing
+  permission_mapping_issue
+}
+
+enum ReviewItemStatus {
+  open
+  in_review
+  resolved
+  dismissed
+}
+
+enum ReviewPriority {
+  low
+  medium
+  high
+}
+
+enum KnowledgeSourceType {
+  manual
+  sop
+  policy
+  field_guide
+  faq
+  uploaded_file
+  other
+}
+
+enum KnowledgeDocumentStatus {
+  draft
+  active
+  archived
+}
+
+enum RetrievalStrategy {
+  keyword
+  vector
+  hybrid
+}
+
+enum NoAnswerReason {
+  no_evidence
+  low_confidence
+  ambiguous_query
+  permission_denied
+  tool_failure
+  evidence_conflict
+  unsupported_scope
+  missing_page_context
+}
+
+enum ClarificationQuestionStatus {
+  pending
+  answered
+  cancelled
+  expired
+}
+
+model AssistantSession {
+  id             String                 @id @default(cuid())
+  hostApp        String
+  organizationId String
+  actorId        String
+  status         AssistantSessionStatus @default(active)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  lastMessageAt  DateTime?
+
+  messages           AssistantMessage[]
+  contextStates      AssistantContextState[]
+  executionPlans     ExecutionPlan[]
+  toolCalls          ToolCall[]
+  approvalRequests   ApprovalRequest[]
+  actionDrafts       ActionDraft[]
+  escalationRequests EscalationRequest[]
+  auditEvents        AuditEvent[]
+
+  @@index([organizationId, hostApp, actorId])
+  @@index([status, updatedAt])
+}
+
+model AssistantMessage {
+  id             String                @id @default(cuid())
+  sessionId      String
+  requestId      String
+  role           AssistantMessageRole
+  content        String
+  answerDecision AnswerDecisionStatus?
+  pageContext    Json?
+  createdAt      DateTime              @default(now())
+
+  session                AssistantSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  executionPlans         ExecutionPlan[]
+  answerDecisions        AnswerDecision[]
+  clarificationQuestions ClarificationQuestion[]
+  groundingChecks        GroundingCheck[]
+  queryUnderstanding     QueryUnderstandingResult?
+  toolCalls              ToolCall[]
+  evidenceRefs           EvidenceRef[]
+  approvalRequests       ApprovalRequest[]
+  actionDrafts           ActionDraft[]
+  escalationRequests     EscalationRequest[]
+  feedbackEvents         FeedbackEvent[]
+  auditEvents            AuditEvent[]
+  retrievalRuns          RetrievalRun[]
+
+  @@index([sessionId, createdAt])
+  @@index([requestId])
+  @@index([answerDecision])
+}
+
+model AssistantContextState {
+  id                       String             @id @default(cuid())
+  sessionId                String
+  currentTask              String?
+  currentModule            String?
+  currentPage              Json?
+  currentEntityType        String?
+  currentEntityId          String?
+  lastIntent               String?
+  lastEntities             Json?
+  lastToolCallIds          String[]
+  lastEvidenceRefIds       String[]
+  pendingClarification     Json?
+  pendingApprovalRequestId String?
+  taskState                AssistantTaskState @default(idle)
+  updatedAt                DateTime           @updatedAt
+  createdAt                DateTime           @default(now())
+
+  session AssistantSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, updatedAt])
+  @@index([taskState])
+}
+
+model ExecutionPlan {
+  id                       String            @id @default(cuid())
+  sessionId                String
+  messageId                String?
+  taskType                 String
+  requiredEvidence         Json
+  candidateTools           Json
+  permissionChecks         Json
+  riskAssessment           RiskLevel
+  clarificationNeeds       Json?
+  expectedAnswerShape      Json?
+  requiresMultiStepToolUse Boolean           @default(false)
+  decision                 ExecutionDecision
+  createdAt                DateTime          @default(now())
+
+  session AssistantSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  message AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, createdAt])
+  @@index([messageId])
+  @@index([riskAssessment, decision])
+}
+
+model AnswerDecision {
+  id                      String               @id @default(cuid())
+  requestId               String
+  messageId               String
+  status                  AnswerDecisionStatus
+  noAnswerReason          NoAnswerReason?
+  clarificationQuestionId String?
+  groundingCheckId        String?
+  metadata                Json?
+  createdAt               DateTime             @default(now())
+
+  message               AssistantMessage       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  clarificationQuestion ClarificationQuestion? @relation(fields: [clarificationQuestionId], references: [id], onDelete: SetNull)
+  groundingCheck        GroundingCheck?        @relation(fields: [groundingCheckId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([messageId, status])
+}
+
+model ClarificationQuestion {
+  id         String                      @id @default(cuid())
+  requestId  String
+  messageId  String
+  question   String
+  reason     String?
+  status     ClarificationQuestionStatus @default(pending)
+  metadata   Json?
+  createdAt  DateTime                    @default(now())
+  answeredAt DateTime?
+
+  message         AssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  answerDecisions AnswerDecision[]
+
+  @@index([requestId])
+  @@index([messageId, status])
+}
+
+model GroundingCheck {
+  id                    String   @id @default(cuid())
+  requestId             String
+  messageId             String
+  covered               Boolean
+  checkedClaimCount     Int      @default(0)
+  unsupportedClaimCount Int      @default(0)
+  evidenceRefIds        String[]
+  metadata              Json?
+  createdAt             DateTime @default(now())
+
+  message         AssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  answerDecisions AnswerDecision[]
+
+  @@index([requestId])
+  @@index([messageId, covered])
+}
+
+model ToolDefinition {
+  id                   String        @id @default(cuid())
+  name                 String
+  version              String
+  description          String
+  resource             String
+  operation            ToolOperation
+  inputSchema          Json
+  outputSchema         Json
+  requiredPermissions  String[]
+  riskLevel            RiskLevel
+  hasSideEffect        Boolean       @default(false)
+  requiresConfirmation Boolean       @default(false)
+  requiresApproval     Boolean       @default(false)
+  connectorKey         String
+  timeoutMs            Int
+  auditBehavior        Json?
+  isActive             Boolean       @default(true)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  toolCalls ToolCall[]
+
+  @@unique([name, version])
+  @@index([connectorKey, isActive])
+  @@index([riskLevel, hasSideEffect])
+}
+
+model ToolCall {
+  id               String              @id @default(cuid())
+  requestId        String
+  sessionId        String
+  messageId        String?
+  toolDefinitionId String?
+  toolName         String
+  toolVersion      String
+  inputSummary     Json?
+  permissionResult Json?
+  outputSummary    Json?
+  status           ToolCallStatus      @default(pending)
+  executionStatus  ToolExecutionStatus @default(not_started)
+  idempotencyKey   String?
+  durationMs       Int?
+  errorCode        String?
+  createdAt        DateTime            @default(now())
+  executedAt       DateTime?
+
+  session        AssistantSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  message        AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  toolDefinition ToolDefinition?   @relation(fields: [toolDefinitionId], references: [id], onDelete: SetNull)
+  evidenceRefs   EvidenceRef[]
+  auditEvents    AuditEvent[]
+
+  @@unique([idempotencyKey])
+  @@index([requestId])
+  @@index([sessionId, createdAt])
+  @@index([messageId])
+  @@index([toolName, toolVersion])
+  @@index([status, executionStatus])
+}
+
+model EvidenceRef {
+  id                 String             @id @default(cuid())
+  requestId          String?
+  messageId          String?
+  sourceType         EvidenceSourceType
+  sourceId           String
+  toolCallId         String?
+  documentId         String?
+  chunkId            String?
+  entityType         String?
+  entityId           String?
+  fieldPaths         String[]
+  timestamp          DateTime           @default(now())
+  permissionSnapshot Json?
+  summary            Json?
+
+  message  AssistantMessage?  @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  toolCall ToolCall?          @relation(fields: [toolCallId], references: [id], onDelete: SetNull)
+  document KnowledgeDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  chunk    KnowledgeChunk?    @relation(fields: [chunkId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([messageId])
+  @@index([sourceType, sourceId])
+  @@index([toolCallId])
+  @@index([documentId])
+}
+
+model AuditEvent {
+  id               String                @id @default(cuid())
+  requestId        String
+  timestamp        DateTime              @default(now())
+  organizationId   String
+  hostApp          String
+  actorId          String
+  sessionId        String?
+  messageId        String?
+  eventType        String
+  decision         AnswerDecisionStatus?
+  toolCallId       String?
+  riskLevel        RiskLevel?
+  permissionResult Json?
+  evidenceRefIds   String[]
+  durationMs       Int?
+  metadata         Json?
+
+  session  AssistantSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  message  AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  toolCall ToolCall?         @relation(fields: [toolCallId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([organizationId, hostApp, actorId])
+  @@index([sessionId, timestamp])
+  @@index([eventType, timestamp])
+}
+
+model FeedbackEvent {
+  id             String                @id @default(cuid())
+  requestId      String
+  messageId      String
+  rating         FeedbackRating
+  reason         String?
+  comment        String?
+  intent         String?
+  toolCallIds    String[]
+  evidenceRefIds String[]
+  answerDecision AnswerDecisionStatus?
+  createdAt      DateTime              @default(now())
+
+  message AssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([messageId, rating])
+}
+
+model ReviewItem {
+  id                   String           @id @default(cuid())
+  sourceType           ReviewSourceType
+  sourceId             String
+  status               ReviewItemStatus @default(open)
+  priority             ReviewPriority   @default(medium)
+  summary              String
+  suggestedImprovement Json?
+  createdAt            DateTime         @default(now())
+  resolvedAt           DateTime?
+
+  @@index([sourceType, sourceId])
+  @@index([status, priority])
+}
+
+model ApprovalRequest {
+  id               String                @id @default(cuid())
+  requestId        String
+  sessionId        String
+  messageId        String?
+  requesterActorId String
+  approverActorId  String?
+  riskLevel        RiskLevel
+  status           ApprovalRequestStatus @default(pending)
+  actionSummary    Json
+  payloadSummary   Json
+  evidenceRefIds   String[]
+  decisionReason   String?
+  idempotencyKey   String?
+  auditEventIds    String[]
+  expiresAt        DateTime?
+  createdAt        DateTime              @default(now())
+  decidedAt        DateTime?
+
+  session AssistantSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  message AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@unique([idempotencyKey])
+  @@index([requestId])
+  @@index([sessionId, status])
+  @@index([requesterActorId, status])
+  @@index([approverActorId, status])
+}
+
+model ActionDraft {
+  id             String            @id @default(cuid())
+  requestId      String
+  sessionId      String
+  messageId      String?
+  actorId        String
+  toolName       String
+  resource       String
+  operation      ToolOperation
+  riskLevel      RiskLevel
+  payloadSummary Json
+  preview        Json
+  status         ActionDraftStatus @default(draft)
+  idempotencyKey String?
+  createdAt      DateTime          @default(now())
+  confirmedAt    DateTime?
+  executedAt     DateTime?
+  expiresAt      DateTime?
+
+  session AssistantSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  message AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@unique([idempotencyKey])
+  @@index([requestId])
+  @@index([sessionId, status])
+  @@index([actorId, status])
+}
+
+model EscalationRequest {
+  id         String              @id @default(cuid())
+  requestId  String
+  sessionId  String
+  messageId  String?
+  reason     EscalationReason
+  status     EscalationStatus    @default(open)
+  ownerType  EscalationOwnerType
+  summary    Json
+  createdAt  DateTime            @default(now())
+  resolvedAt DateTime?
+
+  session AssistantSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  message AssistantMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([sessionId, status])
+  @@index([ownerType, status])
+}
+
+model QueryUnderstandingResult {
+  id                 String   @id @default(cuid())
+  requestId          String
+  messageId          String   @unique
+  sentences          Json
+  tokens             Json
+  phrases            Json
+  normalizedTerms    Json
+  timeRanges         Json?
+  resolvedReferences Json?
+  entityCandidates   Json
+  subTasks           Json?
+  confidence         Float
+  clarificationNeeds Json?
+  createdAt          DateTime @default(now())
+
+  message AssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([confidence])
+}
+
+model KnowledgeDocument {
+  id         String                  @id @default(cuid())
+  title      String
+  sourceType KnowledgeSourceType
+  sourceKey  String
+  version    String
+  language   String
+  status     KnowledgeDocumentStatus @default(draft)
+  metadata   Json?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  chunks       KnowledgeChunk[]
+  evidenceRefs EvidenceRef[]
+
+  @@unique([sourceKey, version])
+  @@index([status, sourceType])
+}
+
+model KnowledgeChunk {
+  id           String   @id @default(cuid())
+  documentId   String
+  chunkIndex   Int
+  heading      String?
+  content      String
+  tokenCount   Int
+  metadata     Json?
+  embeddingRef String?
+  vectorId     String?
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  document            KnowledgeDocument    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  evidenceRefs        EvidenceRef[]
+  retrievalCandidates RetrievalCandidate[]
+
+  @@unique([documentId, chunkIndex])
+  @@index([enabled, documentId])
+}
+
+model RetrievalRun {
+  id                     String            @id @default(cuid())
+  requestId              String
+  messageId              String?
+  query                  String
+  normalizedQuery        String?
+  filters                Json?
+  strategy               RetrievalStrategy
+  selectedEvidenceRefIds String[]
+  noAnswerReason         NoAnswerReason?
+  durationMs             Int?
+  createdAt              DateTime          @default(now())
+
+  message    AssistantMessage?    @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  candidates RetrievalCandidate[]
+
+  @@index([requestId])
+  @@index([messageId])
+  @@index([strategy, createdAt])
+}
+
+model RetrievalCandidate {
+  id             String             @id @default(cuid())
+  retrievalRunId String
+  chunkId        String?
+  sourceId       String
+  sourceType     EvidenceSourceType
+  score          Float
+  rank           Int
+  selected       Boolean            @default(false)
+  reason         String?
+
+  retrievalRun RetrievalRun    @relation(fields: [retrievalRunId], references: [id], onDelete: Cascade)
+  chunk        KnowledgeChunk? @relation(fields: [chunkId], references: [id], onDelete: SetNull)
+
+  @@index([retrievalRunId, rank])
+  @@index([selected])
+}

@@ -8,9 +8,9 @@
 
 ## Summary
 
-本計畫定義 `ai-assistant.com` v1 內部後台 AI 助理核心後端的實作方向。v1 目標是建立可嵌入 ERP / MES / WMS / SCM / CRM 的核心 API 與 domain pipeline，支援 session/message、SSE 即時回覆、`PageContext`、`AssistantContextState`、繁體中文 query understanding、`ExecutionPlan`、tool-first 查詢、RAG/evidence、permission filtering、medium-risk confirmation、high-risk approval、append-only audit、feedback/review loop。
+本計畫定義 `internal-ai-assistant.com` v1 內部後台 AI 助理核心後端的實作方向。v1 目標是建立可嵌入 ERP / MES / WMS / SCM / CRM 的核心 API 與 domain pipeline，支援 session/message、SSE 即時回覆、`PageContext`、`AssistantContextState`、繁體中文 query understanding、`ExecutionPlan`、tool-first 查詢、RAG/evidence、permission filtering、medium-risk confirmation、high-risk approval、append-only audit、feedback/review loop。
 
-本計畫不實作完整後台管理 domain、管理 UI、taxonomy/settings CRUD、analytics dashboard、完整營運報表、真實 ERP / MES / WMS / SCM / CRM connector 或前端 SDK/widget UI。v1 使用 mock connector 驗證核心流程；LLM 預設使用 `OpenAiProvider`，實作位置為 `src/llm/openai/`，並透過可替換 `LlmProvider`、`RetrievalProvider`、`TokenizerAdapter`、`ConnectorAdapter` 保留產品化擴充空間。
+本計畫不實作完整後台管理 domain、管理 UI、taxonomy/settings CRUD、analytics dashboard、完整營運報表、真實 ERP / MES / WMS / SCM / CRM connector 或前端 SDK/widget UI。v1 使用 mock connector 驗證核心流程；LLM 預設 provider 為 `openai` / `OpenAiProvider`，實作位置為 `src/llm/openai/`，並透過 `LLM_PROVIDER`、可替換 `LlmProvider`、`RetrievalProvider`、`TokenizerAdapter`、`ConnectorAdapter` 保留產品化擴充空間。
 
 MVP 不做完整 dashboard，但必須先保存可分析的原始事件，避免後續產品化時需要重構核心 runtime 紀錄。Runtime 必需 records、audit、feedback/review、approval/action draft、tool/evidence records 必須保存，並保留 internal read/debug/review contract 或後續擴充空間。
 
@@ -18,7 +18,7 @@ MVP 不做完整 dashboard，但必須先保存可分析的原始事件，避免
 
 **Language/Version**: TypeScript
 
-**Primary Dependencies**: NestJS、Prisma、Jest；v1 LLM provider 預設為 `OpenAiProvider`，但 LLM / Retrieval / Tokenizer / Connector 仍以 adapter interface 抽象；tokenizer 不在 v1 綁定單一 package
+**Primary Dependencies**: NestJS、Prisma、Jest；v1 LLM provider 預設為 `openai` / `OpenAiProvider`，但 LLM / Retrieval / Tokenizer / Connector 仍以 adapter interface 抽象；tokenizer 不在 v1 綁定單一 package
 
 **Storage**: PostgreSQL + Prisma；audit event 採 append-only model；context、evidence、permission snapshot 可使用 JSON 欄位但核心關聯必須可查詢
 
@@ -32,11 +32,11 @@ MVP 不做完整 dashboard，但必須先保存可分析的原始事件，避免
 
 **Performance Goals**: v1 設計需支援同時大量內部使用者請求，並預留 queue、backpressure、rate limit、SSE timeout、per-host-app resource isolation；正式數值門檻由後續 implementation/eval 階段以壓測基準固定
 
-**Constraints**: AI 回覆即時輸出只採 SSE，不採 WebSocket；所有 retrieval/tool 前必須完成 actor、host app、company/organization boundary、role、permission scope 檢查；未授權欄位不得進入 LLM input；side-effect execution 必須使用 idempotency key；模型必須透過 `LLM_MODEL` 環境變數切換，不得硬寫死在業務邏輯
+**Constraints**: AI 回覆即時輸出只採 SSE，不採 WebSocket；所有 retrieval/tool 前必須完成 actor、host app、company/organization boundary、role、permission scope 檢查；未授權欄位不得進入 LLM input；side-effect execution 必須使用 idempotency key；LLM provider 必須透過 `LLM_PROVIDER` 環境變數選擇，模型必須透過 `LLM_MODEL` 環境變數切換，不得硬寫死在業務邏輯
 
 **Scale/Scope**: v1 core API + mock connector validation；不實作真實 ERP / MES / WMS / SCM / CRM connector，不實作前端 SDK/widget UI，不實作完整後台管理 domain、管理 UI、taxonomy/settings CRUD、analytics dashboard 或完整營運報表；但 runtime core records、audit、feedback/review、approval/confirmation、tool/evidence records 必須持久化
 
-**LLM Model Defaults**: 主力/demo 使用 `gpt-5.4-mini`；高品質測試使用 `gpt-5.4`；廉價快速/fallback 使用 `gpt-5.4-nano`。若 `LLM_MODEL` 未設定，建議由 config/provider 層預設為 `gpt-5.4-mini`。
+**LLM Provider / Model Defaults**: v1 provider 預設為 `LLM_PROVIDER=openai`；主力/demo 使用 `gpt-5.4-mini`；高品質測試使用 `gpt-5.4`；廉價快速/fallback 使用 `gpt-5.4-nano`。若 `LLM_MODEL` 未設定，建議由 config/provider 層預設為 `gpt-5.4-mini`。
 
 **Analytics-ready Raw Events**: MVP 必須保存或可追蹤 `AuditEvent`、`ToolCall`、`ExecutionPlan`、`AnswerDecision`、`EvidenceRef`、`FeedbackEvent`、`ReviewItem`、`ApprovalRequest`、`ActionDraft`、`RetrievalRun` / `RetrievalCandidate` 或等價 audit metadata、dependency status、durationMs、noAnswerReason、permissionDeniedReason、toolFailureReason、approval / confirmation decision status。
 
@@ -108,9 +108,9 @@ test/
 - 決定 Prisma schema 分層策略，涵蓋 session/message/context、tool/evidence、approval/action draft、audit、feedback/review、RAG document/chunk、retrieval observability。
 - 固定 SSE event contract、error/requestId envelope、stream interruption 行為。
 - 固定 `OpenAiProvider` 預設實作於 `src/llm/openai/`，並固定 `LlmProvider`、`RetrievalProvider`、`TokenizerAdapter`、`ConnectorAdapter` interface 邊界：interfaces 必須靠近各自 domain，不集中塞入 `common/`。
-- 固定 `LLM_MODEL` env config 與模型切換策略，確認 model name 不出現在 controller/service/domain 業務邏輯中。
-- 固定 `.env.example`、config validation 與 secret redaction 策略，確保 OpenAI API key、connector secrets 不進 README、fixtures、一般 log、error response 或 audit metadata。
-- 固定 Docker Compose local dev/test baseline：`app`、`postgres`、optional/profile-based `redis`；`.env.example` 必須包含 Docker Compose 所需的 `DATABASE_URL`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB`、`LLM_MODEL`、OpenAI key placeholder。
+- 固定 `LLM_PROVIDER` / `LLM_MODEL` env config 與 provider/model 切換策略，確認 provider/model name 不出現在 controller/service/domain 業務邏輯中。
+- 固定 `.env.example`、config validation 與 secret redaction 策略，確保 OpenAI provider-specific API key、connector secrets 不進 README、fixtures、一般 log、error response 或 audit metadata。
+- 固定 Docker Compose local dev/test baseline：`app`、`postgres`、optional/profile-based `redis`；`.env.example` 必須包含 Docker Compose 所需的 `DATABASE_URL`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB`、`LLM_PROVIDER`、`LLM_MODEL`、OpenAI key placeholder。
 - 固定 Prisma migration、seed 與 test database initialization 在容器環境中的執行方式。
 - 定義 mock connector fixtures：order status、work order progress、inventory availability、customer/supplier history。
 - 定義 audit event strategy：append-only、敏感資料遮罩、metadata 最小化、requestId traceability。
@@ -200,4 +200,4 @@ test/
 - 真實 ERP / MES / WMS / SCM / CRM connector 後續拆 feature specs；v1 只用 mock connector 驗證核心流程。
 - v1 不以 WebSocket 作為 AI 回覆通道；SSE 是唯一即時回答通道。
 - v1 不把 jieba 視為必要依賴；中文理解能力透過可替換 `TokenizerAdapter` 與 query understanding pipeline 實作。
-- v1 預設 LLM adapter 為 `OpenAiProvider`，且仍需透過 `LlmProvider` interface 抽象；`LLM_MODEL` 可切換主力/demo `gpt-5.4-mini`、高品質測試 `gpt-5.4`、廉價快速/fallback `gpt-5.4-nano`，provider/model 選擇不得硬寫死在 controller、service、prompt 或業務邏輯中，fallback/model selection 應在 config/provider 層處理並寫入 audit 或 observability metadata。
+- v1 預設 LLM adapter 為 `OpenAiProvider`，且仍需透過 `LlmProvider` interface 抽象；`LLM_PROVIDER` v1 支援 `openai`，`LLM_MODEL` 可切換主力/demo `gpt-5.4-mini`、高品質測試 `gpt-5.4`、廉價快速/fallback `gpt-5.4-nano`，provider/model 選擇不得硬寫死在 controller、service、prompt 或業務邏輯中，fallback/model selection 應在 config/provider 層處理並寫入 audit 或 observability metadata。
