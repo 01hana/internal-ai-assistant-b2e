@@ -7,7 +7,14 @@ import { LlmProvider } from '../../src/llm/llm-provider.interface';
 import { LlmProviderService } from '../../src/llm/llm-provider.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { RetrievalService } from '../../src/retrieval/retrieval.service';
-import { createIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import {
+  createAuthorizedInternalIdentityHeaders,
+  createIdentityHeaders,
+  createUs1TestAppWithState,
+  parseSseResponse,
+  Us1TestState
+} from '../support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
 describe('non-functional safety boundaries', () => {
   let app: INestApplication;
@@ -193,9 +200,11 @@ describe('non-functional safety boundaries', () => {
       {
         identityContext: {
           requestId: 'req-nonfunctional-llm-fallback',
-          actor: { actorId: 'actor-001', role: 'planner', permissionScopes: ['orders:read'] },
+          customer: { customerId: 'customer-a', integrationId: 'integration-a' },
+          actor: { actorId: 'actor-001', roles: ['planner'], permissionScopes: ['orders:read'] },
           hostApp: { hostApp: 'erp' },
-          company: { organizationId: 'org-001' }
+          organization: { organizationId: 'org-001' },
+          auth: { tokenId: 'jti-nonfunctional-llm-fallback', gatewayIssuer: 'https://gateway.test.local' }
         }
       }
     );
@@ -249,9 +258,13 @@ describe('non-functional safety boundaries', () => {
 
   it('bounds confirm and approve retries through the existing idempotency guard', async () => {
     const initialToolCallCount = state.toolCalls.length;
-    const actionHeaders = createIdentityHeaders({
-      'x-request-id': 'req-nonfunctional-confirm-first',
-      'x-permission-scopes': 'orders:read,orders:update'
+    const actionHeaders = createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+      claims: {
+        ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA,
+        permission_scopes: ['orders:read', 'orders:update'],
+        jti: 'jwt-nonfunctional-confirm-first'
+      },
+      requestId: 'req-nonfunctional-confirm-first'
     });
     const firstConfirm = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
@@ -259,14 +272,24 @@ describe('non-functional safety boundaries', () => {
       .send({ idempotencyKey: 'idem-nonfunctional-confirm' });
     const duplicateConfirm = await request(app.getHttpServer())
       .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-nonfunctional-confirm-retry', 'x-permission-scopes': 'orders:read,orders:update' }))
+      .set(createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+        claims: {
+          ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA,
+          permission_scopes: ['orders:read', 'orders:update'],
+          jti: 'jwt-nonfunctional-confirm-retry'
+        },
+        requestId: 'req-nonfunctional-confirm-retry'
+      }))
       .send({ idempotencyKey: 'idem-nonfunctional-confirm' });
 
-    const approverHeaders = createIdentityHeaders({
-      'x-request-id': 'req-nonfunctional-approve-first',
-      'x-actor-id': 'approver-001',
-      'x-role': 'approver',
-      'x-permission-scopes': 'orders:read,orders:approve'
+    const approverHeaders = createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+      claims: {
+        ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA,
+        roles: ['approver'],
+        permission_scopes: ['orders:read', 'orders:approve'],
+        jti: 'jwt-nonfunctional-approve-first'
+      },
+      requestId: 'req-nonfunctional-approve-first'
     });
     const firstApprove = await request(app.getHttpServer())
       .post('/api/v1/assistant/approval-requests/approval-request-pending-approve-001/approve')
@@ -275,11 +298,14 @@ describe('non-functional safety boundaries', () => {
     const duplicateApprove = await request(app.getHttpServer())
       .post('/api/v1/assistant/approval-requests/approval-request-pending-approve-001/approve')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-nonfunctional-approve-retry',
-          'x-actor-id': 'approver-001',
-          'x-role': 'approver',
-          'x-permission-scopes': 'orders:read,orders:approve'
+        createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+          claims: {
+            ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA,
+            roles: ['approver'],
+            permission_scopes: ['orders:read', 'orders:approve'],
+            jti: 'jwt-nonfunctional-approve-retry'
+          },
+          requestId: 'req-nonfunctional-approve-retry'
         })
       )
       .send({ idempotencyKey: 'idem-nonfunctional-approve' });

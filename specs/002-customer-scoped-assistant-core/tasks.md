@@ -167,7 +167,7 @@
 - [x] T074 [US6] Implement retained-data ownership-and-policy mapping validation and enforcement preflight in `scripts/customer-ownership-migration-preflight.ts` and document invocation/approval in `specs/002-customer-scoped-assistant-core/migration-runbook.md`; no policy inference is permitted.
 - [x] T075 [US6] Document pre-enforcement rollback and post-enforcement forward-fix/restore in `specs/002-customer-scoped-assistant-core/migration-runbook.md`; invalid/legacy policy remains deny-by-default and public identity headers are never re-enabled.
 
-**US6 checkpoint — complete**: T070–T075 are complete. Rebuildable data deterministically seeds Customer A/B ownership and canonical KnowledgeDocument policy; retained unmapped, ambiguous, malformed, foreign, and invalid-policy inputs block retrieval and enforcement; approved normalized mappings pass preflight before Release B constraints enforce. T075 retains pre-enforcement rollback and post-enforcement forward-fix/restore without re-enabling legacy identity authority. **T076–T078 are complete; T079–T082 remain `[ ]`.**
+**US6 checkpoint — complete**: T070–T075 are complete. Rebuildable data deterministically seeds Customer A/B ownership and canonical KnowledgeDocument policy; retained unmapped, ambiguous, malformed, foreign, and invalid-policy inputs block retrieval and enforcement; approved normalized mappings pass preflight before Release B constraints enforce. T075 retains pre-enforcement rollback and post-enforcement forward-fix/restore without re-enabling legacy identity authority. **T076–T082 are complete; Phase 10 verification is complete, while production rollout remains BLOCKED by the Feature 003 Gateway readiness dependencies documented by T082.**
 
 ---
 
@@ -176,10 +176,12 @@
 - [x] T076 Run and repair focused unit suites with `npm run test:unit` for identity, CustomerScope, RAG filters, tool policy, parent-child integrity, and redaction.
 - [x] T077 Run and repair Customer A/B integration suites in `test/integration/customer-*.spec.ts` with `npm run test:integration`.
 - [x] T078 Run and repair API/SSE contract suites in `test/contract/customer-*.spec.ts` with `npm run test:contract`; verify guard rejection stops business work.
-- [ ] T079 Run end-to-end/eval regression in `test/e2e/app.e2e-spec.ts` and `test/eval/customer-rag-isolation.eval.spec.ts` with `npm run test:e2e` and `npm run test:eval`.
-- [ ] T080 Run `npm run typecheck`, `npm run lint`, and `npm run prisma:generate`; validate `prisma/schema.prisma` and `prisma/migrations/**` after schema changes.
-- [ ] T081 Run `npm run test:db:init` and `npm run prisma:seed`; confirm Customer A/B invariants and no production mapping assumptions.
-- [ ] T082 Create `specs/002-customer-scoped-assistant-core/production-readiness.md` to verify Feature 003 signed canonical claims, issuer/audience/JWKS/key rotation, token redaction, and no header fallback; production rollout remains blocked without any Gateway runtime/deployment/registry/onboarding/Host-proxy work.
+- [x] T079 Run end-to-end/eval regression in `test/e2e/app.e2e-spec.ts` and `test/eval/customer-rag-isolation.eval.spec.ts` with `npm run test:e2e` and `npm run test:eval`.
+- [x] T080 Run `npm run typecheck`, `npm run lint`, and `npm run prisma:generate`; validate `prisma/schema.prisma` and `prisma/migrations/**` after schema changes.
+- [x] T081 Run `npm run test:db:init` and `npm run prisma:seed`; confirm Customer A/B invariants and no production mapping assumptions.
+- [x] T082 Create `specs/002-customer-scoped-assistant-core/production-readiness.md` to verify Feature 003 signed canonical claims, issuer/audience/JWKS/key rotation, token redaction, and no header fallback; production rollout remains blocked without any Gateway runtime/deployment/registry/onboarding/Host-proxy work.
+
+**Phase 10 checkpoint — verification complete**: T076–T082 are complete. Feature 002 implementation and verification are complete; production rollout remains **BLOCKED** until Feature 003 supplies and verifies real Gateway-signed canonical claims, public JWKS, key rotation, and Gateway token redaction.
 
 ---
 
