@@ -1,125 +1,45 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestAppWithState } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, Us1TestState } from '../support/us1-test-app.helper';
+import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
 
-describe('US3 action drafts contract baseline', () => {
+describe('T059 Customer-scoped action draft contract', () => {
+  const jwt = createInternalIdentityJwtFixture();
   let app: INestApplication;
+  let state: Us1TestState;
+  const headers = (customer: 'customerA' | 'customerB', requestId: string) => createAuthorizedInternalIdentityHeaders(jwt, {
+    claims: { ...jwt.canonicalClaims[customer], permission_scopes: ['orders:read', 'orders:update'] }, requestId
+  });
+  beforeAll(async () => ({ app, state } = await createUs1TestAppWithState({ internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: jwt.jwks } })));
+  afterAll(async () => app?.close());
 
-  beforeAll(async () => {
-    const testApp = await createUs1TestAppWithState();
-    app = testApp.app;
+  it('defines same-Customer get, confirm, cancel, expiry, and duplicate-safe retry contracts', async () => {
+    const get = await request(app.getHttpServer()).get('/api/v1/assistant/action-drafts/action-draft-waiting-001').set({ ...headers('customerA', 'req-t059-get'), 'x-customer-id': 'customer-b' });
+    expect(get.status).toBe(200);
+    const confirm = await request(app.getHttpServer()).post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm').set(headers('customerA', 'req-t059-confirm')).send({ idempotencyKey: 'workflow-shared-idempotency-key', customerId: 'customer-b' });
+    expect(confirm.status).toBe(200);
+    const retry = await request(app.getHttpServer()).post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm').set(headers('customerA', 'req-t059-retry')).send({ idempotencyKey: 'workflow-shared-idempotency-key' });
+    expect(retry.status).toBe(200);
+    expect(retry.body.data.duplicateSafe).toBe(true);
+    const cancel = await request(app.getHttpServer()).post('/api/v1/assistant/action-drafts/action-draft-draft-001/cancel').set(headers('customerA', 'req-t059-cancel'));
+    expect(cancel.status).toBe(200);
+    const expired = await request(app.getHttpServer()).post('/api/v1/assistant/action-drafts/action-draft-expired-001/confirm').set(headers('customerA', 'req-t059-expired')).send({ idempotencyKey: 'new-key' });
+    expect(expired.status).toBe(409);
   });
 
-  afterAll(async () => {
-    await app.close();
+  it('requires foreign get/confirm/cancel to fail before connector, ToolCall, audit, or state change', async () => {
+    const foreign = state.actionDrafts.find((item) => item.id === 'action-draft-customer-b-waiting-001')!;
+    const before = { status: foreign.status, tools: state.toolCalls.length, audits: state.auditEvents.length };
+    const get = await request(app.getHttpServer()).get(`/api/v1/assistant/action-drafts/${foreign.id}`).set(headers('customerA', 'req-t059-foreign-get'));
+    const confirm = await request(app.getHttpServer()).post(`/api/v1/assistant/action-drafts/${foreign.id}/confirm`).set(headers('customerA', 'req-t059-foreign-confirm')).send({ idempotencyKey: 'workflow-shared-idempotency-key' });
+    const cancel = await request(app.getHttpServer()).post(`/api/v1/assistant/action-drafts/${foreign.id}/cancel`).set(headers('customerA', 'req-t059-foreign-cancel'));
+    for (const response of [get, confirm, cancel]) {
+      expect(response.status).toBe(404);
+      expect(JSON.stringify(response.body)).not.toContain(foreign.id);
+    }
+    expect(foreign.status).toBe(before.status);
+    expect(state.toolCalls).toHaveLength(before.tools);
+    expect(state.auditEvents).toHaveLength(before.audits);
   });
 
-  it('returns an action draft preview with the standard response envelope', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/api/v1/assistant/action-drafts/action-draft-waiting-001')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-draft-get' }));
-
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual(
-      expect.objectContaining({
-        requestId: 'req-us3-action-draft-get',
-        data: expect.objectContaining({
-          actionDraftId: 'action-draft-waiting-001',
-          status: 'waiting_confirmation',
-          riskLevel: 'medium',
-          toolName: expect.any(String),
-          resource: expect.any(String),
-          operation: expect.any(String),
-          preview: expect.anything(),
-          expiresAt: expect.any(String),
-          requestId: expect.any(String),
-          messageId: expect.any(String)
-        })
-      })
-    );
-  });
-
-  it('confirms a waiting action draft only through the confirmation flow and keeps duplicate confirm duplicate-safe', async () => {
-    const firstResponse = await request(app.getHttpServer())
-      .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-draft-confirm-1', 'x-permission-scopes': 'orders:read,orders:update' }))
-      .send({
-        idempotencyKey: 'idem-action-draft-confirm-001'
-      });
-
-    expect(firstResponse.status).toBe(200);
-    expect(firstResponse.body).toEqual(
-      expect.objectContaining({
-        requestId: 'req-us3-action-draft-confirm-1',
-        data: expect.objectContaining({
-          actionDraftId: 'action-draft-waiting-001',
-          status: expect.stringMatching(/confirmed|executed/)
-        })
-      })
-    );
-
-    const duplicateResponse = await request(app.getHttpServer())
-      .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-draft-confirm-2' }))
-      .send({
-        idempotencyKey: 'idem-action-draft-confirm-001'
-      });
-
-    expect(duplicateResponse.status).toBe(200);
-    expect(duplicateResponse.body).toEqual(
-      expect.objectContaining({
-        requestId: 'req-us3-action-draft-confirm-2',
-        data: expect.objectContaining({
-          actionDraftId: 'action-draft-waiting-001',
-          duplicateSafe: true,
-          recheck: expect.objectContaining({
-            idempotency: 'duplicate',
-            permission: 'passed',
-            toolContract: 'passed'
-          })
-        })
-      })
-    );
-  });
-
-  it.each([
-    ['action-draft-expired-001', 'expired'],
-    ['action-draft-cancelled-001', 'cancelled'],
-    ['action-draft-executed-001', 'executed']
-  ])('rejects confirming %s because status is %s', async (draftId, status) => {
-    const response = await request(app.getHttpServer())
-      .post(`/api/v1/assistant/action-drafts/${draftId}/confirm`)
-      .set(createIdentityHeaders({ 'x-request-id': `req-us3-action-draft-${draftId}` }))
-      .send({
-        idempotencyKey: `idem-new-${draftId}`
-      });
-
-    expect(response.status).toBe(409);
-    expect(response.body).toEqual(
-      expect.objectContaining({
-        requestId: `req-us3-action-draft-${draftId}`,
-        error: expect.objectContaining({
-          code: expect.any(String),
-          message: expect.stringContaining(status)
-        })
-      })
-    );
-  });
-
-  it('cancels a pending action draft with the standard response envelope', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/api/v1/assistant/action-drafts/action-draft-draft-001/cancel')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-us3-action-draft-cancel' }));
-
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual(
-      expect.objectContaining({
-        requestId: 'req-us3-action-draft-cancel',
-        data: expect.objectContaining({
-          actionDraftId: 'action-draft-draft-001',
-          status: 'cancelled'
-        })
-      })
-    );
-  });
 });

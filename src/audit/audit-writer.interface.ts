@@ -39,3 +39,14 @@ export interface AppendCustomerToolAuditInput {
   durationMs?: number;
   metadata?: Prisma.InputJsonValue;
 }
+
+export interface AppendCustomerWorkflowAuditInput {
+  customerScope: CustomerScope;
+  requestId: string;
+  eventType: string;
+  sessionId?: string;
+  messageId?: string;
+  toolCallId?: string;
+  riskLevel?: RiskLevel;
+  metadata?: Prisma.InputJsonValue;
+}

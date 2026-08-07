@@ -136,6 +136,7 @@ type CustomerToolPolicyRecord = {
 
 type ActionDraftRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   sessionId: string;
   messageId: string | null;
@@ -156,6 +157,7 @@ type ActionDraftRecord = {
 
 type ApprovalRequestRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   sessionId: string;
   messageId: string | null;
@@ -176,6 +178,7 @@ type ApprovalRequestRecord = {
 
 type EscalationRequestRecord = {
   id: string;
+  customerId: string;
   requestId: string;
   sessionId: string;
   messageId: string | null;
@@ -410,6 +413,7 @@ type MockState = {
   retrievalRuns: RetrievalRunRecord[];
   retrievalCandidates: RetrievalCandidateRecord[];
   internalIdentity?: InternalIdentityTestConfig;
+  workflowAuditFailureEventTypes: string[];
   orchestration: {
     sendMessage: jest.Mock;
     sseEventBuilds: jest.Mock;
@@ -588,7 +592,7 @@ export function createUs1TestStateForTest(): Us1TestState {
 }
 
 function createPrismaMock(state: MockState) {
-  return {
+  const prismaMock: Record<string, any> = {
     $queryRaw: jest.fn(async (query: unknown, ...values: unknown[]) => {
       if (!isAuthorizedKnowledgeChunkQuery(query)) {
         return [{ result: 1 }];
@@ -933,6 +937,7 @@ function createPrismaMock(state: MockState) {
       create: jest.fn(async ({ data }: { data: Partial<ActionDraftRecord> }) => {
         const record: ActionDraftRecord = {
           id: `action-draft-created-${state.actionDrafts.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'ActionDraft'),
           requestId: data.requestId ?? 'req-generated',
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
@@ -953,57 +958,43 @@ function createPrismaMock(state: MockState) {
         state.actionDrafts.push(record);
         return record;
       }),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.actionDrafts.find((item) => item.id === where.id) ?? null),
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => state.actionDrafts.find((item) => matchesWhere(item, where)) ?? null),
       findFirst: jest.fn(
         async ({
           where
         }: {
-          where: {
-            id?: string;
-            sessionId?: string;
-            actorId?: string;
-            status?: ActionDraftStatus;
-          };
+          where: Record<string, unknown>;
         }) =>
-          state.actionDrafts.find(
-            (item) =>
-              (!where.id || item.id === where.id) &&
-              (!where.sessionId || item.sessionId === where.sessionId) &&
-              (!where.actorId || item.actorId === where.actorId) &&
-              (!where.status || item.status === where.status)
-          ) ?? null
+          state.actionDrafts.find((item) => matchesWhere(item, where)) ?? null
       ),
       findMany: jest.fn(
         async ({
           where
         }: {
-          where?: {
-            sessionId?: string;
-            actorId?: string;
-            status?: ActionDraftStatus;
-          };
+          where?: Record<string, unknown>;
         } = {}) =>
-          state.actionDrafts.filter(
-            (item) =>
-              (!where?.sessionId || item.sessionId === where.sessionId) &&
-              (!where?.actorId || item.actorId === where.actorId) &&
-              (!where?.status || item.status === where.status)
-          )
+          state.actionDrafts.filter((item) => !where || matchesWhere(item, where))
       ),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ActionDraftRecord> }) => {
-        const draft = state.actionDrafts.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ActionDraftRecord> }) => {
+        const draft = state.actionDrafts.find((item) => matchesWhere(item, where));
         if (!draft) {
-          throw new Error(`ActionDraft ${where.id} not found.`);
+          throw new Error('ActionDraft not found.');
         }
 
         Object.assign(draft, data);
         return draft;
+      }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ActionDraftRecord> }) => {
+        const records = state.actionDrafts.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
       })
     },
     approvalRequest: {
       create: jest.fn(async ({ data }: { data: Partial<ApprovalRequestRecord> }) => {
         const record: ApprovalRequestRecord = {
           id: `approval-request-created-${state.approvalRequests.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'ApprovalRequest'),
           requestId: data.requestId ?? 'req-generated',
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
@@ -1024,72 +1015,59 @@ function createPrismaMock(state: MockState) {
         state.approvalRequests.push(record);
         return record;
       }),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.approvalRequests.find((item) => item.id === where.id) ?? null),
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => state.approvalRequests.find((item) => matchesWhere(item, where)) ?? null),
       findFirst: jest.fn(
         async ({
           where
         }: {
-          where: {
-            id?: string;
-            sessionId?: string;
-            requesterActorId?: string;
-            approverActorId?: string;
-            status?: ApprovalRequestStatus;
-          };
+          where: Record<string, unknown>;
         }) =>
-          state.approvalRequests.find(
-            (item) =>
-              (!where.id || item.id === where.id) &&
-              (!where.sessionId || item.sessionId === where.sessionId) &&
-              (!where.requesterActorId || item.requesterActorId === where.requesterActorId) &&
-              (!where.approverActorId || item.approverActorId === where.approverActorId) &&
-              (!where.status || item.status === where.status)
-          ) ?? null
+          state.approvalRequests.find((item) => matchesWhere(item, where)) ?? null
       ),
       findMany: jest.fn(
         async ({
           where,
           orderBy
         }: {
-          where?: {
-            status?: ApprovalRequestStatus;
-            riskLevel?: RiskLevel;
-            requesterActorId?: string;
-            approverActorId?: string;
-            createdAt?: { gte?: Date; lte?: Date };
-          };
+          where?: Record<string, unknown>;
           orderBy?: { createdAt: 'asc' | 'desc' };
         } = {}) =>
           state.approvalRequests
-            .filter(
-              (item) =>
-                (!where?.status || item.status === where.status) &&
-                (!where?.riskLevel || item.riskLevel === where.riskLevel) &&
-                (!where?.requesterActorId || item.requesterActorId === where.requesterActorId) &&
-                (!where?.approverActorId || item.approverActorId === where.approverActorId) &&
-                (!where?.createdAt?.gte || item.createdAt.getTime() >= where.createdAt.gte.getTime()) &&
-                (!where?.createdAt?.lte || item.createdAt.getTime() <= where.createdAt.lte.getTime())
-            )
+            .filter((item) => !where || matchesWhere(item, where))
             .sort((left, right) =>
               (orderBy?.createdAt ?? 'desc') === 'desc'
                 ? right.createdAt.getTime() - left.createdAt.getTime()
                 : left.createdAt.getTime() - right.createdAt.getTime()
             )
       ),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<ApprovalRequestRecord> }) => {
-        const approvalRequest = state.approvalRequests.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ApprovalRequestRecord> }) => {
+        const approvalRequest = state.approvalRequests.find((item) => matchesWhere(item, where));
         if (!approvalRequest) {
-          throw new Error(`ApprovalRequest ${where.id} not found.`);
+          throw new Error('ApprovalRequest not found.');
         }
 
         Object.assign(approvalRequest, data);
         return approvalRequest;
+      }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<ApprovalRequestRecord> }) => {
+        const records = state.approvalRequests.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
+      }),
+      delete: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        const index = state.approvalRequests.findIndex((item) => matchesWhere(item, where));
+        if (index < 0) {
+          throw new Error('ApprovalRequest not found.');
+        }
+
+        return state.approvalRequests.splice(index, 1)[0];
       })
     },
     escalationRequest: {
       create: jest.fn(async ({ data }: { data: Partial<EscalationRequestRecord> }) => {
         const record: EscalationRequestRecord = {
           id: `escalation-request-created-${state.escalationRequests.length + 1}`,
+          customerId: requireCustomerId(data.customerId, 'EscalationRequest'),
           requestId: data.requestId ?? 'req-generated',
           sessionId: data.sessionId ?? 'session-owned-001',
           messageId: (data.messageId as string | null | undefined) ?? null,
@@ -1103,50 +1081,44 @@ function createPrismaMock(state: MockState) {
         state.escalationRequests.push(record);
         return record;
       }),
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => state.escalationRequests.find((item) => item.id === where.id) ?? null),
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => state.escalationRequests.find((item) => matchesWhere(item, where)) ?? null),
       findFirst: jest.fn(
         async ({
           where
         }: {
-          where: {
-            id?: string;
-            sessionId?: string;
-            status?: EscalationStatus;
-          };
+          where: Record<string, unknown>;
         }) =>
-          state.escalationRequests.find(
-            (item) =>
-              (!where.id || item.id === where.id) &&
-              (!where.sessionId || item.sessionId === where.sessionId) &&
-              (!where.status || item.status === where.status)
-          ) ?? null
+          state.escalationRequests.find((item) => matchesWhere(item, where)) ?? null
       ),
       findMany: jest.fn(
         async ({
           where,
           orderBy
         }: {
-          where?: {
-            status?: EscalationStatus;
-          };
+          where?: Record<string, unknown>;
           orderBy?: { createdAt: 'asc' | 'desc' };
         } = {}) =>
           state.escalationRequests
-            .filter((item) => !where?.status || item.status === where.status)
+            .filter((item) => !where || matchesWhere(item, where))
             .sort((left, right) =>
               (orderBy?.createdAt ?? 'desc') === 'desc'
                 ? right.createdAt.getTime() - left.createdAt.getTime()
                 : left.createdAt.getTime() - right.createdAt.getTime()
             )
       ),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Partial<EscalationRequestRecord> }) => {
-        const escalationRequest = state.escalationRequests.find((item) => item.id === where.id);
+      update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<EscalationRequestRecord> }) => {
+        const escalationRequest = state.escalationRequests.find((item) => matchesWhere(item, where));
         if (!escalationRequest) {
-          throw new Error(`EscalationRequest ${where.id} not found.`);
+          throw new Error('EscalationRequest not found.');
         }
 
         Object.assign(escalationRequest, data);
         return escalationRequest;
+      }),
+      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<EscalationRequestRecord> }) => {
+        const records = state.escalationRequests.filter((item) => matchesWhere(item, where));
+        records.forEach((record) => Object.assign(record, data));
+        return { count: records.length };
       })
     },
     toolCall: {
@@ -1239,9 +1211,14 @@ function createPrismaMock(state: MockState) {
     },
     auditEvent: {
       create: jest.fn(async ({ data }: { data: Partial<AuditEventRecord> }) => {
+        const failureIndex = state.workflowAuditFailureEventTypes.indexOf(data.eventType ?? '');
+        if (failureIndex >= 0) {
+          state.workflowAuditFailureEventTypes.splice(failureIndex, 1);
+          throw new Error(`test-only workflow audit failure: ${data.eventType}`);
+        }
         const record: AuditEventRecord = {
           id: `audit-${state.auditEvents.length + 1}`,
-          customerId: data.customerId,
+          customerId: requireCustomerId(data.customerId, 'AuditEvent'),
           requestId: data.requestId ?? 'req-generated',
           timestamp: nextDate(),
           organizationId: data.organizationId ?? 'org-001',
@@ -1573,6 +1550,34 @@ function createPrismaMock(state: MockState) {
       )
     }
   };
+  prismaMock.$transaction = jest.fn(async (callback: (transaction: Record<string, any>) => Promise<unknown>) => {
+    const snapshot = structuredClone({
+      sessions: state.sessions,
+      messages: state.messages,
+      approvalRequests: state.approvalRequests,
+      actionDrafts: state.actionDrafts,
+      escalationRequests: state.escalationRequests,
+      auditEvents: state.auditEvents,
+      toolCalls: state.toolCalls
+    });
+    try {
+      return await callback(prismaMock);
+    } catch (error) {
+      restoreStateArray(state.sessions, snapshot.sessions);
+      restoreStateArray(state.messages, snapshot.messages);
+      restoreStateArray(state.approvalRequests, snapshot.approvalRequests);
+      restoreStateArray(state.actionDrafts, snapshot.actionDrafts);
+      restoreStateArray(state.escalationRequests, snapshot.escalationRequests);
+      restoreStateArray(state.auditEvents, snapshot.auditEvents);
+      restoreStateArray(state.toolCalls, snapshot.toolCalls);
+      throw error;
+    }
+  });
+  return prismaMock;
+}
+
+function restoreStateArray(target: unknown[], snapshot: unknown[]) {
+  target.splice(0, target.length, ...snapshot);
 }
 
 function isAuthorizedKnowledgeChunkQuery(query: unknown): boolean {
@@ -1746,7 +1751,23 @@ function createInitialState(): MockState {
         enabled: false,
         requiredRoles: [],
         requiredPermissionScopes: []
-      }
+      },
+      ...['tool-definition-orders-update-001', 'tool-definition-orders-cancel-001'].flatMap((toolDefinitionId) => [
+        {
+          customerId: 'customer-a',
+          toolDefinitionId,
+          enabled: true,
+          requiredRoles: [],
+          requiredPermissionScopes: []
+        },
+        {
+          customerId: 'customer-b',
+          toolDefinitionId,
+          enabled: true,
+          requiredRoles: [],
+          requiredPermissionScopes: []
+        }
+      ])
     ],
     actionDrafts: createActionDrafts(baseDate),
     approvalRequests: createApprovalRequests(baseDate),
@@ -1830,6 +1851,7 @@ function createInitialState(): MockState {
       }
     ],
     auditEvents: [],
+    workflowAuditFailureEventTypes: [],
     queryUnderstandingResults: [],
     executionPlans: [],
     groundingChecks: [],
@@ -1879,6 +1901,14 @@ function matchesWhere(record: Record<string, unknown>, where: Record<string, unk
 
     if (isRecord(value)) {
       if (Array.isArray(value.in)) return value.in.includes(record[key]);
+      if (value.gte instanceof Date || value.lte instanceof Date) {
+        const actual = record[key];
+        if (!(actual instanceof Date)) return false;
+        return (
+          (!(value.gte instanceof Date) || actual.getTime() >= value.gte.getTime()) &&
+          (!(value.lte instanceof Date) || actual.getTime() <= value.lte.getTime())
+        );
+      }
       return false;
     }
 
@@ -2204,10 +2234,11 @@ function createActionDrafts(baseDate: Date): ActionDraftRecord[] {
     requiresApproval: false
   };
   const common = {
+    customerId: 'customer-a',
     requestId: 'req-us3-action-draft-fixture',
     sessionId: 'session-owned-001',
     messageId: 'message-owned-assistant-001',
-    actorId: 'actor-001',
+    actorId: 'actor-shared',
     toolName: 'mock.orders.status.update',
     resource: 'orders',
     operation: ToolOperation.update,
@@ -2267,6 +2298,16 @@ function createActionDrafts(baseDate: Date): ActionDraftRecord[] {
       idempotencyKey: 'idem-action-draft-executed-001',
       executedAt: new Date('2026-06-16T00:00:07.000Z'),
       expiresAt: new Date('2026-12-31T00:00:00.000Z')
+    },
+    {
+      ...common,
+      id: 'action-draft-customer-b-waiting-001',
+      customerId: 'customer-b',
+      sessionId: 'session-hidden-001',
+      messageId: 'message-hidden-assistant-001',
+      idempotencyKey: 'workflow-shared-idempotency-key',
+      status: ActionDraftStatus.waiting_confirmation,
+      expiresAt: new Date('2026-12-31T00:00:00.000Z')
     }
   ];
 }
@@ -2283,10 +2324,11 @@ function createApprovalRequests(baseDate: Date): ApprovalRequestRecord[] {
     requiresApproval: true
   };
   const common = {
+    customerId: 'customer-a',
     requestId: 'req-us3-approval-fixture',
     sessionId: 'session-owned-001',
     messageId: 'message-owned-assistant-001',
-    requesterActorId: 'actor-001',
+    requesterActorId: 'actor-shared',
     approverActorId: 'approver-001',
     riskLevel: RiskLevel.high,
     status: ApprovalRequestStatus.pending,
@@ -2340,12 +2382,21 @@ function createApprovalRequests(baseDate: Date): ApprovalRequestRecord[] {
     {
       ...common,
       id: 'approval-request-pending-cancel-001'
+    },
+    {
+      ...common,
+      id: 'approval-request-customer-b-pending-001',
+      customerId: 'customer-b',
+      sessionId: 'session-hidden-001',
+      messageId: 'message-hidden-assistant-001',
+      idempotencyKey: 'workflow-shared-idempotency-key'
     }
   ];
 }
 
 function createEscalationRequests(baseDate: Date): EscalationRequestRecord[] {
   const common = {
+    customerId: 'customer-a',
     requestId: 'req-us3-escalation-fixture',
     sessionId: 'session-owned-001',
     messageId: 'message-owned-assistant-001',
@@ -2355,7 +2406,7 @@ function createEscalationRequests(baseDate: Date): EscalationRequestRecord[] {
       riskLevel: RiskLevel.critical,
       reasonCode: EscalationReason.policy_required,
       reasonSummary: 'Critical-risk action requires manual escalation before any system side effect.',
-      requesterActorId: 'actor-001',
+      requesterActorId: 'actor-shared',
       assignedActorId: null,
       status: EscalationStatus.open,
       actionSummary: {
@@ -2424,6 +2475,23 @@ function createEscalationRequests(baseDate: Date): EscalationRequestRecord[] {
       summary: {
         ...common.summary,
         requesterActorId: 'actor-002',
+        contextSummary: {
+          module: 'orders',
+          entityType: 'order',
+          entityId: 'SO-20002',
+          visibleFieldCount: 1
+        }
+      }
+    },
+    {
+      ...common,
+      id: 'escalation-request-customer-b-open-001',
+      customerId: 'customer-b',
+      sessionId: 'session-hidden-001',
+      messageId: 'message-hidden-assistant-001',
+      status: EscalationStatus.open,
+      summary: {
+        ...common.summary,
         contextSummary: {
           module: 'orders',
           entityType: 'order',

@@ -3,6 +3,7 @@ import { getRequestId } from '../common/request-id/request-id.util';
 import { ApprovalRequestStatus, RiskLevel } from '../generated/prisma/enums';
 import { getIdentityContext, IdentityRequest } from '../identity/identity-context.extractor';
 import { IdentityGuard } from '../identity/identity.guard';
+import { createCustomerScopeFromIdentityContext } from '../identity/customer-scope.factory';
 import { ApprovalRequestService } from './approval-request.service';
 import { ApprovalRequestListFilters } from './approval-request.types';
 
@@ -13,19 +14,23 @@ export class ApprovalRequestController {
 
   @Get()
   listRequests(@Req() request: IdentityRequest, @Query() query: ApprovalRequestListFiltersQuery) {
+    const identityContext = getRequiredIdentityContext(request);
     return this.approvalRequestService.listVisibleRequests({
       requestId: getRequestId(request),
-      identityContext: getRequiredIdentityContext(request),
+      identityContext,
+      customerScope: createCustomerScopeFromIdentityContext(identityContext),
       filters: toListFilters(query)
     });
   }
 
   @Get(':id')
   getRequest(@Req() request: IdentityRequest, @Param('id') approvalRequestId: string) {
+    const identityContext = getRequiredIdentityContext(request);
     return this.approvalRequestService.getVisibleRequest({
       requestId: getRequestId(request),
       approvalRequestId,
-      identityContext: getRequiredIdentityContext(request)
+      identityContext,
+      customerScope: createCustomerScopeFromIdentityContext(identityContext)
     });
   }
 
@@ -36,10 +41,12 @@ export class ApprovalRequestController {
     @Param('id') approvalRequestId: string,
     @Body() body: { idempotencyKey?: string }
   ) {
+    const identityContext = getRequiredIdentityContext(request);
     return this.approvalRequestService.approve({
       requestId: getRequestId(request),
       approvalRequestId,
-      identityContext: getRequiredIdentityContext(request),
+      identityContext,
+      customerScope: createCustomerScopeFromIdentityContext(identityContext),
       idempotencyKey: body.idempotencyKey
     });
   }
@@ -51,10 +58,12 @@ export class ApprovalRequestController {
     @Param('id') approvalRequestId: string,
     @Body() body: { reason?: string }
   ) {
+    const identityContext = getRequiredIdentityContext(request);
     return this.approvalRequestService.reject({
       requestId: getRequestId(request),
       approvalRequestId,
-      identityContext: getRequiredIdentityContext(request),
+      identityContext,
+      customerScope: createCustomerScopeFromIdentityContext(identityContext),
       reason: body.reason
     });
   }
@@ -66,10 +75,12 @@ export class ApprovalRequestController {
     @Param('id') approvalRequestId: string,
     @Body() body?: { reason?: string }
   ) {
+    const identityContext = getRequiredIdentityContext(request);
     return this.approvalRequestService.cancel({
       requestId: getRequestId(request),
       approvalRequestId,
-      identityContext: getRequiredIdentityContext(request),
+      identityContext,
+      customerScope: createCustomerScopeFromIdentityContext(identityContext),
       reason: body?.reason
     });
   }

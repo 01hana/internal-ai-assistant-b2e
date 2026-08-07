@@ -3,8 +3,10 @@ import { EscalationReason, EscalationStatus, RiskLevel } from '../generated/pris
 import { PageContextDto } from '../assistant/page-context/page-context.dto';
 import { PersistedExecutionPlan } from '../assistant/planning/assistant-planning.types';
 import { RequestIdentityContext } from '../identity/identity-context.types';
+import { CustomerScope } from '../identity/customer-scope.types';
 
 export interface CreateEscalationRequestInput {
+  customerScope: CustomerScope;
   requestId: string;
   sessionId: string;
   messageId: string;
@@ -14,6 +16,7 @@ export interface CreateEscalationRequestInput {
 }
 
 export interface EscalationRequestDecisionInput {
+  customerScope: CustomerScope;
   requestId: string;
   escalationRequestId: string;
   identityContext: RequestIdentityContext;
@@ -21,6 +24,7 @@ export interface EscalationRequestDecisionInput {
 }
 
 export interface ListEscalationRequestsInput {
+  customerScope: CustomerScope;
   requestId: string;
   identityContext: RequestIdentityContext;
   filters: EscalationRequestListFilters;

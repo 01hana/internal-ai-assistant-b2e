@@ -4,13 +4,13 @@ import { MockConnectorAdapter } from '../connectors/mock/mock-connector.adapter'
 import { Prisma } from '../generated/prisma/client';
 import { RiskLevel, ToolCallStatus, ToolExecutionStatus, ToolOperation } from '../generated/prisma/enums';
 import { RequestIdentityContext } from '../identity/identity-context.types';
-import { createCustomerScopeFromIdentityContext } from '../identity/customer-scope.factory';
 import { CustomerScope } from '../identity/customer-scope.types';
 import { ToolPermissionPrecheckService } from '../permissions/tool-permission-precheck.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisteredToolDefinition, ToolPermissionDeniedReason } from '../tools/tool-registry.types';
 import { ToolRegistryService } from '../tools/tool-registry.service';
 import { PersistedSideEffectToolContract } from './side-effect-tool-contract.resolver';
+import { assertCustomerWorkflowIdentityConsistency } from './customer-workflow-context';
 
 type SideEffectSourceType = 'action_draft' | 'approval_request';
 
@@ -19,6 +19,7 @@ interface ExecuteSideEffectInput {
   sessionId: string;
   messageId?: string | null;
   identityContext: RequestIdentityContext;
+  customerScope: CustomerScope;
   sourceType: SideEffectSourceType;
   sourceId: string;
   requesterActorId: string;
@@ -53,7 +54,8 @@ export class SideEffectExecutionGuardService {
   ) {}
 
   async execute(input: ExecuteSideEffectInput): Promise<SideEffectExecutionResult> {
-    const customerScope = createCustomerScopeFromIdentityContext(input.identityContext);
+    const customerScope = input.customerScope;
+    assertCustomerWorkflowIdentityConsistency(customerScope, input.identityContext);
     await this.assertCustomerParents(input, customerScope);
 
     if (!input.idempotencyKey) {
@@ -150,8 +152,8 @@ export class SideEffectExecutionGuardService {
 
     const connectorResult = await this.mockConnector.execute({
       requestId: input.requestId,
-      organizationId: input.identityContext.organization.organizationId,
-      actorId: input.identityContext.actor.actorId,
+      organizationId: customerScope.organizationId,
+      actorId: customerScope.actorId,
       toolKey: tool.key,
       arguments: {
         entityId: input.entityId

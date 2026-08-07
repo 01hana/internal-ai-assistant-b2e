@@ -188,6 +188,7 @@ export class AssistantMessageService {
 
     if (planningResult.executionPlan.riskAssessment === RiskLevel.medium) {
       const actionDraft = await this.actionDraftService.createForMediumRisk({
+        customerScope,
         requestId: input.requestId,
         sessionId: session.id,
         messageId: assistantMessage.id,
@@ -249,6 +250,7 @@ export class AssistantMessageService {
       planningResult.executionPlan.riskAssessment === RiskLevel.critical
     ) {
       const escalationRequest = await this.escalationRequestService.createForCriticalRisk({
+        customerScope,
         requestId: input.requestId,
         sessionId: session.id,
         messageId: assistantMessage.id,
@@ -314,6 +316,7 @@ export class AssistantMessageService {
       planningResult.executionPlan.riskAssessment === RiskLevel.high
     ) {
       const approvalRequest = await this.approvalRequestService.createForHighRisk({
+        customerScope,
         requestId: input.requestId,
         sessionId: session.id,
         messageId: assistantMessage.id,

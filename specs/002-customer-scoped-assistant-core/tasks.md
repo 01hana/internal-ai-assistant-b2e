@@ -134,14 +134,14 @@
 
 ## Phase 7: [US4] Approval, Action Draft, and Escalation Isolation
 
-- [ ] T058 [P] [US4] Add approval Customer A/B create/list/get/approve/reject isolation tests in `test/integration/customer-approval-isolation.spec.ts` and `test/contract/approval-requests.contract.spec.ts`.
-- [ ] T059 [P] [US4] Add action-draft confirm/cancel/expire/retry and side-effect precheck isolation tests in `test/integration/customer-action-draft-isolation.spec.ts` and `test/contract/action-drafts.contract.spec.ts`.
-- [ ] T060 [P] [US4] Add escalation read/resolve isolation and workflow-audit tests in `test/integration/customer-escalation-isolation.spec.ts` and `test/contract/escalation-requests.contract.spec.ts`.
-- [ ] T061 [US4] Apply CustomerScope to approval queries, transitions, idempotency, and qualified parent checks in `src/approvals/approval-request.service.ts` and `src/approvals/approval-request.controller.ts`.
-- [ ] T062 [US4] Apply CustomerScope to action-draft queries, transitions, and side-effect checks in `src/approvals/action-draft.service.ts`, `src/approvals/action-draft.controller.ts`, and `src/approvals/side-effect-execution-guard.service.ts`.
-- [ ] T063 [US4] Apply CustomerScope to escalation queries/transitions in `src/approvals/escalation-request.service.ts` and `src/approvals/escalation-request.controller.ts`; write Customer-scoped workflow audit through `src/audit/audit-writer.service.ts`.
+- [x] T058 [P] [US4] Add approval Customer A/B create/list/get/approve/reject isolation tests in `test/integration/customer-approval-isolation.spec.ts` and `test/contract/approval-requests.contract.spec.ts`.
+- [x] T059 [P] [US4] Add action-draft confirm/cancel/expire/retry and side-effect precheck isolation tests in `test/integration/customer-action-draft-isolation.spec.ts` and `test/contract/action-drafts.contract.spec.ts`.
+- [x] T060 [P] [US4] Add escalation read/resolve isolation and workflow-audit tests in `test/integration/customer-escalation-isolation.spec.ts` and `test/contract/escalation-requests.contract.spec.ts`.
+- [x] T061 [US4] Apply CustomerScope to approval queries, transitions, idempotency, and qualified parent checks in `src/approvals/approval-request.service.ts` and `src/approvals/approval-request.controller.ts`.
+- [x] T062 [US4] Apply CustomerScope to action-draft queries, transitions, and side-effect checks in `src/approvals/action-draft.service.ts`, `src/approvals/action-draft.controller.ts`, and `src/approvals/side-effect-execution-guard.service.ts`.
+- [x] T063 [US4] Apply CustomerScope to escalation queries/transitions in `src/approvals/escalation-request.service.ts` and `src/approvals/escalation-request.controller.ts`; write Customer-scoped workflow audit through `src/audit/audit-writer.service.ts`.
 
-**US4 checkpoint**: Run T058–T060. Mark US4 complete only when all Customer A/B approval, action-draft, and escalation reads, lists, transitions, retries, and side-effect prechecks are Customer-first and cross-Customer attempts make no state change.
+**US4 checkpoint — complete**: Approval, ActionDraft, and Escalation are CustomerScope-first. Customer A/B may share organizationId, actorId, HostApp, lower-level IDs, and idempotency keys, yet reads, lists, create parents, transitions, retries, ToolCalls, connector work, and workflow audit remain Customer-qualified. Cross-Customer access fails safe without state, audit, ToolCall, or connector side effects; workflow lifecycle transitions and audits are atomic, and connector-after-finalization recovery reuses only the caller Customer's ToolCall.
 
 ---
 

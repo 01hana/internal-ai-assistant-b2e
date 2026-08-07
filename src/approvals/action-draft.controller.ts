@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Req, UseGuard
 import { getRequestId } from '../common/request-id/request-id.util';
 import { getIdentityContext, IdentityRequest } from '../identity/identity-context.extractor';
 import { IdentityGuard } from '../identity/identity.guard';
+import { createCustomerScopeFromIdentityContext } from '../identity/customer-scope.factory';
 import { ActionDraftService } from './action-draft.service';
 
 @Controller('assistant/action-drafts')
@@ -11,10 +12,12 @@ export class ActionDraftController {
 
   @Get(':id')
   getDraft(@Req() request: IdentityRequest, @Param('id') actionDraftId: string) {
+    const identityContext = getRequiredIdentityContext(request);
     return this.actionDraftService.getVisibleDraft({
       requestId: getRequestId(request),
       actionDraftId,
-      identityContext: getRequiredIdentityContext(request)
+      identityContext,
+      customerScope: createCustomerScopeFromIdentityContext(identityContext)
     });
   }
 
@@ -25,10 +28,12 @@ export class ActionDraftController {
     @Param('id') actionDraftId: string,
     @Body() body: { idempotencyKey?: string }
   ) {
+    const identityContext = getRequiredIdentityContext(request);
     return this.actionDraftService.confirm({
       requestId: getRequestId(request),
       actionDraftId,
-      identityContext: getRequiredIdentityContext(request),
+      identityContext,
+      customerScope: createCustomerScopeFromIdentityContext(identityContext),
       idempotencyKey: body.idempotencyKey
     });
   }
@@ -36,10 +41,12 @@ export class ActionDraftController {
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
   cancelDraft(@Req() request: IdentityRequest, @Param('id') actionDraftId: string) {
+    const identityContext = getRequiredIdentityContext(request);
     return this.actionDraftService.cancel({
       requestId: getRequestId(request),
       actionDraftId,
-      identityContext: getRequiredIdentityContext(request)
+      identityContext,
+      customerScope: createCustomerScopeFromIdentityContext(identityContext)
     });
   }
 }

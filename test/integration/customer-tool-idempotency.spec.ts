@@ -6,6 +6,8 @@ import { ToolPermissionPrecheckService } from '../../src/permissions/tool-permis
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { ToolRegistryService } from '../../src/tools/tool-registry.service';
 import { RegisteredToolDefinition } from '../../src/tools/tool-registry.types';
+import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
+import { RequestIdentityContext } from '../../src/identity/identity-context.types';
 
 const describeUs3 = process.env.RUN_CUSTOMER_US3_TESTS === 'true' ? describe : describe.skip;
 
@@ -92,13 +94,15 @@ function sideEffectTool(): RegisteredToolDefinition {
 }
 
 function sideEffectInput(customerId: string) {
+  const identityContext: RequestIdentityContext = {
+    requestId: 'req-us3-idempotency-a', customer: { customerId, integrationId: 'integration-erp' },
+    organization: { organizationId: 'org-shared' }, hostApp: { hostApp: 'erp' },
+    actor: { actorId: 'actor-shared', roles: ['planner'], permissionScopes: ['orders:update'] }, auth: { tokenId: 'jwt-a', gatewayIssuer: 'https://gateway.test.internal' }
+  };
   return {
     requestId: 'req-us3-idempotency-a', sessionId: 'session-owned-001', messageId: 'message-owned-assistant-001',
-    identityContext: {
-      requestId: 'req-us3-idempotency-a', customer: { customerId, integrationId: 'integration-erp' },
-      organization: { organizationId: 'org-shared' }, hostApp: { hostApp: 'erp' },
-      actor: { actorId: 'actor-shared', roles: ['planner'], permissionScopes: ['orders:update'] }, auth: { tokenId: 'jwt-a', gatewayIssuer: 'https://gateway.test.internal' }
-    },
+    identityContext,
+    customerScope: createCustomerScopeFromIdentityContext(identityContext),
     sourceType: 'action_draft' as const, sourceId: 'draft-a', requesterActorId: 'actor-shared', toolName: 'mock.orders.status.update',
     resource: 'orders', operation: ToolOperation.update, riskLevel: RiskLevel.medium, entityId: 'SO-10001',
     idempotencyKey: 'shared-tool-idempotency-key', requiresConfirmation: true, requiresApproval: false
