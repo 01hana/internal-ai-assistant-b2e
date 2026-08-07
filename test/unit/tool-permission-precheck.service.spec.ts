@@ -55,7 +55,7 @@ describe('ToolPermissionPrecheckService', () => {
       },
       requiredRoles: ['planner', 'approver'],
       requiredPermissionScopes: ['orders:export']
-    } as const;
+    };
     const context = identityContext(['orders:read', 'orders:export']);
     const allowed = await service.checkResolvedCustomerTool({
       requestId: 'req-composition', sessionId: 'session-a', messageId: 'message-a', identityContext: context,

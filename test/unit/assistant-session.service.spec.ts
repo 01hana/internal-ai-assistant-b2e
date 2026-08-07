@@ -36,9 +36,7 @@ describe('AssistantSessionService', () => {
     expect(harness.auditMock.append).toHaveBeenCalledWith(
       expect.objectContaining({
         requestId: 'req-create-session',
-        organizationId: 'org-001',
-        hostApp: 'erp',
-        actorId: 'actor-001',
+        customerScope: customerScopeFor('customer-a'),
         sessionId: 'session-created-001',
         eventType: 'session_created'
       })

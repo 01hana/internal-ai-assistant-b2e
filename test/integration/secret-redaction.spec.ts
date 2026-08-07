@@ -4,6 +4,7 @@ import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.
 import { redactSecrets } from '../../src/common/logger/redaction.util';
 import { StructuredLogEntry, StructuredLoggerService } from '../../src/common/logger/structured-logger.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
+import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
 
 describe('secret redaction foundation', () => {
   it('redacts OpenAI credentials, connector secrets, and database credentials from logs', () => {
@@ -67,10 +68,15 @@ describe('secret redaction foundation', () => {
     const writer = new AuditWriterService(prisma);
 
     await writer.append({
+      customerScope: createCustomerScopeFromIdentityContext({
+        requestId: 'req-audit-secret',
+        customer: { customerId: 'customer-a', integrationId: 'integration-erp' },
+        organization: { organizationId: 'org-001' },
+        hostApp: { hostApp: 'erp' },
+        actor: { actorId: 'actor-001', roles: ['planner'], permissionScopes: ['orders:read'] },
+        auth: { tokenId: 'jwt-audit-secret', gatewayIssuer: 'https://gateway.test.internal' }
+      }),
       requestId: 'req-audit-secret',
-      organizationId: 'org-001',
-      hostApp: 'erp',
-      actorId: 'actor-001',
       eventType: 'secret_redaction_test',
       permissionResult: {
         connectorSecret: 'connector-secret-value'

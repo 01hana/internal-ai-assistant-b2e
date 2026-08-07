@@ -154,28 +154,28 @@
 - [x] T068 [US5] Apply CustomerScope to review list/get/decision queries in `src/feedback/review-item.service.ts` and `src/feedback/review-item.controller.ts`; metadata cannot be the isolation filter.
 - [x] T069 [US5] Apply CustomerScope to audit event writes/reads in `src/audit/audit-writer.service.ts` and `src/audit/audit-writer.interface.ts`, retaining traceability without raw tokens.
 
-**US5 checkpoint — complete**: T064–T069 are complete. Feedback, Review, and generic Audit writes are CustomerScope-first for direct IDs and list filters; traceability remains available only as non-authority data; metadata, headers, body/query values, request IDs, and raw tokens cannot establish or override Customer ownership. Customer-qualified parent/relation validation fails closed, and feedback/review lifecycle writes plus audits roll back atomically on audit failure. **T070 remains `[ ]` and US6/Phase 9 has not started.**
+**US5 checkpoint — complete**: T064–T069 are complete. Feedback, Review, and generic Audit writes are CustomerScope-first for direct IDs and list filters; traceability remains available only as non-authority data; metadata, headers, body/query values, request IDs, and raw tokens cannot establish or override Customer ownership. Customer-qualified parent/relation validation fails closed, and feedback/review lifecycle writes plus audits roll back atomically on audit failure. US6/Phase 9 completion is recorded below.
 
 ---
 
 ## Phase 9: [US6] Migration Verification and Operational Safety
 
-- [ ] T070 [P] [US6] Add reset/seed Customer A/B migration-path tests in `test/integration/customer-reset-seed.spec.ts` using `scripts/test-db-init.ts` and `scripts/seed.ts`; assert every seeded KnowledgeDocument has explicit valid customerId and access policy.
-- [ ] T071 [P] [US6] Add unmapped/ambiguous Customer ownership and missing/invalid KnowledgeDocument-policy mapping rejection tests in `test/integration/customer-retained-data-migration.spec.ts`; such documents cannot enter retrieval or enforcement.
-- [ ] T072 [P] [US6] Add approved ownership-and-policy mapping, NOT NULL policy fields, visibility/allowlist consistency, normalized arrays, Customer-scoped unique, composite-integrity, rollback, and forward-fix tests in `test/integration/customer-migration-enforcement.spec.ts`.
-- [ ] T073 [US6] Implement reset/seed workflow assertions in `scripts/test-db-init.ts`, `scripts/seed.ts`, and `test/support/customer-scope-fixtures.ts`, including explicit valid KnowledgeDocument access policy fixtures.
-- [ ] T074 [US6] Implement retained-data ownership-and-policy mapping validation and enforcement preflight in `scripts/customer-ownership-migration-preflight.ts` and document invocation/approval in `specs/002-customer-scoped-assistant-core/migration-runbook.md`; no policy inference is permitted.
-- [ ] T075 [US6] Document pre-enforcement rollback and post-enforcement forward-fix/restore in `specs/002-customer-scoped-assistant-core/migration-runbook.md`; invalid/legacy policy remains deny-by-default and public identity headers are never re-enabled.
+- [x] T070 [P] [US6] Add reset/seed Customer A/B migration-path tests in `test/integration/customer-reset-seed.spec.ts` using `scripts/test-db-init.ts` and `scripts/seed.ts`; assert every seeded KnowledgeDocument has explicit valid customerId and access policy.
+- [x] T071 [P] [US6] Add unmapped/ambiguous Customer ownership and missing/invalid KnowledgeDocument-policy mapping rejection tests in `test/integration/customer-retained-data-migration.spec.ts`; such documents cannot enter retrieval or enforcement.
+- [x] T072 [P] [US6] Add approved ownership-and-policy mapping, NOT NULL policy fields, visibility/allowlist consistency, normalized arrays, Customer-scoped unique, composite-integrity, rollback, and forward-fix tests in `test/integration/customer-migration-enforcement.spec.ts`.
+- [x] T073 [US6] Implement reset/seed workflow assertions in `scripts/test-db-init.ts`, `scripts/seed.ts`, and `test/support/customer-scope-fixtures.ts`, including explicit valid KnowledgeDocument access policy fixtures.
+- [x] T074 [US6] Implement retained-data ownership-and-policy mapping validation and enforcement preflight in `scripts/customer-ownership-migration-preflight.ts` and document invocation/approval in `specs/002-customer-scoped-assistant-core/migration-runbook.md`; no policy inference is permitted.
+- [x] T075 [US6] Document pre-enforcement rollback and post-enforcement forward-fix/restore in `specs/002-customer-scoped-assistant-core/migration-runbook.md`; invalid/legacy policy remains deny-by-default and public identity headers are never re-enabled.
 
-**US6 checkpoint**: Run T070–T072. Mark US6 complete only when rebuildable data explicitly seeds valid ownership and policy, retained invalid/unmapped ownership or policy blocks retrieval and enforcement, and approved ownership-and-policy mappings pass validation before constraints enforce.
+**US6 checkpoint — complete**: T070–T075 are complete. Rebuildable data deterministically seeds Customer A/B ownership and canonical KnowledgeDocument policy; retained unmapped, ambiguous, malformed, foreign, and invalid-policy inputs block retrieval and enforcement; approved normalized mappings pass preflight before Release B constraints enforce. T075 retains pre-enforcement rollback and post-enforcement forward-fix/restore without re-enabling legacy identity authority. **T076–T078 are complete; T079–T082 remain `[ ]`.**
 
 ---
 
 ## Phase 10: Cross-Cutting Verification and Production Readiness Gate
 
-- [ ] T076 Run and repair focused unit suites with `npm run test:unit` for identity, CustomerScope, RAG filters, tool policy, parent-child integrity, and redaction.
-- [ ] T077 Run and repair Customer A/B integration suites in `test/integration/customer-*.spec.ts` with `npm run test:integration`.
-- [ ] T078 Run and repair API/SSE contract suites in `test/contract/customer-*.spec.ts` with `npm run test:contract`; verify guard rejection stops business work.
+- [x] T076 Run and repair focused unit suites with `npm run test:unit` for identity, CustomerScope, RAG filters, tool policy, parent-child integrity, and redaction.
+- [x] T077 Run and repair Customer A/B integration suites in `test/integration/customer-*.spec.ts` with `npm run test:integration`.
+- [x] T078 Run and repair API/SSE contract suites in `test/contract/customer-*.spec.ts` with `npm run test:contract`; verify guard rejection stops business work.
 - [ ] T079 Run end-to-end/eval regression in `test/e2e/app.e2e-spec.ts` and `test/eval/customer-rag-isolation.eval.spec.ts` with `npm run test:e2e` and `npm run test:eval`.
 - [ ] T080 Run `npm run typecheck`, `npm run lint`, and `npm run prisma:generate`; validate `prisma/schema.prisma` and `prisma/migrations/**` after schema changes.
 - [ ] T081 Run `npm run test:db:init` and `npm run prisma:seed`; confirm Customer A/B invariants and no production mapping assumptions.

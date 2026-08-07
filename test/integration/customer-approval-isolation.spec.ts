@@ -27,7 +27,7 @@ describe('T058 Customer A/B approval isolation expected-red', () => {
       requestId: identityContext.requestId,
       customerScope,
       sessionId: 'session-owned-001',
-      messageId: 'message-owned-user-001',
+      messageId: 'message-owned-assistant-001',
       identityContext,
       executionPlan: executionPlan(customerScope.customerId),
       pageContext: { module: 'orders', entityType: 'order', entityId: 'SO-10001', visibleColumns: ['status'] }
@@ -56,7 +56,7 @@ describe('T058 Customer A/B approval isolation expected-red', () => {
         sessionId: 'session-hidden-001',
         messageId: 'message-hidden-assistant-001',
         identityContext,
-        executionPlan: executionPlan('customer-b', 'session-hidden-001', 'message-hidden-assistant-001'),
+        executionPlan: executionPlan('customer-b', 'session-hidden-001', 'message-hidden-user-001'),
         pageContext: { module: 'orders', entityType: 'order', entityId: 'SO-20002', visibleColumns: ['status'] }
       })
     ).rejects.toBeInstanceOf(NotFoundException);
@@ -71,7 +71,7 @@ describe('T058 Customer A/B approval isolation expected-red', () => {
     const scope = createCustomerScopeFromIdentityContext(await verifiedIdentityContext('customerA', 'req-t058-scope'));
     const identityContext = await verifiedIdentityContext('customerB', 'req-t058-identity');
     const before = { workflows: state.approvalRequests.length, audits: state.auditEvents.length, tools: state.toolCalls.length };
-    await expect(app.get(ApprovalRequestService).createForHighRisk({ customerScope: scope, requestId: identityContext.requestId, sessionId: 'session-owned-001', messageId: 'message-owned-user-001', identityContext, executionPlan: executionPlan('customer-a'), pageContext: { module: 'orders' } })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(app.get(ApprovalRequestService).createForHighRisk({ customerScope: scope, requestId: identityContext.requestId, sessionId: 'session-owned-001', messageId: 'message-owned-assistant-001', identityContext, executionPlan: executionPlan('customer-a'), pageContext: { module: 'orders' } })).rejects.toBeInstanceOf(NotFoundException);
     expect({ workflows: state.approvalRequests.length, audits: state.auditEvents.length, tools: state.toolCalls.length }).toEqual(before);
   });
 

@@ -1,8 +1,9 @@
 # Feature 002 — Customer Ownership and Knowledge Policy Migration Runbook
 
-**Status**: T030/T031 migration implementation. This document is an operational
-contract, not approval to populate production staging tables or run a production
-deployment.
+**Status**: T030/T031 migrations, T073 deterministic rebuildable seed guard,
+T074 controlled preflight/CLI, and T075 rollback/forward-fix verification are
+implemented. This document is an operational contract, not approval to populate
+production staging tables or run a production deployment.
 
 **Migrations**:
 
@@ -14,10 +15,10 @@ deployment.
 ### Rebuildable development/test data
 
 ```text
-reset safe disposable test database → prisma migrate deploy → no seed → verify final schema
+reset safe disposable test database → prisma migrate deploy → deterministic seed → verify final schema
 ```
 
-This path is permitted only for data explicitly declared rebuildable. The eventual seed must create Customer A/B with the same organizationId, actorId, HostApp, sourceKey/version, and idempotency key, then verify that `customerId` is the isolation boundary. Every seeded KnowledgeDocument must explicitly have valid `customerId`, `visibility`, `organizationIds`, and `requiredPermissionScopes`.
+This path is permitted only for data explicitly declared rebuildable. The deterministic seed creates Customer A/B with the same organizationId, actorId, HostApp, sourceKey/version, and idempotency key, then verifies that `customerId` is the isolation boundary. Every seeded KnowledgeDocument has explicit valid `customerId`, `visibility`, `organizationIds`, and `requiredPermissionScopes`.
 
 ### Retained data (two releases required)
 
@@ -29,9 +30,11 @@ Release A: deploy T030 expand only
 → Release B: deploy T031 backfill/enforce
 ```
 
-The current runtime has not yet completed Customer-scoped repository/retrieval
-work. Therefore retained data must use maintenance/write/retrieval freeze between
-releases; legacy runtime must not be assumed to reject null ownership/policy.
+Retained data must still use maintenance/write/retrieval freeze between Release A
+and Release B because Release A intentionally permits legacy rows with nullable
+Customer ownership and KnowledgeDocument policy until approved mapping and
+Release B enforcement complete. Runtime isolation must not be treated as a
+substitute for migration enforcement.
 Do not deploy both pending migrations to retained data in one unattended
 `prisma migrate deploy` invocation. T031 safely fails when required staging input
 is absent or invalid.
@@ -62,7 +65,7 @@ Each `KnowledgeDocument` mapping additionally must contain:
 | `organizationIds` | For `CUSTOMER`, empty after normalization. For `ORGANIZATION`, a non-empty normalized allowlist. |
 | `requiredPermissionScopes` | Normalized string array. Empty means no additional restriction; non-empty uses ALL semantics. |
 
-The mapping is approved input to a future preflight/backfill process. It is not a schema, an API, or a production mapping template populated with guessed values.
+The mapping is approved input to the implemented controlled preflight/backfill process. It is not a schema, an API, or a production mapping template populated with guessed values.
 
 Missing `mappingSource`, `approvedBy`, or `approvedAt` makes a mapping incomplete and blocks enforcement just as a missing `customerId` does.
 
@@ -114,7 +117,7 @@ Enforcement is blocked if any in-scope record has one or more of the following:
 
 ## 5. Required Preflight Output
 
-A future preflight implementation must report, without logging raw tokens or creating fabricated mappings:
+The preflight implementation reports, without logging raw tokens or creating fabricated mappings:
 
 | Output | Meaning |
 | --- | --- |
@@ -125,12 +128,37 @@ A future preflight implementation must report, without logging raw tokens or cre
 | `invalidCustomerRows` | Rows with missing/non-existent customerId or incomplete approval metadata. |
 | `invalidPolicyRows` | KnowledgeDocuments with missing or invalid approved policy. |
 | `retrievalBlockedRows` | Documents denied from retrieval because ownership or policy is unresolved/invalid. |
-| `relationConflicts` | Proposed Customer-qualified relation conflicts. |
-| `uniquenessConflicts` | Proposed Customer-scoped key collisions. |
+| `relationConflicts` | Each invalid proposed Customer-qualified relation input entry. |
+| `uniquenessConflicts` | Each duplicate Customer-scoped business-key group. |
 | `enforceReadiness` | `true` only when every blocking count is zero. |
 | `blockingReasons` | Safe reason codes/counts for unresolved conditions. |
 
-No production mapping values are included in this runbook. T031/T074 implement the controlled mapping validation and preflight; T070–T075 add the migration coverage.
+No production mapping values are included in this runbook. T031 enforces controlled staging validation; T074 supplies the preflight evaluator/CLI; T070–T075 provide migration coverage.
+
+### Controlled preflight CLI and evidence
+
+Run the preflight only against a controlled JSON artifact; it does not connect to
+the database, create Customers, or write staging rows:
+
+```bash
+npx ts-node --project tsconfig.scripts.json \
+  scripts/customer-ownership-migration-preflight.ts \
+  --input /controlled/path/preflight-input.json
+```
+
+The artifact owner must preserve the source artifact checksum/hash,
+`mappingSource`, `approvedBy`, `approvedAt`, safe report, record counts, and
+deployment reference in the controlled evidence store. The CLI prints only the
+safe report schema from §5; a non-ready report exits non-zero and is not an
+approval to deploy. It accepts no inline Customer mapping values and never reads
+public identity headers.
+
+Only an artifact that passes the same preflight normalization and validation may
+be loaded into Release A staging. The staging artifact must contain canonical,
+trimmed, deduplicated, deterministically ordered policy arrays; raw artifacts
+must not be sent directly to Release B. Preflight itself never writes staging.
+Release B still requires the maintenance freeze, explicit staging inspection,
+and human validation evidence described above.
 
 ## 6. Expand and enforce checkpoints
 

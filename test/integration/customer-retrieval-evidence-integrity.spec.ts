@@ -30,8 +30,8 @@ describeCustomerUs2('Customer-qualified retrieval and evidence integrity contrac
     const candidates = state.retrievalCandidates.filter((item) => item.retrievalRunId === run?.id);
     const evidence = state.evidenceRefs.filter((item) => item.requestId === requestId && item.sourceType === 'document_chunk');
     const retrievalRunCreate = prismaMock.retrievalRun.create.mock.calls.at(-1)?.[0]?.data;
-    const candidateCreates = prismaMock.retrievalCandidate.create.mock.calls.map(([input]) => input.data);
-    const evidenceCreates = prismaMock.evidenceRef.create.mock.calls.map(([input]) => input.data);
+    const candidateCreates = prismaMock.retrievalCandidate.create.mock.calls.map((call: unknown[]) => (call[0] as { data: unknown }).data);
+    const evidenceCreates = prismaMock.evidenceRef.create.mock.calls.map((call: unknown[]) => (call[0] as { data: unknown }).data);
 
     expect(response.status).toBe(200);
     expect(run).toEqual(expect.objectContaining({ customerId: 'customer-a', messageId: expect.any(String) }));
@@ -62,7 +62,7 @@ describeCustomerUs2('Customer-qualified retrieval and evidence integrity contrac
     const response = await request(app.getHttpServer())
       .get('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims.customerA, requestId: `${requestId}-history` }));
-    const evidenceQueries = prismaMock.evidenceRef.findMany.mock.calls.map(([input]) => input.where);
+    const evidenceQueries = prismaMock.evidenceRef.findMany.mock.calls.map((call: unknown[]) => (call[0] as { where: unknown }).where);
 
     expect(response.status).toBe(200);
     expect(evidenceQueries).toEqual(expect.arrayContaining([expect.objectContaining({ customerId: 'customer-a' })]));

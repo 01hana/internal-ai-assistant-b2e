@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
 describe('US3 approval request baseline', () => {
   let app: INestApplication;
@@ -23,9 +24,9 @@ describe('US3 approval request baseline', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-approval-create',
-          'x-permission-scopes': 'orders:read,orders:update'
+        createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+          claims: { permission_scopes: ['orders:read', 'orders:update'] },
+          requestId: 'req-us3-approval-create'
         })
       )
       .send({
@@ -60,6 +61,20 @@ describe('US3 approval request baseline', () => {
     const createdApprovalRequest = state.approvalRequests.find(
       (approvalRequest) => approvalRequest.id === finalEvent?.data?.data?.approvalRequestId
     );
+    const executionPlan = state.executionPlans.at(-1);
+    const planningMessage = state.messages.find((message) => message.id === executionPlan?.messageId);
+    const workflowMessage = state.messages.find((message) => message.id === createdApprovalRequest?.messageId);
+    expect(createdApprovalRequest).toEqual(
+      expect.objectContaining({
+        customerId: 'customer-a',
+        messageId: expect.any(String),
+        requesterActorId: 'actor-shared'
+      })
+    );
+    expect(executionPlan).toEqual(expect.objectContaining({ customerId: 'customer-a', sessionId: 'session-owned-001' }));
+    expect(planningMessage).toEqual(expect.objectContaining({ role: 'user', customerId: 'customer-a' }));
+    expect(workflowMessage).toEqual(expect.objectContaining({ role: 'assistant', customerId: 'customer-a' }));
+    expect(executionPlan?.messageId).not.toBe(createdApprovalRequest?.messageId);
     expect(createdApprovalRequest?.actionSummary).toEqual(
       expect.objectContaining({
         toolName: 'mock.orders.cancel',
@@ -86,11 +101,14 @@ describe('US3 approval request baseline', () => {
       expect.arrayContaining([
         expect.objectContaining({
           eventType: 'approval_request_created',
+          customerId: 'customer-a',
+          sessionId: 'session-owned-001',
+          messageId: createdApprovalRequest?.messageId,
           metadata: expect.objectContaining({
             approvalRequestId: expect.any(String),
             status: 'pending',
             riskLevel: 'high',
-            requesterActorId: 'actor-001',
+            requesterActorId: 'actor-shared',
             approverActorId: null,
             toolName: 'mock.orders.cancel',
             resource: 'orders',
@@ -108,11 +126,14 @@ describe('US3 approval request baseline', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/approval-requests/approval-request-pending-denied-001/approve')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us3-approval-fail-closed',
+        {
+          ...createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+            claims: { permission_scopes: ['orders:read', 'orders:update'] },
+            requestId: 'req-us3-approval-fail-closed'
+          }),
           'x-role': 'planner',
           'x-permission-scopes': 'orders:read,orders:update'
-        })
+        }
       )
       .send({
         idempotencyKey: 'idem-us3-approval-001'

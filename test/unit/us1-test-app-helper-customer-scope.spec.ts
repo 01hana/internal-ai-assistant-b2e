@@ -52,4 +52,25 @@ describe('US1 in-memory Prisma helper Customer predicates', () => {
     await expect(prisma.assistantSession.findFirst({ where: { customerId: undefined, id: 'session-hidden-001' } })).resolves.toBeNull();
     await expect(prisma.assistantSession.findUnique({ where: { id: 'session-hidden-001' } })).resolves.toMatchObject({ customerId: 'customer-b' });
   });
+
+  it('matches AnswerDecision sources only with the exact Customer and message predicate supplied by production', async () => {
+    const state = createUs1TestStateForTest();
+    const prisma = createUs1PrismaMockForTest(state);
+    state.answerDecisions.push({
+      id: 'answer-a',
+      customerId: 'customer-a',
+      requestId: 'req-answer-a',
+      messageId: 'message-a',
+      status: 'permission_denied',
+      noAnswerReason: null,
+      clarificationQuestionId: null,
+      groundingCheckId: null,
+      metadata: null,
+      createdAt: new Date('2026-08-07T00:00:00.000Z')
+    });
+
+    await expect(prisma.answerDecision.findFirst({ where: { customerId: 'customer-a', id: 'answer-a', messageId: 'message-a' } })).resolves.toMatchObject({ id: 'answer-a', customerId: 'customer-a' });
+    await expect(prisma.answerDecision.findFirst({ where: { customerId: 'customer-b', id: 'answer-a', messageId: 'message-a' } })).resolves.toBeNull();
+    await expect(prisma.answerDecision.findFirst({ where: { customerId: 'customer-a', id: 'answer-a', messageId: 'message-other' } })).resolves.toBeNull();
+  });
 });

@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import { Prisma } from '../../src/generated/prisma/client';
 import { AuditWriterService } from '../../src/audit/audit-writer.service';
 import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
 import { validateVerifiedInternalIdentityClaims } from '../../src/identity/identity-context.validator';
@@ -30,8 +31,8 @@ describe('US4 customer workflow audit relation consistency expected-red', () => 
         authorization: 'Bearer abcdefghijklmnopqrstuvwxyz',
         secret: 'secret-value',
         credential: 'credential-value',
-        nested: { rawError: new Error('raw exception') }
-      }
+        nested: { rawError: { message: 'raw exception' } }
+      } as Prisma.InputJsonValue
     });
 
     const stored = state.auditEvents.find((item) => item.id === event.id)!;
@@ -76,10 +77,10 @@ describe('US4 customer workflow audit relation consistency expected-red', () => 
     }],
     ['foreign ToolCall', () => ({ toolCallId: 'tool-call-hidden-001' })],
     ['foreign message', () => ({ messageId: 'message-hidden-assistant-001' })]
-  ])('rejects %s without disclosing workflow context or mutating state', async (_name, arrange) => {
+  ] as const)('rejects %s without disclosing workflow context or mutating state', async (_name, arrange) => {
     const auditWriter = app.get(AuditWriterService);
     const scope = await customerAScope();
-    const relation = arrange();
+    const relation: { messageId?: string; toolCallId?: string } = arrange();
     const before = structuredClone({
       auditEvents: state.auditEvents,
       approvalRequests: state.approvalRequests,

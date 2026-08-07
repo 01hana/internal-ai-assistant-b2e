@@ -5,16 +5,24 @@ describe('assistant context state and page context parsing', () => {
   const service = new RuleBasedQueryUnderstandingPipeline();
   const identityContext = {
     requestId: 'req-assistant-context',
+    customer: {
+      customerId: 'customer-a',
+      integrationId: 'integration-erp'
+    },
+    organization: {
+      organizationId: 'org-001'
+    },
     actor: {
       actorId: 'actor-001',
-      role: 'planner',
+      roles: ['planner'],
       permissionScopes: ['orders:read']
     },
     hostApp: {
       hostApp: 'erp'
     },
-    company: {
-      organizationId: 'org-001'
+    auth: {
+      tokenId: 'jwt-assistant-context',
+      gatewayIssuer: 'https://gateway.test.internal'
     }
   };
 

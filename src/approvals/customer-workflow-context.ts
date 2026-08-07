@@ -17,8 +17,7 @@ export async function assertCustomerWorkflowCreateParents(input: {
   const { customerScope, executionPlan } = input;
   if (
     executionPlan.customerId !== customerScope.customerId ||
-    executionPlan.sessionId !== input.sessionId ||
-    executionPlan.messageId !== input.messageId
+    executionPlan.sessionId !== input.sessionId
   ) {
     throw workflowNotFound();
   }
@@ -34,10 +33,23 @@ export async function assertCustomerWorkflowCreateParents(input: {
   });
   if (!session) throw workflowNotFound();
 
-  const message = await input.db.assistantMessage.findFirst({
-    where: { customerId: customerScope.customerId, id: input.messageId, sessionId: input.sessionId }
+  const planningMessage = await input.db.assistantMessage.findFirst({
+    where: {
+      customerId: customerScope.customerId,
+      id: executionPlan.messageId,
+      sessionId: input.sessionId
+    }
   });
-  if (!message) throw workflowNotFound();
+  if (!planningMessage) throw workflowNotFound();
+
+  const workflowMessage = await input.db.assistantMessage.findFirst({
+    where: {
+      customerId: customerScope.customerId,
+      id: input.messageId,
+      sessionId: input.sessionId
+    }
+  });
+  if (!workflowMessage) throw workflowNotFound();
 }
 
 export function workflowNotFound(): NotFoundException {

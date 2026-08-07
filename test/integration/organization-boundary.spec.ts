@@ -1,21 +1,19 @@
-import { validateRequestIdentityContext, assertSameCompanyBoundary } from '../../src/identity/identity-context.validator';
+import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
+import { assertCustomerScopeMatchesIdentityContext } from '../../src/identity/customer-scope-consistency';
 
 describe('organization boundary integration baseline', () => {
   it('fails closed when resource organization or host app differs from request identity', () => {
-    const identity = validateRequestIdentityContext({
+    const identity = {
       requestId: 'req-boundary',
-      actorId: 'actor-001',
-      hostApp: 'erp',
-      organizationId: 'org-001',
-      role: 'planner',
-      permissionScopes: ['orders:read']
-    });
+      customer: { customerId: 'customer-a', integrationId: 'integration-erp' },
+      organization: { organizationId: 'org-001' },
+      hostApp: { hostApp: 'erp' },
+      actor: { actorId: 'actor-001', roles: ['planner'], permissionScopes: ['orders:read'] },
+      auth: { tokenId: 'jwt-boundary', gatewayIssuer: 'https://gateway.test.internal' }
+    };
+    const scope = createCustomerScopeFromIdentityContext(identity);
 
-    expect(() => assertSameCompanyBoundary(identity, { organizationId: 'org-002', hostApp: 'erp' })).toThrow(
-      /Missing or invalid identity context/
-    );
-    expect(() => assertSameCompanyBoundary(identity, { organizationId: 'org-001', hostApp: 'wms' })).toThrow(
-      /Missing or invalid identity context/
-    );
+    expect(() => assertCustomerScopeMatchesIdentityContext(scope, { ...identity, organization: { organizationId: 'org-002' } })).toThrow(/not found/i);
+    expect(() => assertCustomerScopeMatchesIdentityContext(scope, { ...identity, hostApp: { hostApp: 'wms' } })).toThrow(/not found/i);
   });
 });

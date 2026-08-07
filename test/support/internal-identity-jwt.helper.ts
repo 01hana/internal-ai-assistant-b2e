@@ -95,6 +95,8 @@ export function createInternalIdentityJwtFixture(
   };
 }
 
+export const DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE = createInternalIdentityJwtFixture();
+
 function encodeJson(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString('base64url');
 }

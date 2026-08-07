@@ -20,12 +20,25 @@ describe('feedback to review linkage integration', () => {
   function addAssistantMessage(messageId: string) {
     state.messages.push({
       id: messageId,
+      customerId: 'customer-a',
       sessionId: 'session-owned-001',
       requestId: `req-${messageId}`,
       role: AssistantMessageRole.assistant,
       content: '這是可回饋的 assistant answer。',
       answerDecision: 'answered',
       pageContext: null,
+      createdAt: new Date('2026-06-16T00:00:10.000Z')
+    });
+    state.answerDecisions.push({
+      id: `answer-${messageId}`,
+      customerId: 'customer-a',
+      requestId: `req-${messageId}`,
+      messageId,
+      status: 'answered',
+      noAnswerReason: null,
+      clarificationQuestionId: null,
+      groundingCheckId: null,
+      metadata: null,
       createdAt: new Date('2026-06-16T00:00:10.000Z')
     });
   }
@@ -194,7 +207,7 @@ describe('feedback to review linkage integration', () => {
     );
   });
 
-  it('dedupes actionable feedback by message answer decision and intent', async () => {
+  it('creates a Customer-owned review source for each distinct actionable FeedbackEvent', async () => {
     addAssistantMessage('message-feedback-dedupe-001');
     const initialFeedbackCount = state.feedbackEvents.length;
     const initialReviewCount = state.reviewItems.length;
@@ -219,10 +232,34 @@ describe('feedback to review linkage integration', () => {
     expect(firstResponse.status).toBe(201);
     expect(secondResponse.status).toBe(201);
     expect(state.feedbackEvents).toHaveLength(initialFeedbackCount + 2);
-    expect(state.reviewItems).toHaveLength(initialReviewCount + 1);
-    expect(secondResponse.body.data.reviewItemId).toBe(firstResponse.body.data.reviewItemId);
+    expect(state.reviewItems).toHaveLength(initialReviewCount + 2);
+    const [firstFeedback, secondFeedback] = state.feedbackEvents.slice(-2);
+    const firstReview = state.reviewItems.find((item) => item.id === firstResponse.body.data.reviewItemId);
+    const secondReview = state.reviewItems.find((item) => item.id === secondResponse.body.data.reviewItemId);
+
+    expect(firstFeedback).toEqual(expect.objectContaining({ customerId: 'customer-a' }));
+    expect(secondFeedback).toEqual(expect.objectContaining({ customerId: 'customer-a' }));
+    expect(firstFeedback?.id).not.toBe(secondFeedback?.id);
+    expect(firstReview).toEqual(
+      expect.objectContaining({
+        customerId: 'customer-a',
+        sourceType: 'negative_feedback',
+        sourceId: firstFeedback?.id,
+        status: 'open'
+      })
+    );
+    expect(secondReview).toEqual(
+      expect.objectContaining({
+        customerId: 'customer-a',
+        sourceType: 'negative_feedback',
+        sourceId: secondFeedback?.id,
+        status: 'open'
+      })
+    );
+    expect(firstReview?.id).not.toBe(secondReview?.id);
+    expect(firstReview?.sourceId).not.toBe(secondReview?.sourceId);
     expect(state.auditEvents.filter((event) => event.eventType === 'review_item_created')).toHaveLength(
-      initialReviewCreatedAuditCount + 1
+      initialReviewCreatedAuditCount + 2
     );
     expect(state.auditEvents.filter((event) => event.eventType === 'feedback_received')).toHaveLength(
       initialFeedbackAuditCount + 2

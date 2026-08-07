@@ -41,7 +41,7 @@ describe('assistant message SSE contract', () => {
     await app.close();
   });
 
-  it('fails closed with a safe SSE error when structured ToolCall ownership is unavailable pending T056', async () => {
+  it('streams Customer-owned structured ToolCall success after T056', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(createAuthorizedInternalIdentityHeaders(identityFixture, { claims: ownedClaims, requestId: 'req-us1-sse-success' }))
@@ -61,8 +61,8 @@ describe('assistant message SSE contract', () => {
 
     const events = parseSseResponse(response.text);
 
-    expect(events.map((event) => event.event)).toEqual(['error']);
-    expect(response.text).not.toContain('SO-10001');
+    expect(events.map((event) => event.event)).toEqual(['tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final']);
+    expect(events.map((event) => event.event)).not.toContain('error');
     expect(events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -76,14 +76,11 @@ describe('assistant message SSE contract', () => {
         })
       ])
     );
-    expect(events.at(-1)?.data).toEqual(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          code: 'NOT_FOUND',
-          message: 'Assistant message processing failed.'
-        })
-      })
-    );
+    const toolCall = state.toolCalls.at(-1);
+    const evidence = state.evidenceRefs.find((item) => item.toolCallId === toolCall?.id);
+    expect(toolCall).toEqual(expect.objectContaining({ customerId: 'customer-a', status: 'success', executionStatus: 'executed' }));
+    expect(evidence).toEqual(expect.objectContaining({ customerId: 'customer-a', toolCallId: toolCall?.id }));
+    expect(response.text).not.toContain('customer-b');
   });
 
   it('returns an SSE error event instead of a synchronous JSON body when the message flow fails', async () => {

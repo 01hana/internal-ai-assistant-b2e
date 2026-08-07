@@ -87,8 +87,9 @@ describe('US4 deterministic document retrieval integration', () => {
     expect(finalEvent?.data?.data.answer).toContain('status 欄位');
   });
 
-  it('fails closed before attaching structured tool evidence until ToolCall is Customer-qualified', async () => {
+  it('attaches Customer-owned structured ToolCall evidence without disclosure', async () => {
     const initialRetrievalRunCount = state.retrievalRuns.length;
+    const initialToolCallCount = state.toolCalls.length;
 
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
@@ -104,10 +105,32 @@ describe('US4 deterministic document retrieval integration', () => {
       });
 
     expect(response.status).toBe(200);
-    const eventNames = parseSseResponse(response.text).map((event) => event.event);
-    expect(eventNames).toEqual(['error']);
-    expect(response.text).not.toContain('SO-10001');
+    const events = parseSseResponse(response.text);
+    expect(events.map((event) => event.event)).toEqual([
+      'tool_call_started',
+      'tool_call_completed',
+      'evidence_attached',
+      'answer_delta',
+      'final'
+    ]);
+    expect(events.map((event) => event.event)).not.toContain('error');
+
+    const toolCall = state.toolCalls.at(-1);
+    const evidence = state.evidenceRefs.find((item) => item.requestId === 'req-us4-structured-regression');
+    expect(state.toolCalls).toHaveLength(initialToolCallCount + 1);
+    expect(toolCall).toEqual(expect.objectContaining({
+      customerId: 'customer-a',
+      sessionId: 'session-owned-001',
+      status: 'success',
+      executionStatus: 'executed'
+    }));
+    expect(evidence).toEqual(expect.objectContaining({
+      customerId: 'customer-a',
+      toolCallId: toolCall?.id,
+      messageId: toolCall?.messageId
+    }));
     expect(state.retrievalRuns).toHaveLength(initialRetrievalRunCount);
-    expect(state.evidenceRefs.filter((evidence) => evidence.requestId === 'req-us4-structured-regression')).toHaveLength(0);
+    expect(response.text).not.toContain('customer-b');
+    expect(response.text).not.toContain('sanitizerRemoved');
   });
 });

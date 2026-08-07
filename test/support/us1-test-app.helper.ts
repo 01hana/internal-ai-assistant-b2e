@@ -29,7 +29,10 @@ import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.
 import { RequestIdInterceptor } from '../../src/common/request-id/request-id.interceptor';
 import { ResponseEnvelopeInterceptor } from '../../src/common/response/response-envelope.interceptor';
 import {
+  DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE,
   InternalTokenClaims,
+  TEST_BACKEND_AUDIENCE,
+  TEST_GATEWAY_ISSUER,
   TestJwtFixture
 } from './internal-identity-jwt.helper';
 import {
@@ -449,9 +452,11 @@ export async function createUs1TestAppWithState(
 
   const state = createInitialState();
   const prismaMock = createPrismaMock(state);
-  const internalIdentity = options.internalIdentity
-    ? createInternalIdentityTestConfig(options.internalIdentity)
-    : undefined;
+  const internalIdentity = createInternalIdentityTestConfig(options.internalIdentity ?? {
+    issuer: TEST_GATEWAY_ISSUER,
+    audience: TEST_BACKEND_AUDIENCE,
+    jwks: DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.jwks
+  });
 
   const { AppModule } = await import('../../src/app.module');
   const { createStaticInternalIdentityTokenVerifier } = await import('../../src/identity/internal-identity-token-verifier');
@@ -459,22 +464,18 @@ export async function createUs1TestAppWithState(
   const { PrismaService } = await import('../../src/prisma/prisma.service');
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
-    providers: internalIdentity
-      ? [{ provide: INTERNAL_IDENTITY_TEST_CONFIG, useValue: internalIdentity }]
-      : []
+    providers: [{ provide: INTERNAL_IDENTITY_TEST_CONFIG, useValue: internalIdentity }]
   })
     .overrideProvider(INTERNAL_IDENTITY_CONFIG)
     .useValue({
-      issuer: internalIdentity?.issuer ?? process.env.INTERNAL_IDENTITY_JWT_ISSUER,
-      audience: internalIdentity?.audience ?? process.env.INTERNAL_IDENTITY_JWT_AUDIENCE,
+      issuer: internalIdentity.issuer,
+      audience: internalIdentity.audience,
       jwksUri: process.env.INTERNAL_IDENTITY_JWKS_URI,
       clockToleranceSeconds: 0
     })
     .overrideProvider(INTERNAL_IDENTITY_TOKEN_VERIFIER)
     .useValue(
-      internalIdentity
-        ? createStaticInternalIdentityTokenVerifier(internalIdentity)
-        : { verify: async () => Promise.reject(new Error('No internal identity fixture configured.')) }
+      createStaticInternalIdentityTokenVerifier(internalIdentity)
     )
     .overrideProvider(PrismaService)
     .useValue({
@@ -521,6 +522,7 @@ export async function createUs1TestApp(): Promise<INestApplication> {
 
 export function createIdentityHeaders(overrides?: Partial<Record<string, string>>) {
   return {
+    authorization: `Bearer ${DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.sign()}`,
     'x-request-id': 'req-us1-default',
     'x-actor-id': 'actor-001',
     'x-host-app': 'erp',
@@ -1286,7 +1288,10 @@ function createPrismaMock(state: MockState) {
         };
         state.answerDecisions.push(record);
         return record;
-      })
+      }),
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.answerDecisions.find((item) => matchesWhere(item, where)) ?? null
+      )
     },
     clarificationQuestion: {
       create: jest.fn(async ({ data }: { data: Partial<ClarificationQuestionRecord> }) => {

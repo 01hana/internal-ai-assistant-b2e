@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
 describe('US2 authorized mock connector tool execution', () => {
   let app: INestApplication;
@@ -10,6 +11,13 @@ describe('US2 authorized mock connector tool execution', () => {
     const testApp = await createUs1TestAppWithState();
     app = testApp.app;
     state = testApp.state;
+    state.customerToolPolicies.push({
+      customerId: 'customer-a',
+      toolDefinitionId: 'tool-definition-inventory-001',
+      enabled: true,
+      requiredRoles: [],
+      requiredPermissionScopes: []
+    });
   });
 
   afterAll(async () => {
@@ -20,10 +28,13 @@ describe('US2 authorized mock connector tool execution', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(
-        createIdentityHeaders({
-          'x-request-id': 'req-us2-authorized-tool',
+        {
+          ...createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
+            claims: { permission_scopes: ['orders:read', 'inventory:read'] },
+            requestId: 'req-us2-authorized-tool'
+          }),
           'x-permission-scopes': 'orders:read,inventory:read'
-        })
+        }
       )
       .send({
         message: '請查 SKU-DEMO-RED 目前庫存',

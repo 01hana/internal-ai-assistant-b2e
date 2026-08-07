@@ -5,16 +5,24 @@ describe('US2 tool risk classification and selection', () => {
   const service = new RuleBasedQueryUnderstandingPipeline();
   const identityContext = {
     requestId: 'req-us2-tools',
+    customer: {
+      customerId: 'customer-a',
+      integrationId: 'integration-erp'
+    },
+    organization: {
+      organizationId: 'org-001'
+    },
     actor: {
       actorId: 'actor-001',
-      role: 'planner',
+      roles: ['planner'],
       permissionScopes: ['orders:read', 'inventory:read']
     },
     hostApp: {
       hostApp: 'erp'
     },
-    company: {
-      organizationId: 'org-001'
+    auth: {
+      tokenId: 'jwt-tool-risk',
+      gatewayIssuer: 'https://gateway.test.internal'
     }
   };
 

@@ -5,6 +5,7 @@ import { Prisma } from '../../src/generated/prisma/client';
 export type SchemaModelContract = Readonly<{
   name: string;
   fields: readonly string[];
+  requiredFields: readonly string[];
   relations: readonly SchemaRelationContract[];
   uniqueKeys: readonly (readonly string[])[];
   indexes: readonly (readonly string[])[];
@@ -19,6 +20,7 @@ export type SchemaRelationContract = Readonly<{
 
 export type PrismaSchemaContract = Readonly<{
   model(name: string): SchemaModelContract | undefined;
+  hasRequiredField(modelName: string, fieldName: string): boolean;
   hasCompoundUnique(modelName: string, fields: readonly string[]): boolean;
   hasQualifiedParentKey(modelName: string): boolean;
   hasQualifiedRelation(childModel: string, targetModel: string, localFields: readonly string[], referencedFields: readonly string[]): boolean;
@@ -41,6 +43,9 @@ export function loadPrismaSchemaContract(): PrismaSchemaContract {
         ...parsed,
         fields: Object.freeze([...new Set([...parsed.fields, ...generatedFields])])
       });
+    },
+    hasRequiredField(modelName, fieldName) {
+      return Boolean(models.get(modelName)?.requiredFields.includes(fieldName));
     },
     hasCompoundUnique(modelName, fields) {
       const model = models.get(modelName);
@@ -66,14 +71,16 @@ function parseModels(schema: string): SchemaModelContract[] {
   return [...schema.matchAll(/^model\s+(\w+)\s*\{([\s\S]*?)^\}/gm)].map((match) => {
     const [, name, body] = match;
     const fields: string[] = [];
+    const requiredFields: string[] = [];
     const relations: SchemaRelationContract[] = [];
     const uniqueKeys: string[][] = [];
     const indexes: string[][] = [];
 
     for (const line of body.split('\n')) {
-      const field = line.match(/^\s*(\w+)\s+([A-Za-z]\w*)/);
+      const field = line.match(/^\s*(\w+)\s+([A-Za-z]\w*)(\?)?/);
       if (field && !line.trimStart().startsWith('@@')) {
         fields.push(field[1]);
+        if (!field[3]) requiredFields.push(field[1]);
       }
       const attribute = line.match(/^\s*@@(unique|id|index)\(\[([^\]]+)\]/);
       if (attribute) {
@@ -97,6 +104,7 @@ function parseModels(schema: string): SchemaModelContract[] {
     return Object.freeze({
       name,
       fields: Object.freeze(fields),
+      requiredFields: Object.freeze(requiredFields),
       relations: Object.freeze(relations),
       uniqueKeys: Object.freeze(uniqueKeys.map((key) => Object.freeze(key))),
       indexes: Object.freeze(indexes.map((key) => Object.freeze(key)))
