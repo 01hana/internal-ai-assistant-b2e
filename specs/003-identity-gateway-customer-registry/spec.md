@@ -1,742 +1,310 @@
-# Feature Specification: Host App Capability Governance and Reference Integration
+# Feature Specification: Identity Gateway and Customer Integration Registry
 
-**Feature Branch**: `002-host-integration-gateway-and-data-adapter-contract`
-
-**Created**: 2026-07-13
-
+**Feature Branch**: `003-identity-gateway-customer-registry`
+**Created**: 2026-08-07
 **Status**: Draft
-
-**Input**: User description: "建立 backend host integration gateway 與 data adapter contract，讓既有 internal assistant core 能安全接收不同 host app 的 identity、permission scopes、PageContext、session scope 與 connector routing hints，並以 Admin / Orders / Inventory 作為第一個 reference host integration。"
 
 ## Feature Summary
 
-Backend 002 是 Backend 001 `internal-assistant-core` 的增量能力層，不是新的 Host Integration foundation，也不是新的 assistant runtime。Backend 001 已提供 host-aware assistant core，包括 assistant public API、SSE、identity、PageContext、AssistantContextState、Query Understanding、ExecutionPlan、Connector / Tool runtime、permission、EvidenceRef、AnswerDecision、audit 與 observability foundation。
+Feature 002 has completed the Backend half of the trusted identity boundary: after a valid internal JWT is received, the Backend verifies it, validates canonical claims, creates `RequestIdentityContext` and `CustomerScope`, and applies Customer-qualified business isolation. Production rollout remains blocked because there is no production Gateway runtime that can establish the trusted identity, bind an integration to an existing Customer, sign the required token, publish its public keys, and prove the complete trust chain.
 
-Backend 002 的核心目標是在這些既有能力上新增 Host App capability governance、host-specific PageContext policy、backend-owned source selection，以及 `admin` Orders / Inventory reference integration。此 feature 要讓 backend 能以 static HostApp capability 限制每個 host app 支援的 screen、entity、interaction 與 connector / tool eligibility，並用固定、安全、可回歸的 reference cases 驗證多 Host App 產品化方向。
+Feature 003 delivers that production identity enablement boundary. It does not replace Backend authorization, CustomerScope, RAG, tool, workflow, feedback, review, or audit behavior.
 
-Backend 002 不得重做 Backend 001 的 identity、PageContext public contract、query planning、connector runtime、permission pipeline、EvidenceRef pipeline、AnswerDecision mapping、audit writer 或 observability framework。
+## Problem Statement / Product Context
 
-## Product Context
+The Backend must not infer Customer identity from a host application, organization, actor, page context, request body, metadata, or public headers. A shared Backend needs a trusted Gateway that can resolve a verified integration to one explicit existing Customer, derive canonical identity from a trusted upstream authentication context, and issue a Backend-compatible internal JWT.
 
-本產品方向是一份 Backend 001 assistant core 服務多個 host app。Backend 001 負責共同 runtime 與 public contract；Backend 002 負責把不同 host app 的能力邊界產品化，讓 backend 在既有 assistant request flow 中知道某個 `hostApp` 在特定 `screenId`、`entityType` 與 interaction 下，哪些 connector / tool / evidence capability 是 eligible。
+The resulting production trust chain is:
 
-`admin` 是 Backend 002 的第一個正式 reference host app，用來驗證 Orders 與 Inventory 在既有 connector / tool / permission / evidence pipeline 中如何安全回答。`mes`、`wms`、`scm`、`crm`、`custom` 只保留 identifier 與 extension boundary，不在本 feature 實作 production connector。
+```text
+External / Host request
+        ↓
+Gateway validates trusted integration / authentication context
+        ↓
+Gateway resolves explicit Integration → Customer binding
+        ↓
+Gateway derives canonical identity
+        ↓
+Gateway signs internal JWT
+        ↓
+Gateway attaches internal JWT only to its trusted protected Backend request
+        ↓
+Backend verifies signature, algorithm, issuer, audience, JWKS/kid, and time validity
+        ↓
+Backend validates canonical claims
+        ↓
+RequestIdentityContext → CustomerScope → Customer-qualified business work
+```
 
-Frontend 002 可以透過 npm package / SDK mode 掛載 widget，但 Backend 002 不實作 frontend SDK，也不要求新的 backend request mode。Frontend 只沿用 Backend 001 既有 identity headers 與 top-level `pageContext`，不得傳 raw entity payload、routing authority、approval navigation metadata 或 backend-required session scope。
+Host, page, body, metadata, and public request headers cannot directly establish Backend Customer identity.
 
-## Backend 001 Reuse Baseline
-
-Backend 002 必須直接重用下列 Backend 001 能力，不重新定義、不重新實作，也不得建立第二套 authority、registry、runtime、mapper 或 writer：
-
-- 既有 assistant session / message / history API。
-- SSE event contract 與 `final.data.answerDecision`。
-- `RequestIdentityContext`。
-- identity extraction 與 validation。
-- actor / hostApp / organization / role / permission scopes / requestId contract。
-- 既有 top-level `pageContext` public request 欄位。
-- PageContext DTO 與基本 schema validation。
-- `AssistantContextState`。
-- context resolution 與 clarification flow。
-- Query Understanding。
-- `ExecutionPlan`。
-- Tool Registry。
-- `ConnectorAdapter`。
-- structured lookup 與既有 runtime orchestration。
-- permission pre-check。
-- organization boundary、permission pre-check、field masking 與 row-level permission extension points。
-- field masking。
-- LLM input sanitization。
-- `EvidenceRef`。
-- `AnswerDecision`。
-- degraded / timeout / tool failure 的既有 safe mapping。
-- append-only audit writer。
-- observability 與 dependency health foundation。
-
-Backend 002 可以新增 host-specific policy、capability metadata、allowlist 與 reference acceptance，但必須接在上述 Backend 001 能力之上。Backend 002 只補上 `admin` reference integration 所需的 selectedRows 逐筆 organization / row-level revalidation，不建立第二套 permission engine。
-
-## Scope / Non-goals
+## Scope
 
 ### In Scope
 
-- 定義 static HostApp capability registry 與 capability declaration。
-- 定義 host / screen / entity / interaction eligibility。
-- 定義 host-specific PageContext policy validation、allowlist、minimization 與 selectedRows policy。
-- 定義 backend-derived `sourceSystem` 作為 internal routing / evidence metadata。
-- 定義 capability-aware connector / tool eligibility，並要求沿用 Backend 001 planning、tool routing、permission、masking 與 evidence flow。
-- 定義 `admin` Orders / Inventory reference integration 的產品 acceptance。
-- 定義 deterministic synthetic fixtures、golden questions、eval smoke、privacy 與 regression guardrails。
-- 定義 host-specific audit / observability metadata。
+- A narrow Integration Registry or equivalent authority for a stable integration identifier, explicit binding to one existing Customer, allowed HostApp/integration context, enabled/disabled trust state, and audit-safe issuance lookup decision.
+- A production Gateway runtime that validates its configuration, resolves trusted identity issuance input, issues Backend-compatible internal JWTs, publishes public JWKS, and can participate in real Gateway-to-Backend verification.
+- Canonical identity issuance, RS256 signing, issuer/audience alignment, `kid` key selection, key rotation requirements, safe token/key redaction, and local development verification.
+- Cross-Customer issuance isolation for integrations that intentionally share lower-level organization, actor, HostApp, roles, and permission scopes.
 
 ### Out of Scope
 
-- 不實作 frontend widget / frontend SDK / npm package。
-- 不新增 public chat API。
-- 不建立 Backend 001 Compatibility Mode 與 Backend 002 Mode 兩套 backend request contract。
-- 不新增 nested `hostContext`。
-- 不建立第二個 PageContext request 位置。
-- 不建立第二套 identity authority。
-- 不建立第二套 Query Understanding、ExecutionPlan 或 routing runtime。
-- 不建立第二套 ConnectorAdapter、Tool Registry 或 adapter registry runtime。
-- 不建立第二套 permission engine、EvidenceRef conversion framework、AnswerDecision mapper、audit writer 或 observability framework。
-- 不把 `sessionScope` 加入 Backend 002 public request contract；`sessionScope` 屬於 Frontend 002 session ownership / namespace / fallback 管理。
-- 不接收 approval navigation metadata；Host App 導航屬於 Frontend 002 callback responsibility。
-- 不新增 public diagnostic endpoint。
-- 不一次實作完整 ERP / MES / WMS / SCM / CRM connector。
-- 不做完整 Admin backend domain、generic SQL connector、admin UI / CRUD、approval management UI、production deployment / Kubernetes / Helm。
-- 不允許 frontend / host app 傳 raw entity data 給 LLM。
-- 不允許 PageContext、visibleColumns、selectedRows 或 userVisibleState 取代 permission check。
-- 不允許 connector / adapter 回傳 raw secret、credential、token 或 full sensitive payload 到 response、log、audit metadata 或 LLM input。
+- A second canonical Customer root, Customer administration, onboarding UI, billing, subscription, lifecycle, merge, deletion, or generic IAM platform.
+- HostApp Capability Registry, Host-specific PageContext policy, screen/entity/interaction eligibility, selectedRows policy, sourceSystem governance, or Orders/Inventory reference integration. These belong to Feature 004.
+- Connector registry, connector credentials, frontend SDK token issuance, Host proxy, data-adapter runtime, Gateway routing/deployment implementation details, or credential-storage design.
+- Changes to Feature 002 Backend JWT verification, canonical claim validation, RequestIdentityContext, CustomerScope, CustomerToolPolicy, RAG isolation, workflow isolation, feedback/review/audit isolation, or public identity-header behavior.
 
-## Public API / Transport Contract
+## Trust Boundaries and Identity Authority
 
-Backend 002 必須沿用 Backend 001 既有 Assistant public API 與 transport contract。Backend 002 不重新定義 route path、global prefix 或 route parameter naming；精確 public path、global prefix 與 `:id` 等 parameter 命名，以 Backend 001 實際 controller、bootstrap global prefix、Swagger / OpenAPI 產出與 contract tests 為唯一來源。
+### Integration → Customer binding
 
-Backend 002 沿用 Backend 001 現有 assistant session、message、history、feedback、approval、action draft 與 escalation public routes。
+An integration identifier must resolve through an explicit, verifiable, unique binding to an existing Feature 002 Customer root. The binding must also constrain the allowed HostApp or equivalent integration context and its enabled/disabled trust state.
 
-Backend 002 的 public contract decisions：
+`customer_id` must not be inferred from organization, HostApp, actor, roles, permission scopes, page context, screen, entity, request body, public headers, metadata, document content, or any lower-level identifier. A disabled, unknown, unbound, mismatched, or context-incompatible integration must fail closed without issuing a canonical internal JWT, calling a protected Backend business endpoint, selecting a default Customer, or disclosing another Customer or integration.
 
-- request validation 仍透過既有 assistant request path 進入，不建立平行 host integration chat endpoint。
-- message request body 繼續使用 Backend 001 既有 top-level `pageContext`。
-- 不新增 nested `hostContext`。
-- identity、organization、role、permission scopes 與 requestId 完全繼承 Backend 001 現有 validator 與 contract tests。
-- Backend 002 不重新決定 `role` 是否 required；此規則直接繼承 Backend 001 實際 contract。
-- Backend 002 不建立 body 中的第二套 identity authority。
-- `sessionScope` 不加入 Backend 002 public request contract。
-- Backend 002 不接收 approval navigation metadata。
-- SSE final state 維持 Backend 001 既有 `AnswerDecision`、`noAnswerReason` 與 final-state semantics。
-- `EvidenceRef` output 必須保持 frontend-safe，不暴露 raw connector payload。
+### Upstream authority
 
-## Frontend Integration Dependency
+`sub`, `org_id`, `host_app`, `roles`, and `permission_scopes` must originate from Gateway-validated authentication or approved integration authority. Persona names, screens, PageContext, visible columns, client requests, or capability metadata must never elevate permissions.
 
-Frontend 002 可以用 npm package / SDK mode 取得 host app 畫面脈絡，但 Backend 002 只接受 Backend 001 已定義的 backend contract：
+Public headers, including `x-customer-id`, `x-integration-id`, `x-organization-id`, `x-host-app`, `x-actor-id`, `x-role`, `x-roles`, and `x-permission-scopes`, are not Backend identity authority. Receiving a header at a Gateway boundary does not make it trusted until Gateway-defined verification and explicit binding have completed.
 
-- 既有 trusted identity headers。
-- 既有 top-level sanitized `pageContext`。
-- 既有 assistant session / message / SSE transport。
+## Canonical Internal JWT Contract
 
-Frontend 不得傳 raw entity payload，也不得傳 connector、connectorId、adapter、adapterId、`sourceSystem`、dataSource、candidateTool、candidateTools、permission result 或 final evidence source 作為 backend routing authority。
+The Gateway must issue exactly the application claims already required by Feature 002:
 
-Frontend session ownership、session namespace、fallback recovery 與 host app navigation callback 屬於 Frontend 002 responsibility，不是 Backend 002 required request contract。
-
-## Core Concepts
-
-### HostApp Capability Registry
-
-`HostApp Capability Registry` 是 Backend 002 的核心功能。v1 採 static code-based registration，不建立 dynamic database registration、self-service onboarding API 或 admin CRUD。
-
-每個 `HostAppCapability` 至少描述：
-
-- `hostAppId`
-- `displayName`
-- supported entity types
-- supported screens
-- supported interactions
-- eligible connector / tool 或 evidence capabilities
-- PageContext allowlist
-- selectedRows policy
-- active filter allowlist
-- field visibility / exposure policy
-- default permission-scope mapping interpretation
-- degraded / unsupported behavior
-
-v1 正式註冊：
-
-- `admin`
-
-Future reserved identifiers，非本 feature deliverable：
-
-- `mes`
-- `wms`
-- `scm`
-- `crm`
-- `custom`
-
-Capability rules:
-
-1. 未註冊 host app 不得 fallback 到 `admin`。
-2. unsupported entity 不得猜測最接近的 entity。
-3. unsupported screen 不得套用其他 screen 的 capability。
-4. unsupported interaction 不得執行 connector / tool。
-5. 某 entity type 存在，不代表所有 screen 與 interaction 都允許使用該 entity 的 connector / tool。
-6. capability eligibility 必須發生在既有 tool / connector 執行前。
-7. HostApp capability 與 `defaultPermissionScopeMapping` 只能解讀、限制或縮小 Backend 001 已驗證的 permission scopes 與 eligible capability，不得生成、補齊、合併、替換或提升使用者權限。
-8. `role` 名稱、persona 名稱、`visibleColumns`、screen capability 與 PageContext 都不得授予或提升 permission。
-9. 若 HostApp capability declaration 與 Backend 001 permission 結果衝突，必須採用較嚴格的限制。
-
-### Host-specific PageContext Policy
-
-Backend 002 不新增 public PageContext DTO，也不新增第二個 PageContext request 位置。Backend 002 在 Backend 001 既有 PageContext DTO、mapper、AssistantContextState、Query Understanding 與 clarification flow 上，新增 host-specific policy validation 與 minimization。
-
-Backend 002 新增的 PageContext policy 範圍：
-
-- 根據 HostApp capability 驗證 `screenId`。
-- 根據 HostApp capability 驗證 `entityType`。
-- 根據 screen / entity 驗證 interaction。
-- PageContext 欄位 allowlist。
-- activeFilters allowlist。
-- field visibility / exposure policy。
-- selectedRows 上限與 interaction eligibility。
-- host-specific 敏感欄位移除或遮罩。
-- capability decision 與 minimization 結果的 audit metadata。
-
-PageContext policy rules:
-
-1. `route` query string 與 hash 不得作為可信資料來源。
-2. `visibleColumns` 不得取代 permission。
-3. `userVisibleState` 不得作為 permission authority。
-4. PageContext 不足時沿用 Backend 001 既有 clarification path。
-5. Backend 002 不建立第二套 deixis resolution、clarification pipeline 或 AssistantContextState。
-6. raw PageContext 不得直接交給 LLM。
-
-### selectedRows Policy
-
-`selectedRows` 只作 request-scoped comparison / bulk context，不作 session identity，也不得擴大查詢範圍。
-
-Backend 002 固定 selectedRows 規則：
-
-1. 只接受 Backend 001 既有 PageContext contract 允許的 ID 或 safe summary。
-2. Frontend 與 Backend 都必須獨立驗證最多 20 筆。
-3. Backend 不得只信任 Frontend 驗證結果。
-4. 超過 20 筆時整體拒絕，不得截斷為前 20 筆。
-5. 上限檢查必須針對 client 原始輸入數量執行，不得先 deduplicate 後才判斷是否超限。
-6. `entityId` 與 `selectedRows` 指向互相衝突的 target 時，不得任意選擇其中一方。
-7. 任一 selected row 跨 organization 或未通過 row-level permission 時，整個 comparison request 回 `permission_denied`。
-8. 不得只處理合法 subset。
-9. 不得在 response 中揭露是哪一個 ID 未授權。
-10. Audit metadata 必須最小化，不記錄未授權 row 的 raw payload。
-11. 每個 selected row 都必須在取得或暴露完整資料前重新套用 Backend 001 既有 organization boundary 與 row-level permission extension point。
-12. frontend 傳入的 row ID、safe summary 或畫面上可見狀態都不得視為 authorization proof。
-
-### Backend-owned `sourceSystem`
-
-`sourceSystem` 是 backend-owned internal routing / evidence metadata，不是 frontend 或 host app 可指定的欄位。
-
-Backend 可以根據下列可信資訊推導 `sourceSystem`：
-
-- trusted `hostApp`
-- HostApp capability
-- normalized `screenId`
-- normalized `entityType`
-- eligible existing connector / tool
-- backend-selected adapter specialization
-- existing `ExecutionPlan`
-
-`sourceSystem` 推導結果必須與實際選用的 connector / tool / adapter specialization 一致。推導與選擇結果必須寫入既有 audit / observability pipeline。Client 傳入的 `sourceSystem` 必須視為 routing-control injection，而不是可信 routing input。
-
-### Connector / Tool / Data Adapter Boundary
-
-`DataAdapter` 可以保留為概念，但它不是第二套 runtime。若後續設計保留 `DataAdapter`，它必須是既有 Connector / Tool domain 中的 read-oriented evidence specialization。
-
-Backend 002 必須遵守：
-
-1. DataAdapter 若存在，必須由既有 Connector / Tool domain 管理。
-2. 不建立獨立於 Tool Registry / ConnectorAdapter 的第二套 registry。
-3. 不建立第二套 routing runtime。
-4. 不建立第二套 health model。
-5. 不建立第二套 timeout policy。
-6. 不建立第二套 permission engine。
-7. 不建立第二套 EvidenceRef conversion framework。
-8. 不建立第二套 degraded / public outcome mapper。
-9. 不建立第二套 audit writer 或 observability framework。
-10. adapter eligibility 由 HostApp capability 與既有 planning / tool routing 共同約束。
-11. adapter 執行仍走 Backend 001 既有 permission pre-check。
-12. adapter evidence 仍走 Backend 001 既有 masking、LLM sanitization 與 EvidenceRef pipeline。
-13. timeout / unavailable / tool failure 仍映射到 Backend 001 既有 `tool_failure` safe mapping。
-14. `degraded` 不得成為新的 public `AnswerDecision`。
-15. adapter 不得建立 adapter-specific permission engine；Admin selectedRows 逐筆 revalidation 必須擴充既有 permission policy 與 row-level extension point。
-
-本 spec 不強制保留獨立的 `DataAdapterRegistryService` 技術設計；後續技術設計若提及 registry，必須與既有 Tool Registry / ConnectorAdapter domain 對齊，不得成為獨立產品 surface。
-
-### Public Safe Outcome Mapping
-
-Backend 002 必須讓相同情境只有一個公開結果，並沿用 Backend 001 既有 public enum、error envelope 與 safe mapping：
-
-| 情境 | 固定 public outcome |
+| Claim | Contract |
 | --- | --- |
-| query 依賴「這筆」、「這張」、「目前這個」、缺少必要 entity reference、`entityId` 與 `selectedRows` target 衝突，或存在多個無法安全選擇的 entity candidate | `clarification_required` |
-| client payload 包含 connector、connectorId、adapter、adapterId、`sourceSystem`、dataSource、candidateTool、candidateTools、permission result 或 final evidence source 等 routing-control 欄位 | Backend 001 既有 request validation / integration error envelope；不以 `AnswerDecision` 作為主要拒絕結果 |
-| 未註冊 Host App | Backend 001 既有 request / integration error envelope；不 fallback 到 `admin`，不進入 connector / tool routing |
-| 已註冊 Host App 但 screen、entity 或 interaction 不支援 | `no_answer`，搭配 Backend 001 可容納的 internal `noAnswerReason`；不新增 public enum |
-| 純 restricted-field 問題、mixed unauthorized selectedRows、row-level permission 失敗或 operation permission 失敗 | `permission_denied` |
-| tool / adapter timeout、unavailable 或 tool failure | Backend 001 既有 `tool_failure` safe mapping；適用時為 `no_answer` + `noAnswerReason=tool_failure` |
-| 混合授權 / restricted-field 問題，且授權欄位可形成不誤導 partial answer | 回答授權部分，restricted 部分明確表示無權限提供，不暴露 restricted value 或存在性 |
-| 混合授權 / restricted-field 問題，但 partial answer 會誤導 | `permission_denied` |
+| `customer_id` | Non-blank string from explicit Integration → Customer binding. |
+| `integration_id` | Non-blank stable canonical integration identifier. |
+| `sub` | Non-blank actor identifier from trusted upstream identity. |
+| `org_id` | Non-blank organization identifier from trusted upstream identity. |
+| `host_app` | Non-blank HostApp identifier allowed by the binding. |
+| `roles` | `string[]`; empty is valid; each element is non-blank after trimming. |
+| `permission_scopes` | `string[]`; empty is valid; each element is non-blank after trimming. |
+| `jti` | Gateway-generated, non-client-controlled token identity and trace value. |
+| `iss`, `aud`, `iat`, `exp` | Required registered claims aligned with Backend verification. |
+| `nbf` | Optional; when issued it must satisfy Backend time validation. |
+| `kid` | Required protected-header key identifier for public-key selection and rotation. |
 
-Backend 002 不新增 public `AnswerDecision`、不新增第二套 error model，也不把 `degraded` 暴露成 public answer decision。
+`jti` provides token identity and traceability; it does not by itself create a distributed replay-prevention platform.
 
-### Routing Authority
+## Signing, JWKS, and Rotation Requirements
 
-Backend 可使用的 routing inputs 包含：
+The Gateway must sign internal JWTs with RS256 only. It must reject client-selected algorithms and must not use HS256, `none`, unsigned JWTs, or a shared plaintext signing secret as the production design. Issuer and audience must exactly align with the Backend's configured internal JWT issuer and audience; the JWKS URL is a separate endpoint and need not equal the issuer URL.
 
-- existing trusted identity context
-- `hostApp`
-- normalized `screenId`
-- normalized `entityType`
-- normalized entity reference
-- normalized selectedRows
-- allowlisted filters
-- permission scopes
-- query intent
-- HostApp capability
-- existing Query Understanding / ExecutionPlan result
+The Gateway must publish a Backend-reachable public JWKS containing the data needed for verification: `kty`, `kid`, `alg`, `use`, `n`, and `e`. JWKS and all other public output must exclude private RSA material such as `d`, `p`, `q`, `dp`, `dq`, and `qi`.
 
-上述資訊只能影響：
+Key rotation must use `kid`: a new signing key is published before issuance switches to its new `kid`; Backend verification must accept a token under that published key; retirement must follow a defined policy that does not silently invalidate still-valid tokens. Unknown `kid` must fail closed.
 
-- eligible candidate tools / connectors
-- required evidence
-- context resolution
-- clarification requirement
-- expected answer shape
-- backend-owned source selection
+## Production Identity Configuration Contract
 
-Client / frontend 不得指定：
+Each production environment or production-like deployment environment must provide verifiable identity configuration for the Gateway issuer, Gateway audience, Gateway public JWKS location, Gateway signing-key source/configuration, token-time settings, Backend expected issuer, Backend expected audience, and Backend JWKS URI. The Gateway issuer and audience must exactly match the Backend configuration for that environment, and the Backend must be able to reach the Gateway public JWKS.
 
-- connector
-- connectorId
-- adapter
-- adapterId
-- `sourceSystem`
-- dataSource
-- candidateTool
-- candidateTools
-- permission result
-- final evidence source
+Signing-key configuration must be production-safe and private signing material must not be stored in source control. The deployment mechanism, cloud/provider choice, secret product, networking implementation, and deployment platform remain design and deployment concerns rather than requirements for this specification.
 
-若 client-controlled payload 傳入上述 routing-control 欄位，Backend 必須拒絕該 request，不進入 retrieval、tool、adapter 或 LLM，並寫入最小化 audit。Audit 只記錄欄位名稱、requestId、hostApp、organization 與拒絕原因，不記錄 client 傳入的完整 routing target 值或 raw request body。
+## Redaction and Security Requirements
 
-### Admin Orders / Inventory Reference Integration
+Gateway responses, logs, audit metadata, observability, exceptions, and tests must not retain raw Authorization headers, Bearer tokens, complete JWTs, JWT signatures, private signing keys, private JWKs, credentials, passwords, secrets, or API keys. Safe audit/observability values may include canonical Customer/integration/HostApp/actor identifiers, `jti`, `kid`, requestId, and a safe decision reason where permitted by the Feature 002 redaction contract.
 
-Backend 001 已存在 generic mock connector、generic Orders / Inventory lookup、tool execution、permission、evidence 與 safe response。Backend 002 不取代這些能力。
+Frontend clients must not mint canonical Backend JWTs. The canonical internal JWT is a Gateway-to-Backend service credential and MUST NOT be returned to an external or Frontend caller as a reusable Backend credential. An external or Frontend caller MUST NOT establish Backend identity by submitting an arbitrary canonical internal JWT unless the request traverses the explicitly trusted Gateway/service boundary defined by the system architecture. Feature 003 does not define a token-exchange protocol or Frontend authentication model, and it must preserve Feature 002's no-public-header-fallback rule.
 
-Backend 002 新增的 `admin` reference integration acceptance 包含：
+## User Scenarios & Testing
 
-- `hostApp=admin` 正式 capability registration。
-- Orders / Inventory supported screens。
-- Orders / Inventory supported entity types。
-- supported interactions。
-- selectedRows comparison eligibility。
-- backend-derived source selection。
-- deterministic synthetic reference fixtures。
-- fixed personas 與 restricted field acceptance。
-- host capability-aware routing 驗收。
-- golden questions / eval cases。
+### User Story 1 - Resolve a trusted Integration to its Customer (Priority: P1)
 
-Reference integration 必須支援下列 acceptance questions：
+An integration operator can use a valid trusted integration context only when the Gateway resolves it to one explicit Customer binding.
 
-- order status lookup
-- order summary
-- selected orders comparison
-- inventory availability lookup
-- inventory summary
-- restricted cost permission behavior
-- unsupported host / screen / entity / interaction
-- adapter unavailable / timeout safe path
+**Why this priority**: An incorrect binding breaks the platform's outermost security boundary before the Backend can protect data.
 
-Reference integration 不得演變成完整 ERP connector、generic SQL connector、完整 Admin backend domain，也不得取代 Backend 001 既有 mock fixtures 或 connector runtime。
-
-### Restricted Field Behavior
-
-純 restricted-field 問題，例如使用者只問無權限的 `cost`：
-
-- 回 `permission_denied`。
-- restricted value 不得進入 LLM input。
-- restricted value 不得進入 EvidenceRef。
-- restricted value 不得出現在 response、log 或 audit metadata。
-
-混合授權 / 受限欄位問題，例如同時詢問 status 與 cost：
-
-- 只有在授權欄位本身能形成真實、有用且不誤導的 partial answer 時，才回答授權部分。
-- 受限部分必須省略、遮罩或明確表示無權限提供。
-- 不得透露受限值。
-- 不得透露受限值是否為 null、是否存在、是否超過某個門檻。
-- 若 partial answer 會造成誤導，則整體回 `permission_denied`。
-- 必須沿用 Backend 001 既有 permission、masking 與 EvidenceRef pipeline。
-- `finance_user` 只有在 Backend 001 可信 permission scopes 實際包含 restricted `cost` permission 時，才可讀取 `cost`；persona 名稱或 `role` 名稱本身不得授予 `cost` 權限。
-- `defaultPermissionScopeMapping` 不得將 `role` 自動轉換成額外 permission scope，也不得把未授權欄位加入 LLM input 或 EvidenceRef。
-
-### Audit / Observability
-
-Backend 002 只新增 host-specific audit metadata，不建立第二套 audit 或 observability framework。
-
-可新增 metadata：
-
-- HostApp capability lookup result
-- unsupported host / screen / entity / interaction reason
-- PageContext policy decision
-- selectedRows policy rejection
-- eligible connector / tool set
-- final backend-selected connector / tool / adapter specialization
-- backend-derived `sourceSystem`
-- adapter dependency status
-- host-specific minimization summary
-
-必須沿用：
-
-- Backend 001 `AuditWriter`
-- requestId correlation
-- existing structured logger
-- redaction policy
-- existing observability metadata
-- dependency health model
-- timeout / failure reason
-- existing safe mapping defined by Backend 001 AnswerDecision / noAnswerReason behavior
-
-不得記錄：
-
-- raw PageContext
-- raw selected rows
-- 完整 entity record
-- unauthorized field value
-- credential
-- token
-- secret
-- raw connector payload
-- raw exception object
-
-### Approval / Diagnostic / Future Host Apps
-
-Approval:
-
-- Backend 002 不接收 approval navigation metadata。
-- Backend 002 不新增 approval-specific Host Integration Context。
-- 沿用 Backend 001 既有 `ApprovalRequest`、`ActionDraft`、`EscalationRequest` 與 public API。
-- Host App 導航屬於 Frontend 002 callback responsibility。
-
-Diagnostic:
-
-- v1 不新增 public diagnostic endpoint。
-- 沿用 Backend 001 既有 health、readiness、audit 與 observability。
-- HostApp Registry inspection 或 adapter diagnostic 延後至後續 feature。
-
-Future Host Apps:
-
-- `mes`
-- `wms`
-- `scm`
-- `crm`
-- `custom`
-
-本 feature 只保留 identifier 與 extension boundary，不決定優先序，也不實作 production connector。
-
-## User Personas
-
-- **admin_operator**: 可查看 order 與 inventory 基本資料的營運使用者，但不因角色名稱自動取得 restricted `cost` 欄位。
-- **finance_user**: 具備 order / inventory 基本 read permission；只有當 Backend 001 可信 permission scopes 實際包含 restricted `cost` permission 時，才可讀取 `cost`。
-- **limited_user**: 能使用 assistant 並可讀基本欄位，但不具備 restricted `cost` permission。
-- **host system integrator**: 負責在 host app 中提供既有 identity headers 與 top-level sanitized `pageContext` 的工程人員。
-- **product / platform owner**: 負責審查 HostApp capability、unsupported behavior、reference acceptance 與 future host app extension boundary。
-
-## User Scenarios & Testing *(mandatory)*
-
-### User Story 1 - Use Existing Identity and PageContext to Resolve HostApp Capability (Priority: P1)
-
-Backend 使用 Backend 001 既有 `RequestIdentityContext` 與 top-level `pageContext`，查詢 static HostApp capability，判定目前 host / screen / entity / interaction 是否受支援。
-
-**Independent Test**: 以既有 assistant request contract 傳入完整 identity headers 與 top-level `pageContext`，驗證 `hostApp=admin` 可取得 capability；未註冊 host 使用 Backend 001 既有 request / integration error envelope。
+**Independent Test**: Register Integration A → Customer A and Integration B → Customer B with identical lower-level identity attributes; resolve each independently.
 
 **Acceptance Scenarios**:
 
-1. **Given** request 使用 Backend 001 既有 identity headers 且 `hostApp=admin`，**When** backend 評估 capability，**Then** 取得 `admin` HostApp capability。
-2. **Given** request 帶未註冊 host app，**When** backend 評估 capability，**Then** 沿用 Backend 001 既有 request / integration error envelope，不得 fallback 到 `admin`。
-3. **Given** request 缺少 Backend 001 required identity field，**When** backend 收到 request，**Then** 沿用 Backend 001 identity validation fail closed，不進入 capability、retrieval、tool 或 LLM。
+1. **Given** an enabled Integration A explicitly bound to Customer A, **When** Gateway receives valid trusted context for A, **Then** issuance resolves Customer A and only the allowed HostApp context.
+2. **Given** Integration A and B share organization, actor, HostApp, roles, and scopes, **When** each is resolved, **Then** their Customer and integration identities remain distinct.
+3. **Given** an unknown, disabled, unbound, or context-mismatched integration, **When** issuance is requested, **Then** no token is issued and the response does not disclose another binding.
 
-### User Story 2 - Restrict Eligible Connector / Tool by Host Capability (Priority: P1)
+---
 
-Backend 根據 HostApp capability、normalized screen/entity/interaction 與既有 ExecutionPlan，限制 eligible connector / tool。
+### User Story 2 - Issue a canonical internal identity JWT (Priority: P1)
 
-**Independent Test**: 不需要實作完整 Admin adapter，可用 capability fixtures 驗證 unsupported host、screen、entity 或 interaction 不產生 eligible connector / tool。
+A trusted Gateway can issue and attach a canonical internal identity JWT to a protected Backend request after successful upstream authentication and explicit Integration → Customer resolution. The token is a Gateway-to-Backend service-to-service credential, not an application credential received by a user or Frontend client.
 
-**Acceptance Scenarios**:
+**Why this priority**: This is the production prerequisite for all protected Backend operations.
 
-1. **Given** `admin` capability 支援 order detail status lookup，**When** 使用者詢問訂單狀態，**Then** eligible tools 只能包含 capability 與 permission compatible 的 Orders evidence path。
-2. **Given** screen 不支援 selectedRows comparison，**When** 使用者要求比較 selected rows，**Then** backend 不得選取 comparison connector / tool。
-3. **Given** entity type unsupported，**When** backend 建立 routing decision，**Then** public outcome 為 `no_answer`，並搭配 Backend 001 可容納的 internal `noAnswerReason`。
-
-### User Story 3 - Apply Host-specific PageContext Policy and selectedRows Safety (Priority: P1)
-
-Backend 在既有 PageContext contract 上套用 host-specific allowlist、selectedRows policy 與 minimization，並沿用 Backend 001 clarification path。
-
-**Independent Test**: 以不同 PageContext shape 驗證 allowlist、selectedRows 20 筆上限、entityId / selectedRows conflict 與 minimization metadata。
+**Independent Test**: Use an enabled explicit binding and trusted actor context to have Gateway attach one token to a protected Backend request, then validate its canonical claims and registered metadata at the Backend boundary.
 
 **Acceptance Scenarios**:
 
-1. **Given** PageContext `screenId` 不在 `admin` capability 中，**When** request 進入 backend，**Then** public outcome 為 `no_answer`，不套用其他 screen capability。
-2. **Given** `selectedRows` 超過 20 筆，**When** backend 執行 policy validation，**Then** 整體拒絕，不截斷、不 deduplicate 後再接受。
-3. **Given** `entityId` 與 `selectedRows` 指向不同 target，**When** 使用者要求查詢或比較，**Then** public outcome 為 `clarification_required`，不任意選一方。
-4. **Given** selectedRows 任一 row 跨 organization 或未授權，**When** backend 執行 row-level permission，**Then** 整個 comparison request 回 `permission_denied`，不處理合法 subset。
+1. **Given** valid issuance input, **When** Gateway issues a token, **Then** it contains every required canonical claim, RS256 metadata, a Gateway-generated `jti`, and valid time claims.
+2. **Given** empty trusted roles or permission scopes, **When** a token is issued, **Then** the corresponding empty arrays remain valid without implicit authorization.
+3. **Given** a client supplies conflicting public identity headers or body values, **When** a token is issued, **Then** those values do not override canonical identity.
+4. **Given** an external or Frontend caller, **When** it requests or submits a canonical internal JWT outside the trusted Gateway-to-Backend path, **Then** it cannot receive a reusable Backend credential or establish Backend identity.
 
-### User Story 4 - Derive Backend-owned `sourceSystem` (Priority: P1)
+---
 
-Backend 根據 trusted identity、HostApp capability、normalized PageContext、eligible connector / tool 與 ExecutionPlan 推導 `sourceSystem`。
+### User Story 3 - Reject unauthorized identity issuance (Priority: P1)
 
-**Independent Test**: 使用 fixed capability 與 request fixtures 驗證 `sourceSystem` 與實際 selected connector / tool / adapter specialization 一致，且 frontend 指定 `sourceSystem` 會被拒絕。
+An attacker or misconfigured integration cannot obtain a token for another Customer or a more privileged identity.
 
-**Acceptance Scenarios**:
+**Why this priority**: Issuance is the trust boundary; failure must happen before a protected Backend call.
 
-1. **Given** `admin` Orders detail lookup，**When** backend 選定 Orders evidence path，**Then** `sourceSystem` 由 backend 推導並寫入最小化 audit metadata。
-2. **Given** client payload 嘗試傳入 `sourceSystem`，**When** backend 驗證 request，**Then** request 被拒絕，不進入 retrieval、tool、adapter 或 LLM。
-3. **Given** backend-selected connector / tool 改變，**When** source metadata 被記錄，**Then** `sourceSystem` 必須與實際 evidence source 一致。
-
-### User Story 5 - Complete Admin Orders Queries Through Existing Pipeline (Priority: P2)
-
-Backend 使用既有 Connector / Tool / permission / masking / EvidenceRef / AnswerDecision pipeline 完成 `admin` Orders reference queries。
-
-**Independent Test**: 使用 deterministic synthetic fixtures 驗證 order status、order summary、selected orders comparison 與 restricted cost behavior。
+**Independent Test**: Attempt issuance with unknown, disabled, Customer-mismatched, HostApp-mismatched, invalid upstream, and permission-escalating inputs.
 
 **Acceptance Scenarios**:
 
-1. **Given** admin order detail PageContext，**When** 使用者問「這張訂單目前狀態是什麼」，**Then** backend 使用 existing connector / tool / evidence path 回傳 grounded answer。
-2. **Given** selectedRows comparison request，**When** 所有 rows 都在 organization boundary 且具 read permission，**Then** 查詢範圍只限 selectedRows。
-3. **Given** limited_user 只問 `cost`，**When** backend 處理 request，**Then** final public outcome 是 `permission_denied`，restricted value 不進 LLM、EvidenceRef、response、log 或 audit。
+1. **Given** Integration A, **When** it requests Customer B identity, **Then** Gateway rejects without issuing a token or revealing Customer B existence.
+2. **Given** an upstream identity lacks a trusted role or scope, **When** client-controlled context claims it, **Then** Gateway does not grant it.
+3. **Given** invalid upstream credentials or identity, **When** issuance is requested, **Then** Gateway fails closed before Backend business work.
 
-### User Story 6 - Complete Admin Inventory Queries Through Existing Pipeline (Priority: P2)
+---
 
-Backend 使用既有 pipeline 完成 `admin` Inventory reference queries，並套用 HostApp capability 與 restricted field policy。
+### User Story 4 - Publish public verification keys (Priority: P1)
 
-**Independent Test**: 使用 deterministic synthetic fixtures 驗證 inventory availability、inventory summary 與 restricted cost behavior。
+The Backend can obtain the Gateway public key needed to validate a genuine issued token.
 
-**Acceptance Scenarios**:
+**Why this priority**: Signature verification cannot establish production trust without a reachable public key source.
 
-1. **Given** admin inventory detail PageContext，**When** 使用者問可用庫存，**Then** backend 回傳 grounded answer 且 evidence source 是 inventory。
-2. **Given** unsupported inventory screen，**When** 使用者詢問 inventory data，**Then** backend 不得套用其他 screen capability。
-3. **Given** mixed status + cost question，**When** 使用者無 cost permission，**Then** 只有在授權欄位能形成不誤導 partial answer 時才回答授權部分；若 partial answer 會誤導，public outcome 為 `permission_denied`。
-
-### User Story 7 - Safely Reject Unsupported Host / Screen / Entity / Interaction (Priority: P2)
-
-Backend 對 unsupported capability case 使用固定 public outcome，不猜測、不 fallback、不暴露 routing detail。
-
-**Independent Test**: 使用 unsupported host、screen、entity、interaction fixtures 驗證固定 public outcome、audit metadata 與 no fallback。
+**Independent Test**: Retrieve the Gateway JWKS and validate one issued token by its `kid` using the Backend's Remote-JWKS verifier.
 
 **Acceptance Scenarios**:
 
-1. **Given** `hostApp=mes` 但 v1 未註冊 production capability，**When** request 進入 backend，**Then** 沿用 Backend 001 既有 request / integration error envelope，不使用 `admin` capability。
-2. **Given** `admin` 不支援某 interaction，**When** 使用者要求該 interaction，**Then** public outcome 為 `no_answer`，backend 不選 connector / tool。
-3. **Given** client 指定 candidate tool，**When** backend 驗證 request，**Then** request 被拒絕並寫入最小化 audit。
+1. **Given** an active signing key, **When** Backend obtains Gateway JWKS, **Then** the matching public key is available with required public metadata and no private material.
+2. **Given** a token with unknown `kid`, **When** Backend verifies it, **Then** verification fails closed.
 
-### User Story 8 - Golden Questions / Eval / Privacy / Regression (Priority: P2)
+---
 
-建立固定 golden questions、eval smoke、privacy 與 architecture regression，證明 Backend 002 的增量能力不破壞 Backend 001。
+### User Story 5 - Rotate signing keys safely (Priority: P2)
 
-**Independent Test**: 使用 synthetic fixtures 與固定 expected outcomes，驗證 public contract、source selection、permission behavior 與 Public Safe Outcome Mapping。
+An operator can introduce and retire signing keys without silently breaking valid-token verification.
+
+**Why this priority**: Long-lived production trust requires an auditable key lifecycle.
+
+**Independent Test**: Publish an overlap of current and new public keys, switch issuance to the new `kid`, verify both policy-eligible token states, then retire the old key according to the declared retirement policy.
 
 **Acceptance Scenarios**:
 
-1. **Given** order status golden question，**When** eval 執行，**Then** expected evidence source 是 order，且 public response 符合 Backend 001 AnswerDecision contract。
-2. **Given** inventory availability golden question，**When** eval 執行，**Then** expected evidence source 是 inventory。
-3. **Given** adapter timeout 或 unavailable，**When** backend 回應，**Then** final public outcome 沿用 Backend 001 `tool_failure` safe mapping，不出現 public `answerDecision = "degraded"`。
-4. **Given** Backend 002 Admin capability path以外的既有Backend 001流程，**When** 002 capability code 存在，**Then** 既有 Backend 001 行為不被改變。
+1. **Given** a new signing key is prepared, **When** it is published before issuance switches, **Then** a token carrying the new `kid` is accepted by Backend.
+2. **Given** an old key remains needed by valid tokens, **When** rotation occurs, **Then** retirement does not silently invalidate those tokens outside the declared policy.
+
+---
+
+### User Story 6 - Complete real Gateway-to-Backend identity integration (Priority: P1)
+
+A real Gateway runtime can call a protected Backend endpoint with its own issued token.
+
+**Why this priority**: Static fixtures cannot demonstrate the production trust chain.
+
+**Independent Test**: Start real Gateway and Backend runtimes, issue a Gateway token, and call a protected Backend endpoint through Backend Remote-JWKS verification.
+
+**Acceptance Scenarios**:
+
+1. **Given** aligned issuer, audience, and JWKS configuration, **When** Gateway calls Backend with its token, **Then** Backend accepts the verified canonical identity.
+2. **Given** an invalid signature, wrong issuer/audience, expired/future token, or unknown `kid`, **When** it reaches Backend, **Then** Backend rejects before protected business work.
+
+---
+
+### User Story 7 - Protect tokens, keys, and identity metadata (Priority: P2)
+
+Security operators can investigate issuance decisions without exposing credentials or token material.
+
+**Why this priority**: Observability must not create a second credential leak path.
+
+**Independent Test**: Exercise successful and failed issuance, JWKS publication, rotation, and Backend integration while scanning public output, logs, audit metadata, and exception surfaces for prohibited material.
+
+**Acceptance Scenarios**:
+
+1. **Given** issuance or verification succeeds or fails, **When** telemetry is recorded, **Then** safe trace fields may remain while raw token, signature, Authorization, and private-key material are absent.
+2. **Given** a client supplies spoofed public identity headers, **When** Gateway and Backend handle the request, **Then** those headers never become canonical identity authority.
 
 ### Edge Cases
 
-- unregistered host app 嘗試使用 `admin` Orders / Inventory capability。
-- unsupported screen 但 entity type 支援。
-- unsupported interaction 但 entity type 與 screen 支援。
-- client 傳入 connector / adapter / `sourceSystem` / candidateTools / permission result。
-- `selectedRows` 超過 20 筆。
-- `selectedRows` 原始輸入超過 20 筆但 deduplicate 後小於 20 筆。
-- selectedRows 包含跨 organization 或未授權 row。
-- `entityId` 與 `selectedRows` target 衝突。
-- `visibleColumns` 顯示 restricted field，但 permission scope 不允許 backend 曝露該欄位。
-- `activeFilters` 含未 allowlist 或敏感條件。
-- adapter health 正常但 actual lookup timeout。
-- repeated request / retry 不得造成 scope drift、adapter drift、permission drift 或 evidence expansion。
+- Integration A and B intentionally share `org_id`, `sub`, `host_app`, roles, and scopes.
+- A binding is disabled, missing its Customer, has no allowed HostApp match, or conflicts with claimed context.
+- Canonical string claims are blank, roles/scopes are not arrays, or either array contains a blank element.
+- The token has a client-selected algorithm, missing/unknown `kid`, invalid signature, wrong issuer/audience, invalid `iat`, expired `exp`, or future `nbf`.
+- JWKS omits the active public key, exposes private material, is unavailable, or has not published a new key before issuance switches.
+- A rotation attempts premature old-key retirement.
+- Raw credentials or token material are present in nested errors, audit metadata, logs, or test output.
 
-## Requirements *(mandatory)*
+## Functional Requirements
 
-### Functional Requirements
+- **FR-001**: The system MUST maintain a stable integration identifier with one explicit, verifiable binding to one existing Customer root for identity issuance.
+- **FR-002**: The binding MUST record the allowed HostApp or equivalent integration context and an enabled/disabled trust state.
+- **FR-003**: The system MUST resolve `customer_id` only from the explicit binding and MUST NOT infer it from lower-level identity, request, content, or metadata values.
+- **FR-004**: The system MUST derive `sub`, `org_id`, `host_app`, roles, and permission scopes only from trusted upstream identity or approved integration authority.
+- **FR-005**: Unknown, disabled, unbound, Customer-mismatched, HostApp-mismatched, or invalid-upstream issuance requests MUST fail closed before token issuance or protected Backend business work.
+- **FR-006**: Safe issuance failures MUST NOT disclose another Customer, integration, binding, or credential detail.
+- **FR-007**: The Gateway MUST issue all canonical application claims listed in the Canonical Internal JWT Contract without changing Feature 002 claim semantics.
+- **FR-008**: Canonical string claims MUST be non-blank; `roles` and `permission_scopes` MUST be arrays of non-blank strings and MAY be empty.
+- **FR-009**: The Gateway MUST generate `jti`; client input MUST NOT determine it.
+- **FR-010**: Issued tokens MUST contain `iss`, `aud`, `iat`, and `exp`; optional `nbf` MUST satisfy Backend time validation.
+- **FR-011**: Issued tokens MUST use RS256 and a non-blank `kid`; client-selected signing algorithm, HS256, `none`, unsigned tokens, and shared plaintext production signing secrets are prohibited.
+- **FR-012**: Gateway issuer and audience MUST exactly align with the Backend internal JWT configuration for the deployed environment.
+- **FR-013**: The Gateway MUST publish a Backend-reachable public JWKS with `kty`, `kid`, `alg`, `use`, `n`, and `e` for active verification keys.
+- **FR-014**: JWKS and all public output MUST exclude private signing material, including `d`, `p`, `q`, `dp`, `dq`, and `qi`.
+- **FR-015**: The Gateway MUST publish a new public key before issuing tokens with its new `kid`.
+- **FR-016**: The key-retirement policy MUST prevent silent invalidation of still-valid tokens and MUST define rollback-safe handling for a failed rollout.
+- **FR-017**: Unknown `kid`, invalid signature, wrong issuer/audience, and invalid token time claims MUST fail closed at the Backend boundary.
+- **FR-018**: The Gateway MUST provide a local development path that proves runtime start, JWKS reachability, issuance, Backend acceptance, and negative token rejection.
+- **FR-019**: Feature completion MUST include a real Gateway-issued token accepted by a protected Backend endpoint through Remote-JWKS verification; static fixtures and mock verifiers alone are insufficient.
+- **FR-020**: Integration A MUST NOT obtain a token for Customer B, even when all lower-level identity values are identical.
+- **FR-021**: Public identity headers and client-controlled body, page, metadata, and capability values MUST NOT establish, supplement, override, or elevate canonical Backend identity.
+- **FR-022**: The Gateway MUST redact raw Authorization values, Bearer tokens, full JWTs, signatures, private keys/JWKs, credentials, passwords, secrets, and API keys from responses, logs, audit metadata, observability, exceptions, and test artifacts.
+- **FR-023**: Audit-safe issuance and rotation records MUST retain only approved traceability fields and safe decision reasons.
+- **FR-024**: Feature 003 MUST reuse the existing Feature 002 Customer root and MUST NOT create a second Customer authority, Customer lifecycle platform, or replacement Backend identity context.
+- **FR-025**: Production rollout MUST remain blocked until all Feature 003 readiness requirements have real runtime evidence.
+- **FR-026**: Canonical internal JWTs MUST be Gateway-to-Backend service-to-service credentials. The Gateway MUST attach an issued token only on the trusted Gateway-to-Backend request path and MUST NOT expose it to external or Frontend callers as a reusable Backend credential.
+- **FR-027**: Each production environment or production-like deployment environment MUST provide validated Gateway and Backend identity configuration, including exact issuer/audience alignment, a Backend-reachable Gateway public JWKS, production-safe signing-key source/configuration, and compatible token lifetime and time-validation settings. The deployment mechanism remains a design and deployment concern.
 
-- **FR-001**: Backend 002 必須重用 Backend 001 既有 `RequestIdentityContext`、identity extraction、identity validation 與 required identity fields，不得建立第二套 identity authority。
-- **FR-002**: Backend 002 必須沿用 Backend 001 既有 assistant public API、SSE、top-level `pageContext` 與 requestId / error envelope contract，不得新增 public chat endpoint、nested `hostContext` 或第二套 backend request mode。
-- **FR-003**: Backend 002 不得把 `sessionScope` 加入 backend public request contract；session ownership / namespace / fallback 屬於 Frontend 002 concern。
-- **FR-004**: Backend 002 不得接收 approval navigation metadata，並必須沿用 Backend 001 既有 approval / action draft / escalation APIs。
-- **FR-005**: 系統必須提供 static HostApp Capability Registry v1，正式註冊 `admin`，並保留 `mes`、`wms`、`scm`、`crm`、`custom` identifiers 作為 future extension boundary。
-- **FR-006**: `HostAppCapability` 至少必須描述 hostAppId、displayName、supported entity types、supported screens、supported interactions、eligible connector / tool 或 evidence capabilities、PageContext allowlist、selectedRows policy、active filter allowlist、field exposure policy、permission-scope mapping interpretation 與 degraded / unsupported behavior。
-- **FR-007**: 未註冊 host 必須沿用 Backend 001 既有 request / integration error envelope；unsupported screen、unsupported entity 或 unsupported interaction 的 public outcome 必須為 `no_answer` 並搭配 Backend 001 可容納的 internal `noAnswerReason`。所有情況皆不得 fallback 到 `admin` 或其他 capability。
-- **FR-008**: Capability eligibility 必須在既有 connector / tool execution 前完成，且必須與 Backend 001 Query Understanding / ExecutionPlan / Tool Registry 結果共同約束 eligible candidate tools。
-- **FR-008a**: HostApp capability 與 permission-scope mapping 只能縮小 eligible connector、eligible tool、visible field 與 supported operation，不得生成、補齊、合併、替換或提升 Backend 001 已驗證的 permission scopes，也不得擴大 organization boundary、row scope、field permission、operation permission 或 evidence exposure。
-- **FR-009**: Backend 002 必須在 Backend 001 既有 PageContext DTO 與 mapper 之上套用 host-specific PageContext policy，不得新增 public PageContext DTO 或第二個 PageContext request 位置。
-- **FR-010**: PageContext policy 必須支援 screenId validation、entityType validation、screen/entity/interaction validation、PageContext allowlist、activeFilters allowlist、field visibility / exposure policy、selectedRows 上限與 host-specific sensitive field minimization。
-- **FR-011**: `route` query string 與 hash 不得作為可信資料來源。
-- **FR-012**: `visibleColumns`、`userVisibleState`、selectedRows safe summary 與 PageContext 不得作為 permission authority。
-- **FR-013**: PageContext 不足、缺少必要 entity reference、target 衝突或存在多個無法安全選擇的 candidate 時，public outcome 必須為 `clarification_required`，且不得建立第二套 clarification pipeline。
-- **FR-014**: `selectedRows` 最多 20 筆，且 Backend 必須針對 client 原始輸入數量獨立檢查；超過 20 筆時整體拒絕，不得截斷或先 deduplicate 後接受。
-- **FR-015**: `selectedRows` 只作 request-scoped comparison / bulk context，不作 session identity，也不得擴大查詢範圍。
-- **FR-016**: 任一 selected row 跨 organization 或未通過 row-level permission 時，整個 comparison request 必須回 `permission_denied`，不得只處理合法 subset，也不得揭露哪個 ID 未授權。Backend 002 必須對每個 selected row 重新套用 Backend 001 既有 organization boundary 與 row-level permission extension point，不得將 frontend row ID、safe summary 或畫面可見狀態視為 authorization proof。
-- **FR-017**: Client / frontend 不得指定 connector、connectorId、adapter、adapterId、`sourceSystem`、dataSource、candidateTool、candidateTools、permission result 或 final evidence source。
-- **FR-018**: Client-controlled payload 若包含 routing-control 欄位，Backend 必須以 Backend 001 既有 request validation / integration error envelope 拒絕 request，不進入 retrieval、tool、adapter 或 LLM，不以 `AnswerDecision` 作為主要拒絕結果，並寫入只含欄位名稱、requestId、hostApp、organization 與拒絕原因的最小化 audit metadata。
-- **FR-019**: Backend 必須推導 backend-owned `sourceSystem`，且推導結果必須與實際選用的 connector / tool / adapter specialization 一致。
-- **FR-020**: `sourceSystem` 推導與 final backend-owned source selection 必須寫入既有 audit / observability pipeline。
-- **FR-021**: 若保留 DataAdapter 概念，它必須是既有 Connector / Tool domain 中的 read-oriented evidence specialization，不得成為獨立 runtime、registry、health model、timeout policy、permission engine、EvidenceRef conversion framework、public outcome mapper、audit writer 或 observability framework。
-- **FR-022**: adapter / connector execution 仍必須走 Backend 001 既有 permission pre-check、row-level permission extension point、masking、LLM sanitization、EvidenceRef 與 AnswerDecision pipeline；Backend 002 不得建立 adapter-specific permission engine。
-- **FR-023**: timeout、unavailable、tool failure 或 degraded dependency 必須映射到 Backend 001 既有 `tool_failure` safe mapping；適用時為 `no_answer` + `noAnswerReason=tool_failure`。不得新增 public `answerDecision = "degraded"` 或 `final.data.answerDecision = "degraded"`。
-- **FR-024**: Backend 002 必須提供 `hostApp=admin` reference capability registration，並定義 Orders / Inventory supported screens、entity types、interactions、selectedRows comparison eligibility 與 evidence capabilities。
-- **FR-025**: Admin Orders reference acceptance 至少涵蓋 order status lookup、order summary、selected orders comparison 與 restricted cost permission behavior。
-- **FR-026**: Admin Inventory reference acceptance 至少涵蓋 inventory availability lookup、inventory summary 與 restricted cost permission behavior。
-- **FR-027**: 純 restricted-field 問題必須回 `permission_denied`，restricted value 不得進入 LLM input、EvidenceRef、response、log 或 audit metadata。
-- **FR-028**: 混合授權 / 受限欄位問題只有在授權欄位能形成真實、有用且不誤導 partial answer 時才可回答授權部分；受限值不得洩漏存在性、null 狀態或門檻資訊。若 partial answer 會誤導，public outcome 必須為 `permission_denied`。
-- **FR-029**: Backend 002 只新增 host-specific audit metadata，必須沿用 Backend 001 append-only audit writer、redaction policy、observability metadata 與 dependency health model。
-- **FR-030**: Audit / observability 不得記錄 raw PageContext、raw selected rows、完整 entity record、unauthorized field value、credential、token、secret、raw connector payload 或 raw exception object。
-- **FR-031**: Backend 002 必須提供 deterministic synthetic fixtures、golden questions、eval smoke、privacy tests、contract tests 與 architecture guards，驗證 002 增量能力不破壞 Backend 001。
-- **FR-032**: Backend 002 不得實作 full ERP connector、generic SQL connector、完整 Admin backend domain、MES / WMS / SCM / CRM production connector 或 public diagnostic endpoint。
+### Key Entities
 
-## Data / Fixtures
+- **Integration Binding**: A stable integration identity, its explicit link to one existing Customer, allowed integration/HostApp context, enabled state, and safe issuance decision context.
+- **Trusted Upstream Identity**: The verified external or Host authentication context from which actor, organization, HostApp, roles, and permission scopes can be derived without client authority.
+- **Internal Identity Token**: The RS256 Gateway-issued canonical JWT consumed by Feature 002 Backend verification.
+- **Signing Key Lifecycle**: The active and retiring public/private key relationship needed for `kid` selection, JWKS publication, rollout, and retirement policy.
 
-Backend 002 deterministic test fixtures 必須是 synthetic / de-identified，且不得取代 Backend 001 既有 mock connector runtime。Backend 002 reference fixtures 必須放在獨立 reference namespace，不得修改、覆蓋或重新定義 Backend 001 既有 fixture key 與 value；retry、seed 與 fixture loading 順序不得改變同一 ID 的資料結果。
+## Non-Functional / Security Requirements
 
-### Admin order fixture
+- The Gateway must fail closed for identity, binding, signing, key, JWKS, and time-validation failures.
+- Private signing material must be protected from clients, repositories, logs, audit metadata, exception details, and public JWKS.
+- Token issuance and key changes must have auditable, redacted traceability.
+- Production evidence must use real Gateway and Backend runtimes, not test-only signer or static-verifier fixtures.
+- The feature must preserve Feature 002's customer-first isolation and safe no-disclosure behavior.
 
-- `orderId: ADMIN-SO-10001`
-- `status: confirmed`
-- `customerName: synthetic customer`
-- `cost: restricted field`
+## Dependencies and Future Work
 
-### Admin inventory fixture
+### Feature 002 Compatibility Contract
 
-- `itemNo: ADMIN-SKU-001`
-- `availableQty: 320`
-- `reservedQty: 40`
-- `cost: restricted field`
+Feature 002 remains authoritative for JWT cryptographic verification, canonical claim validation, `RequestIdentityContext`, `CustomerScope`, Customer-qualified data access, CustomerToolPolicy, RAG isolation, workflow isolation, and feedback/review/audit isolation. Feature 003 must issue the exact identity contract those boundaries already require and must not duplicate their runtime behavior.
 
-### Personas
+### Feature 004 Boundary
 
-- `admin_operator`: 可讀 order / inventory 基本欄位，不因角色名稱自動取得 restricted `cost`。
-- `finance_user`: 具備 order / inventory 基本 read permission；只有當 Backend 001 可信 permission scopes 實際包含 restricted `cost` permission 時，才可讀取 `cost`。
-- `limited_user`: 可使用 assistant 並讀基本欄位，但沒有 restricted `cost` permission。
+Feature 004 may define HostApp capability governance, PageContext policy, selectedRows behavior, sourceSystem evidence consistency, and reference Orders/Inventory integration. Feature 003 only issues the canonical `host_app` claim required for future safe use.
 
-## Testing Requirements
+## Success Criteria
 
-### Contract Tests
-
-- Backend 001 assistant message API unchanged。
-- SSE final remains `AnswerDecision`-based。
-- no public `answerDecision = "degraded"`。
-- top-level `pageContext` remains public request location。
-- no nested `hostContext`。
-- no backend-required `sessionScope`。
-- no public diagnostic endpoint。
-
-### Unit Tests
-
-- HostApp capability registry。
-- Host / screen / entity / interaction eligibility。
-- HostApp capability 與 permission-scope mapping 只能縮小 capability，不得提升 Backend 001 verified permission scopes。
-- PageContext allowlist / minimization policy。
-- selectedRows max 20 policy。
-- routing-control field rejection。
-- backend-derived `sourceSystem` derivation。
-- DataAdapter / ConnectorAdapter no-split architecture guard。
-
-### Integration Tests
-
-- `admin` capability lookup。
-- unregistered host cannot use `admin` capability。
-- unsupported screen / entity / interaction cannot select connector / tool。
-- Admin Orders reference questions use existing connector / tool / permission / evidence path。
-- Admin Inventory reference questions use existing connector / tool / permission / evidence path。
-- selectedRows over 20 rejected as whole request。
-- mixed unauthorized selectedRows return `permission_denied` as whole request。
-- every selected row is revalidated through Backend 001 organization boundary and row-level permission extension point before full data retrieval or exposure。
-- client-supplied routing-control fields rejected before retrieval / tool / adapter / LLM。
-- unregistered host uses Backend 001 existing request / integration error envelope and does not route connector / tool。
-- unsupported screen / entity / interaction returns `no_answer` without connector / tool selection。
-- adapter unavailable / timeout uses Backend 001 `tool_failure` safe mapping。
-
-### Security / Privacy Tests
-
-- raw PageContext does not enter LLM input。
-- raw selectedRows does not enter LLM input, response, log, audit or observability。
-- restricted values do not enter LLM input, EvidenceRef, response, log or audit metadata。
-- frontend cannot specify `sourceSystem`、connector、adapter、candidate tool、permission result or final evidence source。
-- visibleColumns / userVisibleState / selectedRows safe summary cannot bypass permission。
-- `finance_user` role / persona name without trusted restricted `cost` permission scope cannot access `cost`。
-- capability mapping cannot add unauthorized fields to LLM input or EvidenceRef。
-
-### Eval / Golden Questions
-
-- order status lookup。
-- order summary。
-- selected orders comparison。
-- inventory availability lookup。
-- inventory summary。
-- unauthorized cost。
-- unsupported host / screen / entity / interaction。
-- adapter unavailable / timeout。
-- repeated request / retry scope stability。
-
-### Backend 001 Regression
-
-- Backend 002 Admin capability path以外的既有Backend 001流程 remains unchanged。
-- Existing assistant API / SSE / AnswerDecision / EvidenceRef / audit tests remain compatible。
-
-## Security / Privacy / Audit Requirements
-
-- Backend 002 必須沿用 Backend 001 identity、permission、masking、EvidenceRef、AnswerDecision、audit 與 observability foundation。
-- 缺少 Backend 001 required identity context 時，必須沿用 Backend 001 fail-closed behavior。
-- HostApp capability rejection、PageContext policy rejection、selectedRows rejection、routing-control rejection 與 source selection 都必須產生最小化 audit metadata。
-- selectedRows 超過 20 筆必須整體拒絕。
-- mixed unauthorized rows 必須整體回 `permission_denied`。
-- 每個 selected row 都必須在取得或暴露完整資料前重新套用 Backend 001 既有 organization boundary 與 row-level permission extension point。
-- HostApp capability 只能縮小 Backend 001 已驗證的 permission scopes、eligible capability 與 evidence exposure，不得提升權限。
-- restricted field value 不得出現在 LLM input、EvidenceRef、response、log、audit metadata 或 observability metadata。
-- client-supplied routing-control 欄位必須安全拒絕並 audit。
-- frontend 不得指定 `sourceSystem`。
-- `degraded` 只可作 internal dependency / availability metadata，不得成為 public `AnswerDecision`。
-
-## Success Criteria *(mandatory)*
-
-### Measurable Outcomes
-
-- **SC-001**: Backend 001 既有 public API / SSE / `AnswerDecision` contract 無 breaking change。
-- **SC-002**: Backend 002 沒有建立第二套 identity、PageContext、planner、permission、evidence、audit、observability 或 connector runtime。
-- **SC-003**: `admin` 可取得明確 HostApp capability。
-- **SC-004**: 未註冊 host app 100% 不得使用 `admin` capability。
-- **SC-005**: unsupported screen / entity / interaction 100% 不得選取 connector / tool。
-- **SC-006**: Backend 能推導並 audit 最終 backend-owned `sourceSystem`，且與實際 selected connector / tool / adapter specialization 一致。
-- **SC-007**: Admin Orders / Inventory reference questions 使用 Backend 001 既有 connector / tool / permission / evidence path。
-- **SC-008**: selectedRows 超過 20 筆的測試案例 100% 整體拒絕。
-- **SC-009**: mixed unauthorized rows 的 comparison 測試案例 100% 整體回 `permission_denied`。
-- **SC-010**: restricted values 100% 不進 LLM input、EvidenceRef、response、log 或 audit metadata。
-- **SC-011**: client 傳入 routing-control 欄位時 100% 安全拒絕並產生最小化 audit metadata。
-- **SC-012**: adapter unavailable / timeout 100% 沿用 Backend 001 `tool_failure` safe mapping。
-- **SC-013**: public response 中 0 cases 出現 `answerDecision = "degraded"` 或 `final.data.answerDecision = "degraded"`。
-- **SC-014**: Backend 002 Admin capability path以外的既有Backend 001流程，其 public behavior、routing、permission、EvidenceRef、AnswerDecision 與 audit 結果不得因 Backend 002 capability code 而改變。
-- **SC-015**: 所有 fixtures 都是 synthetic / de-identified。
-- **SC-016**: HostApp capability / permission-scope mapping 0 cases 提升 Backend 001 已驗證的 permission scopes、organization boundary、row scope、field permission、operation permission 或 evidence exposure。
+- **SC-001**: 100% of valid issuance tests produce all eight canonical application claims with valid registered token metadata.
+- **SC-002**: 100% of A/B isolation tests keep distinct `customer_id` and `integration_id` when lower-level identity values are identical.
+- **SC-003**: 100% of unknown, disabled, unbound, mismatched, or invalid-upstream issuance cases produce no token and no protected Backend business work.
+- **SC-004**: A genuine issued token is accepted by a protected Backend endpoint through the configured public JWKS path.
+- **SC-005**: 100% of invalid-signature, wrong-issuer, wrong-audience, unknown-`kid`, expired, future, and malformed-token cases fail before protected business work.
+- **SC-006**: Every published verification key contains required public metadata and no private RSA material.
+- **SC-007**: A new-key rollout proves that Backend accepts a token with the new published `kid` before old-key retirement.
+- **SC-008**: Rotation verification demonstrates no silent invalidation of tokens that remain valid under the declared retirement policy.
+- **SC-009**: Security-output scans find zero raw Authorization headers, JWTs, signatures, or private-key material in required Gateway response, log, audit, observability, exception, and test surfaces.
+- **SC-010**: 100% of conflicting public identity-header tests leave canonical identity unchanged or fail closed.
+- **SC-011**: A documented local development path demonstrates Gateway start, JWKS reachability, issuance, Backend acceptance, and required negative token rejection.
+- **SC-012**: Production-readiness evidence for every production environment or production-like deployment environment proves exact Gateway/Backend issuer alignment, exact Gateway/Backend audience alignment, Backend-reachable Gateway JWKS, production-safe signing-key source/configuration, and compatible token lifetime/time-validation configuration.
+- **SC-013**: Production readiness is marked READY only when SC-001 through SC-012 have real runtime and deployment identity-configuration evidence; otherwise rollout remains BLOCKED.
 
 ## Assumptions / Decisions
 
-- Backend 001 host-aware foundation 已存在，且是唯一 core runtime。
-- Backend 002 直接重用 Backend 001 public API 與 context contract。
-- top-level `pageContext` 維持不變。
-- 不新增 nested `hostContext`。
-- 不新增 Backend request mode。
-- `sessionScope` 不進 Backend public contract。
-- role / permission / requestId 規則繼承 Backend 001，且 `role` 名稱不得自動授予額外 permission。
-- DataAdapter 若存在，只是 existing connector domain specialization。
-- 不建立獨立 DataAdapter registry / runtime。
-- v1 HostApp Registry 採 static code-based registration。
-- reference host 為 `admin`。
-- reference domain 為 Orders / Inventory。
-- v1 不新增 public diagnostic endpoint。
-- Future Host App 優先序延後至後續 feature。
-
-## Deferred Work / Future Considerations
-
-- Full MES connector。
-- Full WMS connector。
-- Full SCM connector。
-- Full CRM connector。
-- `custom` host app onboarding。
-- dynamic HostApp registry / DB registration。
-- self-service adapter onboarding。
-- frontend SDK implementation。
-- Web Component / iframe mode。
-- full admin connector platform。
-- admin UI / CRUD。
-- approval management UI。
-- production deployment / Kubernetes / Helm。
-- HostApp Registry inspection 或 adapter diagnostic endpoint。
+- Feature 002's existing Customer root is the only canonical Customer authority.
+- Upstream authentication protocol, registry storage, key storage, rotation deployment procedure, token lifetime value, and exact error envelope are design decisions, provided they satisfy this specification and existing Backend compatibility contract.
+- A server-side global replay cache is not required solely because `jti` exists; any future replay policy must be specified separately.
+- No blocking open questions remain for specification planning.
 
 ## Open Questions
 
-目前沒有阻塞本 spec 的 Open Questions。Future host app 優先序、diagnostic endpoint 與 dynamic onboarding 都已延後至 Deferred Work / Future Considerations。
+None. Implementation-specific choices are intentionally deferred to design.

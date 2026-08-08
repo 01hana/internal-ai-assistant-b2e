@@ -1,717 +1,382 @@
-# Design: Host App Capability Governance and Reference Integration
+# Feature 003 — Identity Gateway and Customer Integration Registry Design
 
-**功能分支**: `002-host-integration-gateway-and-data-adapter-contract`
+**Feature**: `003-identity-gateway-customer-registry`
+**Status**: Technical design — implementation has not begun
+**Authority order**: Constitution 2.0.0 → Feature 003 `spec.md` → accepted Feature 002 behavior and readiness gate → current source. Historical `apps/gateway/dist/**` is mechanical reference only and is not design authority.
 
-**建立日期**: 2026-07-13
+## 1. Overview
 
-**來源規格**: [`spec.md`](./spec.md)
+Feature 002 has completed the Backend half of the trust chain. Its protected business endpoints already verify an RS256 internal JWT through Remote JWKS, validate the canonical claims, attach `RequestIdentityContext`, derive immutable `CustomerScope`, and perform Customer-qualified work. Feature 003 supplies the missing upstream trust boundary: a Gateway that verifies a trusted external identity, resolves one explicit Integration-to-Customer binding, signs a short-lived internal JWT, publishes public verification keys, and calls the Backend.
 
-**狀態**: Draft
+The canonical internal JWT is a **Gateway-to-Backend service-to-service credential**. It is not an external login token, a Frontend credential, or a reusable token returned to a Host caller.
 
-## 1. 概觀
+## 2. Current Architecture Inventory
 
-Backend 002 是建立在 Backend 001 `internal-assistant-core` 之上的增量設計。它不是 Host Integration foundation、不是新的 assistant runtime，也不是第二套 public API mode。
+### Backend baseline — exists and is authoritative
 
-Backend 001 仍是 assistant session/message/history、SSE、identity extraction、PageContext DTO validation、query understanding、planning、tool/connector execution、permission pre-check、evidence persistence、answer decision、audit 與 observability 的唯一 public API 與核心 runtime owner。
-
-Backend 002 只新增四個狹義能力：
-
-- HostApp capability governance。
-- host-specific PageContext policy 與 minimization。
-- backend-owned `sourceSystem` derivation。
-- `admin` Orders / Inventory reference integration。
-
-Backend 002 不接收 backend `sessionScope`、不新增 nested `hostContext`、不接收 approval navigation metadata、不新增 public route，也不新增 public `answerDecision = "degraded"`。
-
-## 2. 範圍與非目標
-
-範圍內：
-
-- 為 `admin` 建立 static HostApp capability registration。
-- host/screen/entity/interaction eligibility checks。
-- 在既有 Backend 001 PageContext contract 之上套用 host-specific PageContext policy。
-- selectedRows policy 與 Admin reference selectedRows revalidation。
-- backend-owned source metadata derivation。
-- 使用既有 connector/tool/evidence runtime 完成 Admin Orders / Inventory reference acceptance。
-- 防止產生 parallel runtime 的 architecture 與 regression guards。
-
-非目標：
-
-- 不新增第二套 assistant controller、request mode 或 SSE contract。
-- 不新增第二套 identity extractor、PageContext DTO、query planner、tool registry、connector router、permission engine、EvidenceRef mapper、answer mapper、audit writer 或 observability pipeline。
-- 不實作 frontend SDK/widget。
-- 不實作完整 Admin、ERP、MES、WMS、SCM 或 CRM connector。
-- v1 不新增 public diagnostic endpoint。
-
-## 3. Backend 001 重用架構
-
-Backend 002 必須直接重用下列 Backend 001 owner。
-
-| 能力 | Backend 001 owner | Backend 002 處理方式 |
+| Area | Verified current behavior | Feature 003 consequence |
 | --- | --- | --- |
-| Public assistant request | `AssistantController`, `CreateAssistantSessionDto`, `SendAssistantMessageDto` | 重用既有 request path 與 DTO validation；controller 仍只負責 transport/delegation |
-| Message orchestration | `AssistantMessageService` | 既有 message flow 的 application orchestration owner；Backend 002 hooks 必須整合在這裡，不能由 controller 協調 |
-| Identity | `RequestIdentityContext`, `IdentityContextExtractor`, `IdentityGuard`, `validateRequestIdentityContext` | 直接重用；不得包裝或重新抽取 identity |
-| PageContext public contract | `PageContextDto`, `page-context.mapper.ts` | 先由 Backend 001 完成 validation 與 mapping；Backend 002 只套用 host policy |
-| Assistant context state | `AssistantContextStateService` | 直接重用；不得建立第二個 context store |
-| Query Understanding | `QueryUnderstandingService`, `QueryUnderstandingPipeline` | 直接重用；只把 host policy constraints 當成 bounded context 輸入，而不是 raw PageContext |
-| Planning | `AssistantPlanningService`, persisted `ExecutionPlan` | 直接重用；在 planning 後過濾 candidate tools |
-| Tool registry | `ToolRegistryService`, `ToolDefinition` | 仍是唯一的 tool lookup 與 registration owner |
-| Connector execution | `ConnectorAdapter`, `MockConnectorAdapter`, `AssistantReadonlyRuntimeService` | 重用既有 connector/tool execution path；readonly runtime 負責 read-only execution，不負責完整 message orchestration |
-| Permission | `ToolPermissionPrecheckService`, `LlmInputSanitizerService`, masking utilities, row-level extension points | 只延伸 Admin selectedRows policy checks；不得建立新的 engine |
-| Evidence | `EvidenceRefService` | 直接重用；host integration 不得直接持久化 EvidenceRef |
-| Answer decision | `AnswerDecisionService`, `NoAnswerGateService`, SSE event builder | 直接重用；host integration 不得直接建立 public answer decisions |
-| Audit | `AuditWriterService` | 直接重用；host integration 只能組裝 minimized metadata |
-| Observability | `observability-metadata.helper.ts`, `DependencyHealthService` | 直接重用；只新增 host-specific metadata |
+| Runtime | One NestJS 11 Backend application at `src/`; root package has NestJS, Prisma 7, PostgreSQL, and `jose`. | Gateway is a separate deployable app, not another Backend module. |
+| Token verifier | `RemoteJwksInternalIdentityTokenVerifier` uses `createRemoteJWKSet`, accepts only `RS256`, requires non-blank `kid`, and validates issuer, audience, `iat`, `exp`, and optional `nbf`. | Gateway must publish compatible public JWKS and issue exactly this token shape. |
+| Identity | `IdentityGuard` verifies before `validateVerifiedInternalIdentityClaims()` creates `RequestIdentityContext`. | Gateway must issue `customer_id`, `integration_id`, `sub`, `org_id`, `host_app`, `roles`, `permission_scopes`, and `jti`. |
+| Scope | `createCustomerScopeFromIdentityContext()` freezes Customer, integration, organization, HostApp, actor, roles, and scopes. | Gateway cannot replace Backend authorization or Customer isolation. |
+| Config | Backend requires `INTERNAL_IDENTITY_JWT_ISSUER`, `INTERNAL_IDENTITY_JWT_AUDIENCE`, `INTERNAL_IDENTITY_JWKS_URI`, and tolerance in `[0,300]`. | Deployment evidence must prove exact compatible Gateway values. |
+| Request correlation | Request ID middleware normalizes `x-request-id` or generates one; it is not authority. | Gateway preserves/normalizes correlation only. |
+| Audit/redaction | Audit writes are CustomerScope-first and `redactSecrets()` covers tokens, claims, JWKS, signatures, credentials, secrets, raw errors, and nested values. | Gateway needs equivalent centralized redaction, but must not write Backend business audits. |
+| Persistence | PostgreSQL/Prisma has an existing minimal `Customer` root with Customer-qualified constraints and migrations. | Registry binds directly to this root; no second Customer model or inference is permitted. |
 
-設計 guardrails：
+### Gateway baseline — not implemented
 
-- `src/host-integration` 不得實作 identity extraction。
-- `AssistantController` 不得直接注入並協調完整的 HostApp capability、planning、tool、permission、evidence 與 answer service chain。
-- Backend 002 不得再引入另一套作為 public contract 的 PageContext DTO / mapper。
-- Backend 002 不得再引入另一套 planner、tool registry、connector router、permission engine、EvidenceRef mapper、public outcome mapper、audit writer 或 observability pipeline。
+`apps/gateway` contains only ignored generated `dist/**` files. There is no `apps/gateway/src`, package manifest, TypeScript configuration, bootstrap, signer, JWKS endpoint, configuration module, tests, or Docker service. The old generated artifacts contain obsolete assumptions such as direct private-key environment values and a single role; they must not be copied as a Feature 003 authority.
 
-## 4. 目標模組架構
+The current local Backend configuration uses Gateway port `4000`, Backend port `3000`, issuer `http://localhost:4000`, audience `internal-ai-assistant`, JWKS URI `http://localhost:4000/.well-known/jwks.json`, and clock tolerance `0`. These are local defaults only; `.env.example` has production-shaped placeholder values and does not prove deployment alignment.
 
-Backend 002 應只新增增量元件：
+## 3. Architecture Goals and Non-goals
+
+### Goals
+
+- Establish a single external-to-Backend trust chain without restoring public-header identity.
+- Resolve Customer ownership only through an explicit enabled Integration binding to an existing `Customer` row.
+- Keep signing, JWKS, rotation, redaction, and Gateway issuance audit bounded to Gateway responsibility.
+- Prove real Gateway-to-Backend Remote-JWKS interoperability and A/B isolation.
+
+### Non-goals
+
+Feature 003 is not a generic API Gateway, OAuth/OIDC provider, generic IAM platform, Customer lifecycle product, connector platform, HostApp capability registry, PageContext policy, selectedRows governance, sourceSystem policy, or Orders/Inventory integration. Those Host capability concerns belong to Feature 004.
+
+## 4. Trust Boundary and Target Runtime Architecture
 
 ```text
-src/host-integration/
-├── host-integration.module.ts
-├── host-app-capability.types.ts
-├── host-app-registry.service.ts
-├── admin-reference-capability.ts
-├── host-page-context-policy.service.ts
-├── host-interaction-eligibility.service.ts
-├── source-system-resolver.service.ts
-└── host-integration-metadata.helper.ts
-
-src/connectors/
-└── connector-adapter.interface.ts        # existing
+External / Host caller
+        │ external upstream credential only
+        ▼
+┌──────────────────────────────────────┐
+│ Feature 003 Gateway                  │
+│ - upstream JWT verification           │
+│ - Integration → Customer resolution   │
+│ - canonical identity composition      │
+│ - RS256 internal JWT signing          │
+│ - public JWKS and key lifecycle       │
+│ - narrow Backend client               │
+└───────────────────┬──────────────────┘
+                    │ Authorization: Bearer <internal JWT>
+                    ▼
+┌──────────────────────────────────────┐
+│ Feature 002 Backend                  │
+│ - Remote-JWKS signature verification  │
+│ - canonical claim validation           │
+│ - RequestIdentityContext              │
+│ - CustomerScope                        │
+│ - authorization and business work      │
+└──────────────────────────────────────┘
 ```
 
-`admin-reference-capability.ts` 應屬於 HostApp capability governance，因為它宣告的是 host policy，而不是 connector behavior。只有在真正需要 Admin-specific `ConnectorAdapter` 時，`src/connectors/admin/` 才應存在。
+Gateway authority is limited to trusted upstream verification, integration authentication, explicit binding resolution, canonical identity derivation, signing-key lifecycle, JWKS publication, and Gateway security audit. Backend authority remains cryptographic verification at its boundary, claim validation, `RequestIdentityContext`, `CustomerScope`, CustomerToolPolicy, RAG, workflow, feedback/review, audit, and all Customer-qualified business access.
 
-Host integration module 只提供 registry、policy、eligibility filtering、source resolving 與 metadata helpers。它不是 message orchestrator；`AssistantMessageService` 仍是 application orchestration owner。`HostInteractionEligibilityService` 只能縮小 candidate set，不得授權 tool execution。
+The external credential is consumed only by Gateway. Gateway replaces it with a newly signed internal token on the Backend request. It never returns the internal JWT in a response, SSE event, redirect, cookie, log, audit payload, or error body.
 
-舊設計元件的處置：
+## 5. Gateway Runtime Structure and Shared Contract
 
-| 舊元件 | 決策 |
+### Runtime topology — decision
+
+**Decision:** Feature 003 creates an independent NestJS Gateway application under `apps/gateway` with its own bootstrap, configuration, module graph, tests, and deployment process.
+
+The repository is not currently a workspace monorepo, but a dedicated app is still the correct trust boundary: embedding a signer into the Backend would let the Backend both mint and verify its own identity and would not satisfy Feature 002's Gateway handoff. Gateway must not import `AppModule`, `AssistantModule`, `CustomerScope`, or any Backend business service. Backend must not import Gateway runtime modules.
+
+The future app structure is:
+
+```text
+apps/gateway/src/
+├── main.ts
+├── gateway.module.ts
+├── config/
+├── upstream-auth/
+├── integration-registry/
+├── identity/
+├── signing/
+├── jwks/
+├── backend-client/
+├── audit/
+├── observability/
+└── health/
+```
+
+### Shared contract strategy — decision
+
+**Decision:** create `packages/internal-identity-contract` as a private, pure local npm package. The root Backend and the future standalone Gateway each consume it through an explicit local `file:` dependency and normal package `exports` plus generated declarations. The package builds before either application; no npm workspace conversion, TypeScript path alias, or project-reference graph is introduced.
+
+The package owns only canonical claim names, claim types, registered token metadata constants, and validation-neutral vocabulary. It must not contain Nest providers, JWT signing/verifying implementation, Prisma access, `CustomerScope`, repositories, or authority logic. Gateway owns composition and signing; Backend retains its verifier and claim validator. This prevents literal drift without turning the package into shared identity authority.
+
+### Canonical Prisma boundary — decision
+
+**Decision:** `prisma/schema.prisma` and its existing root migration lineage remain the repository's sole Prisma schema authority. Feature 003 adds `IntegrationBinding`, `GatewaySigningKey`, and `GatewayIdentityAuditEvent` there, in the same migration history as the existing `Customer` root. `apps/gateway` must not contain `prisma/schema.prisma`, a migrations directory, a duplicate `Customer` model, or an independent migration lineage.
+
+Gateway uses an independently generated Prisma client, but that client is generated from the canonical root schema through a second root-schema generator output. Root Prisma generation produces both Backend and Gateway generated clients; Gateway never generates from a local schema. This keeps runtime module graphs independent while preserving one schema, relation graph, and migration owner.
+
+## 6. Upstream Authentication and Integration Resolution
+
+### V1 upstream authentication — decision
+
+**Decision:** v1 accepts one RS256 upstream JWT authenticated against a deployment-configured trusted issuer, audience, JWKS URI, and clock tolerance. The token must carry non-blank `integration_id`, `sub`, `org_id`, `host_app`, `roles`, and `permission_scopes`; the two arrays may be empty but cannot contain blank elements.
+
+This is the smallest repository-compatible path: Backend already uses `jose`, strict RS256/JWKS validation, and canonical array semantics. It avoids creating an API-key platform, storing Host secrets, or introducing a generic enterprise IAM layer. Multiple upstream issuers, API credentials, client certificates, and opaque token introspection are deferred until separately specified.
+
+The Gateway verifies the upstream token before reading its identity claims. A client-supplied header, request body, query parameter, page context, metadata field, visible screen, or capability value is only untrusted input and cannot supplement a verified claim.
+
+### Resolution algorithm
+
+```text
+verify upstream JWT
+  → validate trusted upstream claim shape
+  → canonical integrationId from verified integration_id
+  → find IntegrationBinding by integrationId
+  → require enabled binding and existing Customer FK
+  → require verified host_app == binding.allowedHostApp
+  → compose CanonicalGatewayIdentity
+  → sign one internal JWT
+  → call configured Backend route
+```
+
+There is no path from `org_id`, `sub`, roles, scopes, HostApp, request ID, page context, metadata, or public header to `customer_id`. Unknown, disabled, mismatched, absent, or malformed binding state has no default Customer and performs no signing or Backend request.
+
+### Canonical identity composition
+
+`CanonicalGatewayIdentity` is an internal immutable value used only after upstream verification and binding validation.
+
+| Internal JWT claim | Sole authority | Required validation |
+| --- | --- | --- |
+| `customer_id` | `IntegrationBinding.customerId` | Existing Customer FK; never inferred. |
+| `integration_id` | Verified upstream `integration_id` | Must exactly equal the binding primary key. |
+| `sub` | Verified upstream `sub` | Non-blank string. |
+| `org_id` | Verified upstream `org_id` | Non-blank string. |
+| `host_app` | Verified upstream `host_app` plus binding | Non-blank and exact allowed HostApp match. |
+| `roles` | Verified upstream roles | Non-blank string elements; empty array valid. |
+| `permission_scopes` | Verified upstream scopes | Non-blank string elements; empty array valid. |
+| `jti` | Gateway | New cryptographically random UUID for every internal token. |
+
+## 7. Integration Registry and Persistence Design
+
+### Registry decision
+
+**Decision:** persist the narrow Integration Registry in the existing PostgreSQL database via Prisma. Static config mapping is rejected because it cannot provide referential integrity to the Customer root, auditable enable/disable state, deterministic test fixtures, or safe controlled provisioning.
+
+### Proposed additive models
+
+#### `IntegrationBinding`
+
+| Field | Contract |
 | --- | --- |
-| `HostIntegrationContextService` | 移除其作為 foundation service 的定位。若需要 composition，使用引用 `RequestIdentityContext` 與 `PageContextDto` 的 thin local object，避免複製 identity fields。 |
-| `HostIntegrationContext` | 不保留成為 copied identity snapshot。改用 `HostCapabilityEvaluationContext` 風格的 composition。 |
-| `PageContextNormalizer` | 以 `HostPageContextPolicyService` 取代；DTO validation 與 generic mapping 由 Backend 001 擁有。 |
-| `HostAppRegistryService` | 保留，作為 static capability registry。 |
-| `DataAdapter` | v1 不引入。既有 `ConnectorAdapter` + `ToolRegistryService` + runtime 足以支撐，直到有明確 gap 被證明。 |
-| `DataAdapterRegistryService` | 從 v1 design 移除。它會形成第二個 registry/routing surface。 |
-| `DataAdapterEvidenceResult` | 不引入為 required type。優先沿用既有 connector result、sanitizer 與 `EvidenceRefService` inputs。 |
-| `HostIntegrationAuditService` | 改成 metadata helper/factory；persistence 仍走 `AuditWriterService`。 |
-| `AdminOrdersAdapter` / `AdminInventoryAdapter` | 不預設一定需要。優先沿用既有 mock connector/tool runtime 搭配 Admin capability mapping。 |
-| `SourceSystemResolver` | 保留，作為狹義的 Backend 002 職責。 |
+| `integrationId` | Primary key; stable, canonical, non-blank integration identifier. |
+| `customerId` | Required FK to existing `Customer.id`; `onDelete: Restrict`. |
+| `allowedHostApp` | Required non-blank scalar; v1 binds one HostApp per integration. A further HostApp uses another explicit integration binding. |
+| `enabled` | Required boolean. Only `true` can issue internal JWTs. |
+| `createdAt`, `updatedAt` | Operational traceability. |
 
-## 5. 內部 context 形狀
+The primary key prevents one integration ID from mapping to multiple Customers. Add indexes for `customerId` and `[customerId, allowedHostApp]`; no unique constraint prevents multiple integrations for one Customer/HostApp. The binding has no organization, actor, role, scope, page-context, Customer lifecycle, credential, or secret fields.
 
-Backend 002 不得複製 identity authority。若需要 internal context，應組合既有物件：
+#### `GatewaySigningKey`
 
-```ts
-interface HostCapabilityEvaluationContext {
-  identity: RequestIdentityContext;
-  pageContext?: PageContextDto;
-  capability: HostAppCapability;
-  policyResult: HostPageContextPolicyResult;
-}
-```
-
-規則：
-
-- 不得把 `actorId`、`organizationId`、`role` 或 `permissionScopes` 複製成第二個 authority。
-- 不得重新解析 identity headers。
-- 不納入 backend `sessionScope`。
-- 在 final connector/tool selection 之前，不得包含 final `sourceSystem`。
-- 不得把 frontend input 轉成 permission result。
-- 不得建立會與 `RequestIdentityContext` 漂移的 identity snapshots。
-
-## 6. HostApp Capability 註冊表
-
-`HostAppRegistryService` v1 為 static、code-based。正式註冊只有 `admin`；`mes`、`wms`、`scm`、`crm` 與 `custom` 只保留為 reserved identifiers。
-
-`HostAppCapability` 必須包含：
-
-- host app id 與 display name。
-- supported screens、entity types 與 interactions。
-- eligible tool/connector keys。
-- PageContext allowlist。
-- selectedRows policy。
-- active filter allowlist。
-- field visibility/exposure policy。
-- default permission-scope interpretation。
-- unsupported/dependency behavior。
-
-Capability 只是一層 restriction：
-
-```text
-EffectivePermissions
-=
-Backend 001 verified permissions
-∩ HostApp capability restrictions
-```
-
-它絕對不是：
-
-```text
-Backend permissions
-+
-HostApp role mapping
-```
-
-`defaultPermissionScopeMapping` 可以解讀或收斂既有 scopes，但不能生成新的 scopes。`role`、persona name、screen、PageContext 與 `visibleColumns` 都不能授權欄位或操作。若 capability 與 Backend 001 permission 結果衝突，以更嚴格者為準。
-
-## 7. Host-specific PageContext Policy
-
-`HostPageContextPolicyService` 在 Backend 001 已完成 `PageContextDto` validation 與 generic context mapping 後執行。它不解析 public request body，也不持久化 `AssistantContextState`。
-
-輸入：
-
-- 已完成 validation/mapping 的 `PageContextDto`。
-- `RequestIdentityContext`。
-- 已解析的 `HostAppCapability`。
-- 能保留原始數量的 raw selectedRows count 或 validation metadata。
-
-輸出：
-
-- policy decision。
-- canonical screen/entity reference。
-- allowlisted filters。
-- minimized selected row references。
-- visible field hints。
-- pre-planning capability constraints。
-- selectedRows policy result。
-- audit-safe metadata。
-- clarification condition 或 unsupported reason。
-
-職責：
-
-- 依 capability 驗證 screen/entity declarations。
-- 在 dedupe 前保留 raw selectedRows count，並拒絕超過 20 筆的輸入。
-- 移除未 allowlist 的 filters 與敏感 PageContext fields。
-- 將 `visibleColumns` 僅視為 hint。
-- 將 `entityId` / selectedRows target conflict 標記為 `clarification_required`。
-- 將 unsupported screen/entity declaration 標記為 unsupported capability。
-
-非職責：
-
-- Public DTO parsing。
-- Identity validation。
-- Generic PageContext mapping。
-- `AssistantContextState` persistence。
-- Deixis resolution ownership。
-- Permission authority。
-- Query Understanding。
-- Query intent。
-- Interaction eligibility。
-- Operation eligibility。
-- Candidate tools。
-- Connector eligibility。
-- selectedRows comparison intent。
-- Permission-compatible tools。
-- AnswerDecision creation。
-- Audit persistence。
-
-## 8. 兩階段 capability 評估
-
-### Stage A - Pre-planning Context Policy
-
-在既有 identity extraction 與 PageContext validation 之後、`QueryUnderstandingService` 之前執行。
-
-職責：
-
-- 在既有 validation/request boundary 拒絕已知的 client routing-control injection。
-- 查詢 static HostApp capability。
-- 透過既有 request/integration error envelope 拒絕 unregistered host。
-- 驗證 screen/entity declarations。
-- 套用 PageContext allowlist/minimization。
-- 套用 selectedRows raw count limit；超過 20 筆時，必須在 retrieval/tool/connector/LLM 之前走既有 request/integration error envelope，且不得以 `AnswerDecision` 作為主要拒絕路徑。
-- 驗證 selectedRows shape。
-- 產生 audit-safe metadata。
-- 將 context conflicts 標記為 clarification conditions。
-- 不處理 query intent、interaction eligibility、operation eligibility、candidate tools、connector eligibility、selectedRows comparison intent 或 permission-compatible tools。
-
-### Stage B - Post-planning Interaction Eligibility
-
-`HostInteractionEligibilityService` 是 Stage B 的唯一 owner。在 `QueryUnderstandingService` 與 `AssistantPlanningService` 已產出既有 Query Understanding result、`ExecutionPlan` 與 candidate tool keys 之後、connector/tool execution 之前執行。
-
-輸入：
-
-- resolved `HostAppCapability`。
-- existing Query Understanding result。
-- existing `ExecutionPlan`。
-- candidate tool keys。
-- registered `ToolDefinition` metadata。
-- verified `RequestIdentityContext.permissionScopes`。
-- Stage A canonical context / capability constraints。
-
-輸出：
-
-- interaction eligibility decision。
-- operation eligibility decision。
-- `ProvisionalEligibleTools`。
-- unsupported reason。
-- audit-safe eligibility metadata。
-
-職責：
-
-- 驗證 interaction eligibility。
-- 驗證 operation 與 selectedRows comparison eligibility。
-- 將 candidate tools 與 HostApp capability eligible tool keys 做 intersection。
-- 執行 static scope-compatible candidate filtering。
-- 產生 provisional candidate set。
-
-非職責：
-
-- Query Understanding。
-- 建立或修改 `ExecutionPlan` authority。
-- 最終 permission authorization。
-- row-level permission。
-- connector execution。
-- EvidenceRef。
-- AnswerDecision。
-- audit persistence。
-
-Tool 與 field 模型：
-
-```text
-ProvisionalEligibleTools
-=
-ExecutionPlan candidate tools
-∩ HostApp capability eligible tools
-∩ statically scope-compatible ToolDefinitions
-```
-
-`statically scope-compatible ToolDefinitions` 只代表 `ToolDefinition.requiredPermissionScopes`、已驗證的 `RequestIdentityContext.permissionScopes`、operation/risk/read-only metadata，以及 planning 階段可安全判斷的靜態條件。
-
-`ProvisionalEligibleTools` 只是候選縮小，不是 authorization proof。它不能直接授權 connector execution、不能取代 `ToolPermissionPrecheckService`、不能執行 row-level permission，也不能推導 final field exposure。正式執行權限仍由 `ToolPermissionPrecheckService` 作為 authoritative execution permission；selectedRows 則由 Backend 001 row-level permission extension point 進行 authoritative per-row validation。
-
-```text
-EffectiveVisibleFields
-=
-Host capability allowed fields
-∩ Backend 001 permission-allowed fields
-∩ evidence-safe fields
-```
-
-## 9. 請求生命週期與資料流
-
-Backend 002 是對既有 request lifecycle 的增量補強：
-
-```text
-AssistantController
-  -> AssistantMessageService
-      -> existing DTO / identity validation
-      -> routing-control injection rejection
-      -> HostAppRegistryService capability lookup
-      -> HostPageContextPolicyService pre-planning evaluation    # Stage A
-      -> QueryUnderstandingService
-      -> AssistantPlanningService / ExecutionPlan
-      -> HostInteractionEligibilityService                     # Stage B
-          -> ProvisionalEligibleTools
-      -> AssistantReadonlyRuntimeService
-          -> ToolRegistryService resolution
-          -> ToolPermissionPrecheckService                    # authoritative
-          -> selectedRows organization / row-level revalidation
-          -> ConnectorAdapter / connector/tool execution
-          -> masking / LlmInputSanitizerService
-          -> SourceSystemResolver expected source derivation
-          -> EvidenceRefService normalization / persistence
-          -> SourceSystemResolver evidence source consistency verification
-      -> AnswerDecisionService / NoAnswerGateService
-      -> SSE final event builder
-      -> AuditWriterService / observability helpers
-```
-
-`AssistantController` 只擁有 route/transport handling、DTO entry、identity guard entry、SSE response wiring，以及委派給 `AssistantMessageService`。它不得直接協調 HostApp capability、planning、tool、permission、evidence 與 answer services。
-
-`AssistantMessageService` 是既有 message flow 的 application orchestration owner。Backend 002 capability hooks 應整合進這個既有 orchestration；read-only connector execution 的細節則整合到 `AssistantReadonlyRuntimeService`。
-
-Stage A policy 只處理 pre-planning context policy。Stage B 的 `HostInteractionEligibilityService` 只產生 `ProvisionalEligibleTools`，不授權執行。`AssistantReadonlyRuntimeService` 是 read-only execution subflow owner，且 `ToolPermissionPrecheckService` 與 selectedRows organization / row-level revalidation 必須在 `ConnectorAdapter` execution 之前完成。
-
-`sourceSystem` 可以在 routing 收斂後被視為 candidate metadata，但 expected source 必須在 final connector/tool selection 之後、EvidenceRef persistence 之前推導；consistency 則在 EvidenceRef normalization 之後、answer generation 之前驗證，因此 source resolution 不會回圈依賴 EvidenceRef persistence。
-
-## 10. Client Routing-control Injection
-
-下列 client-controlled fields 禁止作為 routing authority：
-
-- connector
-- connectorId
-- adapter
-- adapterId
-- sourceSystem
-- dataSource
-- candidateTool
-- candidateTools
-- permission result
-- final evidence source
-
-設計規則：
-
-- 必須在既有 validation/request boundary 就拒絕，不得等到 planning 後才處理。
-- 必須沿用 Backend 001 既有 request/integration error envelope。
-- 不得以 `AssistantMessage` / `AnswerDecision` 作為主要拒絕路徑。
-- 不得進入 retrieval、tool、connector、adapter 或 LLM flow。
-- 透過 `AuditWriterService` 寫入 minimized metadata。
-- 只記錄 field names、requestId、hostApp、organization 與 reason。
-- 不記錄 client-supplied values 或 raw request body。
-
-如果 global whitelist validation 在欄位名稱尚不可用前就拒絕 unknown fields，實作可以對既有 request validation boundary 或 exception metadata path 做最小延伸，以捕捉安全的 field names，但不得建立第二個 parser。
-
-## 11. DataAdapter 決策
-
-V1 不引入新的 `DataAdapter` runtime 或 `DataAdapterRegistryService`。
-
-原因：
-
-- `ConnectorAdapter` 已提供 `listTools()`, `execute(input)`, `healthCheck()`。
-- `ToolRegistryService` 已擁有 tool lookup、active checks、operation checks、schema validation、connector keys、permission scopes、risk、timeout metadata 與 output schema。
-- `AssistantReadonlyRuntimeService` 已覆蓋 read-only connector/tool flow，包括 registry、permission pre-check、connector execution、sanitizer、tool-call lifecycle 與 evidence path。
-- `EvidenceRefService` 已能接收 sanitization 後的 structured evidence。
-
-因此 Admin reference integration 應該把 HostApp capability 對應到既有或最小擴充的 `ToolDefinition` / connector keys。若未來出現明確 gap 必須引入 `DataAdapter`，它必須：
-
-- 位於 `src/connectors`。
-- extend 或 specialize `ConnectorAdapter`。
-- 透過既有 tool/connector runtime 註冊與執行。
-- 不擁有 registry、routing、health、timeout、permission、EvidenceRef conversion、public outcome mapping、audit 或 observability。
-
-## 12. Admin Orders / Inventory 參考整合
-
-V1 reference scope：
-
-- order status。
-- order summary。
-- selected orders comparison。
-- inventory availability。
-- inventory summary。
-- restricted `cost` acceptance。
-- unsupported capability handling。
-- timeout/unavailable safe mapping。
-
-Fixture namespace：
-
-- `ADMIN-SO-10001`
-- `ADMIN-SKU-001`
-
-Backend 002 fixtures 不得覆寫 Backend 001 fixtures，例如 `SO-10001`，也不得改變 fixture load order 對既有 IDs 的影響。
-
-優先實作形態：
-
-- 將 Admin capability mapping 加到既有 tool/connector keys。
-- 僅在必要時新增 namespaced synthetic fixtures。
-- 在足夠的情況下沿用 `MockConnectorAdapter` / 既有 connector execution。
-- 只有在既有 mock connector 無法承載 reference behavior 時，才新增 Admin-specific connector；若新增，必須實作 `ConnectorAdapter`、透過既有 tool/connector ownership 註冊，並重用既有 permission、evidence、answer、audit 與 observability paths。
-
-此 reference integration 不得演變成 full ERP connector、full Admin backend domain、generic SQL connector、dynamic adapter onboarding system，或 MES/WMS/SCM/CRM connector。
-
-## 13. selectedRows 與 Row-level Permission 設計
-
-Backend 001 已具備 organization boundary、permission pre-check、field masking 與 row-level permission extension points。Backend 002 只新增 Admin reference integration 所需的 selectedRows revalidation。
-
-流程：
-
-1. 在 dedupe 前檢查 raw selectedRows count；若超過 20，必須在 retrieval/tool/connector/LLM 之前透過既有 request/integration error envelope 拒絕，且不得以 `AnswerDecision` 作為主要拒絕路徑。
-2. 將每一列最小化為 canonical ID / safe summary。
-3. 對每一列 selected row 驗證 organization boundary。
-4. 透過 Backend 001 policy/extension point 驗證每一列的 row-level permission。
-5. 只有在所有 rows 都通過後，才可擷取或暴露完整資料。
-6. 只要任一 row 失敗，整個 comparison 必須回 `permission_denied`。
-7. 不得只處理合法 subset。
-8. 不得揭露是哪一個 ID 失敗。
-9. 不得把未授權 row data 放入 LLM 或 EvidenceRef input collections。
-10. 不得把 frontend ID 或 safe summary 視為 authorization proof。
-
-不得引入：
-
-- `AdminRowPermissionEngine`。
-- adapter-owned permission service。
-- second permission mapping。
-- capability-generated permission。
-
-## 14. SourceSystemResolver 設計
-
-`SourceSystemResolver` 是一個狹義的 Backend 002 職責。
-
-### Phase 1 - Expected Source Derivation
-
-在 final `ToolDefinition` 與 `ConnectorAdapter` 已選定，且 connector/tool output 已可用或即將進入 evidence normalization 時執行；時間點在 EvidenceRef persistence 之前。
-
-輸入：
-
-- `RequestIdentityContext.hostApp`。
-- 已解析的 HostApp capability。
-- canonical screen/entity。
-- final selected `ToolDefinition`。
-- final selected `ConnectorAdapter`。
-- connector key。
-- tool key。
-- 若存在則為 adapter specialization。
-- 若既有 connector contract 有提供，則使用來自 sanitized connector result 的 backend-owned source hint。
-
-輸出：
-
-- `expectedSourceSystem`。
-- audit-safe derivation reason/code。
-- expected connector/tool association。
-
-### Phase 2 - Evidence Source Consistency Verification
-
-在 `EvidenceRefService` 已完成 evidence source metadata normalization 之後、`AnswerDecisionService` 或 SSE final output 之前執行。
-
-輸入：
-
-- `expectedSourceSystem`。
-- normalized EvidenceRef source metadata。
-- 實際執行的 connector/tool identity。
-
-輸出：
-
-- consistency pass/fail。
-- audit-safe mismatch reason。
-
-時序規則：
-
-- 不從 frontend input 推導。
-- 不在 identity extraction 階段定稿。
-- expected source 必須在 EvidenceRef persistence 前推導。
-- consistency 必須在 EvidenceRef normalization 後、answer generation 前驗證。
-- 若 final selected `ToolDefinition`、final selected `ConnectorAdapter`、`expectedSourceSystem` 與 normalized EvidenceRef actual source metadata 任一不一致，必須沿用 Backend 001 既有 `tool_failure` safe mapping，回 `answerDecision = no_answer` 與既有 `noAnswerReason = tool_failure` 語意。
-- 不得產生 source attribution 錯誤的 grounded answer。
-- 不得假造 source attribution。
-- 不得自動接受 EvidenceRef 宣稱的來源。
-- 不得將 expected source 覆蓋成 actual source 來掩蓋錯誤。
-- mismatch reason 只能寫入 minimized audit metadata；audit 只包含 tool key、connector key、expected source、actual source 的安全 identifier 或 reason code，不得記錄 raw connector payload 或完整 evidence 內容。
-
-它不得建立 public source routing API、frontend-selectable source、second evidence source store、`source_mismatch` public AnswerDecision，或一套脫離 EvidenceRef 的 parallel source truth。
-
-## 15. Safe Outcome Mapping 設計
-
-Backend 002 只使用 Backend 001 既有 public enums 與 safe mapping。
-
-| 情境 | 固定處理方式 |
+| Field | Contract |
 | --- | --- |
-| selectedRows raw input count 超過 20 | 在 `AssistantMessage` / `AnswerDecision` / retrieval / tool / connector / LLM 之前走既有 request/integration error envelope |
-| 缺少或模糊 context、缺少 entity target、或 target conflict | 透過既有 clarification path 回 `clarification_required` |
-| client routing-control injection | 在 `AssistantMessage` / `AnswerDecision` / retrieval / tool / LLM 之前走既有 request/integration error envelope |
-| Unregistered Host App | 走既有 request/integration error envelope；不進行 connector/tool routing |
-| Registered Host App 但 screen/entity/interaction 不支援 | 以既有 internal reason 回 `no_answer` |
-| Permission failure | `permission_denied` |
-| Tool/connector timeout 或 unavailable | 沿用既有 `tool_failure` mapping，例如 `no_answer` + `noAnswerReason=tool_failure` |
-| Expected source 與 normalized EvidenceRef source 不一致 | 沿用 Backend 001 `tool_failure` safe mapping，回 `no_answer` 並使用既有 `noAnswerReason=tool_failure`，不得產生 grounded answer |
-| 不具誤導性的 partial answer | 只回答 authorized fields |
-| 具誤導性的 partial answer | `permission_denied` |
+| `kid` | Primary key and public-key selector. |
+| `publicJwk` | Public JWK only; required `kty`, `kid`, `alg`, `use`, `n`, `e`. |
+| `keyReference` | Non-secret deployment/provider reference; never telemetry output. |
+| `status` | `new`, `published`, `active`, `retiring`, or `retired`; visibility and signing semantics are fixed below. |
+| `notBefore`, `activatedAt`, `retireAfter`, `retiredAt` | Lifecycle timing and safe retirement proof. |
+| `createdAt`, `updatedAt` | Operational traceability. |
 
-Owner：
+Private key material is never stored in the application database. The migration must enforce at most one active key, use additive schema changes, and not rewrite Feature 002 Customer-owned data.
 
-- `AnswerDecisionService` 在 request 進入 answer flow 後記錄 public answer decisions。
-- `NoAnswerGateService` 負責既有 no-answer / clarification / permission / tool failure gates。
-- Request/integration validation failures 可以在 `AssistantMessage` / `AnswerDecision` 之前終止。
-- SSE final 仍由既有 final event semantics 驅動。
+Key-state semantics are non-negotiable:
 
-`degraded` 只可作為 dependency metadata，不能成為 public `AnswerDecision`。
+| State | JWKS visibility | Normal Backend request signing |
+| --- | --- | --- |
+| `new` | Hidden | Prohibited. Material is provisioned but no public key is published. |
+| `published` | Included | Prohibited. The public JWK is available for propagation verification only. |
+| `active` | Included | Required; exactly one key may issue normal Gateway-to-Backend tokens. |
+| `retiring` | Included | Prohibited. Existing tokens may still be verified during overlap. |
+| `retired` | Hidden | Prohibited. The JWK is removed only after the retirement invariant is satisfied. |
 
-## 16. Audit 與 Observability 設計
+#### `GatewayIdentityAuditEvent`
 
-不得建立作為 writer 的 `HostIntegrationAuditService`。應使用 metadata helper/factory，並透過 `AuditWriterService` 持久化。
+A narrow, append-only Gateway security record stores timestamp, normalized request ID, safe event type/outcome/reason code, optional resolved Customer/integration/actor/HostApp, `jti`, and `kid`. It must not contain raw credentials, tokens, claims payloads, JWK private fields, or Backend business relations. It is not a replacement for Feature 002 `AuditEvent`.
 
-允許的 host-specific metadata：
+### Provisioning and seed decision
 
-- HostApp capability lookup result。
-- unsupported reason code。
-- PageContext policy decision。
-- selectedRows count 與 policy result。
-- eligible tool keys。
-- final selected tool/connector key。
-- backend-derived `sourceSystem`。
-- source consistency mismatch reason code。
-- dependency status。
-- minimization summary。
+**Decision:** v1 uses a controlled, idempotent internal provisioning command, not a public admin API. It accepts explicit existing `customerId`, `integrationId`, and HostApp; validates Customer existence; creates/enables/disables a binding; and writes only safe Gateway audit data. It cannot infer or create Customers.
 
-禁止的 metadata：
+Test seed fixtures create `Customer A`/`Integration A` and `Customer B`/`Integration B`. The verified upstream claims deliberately share `org_id`, `sub`, `host_app`, roles, and scopes; only Customer and integration IDs differ. Fixtures are synthetic and contain no real credential or committed private key.
 
-- raw PageContext。
-- raw selectedRows。
-- unauthorized ID。
-- complete entity。
-- restricted value。
-- raw connector payload。
-- 完整 evidence 內容。
-- raw exception。
-- secret、token 或 credential。
-- 完整 routing-control injection value。
+## 8. Internal JWT, Signing Key Provider, and JWKS
 
-Observability 應沿用既有 helpers，例如 `createRuntimeDecisionMetadata`、`createDependencyStatusMetadata`、`withNoAnswerReason`、`withPermissionDeniedReason`、`withToolFailureReason`。
+### Issuance
 
-## 17. API / Frontend 邊界
+`InternalIdentityTokenIssuer` is a narrow component: it receives a validated `CanonicalGatewayIdentity` and active signing-key handle, adds `iss`, `aud`, `iat`, `exp`, and protected-header `alg=RS256`, `typ=JWT`, `kid`, then signs. Algorithm, key ID, claims, and expiry are Gateway-selected; callers cannot choose or override them.
 
-Backend 002 不硬編碼 public routes。確切 path、global prefix 與 route parameter names 來自 Backend 001 controller/bootstrap/contract tests。
+V1 internal token TTL is **5 minutes**. `nbf` is omitted to avoid unnecessary clock-boundary failures; Backend validates `iat` and `exp` with the deployment-aligned tolerance (local default `0`). Every Backend request receives a fresh token. `jti` supports trace correlation only and does not imply a replay cache or global replay prevention service.
 
-規則：
+### SigningKeyProvider
 
-- 不新增第二套 public chat API。
-- 不新增 nested `hostContext`。
-- 不新增 backend `sessionScope`。
-- 不區分 Backend 001 compatibility mode 與 Backend 002 mode。
-- 不接收 approval navigation metadata。
-- v1 不新增 public diagnostic endpoint。
-- Frontend 只送既有 identity headers 與 top-level sanitized `pageContext`。
-- Frontend 不送 routing authority。
-- Host navigation 屬於 Frontend callback responsibility。
+`SigningKeyProvider` exposes only the operations necessary to obtain an active signing handle and public JWK metadata. It isolates the issuer from private-key source mechanics.
 
-## 18. 測試策略
+- **Local/test:** an ignored developer-provisioned RSA key file is referenced by path; the real Gateway signer and real JWKS endpoint use it. Ephemeral test keys remain unit-test utilities and do not prove the real trust chain.
+- **Production:** raw PEM values are prohibited in source control and environment variables. Deployment injects a read-only key reference/file into the runtime; the provider validates it without logging content. Future KMS/HSM/secret-manager adapters can implement the same boundary without changing issuance semantics.
 
-### Unit Tests
+### JWKS endpoint
 
-- `HostAppRegistryService`。
-- `HostPageContextPolicyService` pre-planning policy。
-- `HostPageContextPolicyService` 沒有 interaction input。
-- `HostPageContextPolicyService` 不處理 tool eligibility。
-- `HostInteractionEligibilityService` 處理 Stage B。
-- `HostInteractionEligibilityService` 只產生 provisional candidates。
-- static scope filtering 不等於 authorization。
-- dedupe 前的 selectedRows raw-count limit。
-- capability restriction-only permission model。
-- `SourceSystemResolver` expected source derivation。
-- `SourceSystemResolver` 的 EvidenceRef source consistency verification。
-- source mismatch 固定映射到 `tool_failure`。
-- routing-control rejection hook。
-- audit metadata minimization helper。
+Gateway publishes unauthenticated `/.well-known/jwks.json` with every `published`, `active`, and `retiring` public JWK, and with no `new` or `retired` key. It emits `Cache-Control: public, max-age=60, must-revalidate`; never includes `d`, `p`, `q`, `dp`, `dq`, or `qi`; and treats issuer URL and JWKS URL as distinct settings. Gateway unavailability is handled by the existing Backend Remote-JWKS failure behavior.
 
-### Integration Tests
+The HTTP cache header is not the Backend verifier's only cache contract. The current Backend creates `createRemoteJWKSet(new URL(...))` without options. Its installed `jose@5.10.0` defaults are a 600-second effective JWKS cache, a 30-second unknown-key reload cooldown, and a 5-second fetch timeout. Any future Backend override of those values must trigger a recomputation of the retirement invariant.
 
-- `admin` capability lookup。
-- Stage A 完成後才執行 Query Understanding。
-- Stage B 只能在 `ExecutionPlan` 後執行。
-- Stage B 輸出 `ProvisionalEligibleTools`。
-- unregistered host 使用既有 request/integration error envelope。
-- unsupported screen/entity/interaction 回 `no_answer`。
-- target conflict 回 `clarification_required`。
-- selectedRows per-row revalidation。
-- `ToolPermissionPrecheckService` 一定在 connector execution 前執行。
-- selectedRows revalidation 一定在完整資料取得前執行。
-- selectedRows over-limit 在 `AssistantMessage` / `AnswerDecision` 前走既有 request/integration error envelope。
-- mixed unauthorized rows 回 whole-request `permission_denied`。
-- 使用既有 connector/tool runtime。
-- 使用既有 `EvidenceRefService` 與 `AnswerDecisionService`。
-- source consistency mismatch 不產生 grounded answer。
-- source consistency mismatch 回既有 `no_answer + noAnswerReason=tool_failure` mapping。
-- timeout/unavailable 映射到既有 `tool_failure`。
-- provisional candidate filtering 不得繞過 authoritative `ToolPermissionPrecheckService`。
+### Rotation and rollback
 
-### Contract / Regression Tests
+```text
+new key provisioned
+  → state new and assign unique kid
+  → persist public metadata
+  → state published; JWKS includes new kid
+  → verify JWKS publication, Backend reachability, and propagation
+  → activate new kid for normal request signing
+  → immediately verify Backend accepts a new-kid token
+  → previous active key becomes retiring
+  → retain previous JWK throughout the minimum overlap
+  → state retired and remove old JWK
+```
 
-- public routes 不變。
-- top-level `pageContext` 不變。
-- SSE final 不變。
-- 不新增 nested `hostContext`。
-- 不新增 backend `sessionScope`。
-- 不新增 public degraded answer decision。
-- 不新增 public diagnostic endpoint。
-- Backend 002 Admin capability path 以外的既有 Backend 001 flows 維持不變。
+No normal Gateway-to-Backend request is signed by a `new`, `published`, or `retiring` key. The `published` verification step proves public-key availability and Backend reachability before the signer is switched; regular Backend acceptance is verified immediately after activation.
 
-### Architecture Guards
+The v1 retirement overlap is **at least 25 minutes**. It must be no shorter than:
 
-- 不新增第二套 identity extractor。
-- 不新增第二套 assistant controller/message endpoint。
-- `AssistantController` 不得直接協調 HostApp capability、planning、tool、permission、evidence 與 answer service chain。
-- 不新增 public PageContext DTO duplicate。
-- 不新增平行 registry 的 `DataAdapterRegistryService`。
-- tool/connector registration 仍由 `ToolRegistryService` / connector domain 擁有。
-- host integration 不得直接持久化 EvidenceRef。
-- host integration 不得直接建立 public AnswerDecision。
-- host integration 只能透過 `AuditWriterService` 寫入 audit。
-- capability mapping 不得生成 permission。
-- `HostPageContextPolicyService` 不得接收或判斷 query interaction。
-- `HostPageContextPolicyService` 不得產生 tool candidate。
-- `HostInteractionEligibilityService` 是 Stage B 唯一 owner。
-- `HostInteractionEligibilityService` 只能產生 `ProvisionalEligibleTools`。
-- `ProvisionalEligibleTools` 不得作為 authorization proof。
-- `ToolPermissionPrecheckService` 仍是 authoritative execution gate。
-- selectedRows row-level revalidation 不得被 Stage B 取代。
-- `ConnectorAdapter` 不得在 authoritative permission pre-check 與 selectedRows revalidation 前執行。
-- source consistency mismatch 不得繼續 answer flow。
-- 不得新增 source mismatch public enum。
-- `AssistantReadonlyRuntimeService` 是 execution subflow，不是第二個 message orchestrator。
-- Host integration module 不得接管完整 message lifecycle。
-- provisional candidate filtering 不得取代 `ToolPermissionPrecheckService`。
-- Admin fixtures 不得與 Backend 001 fixture IDs 衝突。
+```text
+maximum validity window of the final old-key token (5 minutes)
++ maximum Backend clock tolerance (5 minutes)
++ effective Backend Remote-JWKS cache (10 minutes)
++ Remote-JWKS cooldown (30 seconds)
++ JWKS/network propagation safety margin (1 minute)
+```
 
-### Privacy Tests
+This 21.5-minute observed minimum is rounded up to 25 minutes. `Cache-Control: max-age=60` cannot substitute for the Remote-JWKS cache/cooldown terms. If a new key/JWKS/Backend verification fails, Gateway restores normal issuance to the prior active key and leaves its public JWK available; it never removes a still-needed key as rollback.
 
-- raw PageContext 不得進入 LLM。
-- raw selectedRows 不得進入 LLM、response、log、audit 或 observability。
-- restricted values 不得進入 LLM、EvidenceRef、response、log、audit 或 observability。
-- routing-control values 不得寫入 audit。
-- 不得洩漏 raw connector payload、raw exception、secret、token 或 credential。
+## 9. Gateway-to-Backend Client and Transport Rules
 
-## 19. 安全與隱私設計
+`GatewayBackendClient` is a narrow trust-chain client, not a general proxy, Host proxy, transparent passthrough, or API gateway. Every supported incoming Gateway operation resolves through a server-owned `BackendRouteDefinition` with a fixed Backend method, path template, and operation-specific request contract:
 
-Security model：
+```text
+incoming Gateway operation
+  → explicit BackendRouteDefinition allowlist lookup
+  → upstream authentication and Integration → Customer resolution
+  → fresh internal JWT
+  → one known protected Backend operation
+```
 
-- Backend 001 identity 與 permission services 是唯一 authority。
-- HostApp capability 是 eligibility constraint，不是 permission source。
-- Admin fixture personas 只是 test data，不是 production permission authority。
-- restricted values 必須在進入 LLM/EvidenceRef/response/log/audit 前被排除。
-- PageContext、selectedRows、`visibleColumns`、role name、persona name 與 screen capability 都不能授權 permission。
-- capability 與 permission 衝突時，以更嚴格者為準。
+The caller cannot select a Backend base URL, destination, arbitrary path, dynamic mapping, unsupported operation, or catch-all route. Only parameters, query values, body, content type, accept value, normalized `x-request-id`, `traceparent`, and SSE streaming declared by that route definition may be forwarded as data; none can change the selected Backend destination.
 
-Failure model：
+For an approved mapping, the client strips incoming `Authorization`, cookies, all public identity headers, and routing/control headers, then sets exactly one outbound `Authorization: Bearer <fresh internal JWT>`. No automatic retries occur for business requests. JSON responses use a bounded configurable Backend timeout; SSE requires a bounded connection timeout and streams the Backend response after connection establishment rather than buffering it. Backend errors are translated to Gateway's safe error model, and internal JWT material is not exposed in any response path.
 
-- 缺少 Backend 001 required identity 時 fail closed。
-- 在 request boundary 拒絕 routing-control injection。
-- 缺少/模糊 context 時使用 `clarification_required`。
-- permission failure 時使用 `permission_denied`。
-- unavailable/timeout 時沿用既有 `tool_failure` mapping。
+## 10. Configuration, Local Development, and Production Contract
 
-## 20. 風險與緩解措施
+### Gateway configuration groups
 
-1. **Parallel runtime 再度出現**
-   以 architecture guards 防止 controller-level orchestration，以及第二套 identity、PageContext、planner、registry、permission、evidence、answer、audit 與 observability systems。
+- upstream trusted issuer, audience, JWKS URI, and clock tolerance;
+- internal issuer, audience, five-minute TTL, active key reference, and public JWKS URL;
+- registry database connection and Gateway audit destination;
+- configured Backend base URL, route mapping, JSON timeout, and SSE connection/idle timeout.
 
-2. **DataAdapter 演變成第二個 connector platform**
-   V1 不引入 DataAdapter runtime 或 registry。未來若有 adapter，也必須 specialize `ConnectorAdapter` 並走既有 runtime。
+The route mapping is a version-controlled server-owned allowlist of `BackendRouteDefinition` values, not a caller-configurable proxy table. The local package dependency and canonical Prisma generation run before Backend/Gateway application builds so both apps resolve the same claim vocabulary and schema-generated types without runtime imports between them.
 
-3. **Capability 提升了 permission**
-   強制使用 intersection model，並測試 role/persona/visibleColumns 不能授予 restricted fields。
+### Backend configuration groups
 
-4. **selectedRows 洩漏未授權資料**
-   在 retrieval/exposure 前重新驗證每一個 selected row；任一失敗即拒絕整個 comparison。
+- expected issuer;
+- expected audience;
+- Gateway public JWKS URI;
+- clock tolerance.
 
-5. **sourceSystem 變成 frontend-controlled**
-   拒絕 client source-selection fields，且 final source 只能從 backend-selected tool/connector/evidence metadata 推導。
+Each production-like environment must demonstrate:
 
-6. **sourceSystem attribution 不一致**
-   使用兩階段的 expected source derivation 與 EvidenceRef source consistency verification；一旦 mismatch，必須在 answer generation 前停止，沿用 `no_answer + noAnswerReason=tool_failure` mapping，且不得新增 public enum 或繼續 grounded answer flow。
+```text
+Gateway issuer   == Backend expected issuer
+Gateway audience == Backend expected audience
+Backend JWKS URI → Gateway public JWKS
+```
 
-7. **過期 fixture IDs 衝突**
-   使用 `ADMIN-SO-10001` 與 `ADMIN-SKU-001`；並加上不可覆寫 Backend 001 fixtures 的 guard。
+It must also demonstrate a production-safe signing-key source/configuration and compatible token-time settings. Deployment topology, Kubernetes, cloud provider, KMS/HSM, secret-manager product, and network implementation remain deployment decisions.
 
-8. **模糊的 safe outcomes 削弱測試**
-   使用固定 safe outcome mapping，且只沿用 Backend 001 既有 enum/error envelope。
+### Local topology
 
-9. **Audit metadata 洩漏 raw payload**
-   使用 metadata helper + `AuditWriterService` redaction；禁止 raw context、selectedRows、connector payload、exceptions 與 restricted values。
+```text
+Gateway: http://localhost:4000
+Backend: http://localhost:3000
+Issuer:  http://localhost:4000
+JWKS:    http://localhost:4000/.well-known/jwks.json
+Audience: internal-ai-assistant
+```
 
-## 21. 對下游 Spec Kit 的影響
+The local Gateway uses a non-committed local signing-key file, an explicit local binding fixture, the same disposable PostgreSQL target as the controlled development/test setup, and the actual Gateway JWKS route. A test helper signer or static Backend verifier is never local integration evidence.
 
-這次 cleanup 不直接修改 `plan.md` 或 `tasks.md`，但後續 planning artifacts 必須對齊本 design：
+## 11. Error Model, Audit, Observability, and Redaction
 
-- `plan.md` 不得再把 HostIntegrationContext foundation 當作 phase。
-- `plan.md` 不得建立 DataAdapterRegistry phase。
-- `tasks.md` 不得要求新的 identity extractor。
-- `tasks.md` 不得要求 generic PageContextNormalizer。
-- `tasks.md` 不得要求第二套 EvidenceRef conversion。
-- `tasks.md` 不得要求 degraded mapper。
-- `tasks.md` 不得要求 HostIntegrationAudit writer。
-- Admin reference tasks 必須使用 namespaced fixtures。
-- Runtime integration tasks 必須擴充既有 Backend 001 services，而不是建立 parallel runtime。
+| Internal class | Safe external outcome | Safe audit reason |
+| --- | --- | --- |
+| Invalid/missing upstream credential | Generic 401 authentication failure | `upstream_auth_invalid` |
+| Unknown, disabled, binding/Customer/HostApp mismatch, invalid composed claims | Generic non-disclosing issuance denial | `identity_issuance_denied` with internal subtype |
+| Signing provider, active key, key-state, or JWKS failure | Generic identity service unavailable | `signing_or_jwks_unavailable` |
+| Backend timeout/unavailable | Generic Backend unavailable | `backend_transport_unavailable` |
 
-## 22. 開放問題
+Public outcomes never reveal whether a Customer, integration, key, binding, or external credential exists. Gateway telemetry may contain only request ID, resolved Customer ID after valid resolution, integration ID, actor ID, HostApp, `jti`, `kid`, decision code, duration, and safe status. `requestId` is correlation only and never participates in Customer resolution, permission, signing, or authorization.
 
-V1 design 沒有 blocking open questions。未來的 diagnostic endpoints、dynamic HostApp registration、full connector rollout 與 DataAdapter specialization 都延後處理，除非後續 feature spec 重新打開這些議題。
+One central Gateway redaction helper/logger policy must process HTTP request logging, HTTP client logging, exceptions, configuration errors, audit metadata, observability, and test diagnostics. Prohibited values are Authorization headers, Bearer tokens, full JWTs, signatures, private keys/JWKs, credentials, passwords, API keys, and secrets.
+
+## 12. Test Architecture and Cross-Customer Verification
+
+| Layer | Required proof |
+| --- | --- |
+| Unit | Upstream RS256 verification, claim shape, binding lookup, identity composition, issuer, signer, JWKS visibility by state, 25-minute retirement calculation, route allowlist rejection, safe errors, and redaction. |
+| Integration | Gateway plus registry database, real signer/JWKS, A/B bindings, enabled/disabled/mismatch paths, published-key non-signing, retiring-key overlap, and no signing/Backend call after failed authority checks. |
+| Contract | Gateway-issued JWT is accepted by Feature 002's unchanged Remote-JWKS verifier and rejected for wrong issuer/audience/signature/kid/time/claims. |
+| E2E | Real Gateway runtime → real Gateway signer → real public JWKS → real Backend Remote-JWKS verifier → protected Backend endpoint. No mock verifier or test signer is evidence. |
+
+The mandatory A/B fixture uses different `customer_id` and `integration_id`, but the same `org_id`, `sub`, `host_app`, roles, and permission scopes. Tests prove Integration A cannot obtain/sign Customer B identity and vice versa, even with identical lower-level values. They also prove that public headers cannot restore Feature 002 legacy identity behavior.
+
+Rotation tests prove `kid-a` active, `kid-b` published and JWKS-visible without normal signing, propagated JWKS before signer switching, `kid-b` activation, `kid-a` retirement overlap for at least 25 minutes, Backend acceptance of both eligible token states, safe rollback to `kid-a`, unknown-kid rejection, and prohibition of premature key removal. Contract tests also prove that only the root canonical Prisma schema produces the separate Gateway generated client and that no Gateway-local schema/migration lineage is introduced.
+
+## 13. Migration Strategy and Compatibility
+
+Feature 003 schema changes are additive and are owned only by the root canonical Prisma schema/migration lineage: create the registry, signing-key metadata, and narrow Gateway audit tables; add Customer FKs and supporting indexes; and seed deterministic synthetic A/B bindings. A second generator in that same root schema produces Gateway's independent client. No Feature 002 Customer ownership data is rewritten, inferred, or remapped. Migrations fail closed on invalid existing Customer references.
+
+Feature 002 remains unchanged and authoritative for Backend verification, canonical claim validation, scope creation, business authorization, Customer-qualified persistence, RAG, tools, workflow, feedback/review, and Backend audit. Gateway forwards a signed internal JWT, not `x-customer-id` or any public identity fallback. Production rollout remains BLOCKED until real runtime and deployment evidence satisfies every Feature 003 success criterion.
+
+## 14. Threat Model and Non-negotiable Invariants
+
+| Threat | Mitigation |
+| --- | --- |
+| Spoofed customer/integration/HostApp headers | Ignore as authority; require verified upstream claims and explicit binding. |
+| Customer binding confusion | Integration primary key maps to exactly one Customer; FK plus enabled/HostApp checks happen before signing. |
+| Permission elevation | Roles/scopes come only from verified upstream token; body/page/metadata cannot augment them. |
+| Algorithm or `kid` confusion | RS256-only verifier/signer, Gateway-selected `kid`, JWKS public-key selection, unknown-kid fail closed. |
+| Private key/JWKS leakage | Provider boundary, no DB private key, public-only JWKS, centralized redaction. |
+| Premature retirement | New/published/active/retiring/retired lifecycle, JWKS visibility rules, 25-minute minimum overlap, rollback to prior active key. |
+| Direct Backend bypass | Protected Backend continues to require its verified internal JWT; no header fallback exists. |
+| Frontend internal-token exposure | Internal token is minted per Gateway→Backend request and never returned externally. |
+| Generic Gateway proxy bypass | Server-owned `BackendRouteDefinition` allowlist rejects arbitrary destinations, paths, and catch-all forwarding. |
+| Schema/migration split brain | One root Prisma schema and migration lineage produces both generated clients; Gateway-local schemas are prohibited. |
+| Gateway audit becomes business audit | Gateway records only identity/security events; Feature 002 retains business audit ownership. |
+
+## 15. Alternatives Considered
+
+| Decision | Selected | Rejected alternative | Reason and impact |
+| --- | --- | --- | --- |
+| Registry | DB-backed Prisma/PostgreSQL binding | Static/config mapping | Direct Customer FK, auditable state, deterministic tests, and controlled provisioning. |
+| Runtime | Independent NestJS Gateway | Embed issuer in Backend | Preserves the external trust boundary and avoids Backend self-issuance. |
+| Upstream auth | One configured RS256 upstream JWT issuer/JWKS | API-key platform, opaque introspection, multi-issuer IAM | Smallest secure path compatible with current `jose`/JWKS patterns. |
+| Key source | `SigningKeyProvider` with local file and production reference/file | Raw PEM source control or environment value | Prevents ordinary configuration/logging leakage while permitting future KMS/HSM. |
+| Contract | Local `file:` pure vocabulary package with exports/declarations | Workspace conversion, TS path aliases, duplicated literals | Prevents drift without shared authority or a monorepo overhaul. |
+| Prisma | One root schema/migration lineage with a second Gateway client generator | Gateway-local schema or migration history | Preserves one Customer relation graph while keeping app runtime modules independent. |
+| Backend transport | Server-owned `BackendRouteDefinition` allowlist | Catch-all reverse proxy or caller-selected destination | Limits Feature 003 to the real identity trust chain. |
+| Retirement | Published-before-active lifecycle and 25-minute overlap | 15-minute fixed overlap or HTTP-cache-only reasoning | Covers current Backend validity, verifier cache/cooldown, and propagation behavior. |
+| Token reuse | Fresh 5-minute token per Backend request | Long-lived cached user token | Limits exposure and simplifies identity freshness; increases signing calls intentionally. |
+
+## 16. Final Design Decisions and Open Questions
+
+All required v1 decisions are resolved: independent Gateway, signed upstream JWT verification, DB-backed explicit registry, controlled provisioning command, five-minute per-request internal JWT, omitted `nbf`, provider-based key handling, public JWKS, safe key rotation, and real Runtime E2E proof.
+
+There are no blocking design questions. Exact deployment provider, KMS/HSM adapter, secret product, upstream identity-system onboarding mechanics, and route-level deployment infrastructure remain implementation/deployment choices constrained by this design and the locked Feature 003 specification.
