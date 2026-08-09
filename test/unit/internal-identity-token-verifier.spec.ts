@@ -44,6 +44,30 @@ describe('internal identity token verifier (T006 contract)', () => {
     ).rejects.toMatchObject({ status: 401, code: 'IDENTITY_TOKEN_INVALID' });
   });
 
+  it('verifies a signed canonical-claim payload with empty authorization arrays before canonical claim mapping', async () => {
+    const verifier = loadVerifierUnderTest();
+    const verified = await verifier.verify({
+      authorization: `Bearer ${fixture.sign({ claims: { ...fixture.canonicalClaims.customerA, roles: [], permission_scopes: [] } })}`,
+      issuer: TEST_GATEWAY_ISSUER,
+      audience: TEST_BACKEND_AUDIENCE,
+      jwks: fixture.jwks
+    });
+
+    expect(verified).toMatchObject({
+      claims: expect.objectContaining({
+        customer_id: 'customer-a',
+        integration_id: 'integration-erp',
+        sub: 'actor-shared',
+        org_id: 'org-shared',
+        host_app: 'erp',
+        roles: [],
+        permission_scopes: [],
+        jti: 'jwt-customer-a'
+      }),
+      issuer: TEST_GATEWAY_ISSUER
+    });
+  });
+
   it('does not expose token or key material in verifier errors', async () => {
     const verifier = loadVerifierUnderTest();
     const token = fixture.tamper(fixture.sign());

@@ -71,6 +71,38 @@ describe('verified canonical identity claim validation (T007 contract)', () => {
     });
     expect(JSON.stringify(context)).not.toContain('must-not-be-a-claim');
   });
+
+  it('maps only the eight canonical claims when verified payloads contain public-input lookalikes', () => {
+    const validate = loadCanonicalClaimValidator();
+    const context = validate({
+      claims: {
+        ...valid,
+        'x-customer-id': 'customer-header',
+        'x-integration-id': 'integration-header',
+        'x-organization-id': 'org-header',
+        'x-host-app': 'host-header',
+        'x-actor-id': 'actor-header',
+        'x-role': 'admin',
+        'x-roles': 'admin',
+        'x-permission-scopes': 'all:write',
+        body: { customer_id: 'customer-body' },
+        query: { customer_id: 'customer-query' },
+        pageContext: { customer_id: 'customer-page' },
+        metadata: { customer_id: 'customer-metadata' }
+      },
+      issuer: TEST_GATEWAY_ISSUER
+    });
+
+    expect(context).toEqual({
+      customer: { customerId: 'customer-a', integrationId: 'integration-erp' },
+      organization: { organizationId: 'org-shared' },
+      hostApp: { hostApp: 'erp' },
+      actor: { actorId: 'actor-shared', roles: ['planner'], permissionScopes: ['orders:read'] },
+      auth: { tokenId: 'jwt-customer-a', gatewayIssuer: TEST_GATEWAY_ISSUER }
+    });
+    expect(JSON.stringify(context)).not.toContain('customer-header');
+    expect(JSON.stringify(context)).not.toContain('customer-body');
+  });
 });
 
 function expectContextInvalid(claims: Record<string, unknown>) {

@@ -66,6 +66,32 @@ describe('observability metadata helpers', () => {
     expect(JSON.stringify(metadata)).not.toContain('must-not-be-observable');
   });
 
+  it('redacts private JWK fields, PEM-looking private keys, and credential values from nested observability input', () => {
+    const metadata = createRuntimeDecisionMetadata({
+      nested: {
+        privateJwk: { d: 'private-d', p: 'private-p', q: 'private-q', dp: 'private-dp', dq: 'private-dq', qi: 'private-qi' },
+        privateKey: '-----BEGIN PRIVATE KEY----- synthetic-key -----END PRIVATE KEY-----',
+        credential: 'synthetic-credential'
+      }
+    } as never);
+
+    const serialized = JSON.stringify(metadata);
+    ['private-d', 'private-p', 'private-q', 'private-dp', 'private-dq', 'private-qi', 'synthetic-key', 'synthetic-credential'].forEach((secret) => {
+      expect(serialized).not.toContain(secret);
+    });
+  });
+
+  it('redacts a private PEM under a neutral nested key through the shared redaction boundary', () => {
+    const metadata = createRuntimeDecisionMetadata({
+      requestId: 'req-private-pem',
+      traceId: 'trace-private-pem',
+      nested: { payload: '-----BEGIN RSA PRIVATE KEY----- synthetic-neutral-key -----END RSA PRIVATE KEY-----' }
+    } as never);
+
+    expect(metadata).toMatchObject({ requestId: 'req-private-pem', traceId: 'trace-private-pem' });
+    expect(JSON.stringify(metadata)).not.toContain('synthetic-neutral-key');
+  });
+
   it('redacts nested claims, credentials, passwords, and raw exceptions while preserving safe trace fields', () => {
     const token = createInternalIdentityJwtFixture().sign();
     const metadata = createRuntimeDecisionMetadata({

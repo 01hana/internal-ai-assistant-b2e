@@ -179,4 +179,67 @@ describe('assistant sessions contract', () => {
     expect(response.body.error.code).toBe('IDENTITY_TOKEN_INVALID');
     expect(state.sessions).toHaveLength(beforeSessionCount);
   });
+
+  it('does not let public headers, body/query fields, or PageContext metadata override a signed Customer identity', async () => {
+    const beforeSessionCount = state.sessions.length;
+    const beforeAuditCount = state.auditEvents.length;
+    const conflictingHeaders = {
+      ...createAuthorizedInternalIdentityHeaders(identityFixture, {
+        claims: ownedClaims,
+        requestId: 'req-us1-public-input-non-authority'
+      }),
+      'x-customer-id': 'customer-b',
+      'x-integration-id': 'integration-b',
+      'x-organization-id': 'org-header',
+      'x-host-app': 'host-header',
+      'x-actor-id': 'actor-header',
+      'x-role': 'admin',
+      'x-roles': 'admin',
+      'x-permission-scopes': 'all:write'
+    };
+    const create = await request(app.getHttpServer())
+      .post('/api/v1/assistant/sessions')
+      .set(conflictingHeaders)
+      .send({
+        pageContext: {
+          module: 'orders',
+          userVisibleState: {
+            customer_id: 'customer-page',
+            integration_id: 'integration-page',
+            metadata: { customer_id: 'customer-metadata', permission_scopes: ['all:write'] }
+          }
+        }
+      });
+
+    expect(create.status).toBe(201);
+    expect(state.sessions).toHaveLength(beforeSessionCount + 1);
+    expect(state.sessions.at(-1)).toMatchObject({
+      customerId: ownedClaims.customer_id,
+      organizationId: ownedClaims.org_id,
+      hostApp: ownedClaims.host_app,
+      actorId: ownedClaims.sub
+    });
+    expect(state.auditEvents).toHaveLength(beforeAuditCount + 1);
+    expect(state.auditEvents.at(-1)).toMatchObject({
+      customerId: ownedClaims.customer_id,
+      organizationId: ownedClaims.org_id,
+      hostApp: ownedClaims.host_app,
+      actorId: ownedClaims.sub
+    });
+
+    const beforeRejectedBody = state.sessions.length;
+    const rejectedBody = await request(app.getHttpServer())
+      .post('/api/v1/assistant/sessions')
+      .set(conflictingHeaders)
+      .send({ customerId: 'customer-b' });
+    expect(rejectedBody.status).toBe(400);
+    expect(state.sessions).toHaveLength(beforeRejectedBody);
+
+    const beforeRejectedQueryAudit = state.auditEvents.length;
+    const rejectedQuery = await request(app.getHttpServer())
+      .get('/api/v1/assistant/sessions/session-owned-001/messages?customerId=customer-b&integrationId=integration-b')
+      .set(conflictingHeaders);
+    expect(rejectedQuery.status).toBe(400);
+    expect(state.auditEvents).toHaveLength(beforeRejectedQueryAudit);
+  });
 });

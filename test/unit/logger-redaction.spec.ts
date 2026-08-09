@@ -24,11 +24,32 @@ describe('redactSecrets', () => {
     const privateMaterial = 'test-private-jwks-material';
     const redacted = redactSecrets({
       authorization: `Bearer ${token}`,
-      authMetadata: { authorization: { token, privateMaterial } }
+      authMetadata: {
+        authorization: { token, privateMaterial },
+        privateJwk: { d: 'private-d', p: 'private-p', q: 'private-q', dp: 'private-dp', dq: 'private-dq', qi: 'private-qi' },
+        privateKey: '-----BEGIN PRIVATE KEY----- synthetic-key -----END PRIVATE KEY-----',
+        credential: 'synthetic-credential'
+      }
     });
 
     expect(JSON.stringify(redacted)).not.toContain(token);
     expect(JSON.stringify(redacted)).not.toContain(privateMaterial);
+    ['private-d', 'private-p', 'private-q', 'private-dp', 'private-dq', 'private-qi', 'synthetic-key', 'synthetic-credential'].forEach((secret) => {
+      expect(JSON.stringify(redacted)).not.toContain(secret);
+    });
+  });
+
+  it('redacts private JWK members by private context without redacting ordinary d, p, or q business fields', () => {
+    const redacted = redactSecrets({
+      privateSigningJwk: { kty: 'RSA', kid: 'safe-kid', d: 'private-d', p: 'private-p', q: 'private-q', dp: 'private-dp', dq: 'private-dq', qi: 'private-qi' },
+      businessData: { d: 'safe-domain-value', p: 'safe-product-value', q: 'safe-query-value' }
+    });
+
+    expect(redacted).toEqual(expect.objectContaining({
+      privateSigningJwk: expect.objectContaining({ kty: 'RSA', kid: 'safe-kid', d: '[REDACTED]', p: '[REDACTED]', q: '[REDACTED]' }),
+      businessData: { d: 'safe-domain-value', p: 'safe-product-value', q: 'safe-query-value' }
+    }));
+    expect(JSON.stringify(redacted)).not.toContain('private-d');
   });
 
   it('redacts nested identity, credential, and raw exception material while retaining safe trace fields', () => {
