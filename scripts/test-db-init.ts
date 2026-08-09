@@ -24,6 +24,9 @@ async function main() {
     await prisma.$transaction([
       // Delete restrictive children before every parent; this order is the
       // rebuildable-test-data FK graph, not a cascade/truncate workaround.
+      prisma.gatewayIdentityAuditEvent.deleteMany(),
+      prisma.integrationBinding.deleteMany(),
+      prisma.gatewaySigningKey.deleteMany(),
       prisma.auditEvent.deleteMany(),
       prisma.reviewItem.deleteMany(),
       prisma.feedbackEvent.deleteMany(),
@@ -64,7 +67,7 @@ async function main() {
 }
 
 async function assertSeededCustomerScopeInvariants(prisma: PrismaClient): Promise<void> {
-  const [customers, documents, chunks, toolCalls] = await Promise.all([
+  const [customers, documents, chunks, toolCalls, bindings] = await Promise.all([
     prisma.customer.findMany({ select: { id: true }, orderBy: { id: 'asc' } }),
     prisma.knowledgeDocument.findMany({
       select: {
@@ -78,7 +81,8 @@ async function assertSeededCustomerScopeInvariants(prisma: PrismaClient): Promis
       }
     }),
     prisma.knowledgeChunk.findMany({ select: { customerId: true, documentId: true } }),
-    prisma.toolCall.findMany({ select: { customerId: true, idempotencyKey: true } })
+    prisma.toolCall.findMany({ select: { customerId: true, idempotencyKey: true } }),
+    prisma.integrationBinding.findMany({ select: { customerId: true, integrationId: true, allowedHostApp: true, enabled: true }, orderBy: { integrationId: 'asc' } })
   ]);
 
   const customerIds = customers.map((customer) => customer.id);
@@ -112,6 +116,10 @@ async function assertSeededCustomerScopeInvariants(prisma: PrismaClient): Promis
   const sharedToolCalls = toolCalls.filter((toolCall) => toolCall.idempotencyKey === 'shared-idempotency-key');
   if (!hasBothCustomers(sharedToolCalls.map((toolCall) => toolCall.customerId))) {
     throw new Error('Seed invariant failed: Customer A/B shared idempotency fixture is missing.');
+  }
+  if (bindings.length !== 2 || bindings[0]?.integrationId !== 'integration-a' || bindings[1]?.integrationId !== 'integration-b' ||
+      !bindings.every((binding) => binding.enabled && binding.allowedHostApp === 'admin') || !hasBothCustomers(bindings.map((binding) => binding.customerId))) {
+    throw new Error('Seed invariant failed: deterministic Customer A/B IntegrationBinding fixtures are missing.');
   }
 }
 

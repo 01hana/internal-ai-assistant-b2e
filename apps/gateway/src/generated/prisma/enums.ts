@@ -282,3 +282,14 @@ export const ClarificationQuestionStatus = {
 } as const
 
 export type ClarificationQuestionStatus = (typeof ClarificationQuestionStatus)[keyof typeof ClarificationQuestionStatus]
+
+
+export const GatewaySigningKeyStatus = {
+  new: 'new',
+  published: 'published',
+  active: 'active',
+  retiring: 'retiring',
+  retired: 'retired'
+} as const
+
+export type GatewaySigningKeyStatus = (typeof GatewaySigningKeyStatus)[keyof typeof GatewaySigningKeyStatus]

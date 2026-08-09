@@ -385,6 +385,9 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   Customer: 'Customer',
+  IntegrationBinding: 'IntegrationBinding',
+  GatewaySigningKey: 'GatewaySigningKey',
+  GatewayIdentityAuditEvent: 'GatewayIdentityAuditEvent',
   AssistantSession: 'AssistantSession',
   AssistantMessage: 'AssistantMessage',
   AssistantContextState: 'AssistantContextState',
@@ -422,7 +425,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "customer" | "assistantSession" | "assistantMessage" | "assistantContextState" | "executionPlan" | "answerDecision" | "clarificationQuestion" | "groundingCheck" | "toolDefinition" | "customerToolPolicy" | "toolCall" | "evidenceRef" | "auditEvent" | "feedbackEvent" | "reviewItem" | "approvalRequest" | "actionDraft" | "escalationRequest" | "queryUnderstandingResult" | "knowledgeDocument" | "knowledgeChunk" | "retrievalRun" | "retrievalCandidate"
+    modelProps: "customer" | "integrationBinding" | "gatewaySigningKey" | "gatewayIdentityAuditEvent" | "assistantSession" | "assistantMessage" | "assistantContextState" | "executionPlan" | "answerDecision" | "clarificationQuestion" | "groundingCheck" | "toolDefinition" | "customerToolPolicy" | "toolCall" | "evidenceRef" | "auditEvent" | "feedbackEvent" | "reviewItem" | "approvalRequest" | "actionDraft" | "escalationRequest" | "queryUnderstandingResult" | "knowledgeDocument" | "knowledgeChunk" | "retrievalRun" | "retrievalCandidate"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -497,6 +500,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.CustomerCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.CustomerCountAggregateOutputType> | number
+        }
+      }
+    }
+    IntegrationBinding: {
+      payload: Prisma.$IntegrationBindingPayload<ExtArgs>
+      fields: Prisma.IntegrationBindingFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.IntegrationBindingFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.IntegrationBindingFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload>
+        }
+        findFirst: {
+          args: Prisma.IntegrationBindingFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.IntegrationBindingFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload>
+        }
+        findMany: {
+          args: Prisma.IntegrationBindingFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload>[]
+        }
+        create: {
+          args: Prisma.IntegrationBindingCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload>
+        }
+        createMany: {
+          args: Prisma.IntegrationBindingCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.IntegrationBindingCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload>[]
+        }
+        delete: {
+          args: Prisma.IntegrationBindingDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload>
+        }
+        update: {
+          args: Prisma.IntegrationBindingUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload>
+        }
+        deleteMany: {
+          args: Prisma.IntegrationBindingDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.IntegrationBindingUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.IntegrationBindingUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload>[]
+        }
+        upsert: {
+          args: Prisma.IntegrationBindingUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationBindingPayload>
+        }
+        aggregate: {
+          args: Prisma.IntegrationBindingAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateIntegrationBinding>
+        }
+        groupBy: {
+          args: Prisma.IntegrationBindingGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IntegrationBindingGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.IntegrationBindingCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IntegrationBindingCountAggregateOutputType> | number
+        }
+      }
+    }
+    GatewaySigningKey: {
+      payload: Prisma.$GatewaySigningKeyPayload<ExtArgs>
+      fields: Prisma.GatewaySigningKeyFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GatewaySigningKeyFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GatewaySigningKeyFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload>
+        }
+        findFirst: {
+          args: Prisma.GatewaySigningKeyFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GatewaySigningKeyFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload>
+        }
+        findMany: {
+          args: Prisma.GatewaySigningKeyFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload>[]
+        }
+        create: {
+          args: Prisma.GatewaySigningKeyCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload>
+        }
+        createMany: {
+          args: Prisma.GatewaySigningKeyCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.GatewaySigningKeyCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload>[]
+        }
+        delete: {
+          args: Prisma.GatewaySigningKeyDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload>
+        }
+        update: {
+          args: Prisma.GatewaySigningKeyUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload>
+        }
+        deleteMany: {
+          args: Prisma.GatewaySigningKeyDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GatewaySigningKeyUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.GatewaySigningKeyUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload>[]
+        }
+        upsert: {
+          args: Prisma.GatewaySigningKeyUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewaySigningKeyPayload>
+        }
+        aggregate: {
+          args: Prisma.GatewaySigningKeyAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGatewaySigningKey>
+        }
+        groupBy: {
+          args: Prisma.GatewaySigningKeyGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GatewaySigningKeyGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GatewaySigningKeyCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GatewaySigningKeyCountAggregateOutputType> | number
+        }
+      }
+    }
+    GatewayIdentityAuditEvent: {
+      payload: Prisma.$GatewayIdentityAuditEventPayload<ExtArgs>
+      fields: Prisma.GatewayIdentityAuditEventFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GatewayIdentityAuditEventFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GatewayIdentityAuditEventFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload>
+        }
+        findFirst: {
+          args: Prisma.GatewayIdentityAuditEventFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GatewayIdentityAuditEventFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload>
+        }
+        findMany: {
+          args: Prisma.GatewayIdentityAuditEventFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload>[]
+        }
+        create: {
+          args: Prisma.GatewayIdentityAuditEventCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload>
+        }
+        createMany: {
+          args: Prisma.GatewayIdentityAuditEventCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.GatewayIdentityAuditEventCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload>[]
+        }
+        delete: {
+          args: Prisma.GatewayIdentityAuditEventDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload>
+        }
+        update: {
+          args: Prisma.GatewayIdentityAuditEventUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload>
+        }
+        deleteMany: {
+          args: Prisma.GatewayIdentityAuditEventDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GatewayIdentityAuditEventUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.GatewayIdentityAuditEventUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload>[]
+        }
+        upsert: {
+          args: Prisma.GatewayIdentityAuditEventUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GatewayIdentityAuditEventPayload>
+        }
+        aggregate: {
+          args: Prisma.GatewayIdentityAuditEventAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGatewayIdentityAuditEvent>
+        }
+        groupBy: {
+          args: Prisma.GatewayIdentityAuditEventGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GatewayIdentityAuditEventGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GatewayIdentityAuditEventCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GatewayIdentityAuditEventCountAggregateOutputType> | number
         }
       }
     }
@@ -2174,6 +2399,52 @@ export const CustomerScalarFieldEnum = {
 export type CustomerScalarFieldEnum = (typeof CustomerScalarFieldEnum)[keyof typeof CustomerScalarFieldEnum]
 
 
+export const IntegrationBindingScalarFieldEnum = {
+  integrationId: 'integrationId',
+  customerId: 'customerId',
+  allowedHostApp: 'allowedHostApp',
+  enabled: 'enabled',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type IntegrationBindingScalarFieldEnum = (typeof IntegrationBindingScalarFieldEnum)[keyof typeof IntegrationBindingScalarFieldEnum]
+
+
+export const GatewaySigningKeyScalarFieldEnum = {
+  kid: 'kid',
+  publicJwk: 'publicJwk',
+  keyReference: 'keyReference',
+  status: 'status',
+  notBefore: 'notBefore',
+  activatedAt: 'activatedAt',
+  retireAfter: 'retireAfter',
+  retiredAt: 'retiredAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GatewaySigningKeyScalarFieldEnum = (typeof GatewaySigningKeyScalarFieldEnum)[keyof typeof GatewaySigningKeyScalarFieldEnum]
+
+
+export const GatewayIdentityAuditEventScalarFieldEnum = {
+  id: 'id',
+  timestamp: 'timestamp',
+  requestId: 'requestId',
+  eventType: 'eventType',
+  outcome: 'outcome',
+  reasonCode: 'reasonCode',
+  customerId: 'customerId',
+  integrationId: 'integrationId',
+  actorId: 'actorId',
+  hostApp: 'hostApp',
+  jti: 'jti',
+  kid: 'kid'
+} as const
+
+export type GatewayIdentityAuditEventScalarFieldEnum = (typeof GatewayIdentityAuditEventScalarFieldEnum)[keyof typeof GatewayIdentityAuditEventScalarFieldEnum]
+
+
 export const AssistantSessionScalarFieldEnum = {
   id: 'id',
   customerId: 'customerId',
@@ -2604,19 +2875,19 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const NullableJsonNullValueInput = {
   DbNull: DbNull,
   JsonNull: JsonNull
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
-
-
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {
@@ -2627,14 +2898,6 @@ export const QueryMode = {
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
-
-
 export const JsonNullValueFilter = {
   DbNull: DbNull,
   JsonNull: JsonNull,
@@ -2642,6 +2905,14 @@ export const JsonNullValueFilter = {
 } as const
 
 export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
 
@@ -2665,16 +2936,9 @@ export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaMod
 
 
 /**
- * Reference to a field of type 'AssistantSessionStatus'
+ * Reference to a field of type 'Boolean'
  */
-export type EnumAssistantSessionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantSessionStatus'>
-    
-
-
-/**
- * Reference to a field of type 'AssistantSessionStatus[]'
- */
-export type ListEnumAssistantSessionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantSessionStatus[]'>
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 
@@ -2689,6 +2953,48 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'DateTime[]'
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Json'
+ */
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+/**
+ * Reference to a field of type 'QueryMode'
+ */
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+/**
+ * Reference to a field of type 'GatewaySigningKeyStatus'
+ */
+export type EnumGatewaySigningKeyStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GatewaySigningKeyStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'GatewaySigningKeyStatus[]'
+ */
+export type ListEnumGatewaySigningKeyStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GatewaySigningKeyStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'AssistantSessionStatus'
+ */
+export type EnumAssistantSessionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantSessionStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'AssistantSessionStatus[]'
+ */
+export type ListEnumAssistantSessionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantSessionStatus[]'>
     
 
 
@@ -2721,20 +3027,6 @@ export type ListEnumAnswerDecisionStatusFieldRefInput<$PrismaModel> = FieldRefIn
 
 
 /**
- * Reference to a field of type 'Json'
- */
-export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
-    
-
-
-/**
- * Reference to a field of type 'QueryMode'
- */
-export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
-    
-
-
-/**
  * Reference to a field of type 'AssistantTaskState'
  */
 export type EnumAssistantTaskStateFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantTaskState'>
@@ -2759,13 +3051,6 @@ export type EnumRiskLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$Prisma
  * Reference to a field of type 'RiskLevel[]'
  */
 export type ListEnumRiskLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RiskLevel[]'>
-    
-
-
-/**
- * Reference to a field of type 'Boolean'
- */
-export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 
@@ -3187,6 +3472,9 @@ export type PrismaClientOptions = ({
 }
 export type GlobalOmitConfig = {
   customer?: Prisma.CustomerOmit
+  integrationBinding?: Prisma.IntegrationBindingOmit
+  gatewaySigningKey?: Prisma.GatewaySigningKeyOmit
+  gatewayIdentityAuditEvent?: Prisma.GatewayIdentityAuditEventOmit
   assistantSession?: Prisma.AssistantSessionOmit
   assistantMessage?: Prisma.AssistantMessageOmit
   assistantContextState?: Prisma.AssistantContextStateOmit

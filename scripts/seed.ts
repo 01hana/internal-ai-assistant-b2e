@@ -3,6 +3,7 @@ import { PrismaClient } from '../src/generated/prisma/client';
 import { RiskLevel, ToolOperation } from '../src/generated/prisma/enums';
 import { createPrismaClient } from '../src/prisma/prisma-client.factory';
 import { seedUs1TestFixtures } from './us1-test-fixtures';
+import { GATEWAY_INTEGRATION_BINDING_SEEDS } from './gateway-identity-fixtures';
 
 const FIXTURE_TIME = new Date('2026-08-04T00:00:00.000Z');
 const CUSTOMER_A_ID = 'customer-a';
@@ -10,9 +11,20 @@ const CUSTOMER_B_ID = 'customer-b';
 
 export async function seedCoreData(prisma: PrismaClient) {
   await seedCustomers(prisma);
+  await seedGatewayIntegrationBindings(prisma);
   const toolDefinitions = await seedToolDefinitions(prisma);
   await seedCustomerToolPolicies(prisma, toolDefinitions);
   await seedKnowledgeDocuments(prisma);
+}
+
+async function seedGatewayIntegrationBindings(prisma: PrismaClient) {
+  for (const binding of GATEWAY_INTEGRATION_BINDING_SEEDS) {
+    await prisma.integrationBinding.upsert({
+      where: { integrationId: binding.integrationId },
+      update: { customerId: binding.customerId, allowedHostApp: binding.allowedHostApp, enabled: binding.enabled },
+      create: binding
+    });
+  }
 }
 
 async function seedCustomers(prisma: PrismaClient) {

@@ -9,6 +9,9 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/Customer'
+export type * from './models/IntegrationBinding'
+export type * from './models/GatewaySigningKey'
+export type * from './models/GatewayIdentityAuditEvent'
 export type * from './models/AssistantSession'
 export type * from './models/AssistantMessage'
 export type * from './models/AssistantContextState'

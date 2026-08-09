@@ -212,6 +212,14 @@ enum ClarificationQuestionStatus {
   expired
 }
 
+enum GatewaySigningKeyStatus {
+  new
+  published
+  active
+  retiring
+  retired
+}
+
 model Customer {
   id String @id
 
@@ -230,6 +238,59 @@ model Customer {
   feedbackEvents      FeedbackEvent[]
   reviewItems         ReviewItem[]
   auditEvents         AuditEvent[]
+  integrationBindings IntegrationBinding[]
+  gatewayIdentityAuditEvents GatewayIdentityAuditEvent[]
+}
+
+model IntegrationBinding {
+  integrationId String   @id
+  customerId    String
+  allowedHostApp String
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@index([customerId])
+  @@index([customerId, allowedHostApp])
+}
+
+model GatewaySigningKey {
+  kid          String                  @id
+  publicJwk    Json
+  keyReference String
+  status       GatewaySigningKeyStatus @default(new)
+  notBefore    DateTime?
+  activatedAt  DateTime?
+  retireAfter  DateTime?
+  retiredAt    DateTime?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  @@index([status])
+}
+
+model GatewayIdentityAuditEvent {
+  id            String   @id @default(cuid())
+  timestamp     DateTime @default(now())
+  requestId     String
+  eventType     String
+  outcome       String
+  reasonCode    String
+  customerId    String?
+  integrationId String?
+  actorId       String?
+  hostApp       String?
+  jti           String?
+  kid           String?
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@index([requestId])
+  @@index([timestamp])
+  @@index([customerId, timestamp])
+  @@index([integrationId, timestamp])
 }
 
 model AssistantSession {

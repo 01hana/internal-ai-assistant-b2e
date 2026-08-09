@@ -606,10 +606,6 @@ export type AssistantContextStateCreatelastEvidenceRefIdsInput = {
   set: string[]
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
 export type AssistantContextStateUpdatelastToolCallIdsInput = {
   set?: string[]
   push?: string | string[]

@@ -45,6 +45,21 @@ export { Prisma }
  */
 export type Customer = Prisma.CustomerModel
 /**
+ * Model IntegrationBinding
+ * 
+ */
+export type IntegrationBinding = Prisma.IntegrationBindingModel
+/**
+ * Model GatewaySigningKey
+ * 
+ */
+export type GatewaySigningKey = Prisma.GatewaySigningKeyModel
+/**
+ * Model GatewayIdentityAuditEvent
+ * 
+ */
+export type GatewayIdentityAuditEvent = Prisma.GatewayIdentityAuditEventModel
+/**
  * Model AssistantSession
  * 
  */

@@ -165,6 +165,8 @@ export type CustomerWhereInput = {
   feedbackEvents?: Prisma.FeedbackEventListRelationFilter
   reviewItems?: Prisma.ReviewItemListRelationFilter
   auditEvents?: Prisma.AuditEventListRelationFilter
+  integrationBindings?: Prisma.IntegrationBindingListRelationFilter
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventListRelationFilter
 }
 
 export type CustomerOrderByWithRelationInput = {
@@ -184,6 +186,8 @@ export type CustomerOrderByWithRelationInput = {
   feedbackEvents?: Prisma.FeedbackEventOrderByRelationAggregateInput
   reviewItems?: Prisma.ReviewItemOrderByRelationAggregateInput
   auditEvents?: Prisma.AuditEventOrderByRelationAggregateInput
+  integrationBindings?: Prisma.IntegrationBindingOrderByRelationAggregateInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventOrderByRelationAggregateInput
 }
 
 export type CustomerWhereUniqueInput = Prisma.AtLeast<{
@@ -206,6 +210,8 @@ export type CustomerWhereUniqueInput = Prisma.AtLeast<{
   feedbackEvents?: Prisma.FeedbackEventListRelationFilter
   reviewItems?: Prisma.ReviewItemListRelationFilter
   auditEvents?: Prisma.AuditEventListRelationFilter
+  integrationBindings?: Prisma.IntegrationBindingListRelationFilter
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventListRelationFilter
 }, "id">
 
 export type CustomerOrderByWithAggregationInput = {
@@ -239,6 +245,8 @@ export type CustomerCreateInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateInput = {
@@ -258,6 +266,8 @@ export type CustomerUncheckedCreateInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUpdateInput = {
@@ -277,6 +287,8 @@ export type CustomerUpdateInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateInput = {
@@ -296,6 +308,8 @@ export type CustomerUncheckedUpdateInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateManyInput = {
@@ -327,8 +341,43 @@ export type CustomerScalarRelationFilter = {
   isNot?: Prisma.CustomerWhereInput
 }
 
+export type CustomerNullableScalarRelationFilter = {
+  is?: Prisma.CustomerWhereInput | null
+  isNot?: Prisma.CustomerWhereInput | null
+}
+
 export type StringFieldUpdateOperationsInput = {
   set?: string
+}
+
+export type CustomerCreateNestedOneWithoutIntegrationBindingsInput = {
+  create?: Prisma.XOR<Prisma.CustomerCreateWithoutIntegrationBindingsInput, Prisma.CustomerUncheckedCreateWithoutIntegrationBindingsInput>
+  connectOrCreate?: Prisma.CustomerCreateOrConnectWithoutIntegrationBindingsInput
+  connect?: Prisma.CustomerWhereUniqueInput
+}
+
+export type CustomerUpdateOneRequiredWithoutIntegrationBindingsNestedInput = {
+  create?: Prisma.XOR<Prisma.CustomerCreateWithoutIntegrationBindingsInput, Prisma.CustomerUncheckedCreateWithoutIntegrationBindingsInput>
+  connectOrCreate?: Prisma.CustomerCreateOrConnectWithoutIntegrationBindingsInput
+  upsert?: Prisma.CustomerUpsertWithoutIntegrationBindingsInput
+  connect?: Prisma.CustomerWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CustomerUpdateToOneWithWhereWithoutIntegrationBindingsInput, Prisma.CustomerUpdateWithoutIntegrationBindingsInput>, Prisma.CustomerUncheckedUpdateWithoutIntegrationBindingsInput>
+}
+
+export type CustomerCreateNestedOneWithoutGatewayIdentityAuditEventsInput = {
+  create?: Prisma.XOR<Prisma.CustomerCreateWithoutGatewayIdentityAuditEventsInput, Prisma.CustomerUncheckedCreateWithoutGatewayIdentityAuditEventsInput>
+  connectOrCreate?: Prisma.CustomerCreateOrConnectWithoutGatewayIdentityAuditEventsInput
+  connect?: Prisma.CustomerWhereUniqueInput
+}
+
+export type CustomerUpdateOneWithoutGatewayIdentityAuditEventsNestedInput = {
+  create?: Prisma.XOR<Prisma.CustomerCreateWithoutGatewayIdentityAuditEventsInput, Prisma.CustomerUncheckedCreateWithoutGatewayIdentityAuditEventsInput>
+  connectOrCreate?: Prisma.CustomerCreateOrConnectWithoutGatewayIdentityAuditEventsInput
+  upsert?: Prisma.CustomerUpsertWithoutGatewayIdentityAuditEventsInput
+  disconnect?: Prisma.CustomerWhereInput | boolean
+  delete?: Prisma.CustomerWhereInput | boolean
+  connect?: Prisma.CustomerWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CustomerUpdateToOneWithWhereWithoutGatewayIdentityAuditEventsInput, Prisma.CustomerUpdateWithoutGatewayIdentityAuditEventsInput>, Prisma.CustomerUncheckedUpdateWithoutGatewayIdentityAuditEventsInput>
 }
 
 export type CustomerCreateNestedOneWithoutAssistantSessionsInput = {
@@ -541,6 +590,198 @@ export type CustomerUpdateOneRequiredWithoutRetrievalCandidatesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.CustomerUpdateToOneWithWhereWithoutRetrievalCandidatesInput, Prisma.CustomerUpdateWithoutRetrievalCandidatesInput>, Prisma.CustomerUncheckedUpdateWithoutRetrievalCandidatesInput>
 }
 
+export type CustomerCreateWithoutIntegrationBindingsInput = {
+  id: string
+  assistantSessions?: Prisma.AssistantSessionCreateNestedManyWithoutCustomerInput
+  assistantMessages?: Prisma.AssistantMessageCreateNestedManyWithoutCustomerInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentCreateNestedManyWithoutCustomerInput
+  knowledgeChunks?: Prisma.KnowledgeChunkCreateNestedManyWithoutCustomerInput
+  retrievalRuns?: Prisma.RetrievalRunCreateNestedManyWithoutCustomerInput
+  retrievalCandidates?: Prisma.RetrievalCandidateCreateNestedManyWithoutCustomerInput
+  evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutCustomerInput
+  toolPolicies?: Prisma.CustomerToolPolicyCreateNestedManyWithoutCustomerInput
+  toolCalls?: Prisma.ToolCallCreateNestedManyWithoutCustomerInput
+  approvalRequests?: Prisma.ApprovalRequestCreateNestedManyWithoutCustomerInput
+  actionDrafts?: Prisma.ActionDraftCreateNestedManyWithoutCustomerInput
+  escalationRequests?: Prisma.EscalationRequestCreateNestedManyWithoutCustomerInput
+  feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
+  reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+}
+
+export type CustomerUncheckedCreateWithoutIntegrationBindingsInput = {
+  id: string
+  assistantSessions?: Prisma.AssistantSessionUncheckedCreateNestedManyWithoutCustomerInput
+  assistantMessages?: Prisma.AssistantMessageUncheckedCreateNestedManyWithoutCustomerInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentUncheckedCreateNestedManyWithoutCustomerInput
+  knowledgeChunks?: Prisma.KnowledgeChunkUncheckedCreateNestedManyWithoutCustomerInput
+  retrievalRuns?: Prisma.RetrievalRunUncheckedCreateNestedManyWithoutCustomerInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUncheckedCreateNestedManyWithoutCustomerInput
+  evidenceRefs?: Prisma.EvidenceRefUncheckedCreateNestedManyWithoutCustomerInput
+  toolPolicies?: Prisma.CustomerToolPolicyUncheckedCreateNestedManyWithoutCustomerInput
+  toolCalls?: Prisma.ToolCallUncheckedCreateNestedManyWithoutCustomerInput
+  approvalRequests?: Prisma.ApprovalRequestUncheckedCreateNestedManyWithoutCustomerInput
+  actionDrafts?: Prisma.ActionDraftUncheckedCreateNestedManyWithoutCustomerInput
+  escalationRequests?: Prisma.EscalationRequestUncheckedCreateNestedManyWithoutCustomerInput
+  feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
+  reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+}
+
+export type CustomerCreateOrConnectWithoutIntegrationBindingsInput = {
+  where: Prisma.CustomerWhereUniqueInput
+  create: Prisma.XOR<Prisma.CustomerCreateWithoutIntegrationBindingsInput, Prisma.CustomerUncheckedCreateWithoutIntegrationBindingsInput>
+}
+
+export type CustomerUpsertWithoutIntegrationBindingsInput = {
+  update: Prisma.XOR<Prisma.CustomerUpdateWithoutIntegrationBindingsInput, Prisma.CustomerUncheckedUpdateWithoutIntegrationBindingsInput>
+  create: Prisma.XOR<Prisma.CustomerCreateWithoutIntegrationBindingsInput, Prisma.CustomerUncheckedCreateWithoutIntegrationBindingsInput>
+  where?: Prisma.CustomerWhereInput
+}
+
+export type CustomerUpdateToOneWithWhereWithoutIntegrationBindingsInput = {
+  where?: Prisma.CustomerWhereInput
+  data: Prisma.XOR<Prisma.CustomerUpdateWithoutIntegrationBindingsInput, Prisma.CustomerUncheckedUpdateWithoutIntegrationBindingsInput>
+}
+
+export type CustomerUpdateWithoutIntegrationBindingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  assistantSessions?: Prisma.AssistantSessionUpdateManyWithoutCustomerNestedInput
+  assistantMessages?: Prisma.AssistantMessageUpdateManyWithoutCustomerNestedInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentUpdateManyWithoutCustomerNestedInput
+  knowledgeChunks?: Prisma.KnowledgeChunkUpdateManyWithoutCustomerNestedInput
+  retrievalRuns?: Prisma.RetrievalRunUpdateManyWithoutCustomerNestedInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUpdateManyWithoutCustomerNestedInput
+  evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutCustomerNestedInput
+  toolPolicies?: Prisma.CustomerToolPolicyUpdateManyWithoutCustomerNestedInput
+  toolCalls?: Prisma.ToolCallUpdateManyWithoutCustomerNestedInput
+  approvalRequests?: Prisma.ApprovalRequestUpdateManyWithoutCustomerNestedInput
+  actionDrafts?: Prisma.ActionDraftUpdateManyWithoutCustomerNestedInput
+  escalationRequests?: Prisma.EscalationRequestUpdateManyWithoutCustomerNestedInput
+  feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
+  reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+}
+
+export type CustomerUncheckedUpdateWithoutIntegrationBindingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  assistantSessions?: Prisma.AssistantSessionUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantMessages?: Prisma.AssistantMessageUncheckedUpdateManyWithoutCustomerNestedInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentUncheckedUpdateManyWithoutCustomerNestedInput
+  knowledgeChunks?: Prisma.KnowledgeChunkUncheckedUpdateManyWithoutCustomerNestedInput
+  retrievalRuns?: Prisma.RetrievalRunUncheckedUpdateManyWithoutCustomerNestedInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUncheckedUpdateManyWithoutCustomerNestedInput
+  evidenceRefs?: Prisma.EvidenceRefUncheckedUpdateManyWithoutCustomerNestedInput
+  toolPolicies?: Prisma.CustomerToolPolicyUncheckedUpdateManyWithoutCustomerNestedInput
+  toolCalls?: Prisma.ToolCallUncheckedUpdateManyWithoutCustomerNestedInput
+  approvalRequests?: Prisma.ApprovalRequestUncheckedUpdateManyWithoutCustomerNestedInput
+  actionDrafts?: Prisma.ActionDraftUncheckedUpdateManyWithoutCustomerNestedInput
+  escalationRequests?: Prisma.EscalationRequestUncheckedUpdateManyWithoutCustomerNestedInput
+  feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
+  reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+}
+
+export type CustomerCreateWithoutGatewayIdentityAuditEventsInput = {
+  id: string
+  assistantSessions?: Prisma.AssistantSessionCreateNestedManyWithoutCustomerInput
+  assistantMessages?: Prisma.AssistantMessageCreateNestedManyWithoutCustomerInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentCreateNestedManyWithoutCustomerInput
+  knowledgeChunks?: Prisma.KnowledgeChunkCreateNestedManyWithoutCustomerInput
+  retrievalRuns?: Prisma.RetrievalRunCreateNestedManyWithoutCustomerInput
+  retrievalCandidates?: Prisma.RetrievalCandidateCreateNestedManyWithoutCustomerInput
+  evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutCustomerInput
+  toolPolicies?: Prisma.CustomerToolPolicyCreateNestedManyWithoutCustomerInput
+  toolCalls?: Prisma.ToolCallCreateNestedManyWithoutCustomerInput
+  approvalRequests?: Prisma.ApprovalRequestCreateNestedManyWithoutCustomerInput
+  actionDrafts?: Prisma.ActionDraftCreateNestedManyWithoutCustomerInput
+  escalationRequests?: Prisma.EscalationRequestCreateNestedManyWithoutCustomerInput
+  feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
+  reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+}
+
+export type CustomerUncheckedCreateWithoutGatewayIdentityAuditEventsInput = {
+  id: string
+  assistantSessions?: Prisma.AssistantSessionUncheckedCreateNestedManyWithoutCustomerInput
+  assistantMessages?: Prisma.AssistantMessageUncheckedCreateNestedManyWithoutCustomerInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentUncheckedCreateNestedManyWithoutCustomerInput
+  knowledgeChunks?: Prisma.KnowledgeChunkUncheckedCreateNestedManyWithoutCustomerInput
+  retrievalRuns?: Prisma.RetrievalRunUncheckedCreateNestedManyWithoutCustomerInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUncheckedCreateNestedManyWithoutCustomerInput
+  evidenceRefs?: Prisma.EvidenceRefUncheckedCreateNestedManyWithoutCustomerInput
+  toolPolicies?: Prisma.CustomerToolPolicyUncheckedCreateNestedManyWithoutCustomerInput
+  toolCalls?: Prisma.ToolCallUncheckedCreateNestedManyWithoutCustomerInput
+  approvalRequests?: Prisma.ApprovalRequestUncheckedCreateNestedManyWithoutCustomerInput
+  actionDrafts?: Prisma.ActionDraftUncheckedCreateNestedManyWithoutCustomerInput
+  escalationRequests?: Prisma.EscalationRequestUncheckedCreateNestedManyWithoutCustomerInput
+  feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
+  reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+}
+
+export type CustomerCreateOrConnectWithoutGatewayIdentityAuditEventsInput = {
+  where: Prisma.CustomerWhereUniqueInput
+  create: Prisma.XOR<Prisma.CustomerCreateWithoutGatewayIdentityAuditEventsInput, Prisma.CustomerUncheckedCreateWithoutGatewayIdentityAuditEventsInput>
+}
+
+export type CustomerUpsertWithoutGatewayIdentityAuditEventsInput = {
+  update: Prisma.XOR<Prisma.CustomerUpdateWithoutGatewayIdentityAuditEventsInput, Prisma.CustomerUncheckedUpdateWithoutGatewayIdentityAuditEventsInput>
+  create: Prisma.XOR<Prisma.CustomerCreateWithoutGatewayIdentityAuditEventsInput, Prisma.CustomerUncheckedCreateWithoutGatewayIdentityAuditEventsInput>
+  where?: Prisma.CustomerWhereInput
+}
+
+export type CustomerUpdateToOneWithWhereWithoutGatewayIdentityAuditEventsInput = {
+  where?: Prisma.CustomerWhereInput
+  data: Prisma.XOR<Prisma.CustomerUpdateWithoutGatewayIdentityAuditEventsInput, Prisma.CustomerUncheckedUpdateWithoutGatewayIdentityAuditEventsInput>
+}
+
+export type CustomerUpdateWithoutGatewayIdentityAuditEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  assistantSessions?: Prisma.AssistantSessionUpdateManyWithoutCustomerNestedInput
+  assistantMessages?: Prisma.AssistantMessageUpdateManyWithoutCustomerNestedInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentUpdateManyWithoutCustomerNestedInput
+  knowledgeChunks?: Prisma.KnowledgeChunkUpdateManyWithoutCustomerNestedInput
+  retrievalRuns?: Prisma.RetrievalRunUpdateManyWithoutCustomerNestedInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUpdateManyWithoutCustomerNestedInput
+  evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutCustomerNestedInput
+  toolPolicies?: Prisma.CustomerToolPolicyUpdateManyWithoutCustomerNestedInput
+  toolCalls?: Prisma.ToolCallUpdateManyWithoutCustomerNestedInput
+  approvalRequests?: Prisma.ApprovalRequestUpdateManyWithoutCustomerNestedInput
+  actionDrafts?: Prisma.ActionDraftUpdateManyWithoutCustomerNestedInput
+  escalationRequests?: Prisma.EscalationRequestUpdateManyWithoutCustomerNestedInput
+  feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
+  reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+}
+
+export type CustomerUncheckedUpdateWithoutGatewayIdentityAuditEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  assistantSessions?: Prisma.AssistantSessionUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantMessages?: Prisma.AssistantMessageUncheckedUpdateManyWithoutCustomerNestedInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentUncheckedUpdateManyWithoutCustomerNestedInput
+  knowledgeChunks?: Prisma.KnowledgeChunkUncheckedUpdateManyWithoutCustomerNestedInput
+  retrievalRuns?: Prisma.RetrievalRunUncheckedUpdateManyWithoutCustomerNestedInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUncheckedUpdateManyWithoutCustomerNestedInput
+  evidenceRefs?: Prisma.EvidenceRefUncheckedUpdateManyWithoutCustomerNestedInput
+  toolPolicies?: Prisma.CustomerToolPolicyUncheckedUpdateManyWithoutCustomerNestedInput
+  toolCalls?: Prisma.ToolCallUncheckedUpdateManyWithoutCustomerNestedInput
+  approvalRequests?: Prisma.ApprovalRequestUncheckedUpdateManyWithoutCustomerNestedInput
+  actionDrafts?: Prisma.ActionDraftUncheckedUpdateManyWithoutCustomerNestedInput
+  escalationRequests?: Prisma.EscalationRequestUncheckedUpdateManyWithoutCustomerNestedInput
+  feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
+  reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+}
+
 export type CustomerCreateWithoutAssistantSessionsInput = {
   id: string
   assistantMessages?: Prisma.AssistantMessageCreateNestedManyWithoutCustomerInput
@@ -557,6 +798,8 @@ export type CustomerCreateWithoutAssistantSessionsInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutAssistantSessionsInput = {
@@ -575,6 +818,8 @@ export type CustomerUncheckedCreateWithoutAssistantSessionsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutAssistantSessionsInput = {
@@ -609,6 +854,8 @@ export type CustomerUpdateWithoutAssistantSessionsInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutAssistantSessionsInput = {
@@ -627,6 +874,8 @@ export type CustomerUncheckedUpdateWithoutAssistantSessionsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutAssistantMessagesInput = {
@@ -645,6 +894,8 @@ export type CustomerCreateWithoutAssistantMessagesInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutAssistantMessagesInput = {
@@ -663,6 +914,8 @@ export type CustomerUncheckedCreateWithoutAssistantMessagesInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutAssistantMessagesInput = {
@@ -697,6 +950,8 @@ export type CustomerUpdateWithoutAssistantMessagesInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutAssistantMessagesInput = {
@@ -715,6 +970,8 @@ export type CustomerUncheckedUpdateWithoutAssistantMessagesInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutToolPoliciesInput = {
@@ -733,6 +990,8 @@ export type CustomerCreateWithoutToolPoliciesInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutToolPoliciesInput = {
@@ -751,6 +1010,8 @@ export type CustomerUncheckedCreateWithoutToolPoliciesInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutToolPoliciesInput = {
@@ -785,6 +1046,8 @@ export type CustomerUpdateWithoutToolPoliciesInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutToolPoliciesInput = {
@@ -803,6 +1066,8 @@ export type CustomerUncheckedUpdateWithoutToolPoliciesInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutToolCallsInput = {
@@ -821,6 +1086,8 @@ export type CustomerCreateWithoutToolCallsInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutToolCallsInput = {
@@ -839,6 +1106,8 @@ export type CustomerUncheckedCreateWithoutToolCallsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutToolCallsInput = {
@@ -873,6 +1142,8 @@ export type CustomerUpdateWithoutToolCallsInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutToolCallsInput = {
@@ -891,6 +1162,8 @@ export type CustomerUncheckedUpdateWithoutToolCallsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutEvidenceRefsInput = {
@@ -909,6 +1182,8 @@ export type CustomerCreateWithoutEvidenceRefsInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutEvidenceRefsInput = {
@@ -927,6 +1202,8 @@ export type CustomerUncheckedCreateWithoutEvidenceRefsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutEvidenceRefsInput = {
@@ -961,6 +1238,8 @@ export type CustomerUpdateWithoutEvidenceRefsInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutEvidenceRefsInput = {
@@ -979,6 +1258,8 @@ export type CustomerUncheckedUpdateWithoutEvidenceRefsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutAuditEventsInput = {
@@ -997,6 +1278,8 @@ export type CustomerCreateWithoutAuditEventsInput = {
   escalationRequests?: Prisma.EscalationRequestCreateNestedManyWithoutCustomerInput
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutAuditEventsInput = {
@@ -1015,6 +1298,8 @@ export type CustomerUncheckedCreateWithoutAuditEventsInput = {
   escalationRequests?: Prisma.EscalationRequestUncheckedCreateNestedManyWithoutCustomerInput
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutAuditEventsInput = {
@@ -1049,6 +1334,8 @@ export type CustomerUpdateWithoutAuditEventsInput = {
   escalationRequests?: Prisma.EscalationRequestUpdateManyWithoutCustomerNestedInput
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutAuditEventsInput = {
@@ -1067,6 +1354,8 @@ export type CustomerUncheckedUpdateWithoutAuditEventsInput = {
   escalationRequests?: Prisma.EscalationRequestUncheckedUpdateManyWithoutCustomerNestedInput
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutFeedbackEventsInput = {
@@ -1085,6 +1374,8 @@ export type CustomerCreateWithoutFeedbackEventsInput = {
   escalationRequests?: Prisma.EscalationRequestCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutFeedbackEventsInput = {
@@ -1103,6 +1394,8 @@ export type CustomerUncheckedCreateWithoutFeedbackEventsInput = {
   escalationRequests?: Prisma.EscalationRequestUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutFeedbackEventsInput = {
@@ -1137,6 +1430,8 @@ export type CustomerUpdateWithoutFeedbackEventsInput = {
   escalationRequests?: Prisma.EscalationRequestUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutFeedbackEventsInput = {
@@ -1155,6 +1450,8 @@ export type CustomerUncheckedUpdateWithoutFeedbackEventsInput = {
   escalationRequests?: Prisma.EscalationRequestUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutReviewItemsInput = {
@@ -1173,6 +1470,8 @@ export type CustomerCreateWithoutReviewItemsInput = {
   escalationRequests?: Prisma.EscalationRequestCreateNestedManyWithoutCustomerInput
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutReviewItemsInput = {
@@ -1191,6 +1490,8 @@ export type CustomerUncheckedCreateWithoutReviewItemsInput = {
   escalationRequests?: Prisma.EscalationRequestUncheckedCreateNestedManyWithoutCustomerInput
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutReviewItemsInput = {
@@ -1225,6 +1526,8 @@ export type CustomerUpdateWithoutReviewItemsInput = {
   escalationRequests?: Prisma.EscalationRequestUpdateManyWithoutCustomerNestedInput
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutReviewItemsInput = {
@@ -1243,6 +1546,8 @@ export type CustomerUncheckedUpdateWithoutReviewItemsInput = {
   escalationRequests?: Prisma.EscalationRequestUncheckedUpdateManyWithoutCustomerNestedInput
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutApprovalRequestsInput = {
@@ -1261,6 +1566,8 @@ export type CustomerCreateWithoutApprovalRequestsInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutApprovalRequestsInput = {
@@ -1279,6 +1586,8 @@ export type CustomerUncheckedCreateWithoutApprovalRequestsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutApprovalRequestsInput = {
@@ -1313,6 +1622,8 @@ export type CustomerUpdateWithoutApprovalRequestsInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutApprovalRequestsInput = {
@@ -1331,6 +1642,8 @@ export type CustomerUncheckedUpdateWithoutApprovalRequestsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutActionDraftsInput = {
@@ -1349,6 +1662,8 @@ export type CustomerCreateWithoutActionDraftsInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutActionDraftsInput = {
@@ -1367,6 +1682,8 @@ export type CustomerUncheckedCreateWithoutActionDraftsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutActionDraftsInput = {
@@ -1401,6 +1718,8 @@ export type CustomerUpdateWithoutActionDraftsInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutActionDraftsInput = {
@@ -1419,6 +1738,8 @@ export type CustomerUncheckedUpdateWithoutActionDraftsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutEscalationRequestsInput = {
@@ -1437,6 +1758,8 @@ export type CustomerCreateWithoutEscalationRequestsInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutEscalationRequestsInput = {
@@ -1455,6 +1778,8 @@ export type CustomerUncheckedCreateWithoutEscalationRequestsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutEscalationRequestsInput = {
@@ -1489,6 +1814,8 @@ export type CustomerUpdateWithoutEscalationRequestsInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutEscalationRequestsInput = {
@@ -1507,6 +1834,8 @@ export type CustomerUncheckedUpdateWithoutEscalationRequestsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutKnowledgeDocumentsInput = {
@@ -1525,6 +1854,8 @@ export type CustomerCreateWithoutKnowledgeDocumentsInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutKnowledgeDocumentsInput = {
@@ -1543,6 +1874,8 @@ export type CustomerUncheckedCreateWithoutKnowledgeDocumentsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutKnowledgeDocumentsInput = {
@@ -1577,6 +1910,8 @@ export type CustomerUpdateWithoutKnowledgeDocumentsInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutKnowledgeDocumentsInput = {
@@ -1595,6 +1930,8 @@ export type CustomerUncheckedUpdateWithoutKnowledgeDocumentsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutKnowledgeChunksInput = {
@@ -1613,6 +1950,8 @@ export type CustomerCreateWithoutKnowledgeChunksInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutKnowledgeChunksInput = {
@@ -1631,6 +1970,8 @@ export type CustomerUncheckedCreateWithoutKnowledgeChunksInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutKnowledgeChunksInput = {
@@ -1665,6 +2006,8 @@ export type CustomerUpdateWithoutKnowledgeChunksInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutKnowledgeChunksInput = {
@@ -1683,6 +2026,8 @@ export type CustomerUncheckedUpdateWithoutKnowledgeChunksInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutRetrievalRunsInput = {
@@ -1701,6 +2046,8 @@ export type CustomerCreateWithoutRetrievalRunsInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutRetrievalRunsInput = {
@@ -1719,6 +2066,8 @@ export type CustomerUncheckedCreateWithoutRetrievalRunsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutRetrievalRunsInput = {
@@ -1753,6 +2102,8 @@ export type CustomerUpdateWithoutRetrievalRunsInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutRetrievalRunsInput = {
@@ -1771,6 +2122,8 @@ export type CustomerUncheckedUpdateWithoutRetrievalRunsInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutRetrievalCandidatesInput = {
@@ -1789,6 +2142,8 @@ export type CustomerCreateWithoutRetrievalCandidatesInput = {
   feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutRetrievalCandidatesInput = {
@@ -1807,6 +2162,8 @@ export type CustomerUncheckedCreateWithoutRetrievalCandidatesInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutRetrievalCandidatesInput = {
@@ -1841,6 +2198,8 @@ export type CustomerUpdateWithoutRetrievalCandidatesInput = {
   feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutRetrievalCandidatesInput = {
@@ -1859,6 +2218,8 @@ export type CustomerUncheckedUpdateWithoutRetrievalCandidatesInput = {
   feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 
@@ -1882,6 +2243,8 @@ export type CustomerCountOutputType = {
   feedbackEvents: number
   reviewItems: number
   auditEvents: number
+  integrationBindings: number
+  gatewayIdentityAuditEvents: number
 }
 
 export type CustomerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1900,6 +2263,8 @@ export type CustomerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensio
   feedbackEvents?: boolean | CustomerCountOutputTypeCountFeedbackEventsArgs
   reviewItems?: boolean | CustomerCountOutputTypeCountReviewItemsArgs
   auditEvents?: boolean | CustomerCountOutputTypeCountAuditEventsArgs
+  integrationBindings?: boolean | CustomerCountOutputTypeCountIntegrationBindingsArgs
+  gatewayIdentityAuditEvents?: boolean | CustomerCountOutputTypeCountGatewayIdentityAuditEventsArgs
 }
 
 /**
@@ -2017,6 +2382,20 @@ export type CustomerCountOutputTypeCountAuditEventsArgs<ExtArgs extends runtime.
   where?: Prisma.AuditEventWhereInput
 }
 
+/**
+ * CustomerCountOutputType without action
+ */
+export type CustomerCountOutputTypeCountIntegrationBindingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.IntegrationBindingWhereInput
+}
+
+/**
+ * CustomerCountOutputType without action
+ */
+export type CustomerCountOutputTypeCountGatewayIdentityAuditEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.GatewayIdentityAuditEventWhereInput
+}
+
 
 export type CustomerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2035,6 +2414,8 @@ export type CustomerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   feedbackEvents?: boolean | Prisma.Customer$feedbackEventsArgs<ExtArgs>
   reviewItems?: boolean | Prisma.Customer$reviewItemsArgs<ExtArgs>
   auditEvents?: boolean | Prisma.Customer$auditEventsArgs<ExtArgs>
+  integrationBindings?: boolean | Prisma.Customer$integrationBindingsArgs<ExtArgs>
+  gatewayIdentityAuditEvents?: boolean | Prisma.Customer$gatewayIdentityAuditEventsArgs<ExtArgs>
   _count?: boolean | Prisma.CustomerCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["customer"]>
 
@@ -2067,6 +2448,8 @@ export type CustomerInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   feedbackEvents?: boolean | Prisma.Customer$feedbackEventsArgs<ExtArgs>
   reviewItems?: boolean | Prisma.Customer$reviewItemsArgs<ExtArgs>
   auditEvents?: boolean | Prisma.Customer$auditEventsArgs<ExtArgs>
+  integrationBindings?: boolean | Prisma.Customer$integrationBindingsArgs<ExtArgs>
+  gatewayIdentityAuditEvents?: boolean | Prisma.Customer$gatewayIdentityAuditEventsArgs<ExtArgs>
   _count?: boolean | Prisma.CustomerCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type CustomerIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -2090,6 +2473,8 @@ export type $CustomerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     feedbackEvents: Prisma.$FeedbackEventPayload<ExtArgs>[]
     reviewItems: Prisma.$ReviewItemPayload<ExtArgs>[]
     auditEvents: Prisma.$AuditEventPayload<ExtArgs>[]
+    integrationBindings: Prisma.$IntegrationBindingPayload<ExtArgs>[]
+    gatewayIdentityAuditEvents: Prisma.$GatewayIdentityAuditEventPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2502,6 +2887,8 @@ export interface Prisma__CustomerClient<T, Null = never, ExtArgs extends runtime
   feedbackEvents<T extends Prisma.Customer$feedbackEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$feedbackEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FeedbackEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   reviewItems<T extends Prisma.Customer$reviewItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$reviewItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReviewItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   auditEvents<T extends Prisma.Customer$auditEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$auditEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuditEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  integrationBindings<T extends Prisma.Customer$integrationBindingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$integrationBindingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$IntegrationBindingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  gatewayIdentityAuditEvents<T extends Prisma.Customer$gatewayIdentityAuditEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$gatewayIdentityAuditEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GatewayIdentityAuditEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3282,6 +3669,54 @@ export type Customer$auditEventsArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   distinct?: Prisma.AuditEventScalarFieldEnum | Prisma.AuditEventScalarFieldEnum[]
+}
+
+/**
+ * Customer.integrationBindings
+ */
+export type Customer$integrationBindingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the IntegrationBinding
+   */
+  select?: Prisma.IntegrationBindingSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the IntegrationBinding
+   */
+  omit?: Prisma.IntegrationBindingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.IntegrationBindingInclude<ExtArgs> | null
+  where?: Prisma.IntegrationBindingWhereInput
+  orderBy?: Prisma.IntegrationBindingOrderByWithRelationInput | Prisma.IntegrationBindingOrderByWithRelationInput[]
+  cursor?: Prisma.IntegrationBindingWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.IntegrationBindingScalarFieldEnum | Prisma.IntegrationBindingScalarFieldEnum[]
+}
+
+/**
+ * Customer.gatewayIdentityAuditEvents
+ */
+export type Customer$gatewayIdentityAuditEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GatewayIdentityAuditEvent
+   */
+  select?: Prisma.GatewayIdentityAuditEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GatewayIdentityAuditEvent
+   */
+  omit?: Prisma.GatewayIdentityAuditEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GatewayIdentityAuditEventInclude<ExtArgs> | null
+  where?: Prisma.GatewayIdentityAuditEventWhereInput
+  orderBy?: Prisma.GatewayIdentityAuditEventOrderByWithRelationInput | Prisma.GatewayIdentityAuditEventOrderByWithRelationInput[]
+  cursor?: Prisma.GatewayIdentityAuditEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.GatewayIdentityAuditEventScalarFieldEnum | Prisma.GatewayIdentityAuditEventScalarFieldEnum[]
 }
 
 /**

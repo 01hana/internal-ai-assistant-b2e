@@ -572,10 +572,6 @@ export type EnumRiskLevelFieldUpdateOperationsInput = {
   set?: $Enums.RiskLevel
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
 export type EnumExecutionDecisionFieldUpdateOperationsInput = {
   set?: $Enums.ExecutionDecision
 }

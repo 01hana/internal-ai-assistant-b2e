@@ -52,6 +52,9 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   Customer: 'Customer',
+  IntegrationBinding: 'IntegrationBinding',
+  GatewaySigningKey: 'GatewaySigningKey',
+  GatewayIdentityAuditEvent: 'GatewayIdentityAuditEvent',
   AssistantSession: 'AssistantSession',
   AssistantMessage: 'AssistantMessage',
   AssistantContextState: 'AssistantContextState',
@@ -97,6 +100,52 @@ export const CustomerScalarFieldEnum = {
 } as const
 
 export type CustomerScalarFieldEnum = (typeof CustomerScalarFieldEnum)[keyof typeof CustomerScalarFieldEnum]
+
+
+export const IntegrationBindingScalarFieldEnum = {
+  integrationId: 'integrationId',
+  customerId: 'customerId',
+  allowedHostApp: 'allowedHostApp',
+  enabled: 'enabled',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type IntegrationBindingScalarFieldEnum = (typeof IntegrationBindingScalarFieldEnum)[keyof typeof IntegrationBindingScalarFieldEnum]
+
+
+export const GatewaySigningKeyScalarFieldEnum = {
+  kid: 'kid',
+  publicJwk: 'publicJwk',
+  keyReference: 'keyReference',
+  status: 'status',
+  notBefore: 'notBefore',
+  activatedAt: 'activatedAt',
+  retireAfter: 'retireAfter',
+  retiredAt: 'retiredAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GatewaySigningKeyScalarFieldEnum = (typeof GatewaySigningKeyScalarFieldEnum)[keyof typeof GatewaySigningKeyScalarFieldEnum]
+
+
+export const GatewayIdentityAuditEventScalarFieldEnum = {
+  id: 'id',
+  timestamp: 'timestamp',
+  requestId: 'requestId',
+  eventType: 'eventType',
+  outcome: 'outcome',
+  reasonCode: 'reasonCode',
+  customerId: 'customerId',
+  integrationId: 'integrationId',
+  actorId: 'actorId',
+  hostApp: 'hostApp',
+  jti: 'jti',
+  kid: 'kid'
+} as const
+
+export type GatewayIdentityAuditEventScalarFieldEnum = (typeof GatewayIdentityAuditEventScalarFieldEnum)[keyof typeof GatewayIdentityAuditEventScalarFieldEnum]
 
 
 export const AssistantSessionScalarFieldEnum = {
@@ -529,19 +578,19 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const NullableJsonNullValueInput = {
   DbNull: DbNull,
   JsonNull: JsonNull
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
-
-
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {
@@ -552,14 +601,6 @@ export const QueryMode = {
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
-
-
 export const JsonNullValueFilter = {
   DbNull: DbNull,
   JsonNull: JsonNull,
@@ -567,4 +608,12 @@ export const JsonNullValueFilter = {
 } as const
 
 export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
