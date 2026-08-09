@@ -1,3 +1,4 @@
+import { CANONICAL_INTERNAL_IDENTITY_CLAIM_NAMES } from '@internal-ai-assistant/internal-identity-contract';
 import { CanonicalIdentityContext } from './identity-context.types';
 import { IdentityContextException } from './identity.errors';
 
@@ -5,14 +6,16 @@ export function validateVerifiedInternalIdentityClaims(input: {
   claims: Record<string, unknown>;
   issuer: string;
 }): CanonicalIdentityContext {
-  const customerId = requireString(input.claims.customer_id, 'customer_id');
-  const integrationId = requireString(input.claims.integration_id, 'integration_id');
-  const actorId = requireString(input.claims.sub, 'sub');
-  const organizationId = requireString(input.claims.org_id, 'org_id');
-  const hostApp = requireString(input.claims.host_app, 'host_app');
-  const tokenId = requireString(input.claims.jti, 'jti');
-  const roles = requireStringArray(input.claims.roles, 'roles');
-  const permissionScopes = requireStringArray(input.claims.permission_scopes, 'permission_scopes');
+  const [customerClaim, integrationClaim, actorClaim, organizationClaim, hostAppClaim, rolesClaim, permissionScopesClaim, tokenIdClaim] =
+    CANONICAL_INTERNAL_IDENTITY_CLAIM_NAMES;
+  const customerId = requireString(input.claims[customerClaim], customerClaim);
+  const integrationId = requireString(input.claims[integrationClaim], integrationClaim);
+  const actorId = requireString(input.claims[actorClaim], actorClaim);
+  const organizationId = requireString(input.claims[organizationClaim], organizationClaim);
+  const hostApp = requireString(input.claims[hostAppClaim], hostAppClaim);
+  const tokenId = requireString(input.claims[tokenIdClaim], tokenIdClaim);
+  const roles = requireStringArray(input.claims[rolesClaim], rolesClaim);
+  const permissionScopes = requireStringArray(input.claims[permissionScopesClaim], permissionScopesClaim);
 
   return {
     customer: { customerId, integrationId },

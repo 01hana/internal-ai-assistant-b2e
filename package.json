@@ -6,6 +6,9 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "build:identity-contract": "npm --prefix packages/internal-identity-contract run build",
+    "build:gateway": "npm --prefix apps/gateway run build",
+    "build:feature003": "npm run build:identity-contract && npm run prisma:generate && npm run build && npm run build:gateway",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "start": "nest start",
@@ -24,6 +27,7 @@
     "test:db:init": "ts-node --project tsconfig.scripts.json scripts/test-db-init.ts"
   },
   "dependencies": {
+    "@internal-ai-assistant/internal-identity-contract": "file:packages/internal-identity-contract",
     "@nestjs/common": "^11.1.26",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.26",

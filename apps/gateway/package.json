@@ -1,0 +1,19 @@
+{
+  "name": "@internal-ai-assistant/gateway",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node ../../node_modules/jest/bin/jest.js --config jest.config.cjs",
+    "test:unit": "node ../../node_modules/jest/bin/jest.js --config jest.config.cjs --runInBand",
+    "build": "node ../../node_modules/@nestjs/cli/bin/nest.js build --config nest-cli.json",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@internal-ai-assistant/internal-identity-contract": "file:../../packages/internal-identity-contract",
+    "@nestjs/common": "^11.1.26",
+    "@nestjs/core": "^11.1.26",
+    "@nestjs/platform-express": "^11.1.26",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  }
+}

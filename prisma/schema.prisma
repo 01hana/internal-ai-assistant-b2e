@@ -3,6 +3,11 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+generator gatewayClient {
+  provider = "prisma-client"
+  output   = "../apps/gateway/src/generated/prisma"
+}
+
 datasource db {
   provider = "postgresql"
 }
