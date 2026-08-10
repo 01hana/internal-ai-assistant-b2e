@@ -26,15 +26,19 @@ export class GatewayIdentityAuditWriter {
       eventType: safeCode(input.eventType),
       outcome: safeCode(input.outcome),
       reasonCode: safeCode(input.reasonCode),
-      customerId: optional(input.customerId),
-      integrationId: optional(input.integrationId),
-      actorId: optional(input.actorId),
-      hostApp: optional(input.hostApp),
-      jti: optional(input.jti),
-      kid: optional(input.kid)
+      ...defined('customerId', optional(input.customerId)),
+      ...defined('integrationId', optional(input.integrationId)),
+      ...defined('actorId', optional(input.actorId)),
+      ...defined('hostApp', optional(input.hostApp)),
+      ...defined('jti', optional(input.jti)),
+      ...defined('kid', optional(input.kid))
     };
     return this.client.gatewayIdentityAuditEvent.create({ data });
   }
+}
+
+function defined(key: string, value: string | undefined): Record<string, string> {
+  return value === undefined ? {} : { [key]: value };
 }
 
 function required(value: string): string {

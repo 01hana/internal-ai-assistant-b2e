@@ -39,6 +39,20 @@ describe('Feature 003 architecture guardrails', () => {
     expect(source).not.toMatch(/findCustomerByOrganizationId|findCustomerBySubject|findCustomerByHostApp|findDefaultCustomer|findFirstEnabledCustomer/);
     expect(source).not.toMatch(/AuditWriterService|src\/audit|SigningKeyProvider|GatewaySigningKey|InternalIdentityTokenIssuer|GatewayBackendClient|BackendRouteDefinition|jwks/i);
   });
+
+  it('limits signing-key rotation transaction and emergency-compensation primitives to lifecycle and rotation production source', () => {
+    const allowed = new Set([
+      join(gatewaySourceRoot, 'signing', 'key-lifecycle.service.ts'),
+      join(gatewaySourceRoot, 'signing', 'key-rotation.service.ts')
+    ]);
+    const primitiveCall = /\.\s*(?:transitionInTransaction|restorePriorActiveInTransaction|compensateFailedActivation)\s*\(/;
+    const offenders = readSourceFiles(gatewaySourceRoot)
+      .filter(({ path, content }) => !allowed.has(path) && primitiveCall.test(content))
+      .map(({ path }) => path);
+
+    expect(offenders).toEqual([]);
+    expect(readSourceFiles(gatewaySourceRoot).filter(({ content }) => /\b(?:transitionWithoutAudit|forceTransition|unsafeUpdate)\b/.test(content))).toEqual([]);
+  });
 });
 
 function readSourceFiles(root: string): Array<{ path: string; content: string }> {
