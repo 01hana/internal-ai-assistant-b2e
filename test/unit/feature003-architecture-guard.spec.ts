@@ -27,6 +27,18 @@ describe('Feature 003 architecture guardrails', () => {
 
     expect(gatewaySource.filter(({ content }) => forbidden.test(content))).toEqual([]);
   });
+
+  it('keeps Phase 4 canonical resolution isolated from Customer inference, business audit, signing, JWKS, and Backend transport', () => {
+    const resolverPath = join(gatewaySourceRoot, 'integration-registry', 'canonical-identity-resolver.service.ts');
+    const composerPath = join(gatewaySourceRoot, 'identity', 'canonical-gateway-identity.ts');
+    expect(existsSync(resolverPath)).toBe(true);
+    expect(existsSync(composerPath)).toBe(true);
+
+    const source = `${readFileSync(resolverPath, 'utf8')}\n${readFileSync(composerPath, 'utf8')}`;
+    expect(source).toMatch(/findByIntegrationId/);
+    expect(source).not.toMatch(/findCustomerByOrganizationId|findCustomerBySubject|findCustomerByHostApp|findDefaultCustomer|findFirstEnabledCustomer/);
+    expect(source).not.toMatch(/AuditWriterService|src\/audit|SigningKeyProvider|GatewaySigningKey|InternalIdentityTokenIssuer|GatewayBackendClient|BackendRouteDefinition|jwks/i);
+  });
 });
 
 function readSourceFiles(root: string): Array<{ path: string; content: string }> {

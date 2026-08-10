@@ -51,7 +51,8 @@ describe('Upstream RS256 Remote-JWKS verifier (T028)', () => {
     const verifier = await verifierFor(fixture);
     await expect(verifier.verify({ authorization: `Bearer ${await fixture.issue({ nbf: Math.floor(Date.now() / 1000) - 1 })}` })).resolves.toBeDefined();
     const valid = await fixture.issue();
-    const badSignature = `${valid.slice(0, -1)}${valid.endsWith('a') ? 'b' : 'a'}`;
+    const [header, payload, signature] = valid.split('.');
+    const badSignature = `${header}.${payload}.${signature.startsWith('a') ? 'b' : 'a'}${signature.slice(1)}`;
     await expect(verifier.verify({ authorization: `Bearer ${badSignature}` })).rejects.toMatchObject({ status: 401, code: 'UPSTREAM_IDENTITY_INVALID', reasonCode: 'invalid_signature' });
     for (const token of ['not.a.jwt', await fixture.issue({}, { kid: '' }), ...['HS256', 'RS384', 'RS512', 'PS256', 'ES256', 'none'].map((alg) => unsignedToken(alg))]) {
       await expect(verifier.verify({ authorization: `Bearer ${token}` })).rejects.toMatchObject({ status: 401, code: 'UPSTREAM_IDENTITY_INVALID' });

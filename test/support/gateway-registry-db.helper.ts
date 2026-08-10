@@ -1,11 +1,13 @@
 import { execFile as execFileCallback } from 'node:child_process';
 import { config as loadEnv } from 'dotenv';
+import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafeTestDatabaseReset } from '../../scripts/test-db-safety';
 
-loadEnv({ path: '.env.test', override: true, quiet: true });
+loadEnv({ path: resolve(__dirname, '../../.env.test'), override: true, quiet: true });
 
 const execFile = promisify(execFileCallback);
+const repositoryRoot = resolve(__dirname, '../..');
 let sequence = 0;
 
 export type GatewayRegistryDatabase = Readonly<{
@@ -65,7 +67,7 @@ function postgresCliUrl(value: URL): URL {
 
 async function run(command: string, argumentsList: readonly string[], environment?: NodeJS.ProcessEnv): Promise<string> {
   try {
-    const result = await execFile(command, [...argumentsList], { cwd: process.cwd(), env: environment, maxBuffer: 2 * 1024 * 1024 });
+    const result = await execFile(command, [...argumentsList], { cwd: repositoryRoot, env: environment, maxBuffer: 2 * 1024 * 1024 });
     return result.stdout;
   } catch (error) {
     const code = typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : 'unknown';
