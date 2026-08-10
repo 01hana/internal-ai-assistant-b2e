@@ -17,6 +17,13 @@ export interface GatewayEnvironment {
   port: number;
 }
 
+export type GatewayUpstreamVerificationConfig = Readonly<{
+  issuer: string;
+  audience: string;
+  jwksUri: string;
+  clockToleranceSeconds: number;
+}>;
+
 export class GatewayConfigurationError extends Error {
   constructor() {
     super('Invalid Gateway configuration.');
@@ -30,14 +37,23 @@ export class GatewayConfigService {
   get config(): Readonly<GatewayEnvironment> {
     return this.environment;
   }
+
+  get upstreamVerification(): GatewayUpstreamVerificationConfig {
+    return Object.freeze({
+      issuer: this.environment.upstreamIssuer,
+      audience: this.environment.upstreamAudience,
+      jwksUri: this.environment.upstreamJwksUri,
+      clockToleranceSeconds: this.environment.upstreamClockToleranceSeconds
+    });
+  }
 }
 
 export function validateGatewayEnvironment(input: Record<string, unknown>): GatewayEnvironment {
   return {
-    internalIssuer: requireUrl(input.GATEWAY_INTERNAL_JWT_ISSUER),
+    internalIssuer: requireIssuer(input.GATEWAY_INTERNAL_JWT_ISSUER),
     internalAudience: requireNonBlankString(input.GATEWAY_INTERNAL_JWT_AUDIENCE),
     publicJwksUrl: requireUrl(input.GATEWAY_PUBLIC_JWKS_URL),
-    upstreamIssuer: requireUrl(input.GATEWAY_UPSTREAM_JWT_ISSUER),
+    upstreamIssuer: requireIssuer(input.GATEWAY_UPSTREAM_JWT_ISSUER),
     upstreamAudience: requireNonBlankString(input.GATEWAY_UPSTREAM_JWT_AUDIENCE),
     upstreamJwksUri: requireUrl(input.GATEWAY_UPSTREAM_JWKS_URI),
     upstreamClockToleranceSeconds: requireIntegerInRange(
@@ -67,6 +83,21 @@ function requireUrl(value: unknown): string {
       throw new GatewayConfigurationError();
     }
     return parsed.toString();
+  } catch (error) {
+    if (error instanceof GatewayConfigurationError) throw error;
+    throw new GatewayConfigurationError();
+  }
+}
+
+/** JWT issuers are exact string identifiers, not normalized network endpoints. */
+function requireIssuer(value: unknown): string {
+  const issuer = requireNonBlankString(value);
+  try {
+    const parsed = new URL(issuer);
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+      throw new GatewayConfigurationError();
+    }
+    return issuer;
   } catch (error) {
     if (error instanceof GatewayConfigurationError) throw error;
     throw new GatewayConfigurationError();

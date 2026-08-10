@@ -30,16 +30,39 @@ describe('Gateway configuration contract', () => {
   it('returns typed, safe configuration without performing identity work', () => {
     const target = require(configTarget) as {
       validateGatewayEnvironment?: (input: Record<string, unknown>) => Record<string, unknown>;
+      GatewayConfigService?: new (environment: Record<string, unknown>) => { upstreamVerification: Record<string, unknown> };
     };
     const config = target.validateGatewayEnvironment?.(validEnvironment());
 
     expect(config).toMatchObject({
-      internalIssuer: 'http://gateway.test/',
+      internalIssuer: 'http://gateway.test',
       internalAudience: 'internal-audience',
       internalTokenTtlSeconds: 300,
       port: 4000
     });
     expect(config).not.toHaveProperty('privateKey');
+    expect(new (target.GatewayConfigService as new (environment: Record<string, unknown>) => { upstreamVerification: Record<string, unknown> })(config ?? {}).upstreamVerification).toEqual({
+      issuer: 'http://upstream.test', audience: 'upstream-audience', jwksUri: 'http://upstream.test/.well-known/jwks.json', clockToleranceSeconds: 0
+    });
+  });
+
+  it('preserves trimmed issuer strings exactly while normalizing network endpoints', () => {
+    const target = require(configTarget) as {
+      validateGatewayEnvironment?: (input: Record<string, unknown>) => Record<string, unknown>;
+    };
+
+    const config = target.validateGatewayEnvironment?.({
+      ...validEnvironment(),
+      GATEWAY_INTERNAL_JWT_ISSUER: ' https://gateway.example ',
+      GATEWAY_UPSTREAM_JWT_ISSUER: ' https://issuer.example/ ',
+      GATEWAY_UPSTREAM_JWKS_URI: 'https://upstream.example'
+    });
+
+    expect(config).toMatchObject({
+      internalIssuer: 'https://gateway.example',
+      upstreamIssuer: 'https://issuer.example/',
+      upstreamJwksUri: 'https://upstream.example/'
+    });
   });
 
   it.each(['key-reference', 'file:/tmp/gateway-private.pem', './.keys/gateway-private.pem', 'provider://gateway/signing-key'])(
