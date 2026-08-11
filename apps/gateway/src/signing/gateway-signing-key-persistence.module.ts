@@ -4,6 +4,7 @@ import { createGatewayPrismaClient } from '../integration-registry/gateway-prism
 import { IdentityServiceUnavailableError } from './identity-service-unavailable.error';
 import { GatewaySigningKeyRepository } from './gateway-signing-key.repository';
 
+export const GATEWAY_PRISMA_CLIENT = Symbol('GATEWAY_PRISMA_CLIENT');
 export const GATEWAY_SIGNING_KEY_READ_CLIENT = Symbol('GATEWAY_SIGNING_KEY_READ_CLIENT');
 
 class GatewaySigningKeyPrismaLifecycle implements OnApplicationShutdown {
@@ -34,11 +35,15 @@ class GatewaySigningKeyPrismaLifecycle implements OnApplicationShutdown {
       useFactory: (lifecycle: GatewaySigningKeyPrismaLifecycle) => lifecycle.getClient()
     },
     {
+      provide: GATEWAY_PRISMA_CLIENT,
+      useExisting: GATEWAY_SIGNING_KEY_READ_CLIENT
+    },
+    {
       provide: GatewaySigningKeyRepository,
       inject: [GATEWAY_SIGNING_KEY_READ_CLIENT],
       useFactory: (client: PrismaClient) => new GatewaySigningKeyRepository(client)
     }
   ],
-  exports: [GatewaySigningKeyRepository, GATEWAY_SIGNING_KEY_READ_CLIENT]
+  exports: [GatewaySigningKeyRepository, GATEWAY_PRISMA_CLIENT, GATEWAY_SIGNING_KEY_READ_CLIENT]
 })
 export class GatewaySigningKeyPersistenceModule {}
