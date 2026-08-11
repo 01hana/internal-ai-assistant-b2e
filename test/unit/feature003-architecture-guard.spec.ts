@@ -13,6 +13,13 @@ describe('Feature 003 architecture guardrails', () => {
     expect(gatewaySource.filter(({ content }) => /(?:from|require\()\s*['"](?:\.\.\/)+src\//.test(content))).toEqual([]);
   });
 
+  it('keeps test support, including the Phase 8 trust-chain harness, out of production runtime imports', () => {
+    const productionSource = [...readSourceFiles(join(repositoryRoot, 'src')), ...readSourceFiles(gatewaySourceRoot)];
+    const testSupportImport = /(?:from\s+|require\(\s*|import\(\s*)['"][^'"]*test\/support\//;
+
+    expect(productionSource.filter(({ content }) => testSupportImport.test(content))).toEqual([]);
+  });
+
   it('keeps the root Prisma schema as the only Customer-root and migration lineage', () => {
     const schema = readFileSync(join(repositoryRoot, 'prisma/schema.prisma'), 'utf8');
 

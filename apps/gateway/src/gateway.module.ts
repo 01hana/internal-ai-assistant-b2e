@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { GatewayIdentityAuditWriter } from './audit/gateway-identity-audit.writer';
 import { GatewayBackendClient } from './backend-client/gateway-backend-client.service';
+import { GatewayAssistantController } from './operations/gateway-assistant.controller';
 import { GatewayTrustChainHandler } from './backend-client/gateway-trust-chain.handler';
 import { GatewayConfigModule } from './config/gateway-config.module';
 import { GatewayConfigService } from './config/gateway-config.service';
@@ -18,6 +19,7 @@ import { RemoteJwksUpstreamTokenVerifier } from './upstream-auth/upstream-token-
 
 @Module({
   imports: [GatewayConfigModule, GatewayHealthModule, JwksModule, GatewaySigningKeyPersistenceModule],
+  controllers: [GatewayAssistantController],
   providers: [
     {
       provide: RemoteJwksUpstreamTokenVerifier,
