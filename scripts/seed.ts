@@ -19,11 +19,15 @@ export async function seedCoreData(prisma: PrismaClient) {
 
 async function seedGatewayIntegrationBindings(prisma: PrismaClient) {
   for (const binding of GATEWAY_INTEGRATION_BINDING_SEEDS) {
-    await prisma.integrationBinding.upsert({
-      where: { integrationId: binding.integrationId },
-      update: { customerId: binding.customerId, allowedHostApp: binding.allowedHostApp, enabled: binding.enabled },
-      create: binding
-    });
+    const existing = await prisma.integrationBinding.findUnique({ where: { integrationId: binding.integrationId } });
+    if (existing && (existing.customerId !== binding.customerId || existing.allowedHostApp !== binding.allowedHostApp)) {
+      throw new Error('Seed IntegrationBinding mapping conflicts with an existing explicit binding.');
+    }
+    if (existing) {
+      await prisma.integrationBinding.update({ where: { integrationId: binding.integrationId }, data: { enabled: binding.enabled } });
+    } else {
+      await prisma.integrationBinding.create({ data: binding });
+    }
   }
 }
 

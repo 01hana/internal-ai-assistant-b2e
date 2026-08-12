@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { Response } from 'express';
 import { GatewayTrustChainHandler } from '../backend-client/gateway-trust-chain.handler';
 import { IdentityResolutionError } from '../integration-registry/canonical-identity-resolver.service';
+import { IdentityServiceUnavailableError } from '../signing/identity-service-unavailable.error';
 import { UpstreamAuthenticationError } from '../upstream-auth/upstream-auth.error';
 
 /**
@@ -127,6 +128,9 @@ function projectTrustChainError(error: unknown): unknown {
   }
   if (error instanceof IdentityResolutionError) {
     return new HttpException({ statusCode: 403, code: 'IDENTITY_ISSUANCE_DENIED', message: 'Identity issuance cannot be completed.' }, 403);
+  }
+  if (error instanceof IdentityServiceUnavailableError) {
+    return new HttpException({ statusCode: 503, code: 'IDENTITY_SERVICE_UNAVAILABLE', message: 'Identity service is unavailable.' }, 503);
   }
   if (typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 'BACKEND_UNAVAILABLE') {
     return new HttpException({ statusCode: 503, code: 'BACKEND_UNAVAILABLE', message: 'Backend is unavailable.' }, 503);
