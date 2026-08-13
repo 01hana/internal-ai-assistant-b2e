@@ -38,6 +38,8 @@ describe('Gateway configuration contract', () => {
       internalIssuer: 'http://gateway.test',
       internalAudience: 'internal-audience',
       internalTokenTtlSeconds: 300,
+      allowedOrigins: ['http://localhost:3001'],
+      localSigningBootstrapEnabled: false,
       port: 4000
     });
     expect(config).not.toHaveProperty('privateKey');
@@ -102,6 +104,26 @@ describe('Gateway configuration contract', () => {
       }
     }
   });
+
+  it('accepts only explicit, normalized browser origins and a disabled local bootstrap flag by default', () => {
+    const target = require(configTarget) as { validateGatewayEnvironment?: (input: Record<string, unknown>) => Record<string, unknown> };
+    expect(target.validateGatewayEnvironment?.({
+      ...validEnvironment(),
+      GATEWAY_ALLOWED_ORIGINS: ' http://localhost:3001 ,https://host.example,http://localhost:3001 ',
+      GATEWAY_LOCAL_SIGNING_BOOTSTRAP_ENABLED: 'true'
+    })).toMatchObject({
+      allowedOrigins: ['http://localhost:3001', 'https://host.example'],
+      localSigningBootstrapEnabled: true
+    });
+  });
+
+  it.each(['', '   ', '*', 'http://localhost:3001,*', 'not-an-origin', 'ftp://host.example', 'http://user:password@host.example'])(
+    'fails closed for invalid CORS origins %j',
+    (origins) => {
+      const target = require(configTarget) as { validateGatewayEnvironment?: (input: Record<string, unknown>) => unknown };
+      expect(() => target.validateGatewayEnvironment?.({ ...validEnvironment(), GATEWAY_ALLOWED_ORIGINS: origins })).toThrow('Invalid Gateway configuration.');
+    }
+  );
 });
 
 function validEnvironment(): Record<string, unknown> {
@@ -116,6 +138,7 @@ function validEnvironment(): Record<string, unknown> {
     GATEWAY_INTERNAL_JWT_TTL_SECONDS: '300',
     GATEWAY_BACKEND_BASE_URL: 'http://backend.test',
     GATEWAY_SIGNING_KEY_REFERENCE: 'key-reference',
+    GATEWAY_ALLOWED_ORIGINS: 'http://localhost:3001',
     GATEWAY_PORT: '4000'
   };
 }

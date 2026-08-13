@@ -191,7 +191,7 @@ function environmentFor(input: Readonly<{
     GATEWAY_UPSTREAM_JWT_ISSUER: input.upstreamIssuer, GATEWAY_UPSTREAM_JWT_AUDIENCE: input.upstreamAudience,
     GATEWAY_UPSTREAM_JWKS_URI: input.upstreamJwksUri, GATEWAY_UPSTREAM_JWT_CLOCK_TOLERANCE_SECONDS: '0',
     GATEWAY_INTERNAL_JWT_TTL_SECONDS: '300', GATEWAY_BACKEND_BASE_URL: input.backendOrigin,
-    GATEWAY_SIGNING_KEY_REFERENCE: input.signingKeyReference, GATEWAY_PORT: '4000'
+    GATEWAY_SIGNING_KEY_REFERENCE: input.signingKeyReference, GATEWAY_ALLOWED_ORIGINS: 'http://localhost:3001', GATEWAY_PORT: '4000'
   };
 }
 

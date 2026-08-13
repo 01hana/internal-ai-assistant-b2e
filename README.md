@@ -31,6 +31,30 @@ or `.env.test`, and never place real OpenAI API keys, connector secrets,
 database credentials, production `DATABASE_URL` values, or customer data in
 README files, fixtures, audit metadata, error responses, or logs.
 
+### Gateway Local Integration
+
+The browser-facing Gateway is a separate built process; it is not Backend
+`localhost:3000`. Export the required `GATEWAY_*` values, including explicit
+`GATEWAY_ALLOWED_ORIGINS` (for example `http://localhost:3001`) and
+`GATEWAY_LOCAL_SIGNING_BOOTSTRAP_ENABLED=true`. Its internal issuer/audience
+and public JWKS URL must align with Backend `INTERNAL_IDENTITY_*` values, and
+`GATEWAY_BACKEND_BASE_URL` must target the Backend listener.
+
+Keep a local RSA private key only under ignored `.gateway-local-keys/` and set
+`GATEWAY_SIGNING_KEY_REFERENCE` to its `file:` URL or relative path. Build and
+start Gateway, then run its local-only lifecycle bootstrap in a second shell:
+
+```sh
+npm run build:gateway
+npm --prefix apps/gateway run start
+npm --prefix apps/gateway run signing:bootstrap:local
+```
+
+The bootstrap command is enabled only for `NODE_ENV=development` or `test` and
+uses the existing `new → published → JWKS proof → active` lifecycle. It is
+local development evidence only: it does not close Feature 003 GAP-001–GAP-004
+or change the production rollout decision.
+
 ### Start the Local Baseline
 
 Install dependencies and start the local app and database:

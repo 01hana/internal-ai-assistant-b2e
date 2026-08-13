@@ -78,6 +78,7 @@ function gatewayEnvironmentFor(fixture: UpstreamJwksFixture): Record<string, unk
     GATEWAY_INTERNAL_JWT_TTL_SECONDS: '300',
     GATEWAY_BACKEND_BASE_URL: 'http://backend.test',
     GATEWAY_SIGNING_KEY_REFERENCE: 'key-reference',
+    GATEWAY_ALLOWED_ORIGINS: 'http://localhost:3001',
     GATEWAY_PORT: '4000'
   };
 }

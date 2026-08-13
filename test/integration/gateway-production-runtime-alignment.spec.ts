@@ -151,7 +151,7 @@ function runtimeEnvironment(input: Readonly<{ databaseUrl: string; gatewayOrigin
     ENABLE_RUNTIME_DEBUG: 'false', ENABLE_REDIS: 'false', ENABLE_SWAGGER_DOCS: 'false', SWAGGER_PATH: 'docs', PORT: String(input.backendPort),
     GATEWAY_INTERNAL_JWT_ISSUER: input.gatewayOrigin, GATEWAY_INTERNAL_JWT_AUDIENCE: 't082-backend', GATEWAY_PUBLIC_JWKS_URL: `${input.gatewayOrigin}/.well-known/jwks.json`,
     GATEWAY_UPSTREAM_JWT_ISSUER: input.authority.issuer, GATEWAY_UPSTREAM_JWT_AUDIENCE: input.authority.audience, GATEWAY_UPSTREAM_JWKS_URI: input.authority.jwksUri, GATEWAY_UPSTREAM_JWT_CLOCK_TOLERANCE_SECONDS: '0',
-    GATEWAY_INTERNAL_JWT_TTL_SECONDS: '300', GATEWAY_BACKEND_BASE_URL: input.backendOrigin, GATEWAY_SIGNING_KEY_REFERENCE: input.signingReference, GATEWAY_PORT: String(input.gatewayPort)
+    GATEWAY_INTERNAL_JWT_TTL_SECONDS: '300', GATEWAY_BACKEND_BASE_URL: input.backendOrigin, GATEWAY_SIGNING_KEY_REFERENCE: input.signingReference, GATEWAY_ALLOWED_ORIGINS: 'http://localhost:3001', GATEWAY_PORT: String(input.gatewayPort)
   };
 }
 

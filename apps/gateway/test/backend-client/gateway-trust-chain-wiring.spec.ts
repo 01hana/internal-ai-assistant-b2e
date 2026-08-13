@@ -52,6 +52,7 @@ async function withGatewayEnvironment<T>(callback: () => Promise<T>): Promise<T>
     GATEWAY_INTERNAL_JWT_TTL_SECONDS: '300',
     GATEWAY_BACKEND_BASE_URL: 'http://backend.test',
     GATEWAY_SIGNING_KEY_REFERENCE: 'file:/tmp/gateway-signing-key.pem',
+    GATEWAY_ALLOWED_ORIGINS: 'http://localhost:3001',
     GATEWAY_PORT: '4000'
   };
   const previous = Object.fromEntries(Object.keys(environment).map((key) => [key, process.env[key]]));

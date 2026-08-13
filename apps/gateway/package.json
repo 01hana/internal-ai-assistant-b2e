@@ -6,7 +6,8 @@
     "test": "node ../../node_modules/jest/bin/jest.js --config jest.config.cjs",
     "test:unit": "node ../../node_modules/jest/bin/jest.js --config jest.config.cjs --runInBand",
     "build": "node ../../node_modules/@nestjs/cli/bin/nest.js build --config nest-cli.json",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "signing:bootstrap:local": "node dist/commands/local-signing-bootstrap.js"
   },
   "dependencies": {
     "@internal-ai-assistant/internal-identity-contract": "file:../../packages/internal-identity-contract",

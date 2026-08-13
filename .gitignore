@@ -9,3 +9,4 @@ coverage/
 .DS_Store
 .cache/
 tmp/
+.gateway-local-keys/

@@ -14,6 +14,8 @@ export interface GatewayEnvironment {
   internalTokenTtlSeconds: number;
   backendBaseUrl: string;
   signingKeyReference: string;
+  allowedOrigins: readonly string[];
+  localSigningBootstrapEnabled: boolean;
   port: number;
 }
 
@@ -64,8 +66,38 @@ export function validateGatewayEnvironment(input: Record<string, unknown>): Gate
     internalTokenTtlSeconds: requireExactInteger(input.GATEWAY_INTERNAL_JWT_TTL_SECONDS, INTERNAL_GATEWAY_TOKEN_TTL_SECONDS),
     backendBaseUrl: requireUrl(input.GATEWAY_BACKEND_BASE_URL),
     signingKeyReference: requireSigningKeyReference(input.GATEWAY_SIGNING_KEY_REFERENCE),
+    allowedOrigins: requireAllowedOrigins(input.GATEWAY_ALLOWED_ORIGINS),
+    localSigningBootstrapEnabled: optionalBoolean(input.GATEWAY_LOCAL_SIGNING_BOOTSTRAP_ENABLED, false),
     port: requireIntegerInRange(input.GATEWAY_PORT ?? 4000, 1, 65_535)
   };
+}
+
+function requireAllowedOrigins(value: unknown): readonly string[] {
+  if (typeof value !== 'string') throw new GatewayConfigurationError();
+  const origins = value.split(',').map((origin) => origin.trim());
+  if (origins.length === 0 || origins.some((origin) => origin.length === 0 || origin === '*')) {
+    throw new GatewayConfigurationError();
+  }
+  const normalized = origins.map((origin) => {
+    try {
+      const parsed = new URL(origin);
+      if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash) {
+        throw new GatewayConfigurationError();
+      }
+      return parsed.origin;
+    } catch (error) {
+      if (error instanceof GatewayConfigurationError) throw error;
+      throw new GatewayConfigurationError();
+    }
+  });
+  return Object.freeze([...new Set(normalized)]);
+}
+
+function optionalBoolean(value: unknown, defaultValue: boolean): boolean {
+  if (value === undefined) return defaultValue;
+  if (value === true || value === 'true') return true;
+  if (value === false || value === 'false') return false;
+  throw new GatewayConfigurationError();
 }
 
 function requireNonBlankString(value: unknown): string {
