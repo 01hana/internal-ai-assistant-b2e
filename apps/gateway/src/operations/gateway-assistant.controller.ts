@@ -1,13 +1,14 @@
-import { BadRequestException, Body, Controller, Headers, HttpCode, HttpException, Param, Post, Res } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, HttpCode, HttpException, Param, Post, Query, Res } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Response } from 'express';
 import { GatewayTrustChainHandler } from '../backend-client/gateway-trust-chain.handler';
+import type { GatewayHistoryQuery } from '../backend-client/gateway-backend-client.service';
 import { IdentityResolutionError } from '../integration-registry/canonical-identity-resolver.service';
 import { IdentityServiceUnavailableError } from '../signing/identity-service-unavailable.error';
 import { UpstreamAuthenticationError } from '../upstream-auth/upstream-auth.error';
 
 /**
- * The Gateway's single fixed Host operation. It has no routing or identity
+ * Fixed Host operations only. This controller has no routing or identity
  * authority: external Authorization is verifier-only and all Customer
  * authority remains inside the existing trust-chain handler.
  */
@@ -33,6 +34,48 @@ export class GatewayAssistantController {
     } catch (error) {
       throw projectTrustChainError(error);
     }
+  }
+
+  @Get('sessions/:id')
+  async getSession(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Param('id') sessionId: string,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    rejectGetBodyOrQuery(body, query);
+    const result = await this.trustChainHandler.getSession({
+      authorization,
+      sessionId,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
+  }
+
+  @Get('sessions/:id/messages')
+  async getSessionMessages(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Param('id') sessionId: string,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    const historyQuery = readHistoryQuery(query);
+    rejectGetBody(body);
+    const result = await this.trustChainHandler.getSessionMessages({
+      authorization,
+      sessionId,
+      query: historyQuery,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
   }
 
   @Post('sessions/:id/messages')
@@ -89,6 +132,32 @@ function readCreateSessionPageContext(body: unknown): Readonly<Record<string, un
   if (body.pageContext === undefined) return undefined;
   if (!isRecord(body.pageContext)) throw new BadRequestException('Invalid Gateway operation input.');
   return body.pageContext;
+}
+
+function rejectGetBodyOrQuery(body: unknown, query: unknown): void {
+  rejectGetBody(body);
+  if (!isRecord(query) || Object.keys(query).length !== 0) throw new BadRequestException('Invalid Gateway operation input.');
+}
+
+function rejectGetBody(body: unknown): void {
+  if (body !== undefined && (!isRecord(body) || Object.keys(body).length !== 0)) throw new BadRequestException('Invalid Gateway operation input.');
+}
+
+function readHistoryQuery(query: unknown): GatewayHistoryQuery {
+  if (!isRecord(query) || Object.keys(query).some((key) => key !== 'limit' && key !== 'cursor' && key !== 'order')) throw new BadRequestException('Invalid Gateway operation input.');
+  const limit = query.limit;
+  const cursor = query.cursor;
+  const order = query.order;
+  if ((limit !== undefined && (typeof limit !== 'string' || !/^[0-9]+$/.test(limit)))
+    || (cursor !== undefined && typeof cursor !== 'string')
+    || (order !== undefined && order !== 'asc')) throw new BadRequestException('Invalid Gateway operation input.');
+  return Object.freeze({ ...(limit === undefined ? {} : { limit }), ...(cursor === undefined ? {} : { cursor }), ...(order === undefined ? {} : { order }) });
+}
+
+function writeReadResponse(response: Response, result: Readonly<{ statusCode: number; body: unknown }>): void {
+  response.status(result.statusCode);
+  response.setHeader('content-type', 'application/json; charset=utf-8');
+  response.send(result.body);
 }
 
 function readSendMessageInput(body: unknown): Readonly<{ message: string; pageContext?: Readonly<Record<string, unknown>> }> {

@@ -1,4 +1,4 @@
-import type { GatewayBackendClient } from './gateway-backend-client.service';
+import type { GatewayBackendClient, GatewayBackendReadResponse, GatewayHistoryQuery } from './gateway-backend-client.service';
 import type { CanonicalIdentityResolver } from '../integration-registry/canonical-identity-resolver.service';
 import type { UpstreamTokenVerifier } from '../upstream-auth/upstream-token-verifier.service';
 
@@ -18,10 +18,25 @@ type SendStreamMessageInput = Readonly<{
   traceparent?: string;
 }>;
 
+type GetSessionInput = Readonly<{
+  authorization?: string;
+  sessionId: string;
+  requestId: string;
+  traceparent?: string;
+}>;
+
+type GetSessionMessagesInput = Readonly<{
+  authorization?: string;
+  sessionId: string;
+  query: GatewayHistoryQuery;
+  requestId: string;
+  traceparent?: string;
+}>;
+
 type GatewayTrustChainHandlerDependencies = Readonly<{
   upstreamTokenVerifier: UpstreamTokenVerifier;
   canonicalIdentityResolver: Pick<CanonicalIdentityResolver, 'resolve'>;
-  gatewayBackendClient: Pick<GatewayBackendClient, 'createSession' | 'sendStreamMessage'>;
+  gatewayBackendClient: Pick<GatewayBackendClient, 'createSession' | 'getSession' | 'getSessionMessages' | 'sendStreamMessage'>;
 }>;
 
 /** Coordinates the fixed identity-to-transport chain without owning either authority. */
@@ -58,12 +73,36 @@ export class GatewayTrustChainHandler {
       traceparent: input.traceparent
     });
   }
+
+  async getSession(input: GetSessionInput): Promise<GatewayBackendReadResponse> {
+    if (!isGetSessionInput(input)) throw new GatewayTrustChainInputError();
+    const canonicalIdentity = await resolveCanonicalIdentity(this.dependencies, input.authorization, input.requestId);
+    return this.dependencies.gatewayBackendClient.getSession(canonicalIdentity, input.sessionId, {
+      requestId: input.requestId,
+      traceparent: input.traceparent
+    });
+  }
+
+  async getSessionMessages(input: GetSessionMessagesInput): Promise<GatewayBackendReadResponse> {
+    if (!isGetSessionMessagesInput(input)) throw new GatewayTrustChainInputError();
+    const canonicalIdentity = await resolveCanonicalIdentity(this.dependencies, input.authorization, input.requestId);
+    return this.dependencies.gatewayBackendClient.getSessionMessages(canonicalIdentity, input.sessionId, input.query, {
+      requestId: input.requestId,
+      traceparent: input.traceparent
+    });
+  }
+
 }
 
 class GatewayTrustChainInputError extends Error {
   constructor() {
     super('Gateway trust-chain input is invalid.');
   }
+}
+
+async function resolveCanonicalIdentity(dependencies: GatewayTrustChainHandlerDependencies, authorization: string | undefined, requestId: string) {
+  const verifiedIdentity = await dependencies.upstreamTokenVerifier.verify({ authorization });
+  return dependencies.canonicalIdentityResolver.resolve({ identity: verifiedIdentity, requestId });
 }
 
 function isCreateSessionInput(value: unknown): value is CreateSessionInput {
@@ -86,6 +125,23 @@ function isSendStreamMessageInput(value: unknown): value is SendStreamMessageInp
     && isOptionalRecord(value.pageContext)
     && isNonBlankString(value.requestId)
     && isOptionalString(value.traceparent);
+}
+
+function isGetSessionInput(value: unknown): value is GetSessionInput {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'authorization' && key !== 'sessionId' && key !== 'requestId' && key !== 'traceparent')) return false;
+  return isOptionalString(value.authorization) && isNonBlankString(value.sessionId) && isNonBlankString(value.requestId) && isOptionalString(value.traceparent);
+}
+
+function isGetSessionMessagesInput(value: unknown): value is GetSessionMessagesInput {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'authorization' && key !== 'sessionId' && key !== 'query' && key !== 'requestId' && key !== 'traceparent')) return false;
+  return isOptionalString(value.authorization) && isNonBlankString(value.sessionId) && isHistoryQuery(value.query) && isNonBlankString(value.requestId) && isOptionalString(value.traceparent);
+}
+
+function isHistoryQuery(value: unknown): value is GatewayHistoryQuery {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'limit' && key !== 'cursor' && key !== 'order')) return false;
+  return (value.limit === undefined || (typeof value.limit === 'string' && /^[0-9]+$/.test(value.limit)))
+    && isOptionalString(value.cursor)
+    && (value.order === undefined || value.order === 'asc');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

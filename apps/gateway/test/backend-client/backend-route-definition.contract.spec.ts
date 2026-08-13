@@ -7,10 +7,12 @@ const assistantControllerPath = join(repositoryRoot, 'src/assistant/assistant.co
 const gatewayBackendClientRoot = join(repositoryRoot, 'apps/gateway/src/backend-client');
 const definitionPath = join(gatewayBackendClientRoot, 'backend-route-definition.ts');
 
-type BackendRouteDefinitions = Readonly<Record<'create-session' | 'send-stream-message', Readonly<{ method: string; path: string }>>>;
+type BackendRouteDefinitions = Readonly<Record<'create-session' | 'get-session' | 'get-session-messages' | 'send-stream-message', Readonly<{ method: string; path: string }>>>;
 
 const expectedMappings: BackendRouteDefinitions = Object.freeze({
   'create-session': Object.freeze({ method: 'POST', path: '/api/v1/assistant/sessions' }),
+  'get-session': Object.freeze({ method: 'GET', path: '/api/v1/assistant/sessions/:id' }),
+  'get-session-messages': Object.freeze({ method: 'GET', path: '/api/v1/assistant/sessions/:id/messages' }),
   'send-stream-message': Object.freeze({ method: 'POST', path: '/api/v1/assistant/sessions/:id/messages' })
 });
 
@@ -27,7 +29,8 @@ describe('Backend route definition compatibility contract (T063)', () => {
     ['global prefix', mainSource.replace('app.setGlobalPrefix("api/v1")', 'app.setGlobalPrefix("api/v2")'), controllerSource],
     ['controller prefix', mainSource, controllerSource.replace('@Controller("assistant")', '@Controller("assistants")')],
     ['path', mainSource, controllerSource.replace('@Post("sessions")', '@Post("session")')],
-    [':id parameter name', mainSource, controllerSource.replace('sessions/:id/messages', 'sessions/:sessionId/messages')]
+    [':id parameter name', mainSource, controllerSource.replace('sessions/:id/messages', 'sessions/:sessionId/messages')],
+    ['history query DTO', mainSource, controllerSource.replace('@Query() query: AssistantMessageHistoryQueryDto', '@Query() query: Record<string, string>')]
   ])('rejects Backend %s drift', (_kind, mutatedMain, mutatedController) => {
     expect(() => assertMatchesLockedRoutes(mutatedMain, mutatedController)).toThrow('Backend route surface no longer matches the locked Gateway contract.');
   });
@@ -53,12 +56,18 @@ function extractBackendSurface(mainSource: string, controllerSource: string): Ba
   const globalPrefix = requiredMatch(mainSource, /app\.setGlobalPrefix\(\s*["']([^"']+)["']\s*\)/, 'global prefix');
   const controllerPrefix = requiredMatch(controllerSource, /@Controller\(\s*["']([^"']+)["']\s*\)/, 'controller prefix');
   const createSession = extractPostRoute(controllerSource, 'createSession');
+  const getSession = extractPostRoute(controllerSource, 'getSession');
+  const getMessages = extractPostRoute(controllerSource, 'listMessages');
   const sendMessage = extractPostRoute(controllerSource, 'postMessage');
   const parameter = requiredMatch(sendMessage.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'message parameter');
+  const getSessionParameter = requiredMatch(getSession.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'session parameter');
+  const getMessagesParameter = requiredMatch(getMessages.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'history parameter');
 
-  if (parameter !== 'id') throw new Error('Backend route surface no longer matches the locked Gateway contract.');
+  if (parameter !== 'id' || getSessionParameter !== 'id' || getMessagesParameter !== 'id' || !/@Query\(\)\s+query:\s+AssistantMessageHistoryQueryDto/.test(getMessages.parameters)) throw new Error('Backend route surface no longer matches the locked Gateway contract.');
   return Object.freeze({
     'create-session': Object.freeze({ method: createSession.method, path: route(globalPrefix, controllerPrefix, createSession.path) }),
+    'get-session': Object.freeze({ method: getSession.method, path: route(globalPrefix, controllerPrefix, getSession.path) }),
+    'get-session-messages': Object.freeze({ method: getMessages.method, path: route(globalPrefix, controllerPrefix, getMessages.path) }),
     'send-stream-message': Object.freeze({ method: sendMessage.method, path: route(globalPrefix, controllerPrefix, sendMessage.path) })
   });
 }

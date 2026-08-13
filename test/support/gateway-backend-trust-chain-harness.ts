@@ -6,9 +6,6 @@ import type { Prisma } from '../../apps/gateway/src/generated/prisma/client';
 import { GatewayModule } from '../../apps/gateway/src/gateway.module';
 import { createGatewayPrismaClient } from '../../apps/gateway/src/integration-registry/gateway-prisma-client.factory';
 import { createEphemeralRsaFixture, type EphemeralRsaFixture } from '../../apps/gateway/test/signing/ephemeral-rsa.fixture';
-import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.filter';
-import { RequestIdInterceptor } from '../../src/common/request-id/request-id.interceptor';
-import { ResponseEnvelopeInterceptor } from '../../src/common/response/response-envelope.interceptor';
 import { createGatewayRegistryDatabase, type GatewayRegistryDatabase } from './gateway-registry-db.helper';
 import { createGatewayUpstreamTestAuthority, type GatewayUpstreamTestAuthority } from './gateway-upstream-test-authority';
 
@@ -129,7 +126,12 @@ async function startGateway(port: number, logger: LoggerService): Promise<INestA
 
 async function startBackend(port: number, logger: LoggerService): Promise<INestApplication> {
   jest.resetModules();
-  const { AppModule } = await import('../../src/app.module');
+  const [{ AppModule }, { GlobalExceptionFilter }, { RequestIdInterceptor }, { ResponseEnvelopeInterceptor }] = await Promise.all([
+    import('../../src/app.module'),
+    import('../../src/common/errors/global-exception.filter'),
+    import('../../src/common/request-id/request-id.interceptor'),
+    import('../../src/common/response/response-envelope.interceptor')
+  ]);
   const app = await NestFactory.create(AppModule, { logger });
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ forbidNonWhitelisted: true, transform: true, whitelist: true }));

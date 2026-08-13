@@ -40,6 +40,8 @@ type ClientSendStreamMessageInput = Readonly<{
 
 type GatewayTrustChainHandler = Readonly<{
   createSession(input: CreateSessionHandlerInput): Promise<unknown>;
+  getSession(input: Readonly<{ authorization?: string; sessionId: string; requestId: string; traceparent?: string }>): Promise<unknown>;
+  getSessionMessages(input: Readonly<{ authorization?: string; sessionId: string; query: Readonly<{ limit?: string; cursor?: string; order?: 'asc' }>; requestId: string; traceparent?: string }>): Promise<unknown>;
   sendStreamMessage(input: SendStreamMessageHandlerInput): Promise<ReadableStream<Uint8Array>>;
 }>;
 
@@ -48,6 +50,8 @@ type GatewayTrustChainHandlerConstructor = new (dependencies: Readonly<{
   canonicalIdentityResolver: Readonly<{ resolve(input: Readonly<{ identity: VerifiedUpstreamIdentity; requestId: string }>): Promise<CanonicalGatewayIdentity> }>;
   gatewayBackendClient: Readonly<{
     createSession(identity: CanonicalGatewayIdentity, input: ClientCreateSessionInput): Promise<unknown>;
+    getSession(identity: CanonicalGatewayIdentity, sessionId: string, input: Readonly<{ requestId: string; traceparent?: string }>): Promise<unknown>;
+    getSessionMessages(identity: CanonicalGatewayIdentity, sessionId: string, query: Readonly<{ limit?: string; cursor?: string; order?: 'asc' }>, input: Readonly<{ requestId: string; traceparent?: string }>): Promise<unknown>;
     sendStreamMessage(identity: CanonicalGatewayIdentity, sessionId: string, input: ClientSendStreamMessageInput): Promise<ReadableStream<Uint8Array>>;
   }>;
 }>) => GatewayTrustChainHandler;
@@ -95,7 +99,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
 
   it('requires exactly the two server-owned future handler methods', () => {
     const Handler = loadGatewayTrustChainHandler();
-    expect(Object.getOwnPropertyNames(Handler.prototype).sort()).toEqual(['constructor', 'createSession', 'sendStreamMessage']);
+    expect(Object.getOwnPropertyNames(Handler.prototype).sort()).toEqual(['constructor', 'createSession', 'getSession', 'getSessionMessages', 'sendStreamMessage']);
   });
 
   it('chains verified upstream identity to canonical identity and then create-session transport by reference', async () => {
@@ -262,6 +266,8 @@ function createHarness(options: Readonly<{ verifyFailure?: Error; resolveFailure
         createCalls.push({ identity, input });
         return { requestId: input.requestId };
       },
+      async getSession() { return { statusCode: 200, body: {} }; },
+      async getSessionMessages() { return { statusCode: 200, body: {} }; },
       async sendStreamMessage(identity, sessionId, input) {
         sendCalls.push({ identity, sessionId, input });
         return new ReadableStream<Uint8Array>();

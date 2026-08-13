@@ -5,7 +5,7 @@ export function gatewayCorsOptions(origins: readonly string[]): CorsOptions {
   return {
     origin: [...origins],
     credentials: false,
-    methods: ['POST', 'OPTIONS'],
+    methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type', 'Accept', 'x-request-id', 'traceparent']
   };
 }

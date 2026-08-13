@@ -14,8 +14,25 @@ type SendStreamMessageInput = Readonly<{
   traceparent?: string;
 }>;
 
+export type GatewayHistoryQuery = Readonly<{
+  limit?: string;
+  cursor?: string;
+  order?: 'asc';
+}>;
+
+export type GatewayBackendReadResponse = Readonly<{
+  statusCode: number;
+  body: unknown;
+}>;
+
+type ReadInput = Readonly<{
+  requestId: string;
+  traceparent?: string;
+}>;
+
 type BackendFetchResponse = Readonly<{
   ok: boolean;
+  status: number;
   json?: () => Promise<unknown>;
   body?: unknown;
 }>;
@@ -25,9 +42,9 @@ type GatewayBackendClientDependencies = Readonly<{
   timeoutMilliseconds: number;
   internalTokenIssuer: Readonly<{ issue(identity: CanonicalGatewayIdentity): Promise<string> }>;
   fetch(url: string, init: Readonly<{
-    method: 'POST';
+    method: 'GET' | 'POST';
     headers: Record<string, string>;
-    body: string;
+    body?: string;
     signal: AbortSignal;
   }>): Promise<BackendFetchResponse>;
   createTimeoutSignal(milliseconds: number): AbortSignal;
@@ -66,6 +83,16 @@ export class GatewayBackendClient {
     }
   }
 
+  async getSession(identity: CanonicalGatewayIdentity, sessionId: string, input: ReadInput): Promise<GatewayBackendReadResponse> {
+    if (!isNonBlankString(sessionId) || !isReadInput(input)) throw new BackendUnavailableError();
+    return this.fetchRead(identity, 'get-session', sessionId, undefined, input);
+  }
+
+  async getSessionMessages(identity: CanonicalGatewayIdentity, sessionId: string, query: GatewayHistoryQuery, input: ReadInput): Promise<GatewayBackendReadResponse> {
+    if (!isNonBlankString(sessionId) || !isHistoryQuery(query) || !isReadInput(input)) throw new BackendUnavailableError();
+    return this.fetchRead(identity, 'get-session-messages', sessionId, query, input);
+  }
+
   async sendStreamMessage(
     identity: CanonicalGatewayIdentity,
     sessionId: string,
@@ -99,6 +126,42 @@ export class GatewayBackendClient {
       throw new BackendUnavailableError();
     }
   }
+
+  private async fetchRead(
+    identity: CanonicalGatewayIdentity,
+    operation: 'get-session' | 'get-session-messages',
+    sessionId: string,
+    query: GatewayHistoryQuery | undefined,
+    input: ReadInput
+  ): Promise<GatewayBackendReadResponse> {
+    const token = await this.dependencies.internalTokenIssuer.issue(identity);
+    const route = BACKEND_ROUTE_DEFINITIONS[operation];
+    const url = new URL(route.path.replace(':id', encodeURIComponent(sessionId)), this.dependencies.backendBaseUrl);
+    if (query) {
+      if (query.limit !== undefined) url.searchParams.set('limit', query.limit);
+      if (query.cursor !== undefined) url.searchParams.set('cursor', query.cursor);
+      if (query.order !== undefined) url.searchParams.set('order', query.order);
+    }
+    try {
+      const response = await this.dependencies.fetch(url.toString(), {
+        method: route.method,
+        headers: {
+          authorization: `Bearer ${token}`,
+          accept: 'application/json',
+          ...correlationHeader('x-request-id', input.requestId),
+          ...correlationHeader('traceparent', input.traceparent)
+        },
+        signal: this.dependencies.createTimeoutSignal(this.dependencies.timeoutMilliseconds)
+      });
+      if (typeof response.json !== 'function') throw new BackendUnavailableError();
+      const body = await response.json();
+      if (response.ok && response.status >= 200 && response.status < 300) return Object.freeze({ statusCode: response.status, body });
+      if (isSafeBackendReadFailure(response.status, body)) return Object.freeze({ statusCode: response.status, body });
+      throw new BackendUnavailableError();
+    } catch {
+      throw new BackendUnavailableError();
+    }
+  }
 }
 
 class BackendUnavailableError extends Error {
@@ -125,6 +188,23 @@ function isSendStreamMessageInput(value: unknown): value is SendStreamMessageInp
   if (!isNonBlankString(value.message)) return false;
   if (value.pageContext !== undefined && !isRecord(value.pageContext)) return false;
   return isOptionalString(value.requestId) && isOptionalString(value.traceparent);
+}
+
+function isReadInput(value: unknown): value is ReadInput {
+  return isRecord(value) && Object.keys(value).every((key) => key === 'requestId' || key === 'traceparent')
+    && isNonBlankString(value.requestId) && isOptionalString(value.traceparent);
+}
+
+function isHistoryQuery(value: unknown): value is GatewayHistoryQuery {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'limit' && key !== 'cursor' && key !== 'order')) return false;
+  return (value.limit === undefined || (typeof value.limit === 'string' && /^[0-9]+$/.test(value.limit)))
+    && isOptionalString(value.cursor)
+    && (value.order === undefined || value.order === 'asc');
+}
+
+function isSafeBackendReadFailure(statusCode: number, body: unknown): boolean {
+  if (![401, 403, 404].includes(statusCode) || !isRecord(body) || !isNonBlankString(body.requestId) || !isRecord(body.error)) return false;
+  return isNonBlankString(body.error.code) && typeof body.error.message === 'string';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
