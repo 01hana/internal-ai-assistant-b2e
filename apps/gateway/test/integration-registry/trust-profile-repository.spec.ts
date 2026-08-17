@@ -1,4 +1,5 @@
 import { createGatewayPrismaClient } from '../../src/integration-registry/gateway-prisma-client.factory';
+import { CandidateTrustProfileResolver } from '../../src/integration-registry/candidate-trust-profile.resolver';
 import { TrustProfileRepository } from '../../src/integration-registry/trust-profile.repository';
 import { createGatewayRegistryDatabase } from '../../../../test/support/gateway-registry-db.helper';
 
@@ -52,6 +53,19 @@ describeRegistry('Trust-profile repository persistence (T005)', () => {
 
     await expect(repository.findEnabledExactPolicy({ ...profile('profile-c', 'integration-a', 2) })).resolves.toEqual([expect.objectContaining({ id: 'profile-a' })]);
     await expect(repository.findEnabledExactPolicy({ ...profile('profile-c', 'integration-b', 2) })).resolves.toEqual([expect.objectContaining({ id: 'profile-b' })]);
+  });
+
+  it('returns only enabled active profiles through the real candidate-resolver and repository composition', async () => {
+    await repository.create(profile('profile-a', 'integration-a', 1), prisma);
+    await repository.create(profile('profile-b', 'integration-b', 1), prisma);
+    await repository.create({ ...profile('profile-disabled', 'integration-a', 2), enabled: false, lifecycle: 'disabled' }, prisma);
+    const resolver = new CandidateTrustProfileResolver(repository);
+
+    await expect(resolver.resolve({ issuerHint: 'https://issuer.example.test' })).resolves.toEqual([
+      expect.objectContaining({ id: 'profile-a', enabled: true, lifecycle: 'active' }),
+      expect.objectContaining({ id: 'profile-b', enabled: true, lifecycle: 'active' })
+    ]);
+    await expect(resolver.resolve({ issuerHint: 'https://issuer.example.test' })).resolves.not.toContainEqual(expect.objectContaining({ id: 'profile-disabled' }));
   });
 });
 

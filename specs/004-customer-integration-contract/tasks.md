@@ -41,13 +41,13 @@
 
 ### Tasks
 
-- [ ] T011 Add failing parser tests in `apps/gateway/test/upstream-auth/routing-metadata-parser.spec.ts` for valid compact JWT, malformed segment count, oversized token/metadata, invalid base64url/JSON, controls, missing `iss`, and missing `kid`.
-- [ ] T012 Add failing parser non-authority tests in `apps/gateway/test/upstream-auth/routing-metadata-parser.spec.ts` proving `integration_id`, `sub`, `org_id`, `host_app`, roles, scopes, and Customer-like claims cannot be output or consumed.
-- [ ] T013 Implement `apps/gateway/src/upstream-auth/routing-metadata.parser.ts` to return only bounded unverified `iss` and protected-header `kid`; verify T011–T012 and safe non-logging.
-- [ ] T014 Add failing candidate-resolution tests in `apps/gateway/test/integration-registry/candidate-trust-profile-resolver.spec.ts` for zero/one/multiple candidates, shared issuer/audience/JWKS, missing/unknown kid, and disabled-profile exclusion.
-- [ ] T015 Implement `apps/gateway/src/integration-registry/candidate-trust-profile.resolver.ts` using only `iss` and optional `kid` with `TrustProfileRepository`; verify T014.
-- [ ] T016 Add static/regression tests in `apps/gateway/test/upstream-auth/routing-metadata-parser.spec.ts` proving candidate lookup never receives browser headers/body/query/page context or unverified integration/Customer fields.
-- [ ] T017 Run focused parser/repository tests and record `ROUTING_HINT_BOUNDARY_READY` only when candidate resolution uses no identity authority.
+- [X] T011 Add failing parser tests in `apps/gateway/test/upstream-auth/routing-metadata-parser.spec.ts` for valid compact JWT, malformed segment count, oversized token/metadata, invalid base64url/JSON, controls, missing `iss`, and missing `kid`.
+- [X] T012 Add failing parser non-authority tests in `apps/gateway/test/upstream-auth/routing-metadata-parser.spec.ts` proving `integration_id`, `sub`, `org_id`, `host_app`, roles, scopes, and Customer-like claims cannot be output or consumed.
+- [X] T013 Implement `apps/gateway/src/upstream-auth/routing-metadata.parser.ts` to return only bounded unverified `iss` and protected-header `kid`; verify T011–T012 and safe non-logging.
+- [X] T014 Add failing candidate-resolution tests in `apps/gateway/test/integration-registry/candidate-trust-profile-resolver.spec.ts` for zero/one/multiple candidates, shared issuer/audience/JWKS, missing/unknown kid, and disabled-profile exclusion.
+- [X] T015 Implement `apps/gateway/src/integration-registry/candidate-trust-profile.resolver.ts` using only `iss` and optional `kid` with `TrustProfileRepository`; verify T014.
+- [X] T016 Add static/regression tests in `apps/gateway/test/upstream-auth/routing-metadata-parser.spec.ts` proving candidate lookup never receives browser headers/body/query/page context or unverified integration/Customer fields.
+- [X] T017 Run focused parser/repository tests and record `ROUTING_HINT_BOUNDARY_READY` only when candidate resolution uses no identity authority.
 
 ### Acceptance Gate
 
