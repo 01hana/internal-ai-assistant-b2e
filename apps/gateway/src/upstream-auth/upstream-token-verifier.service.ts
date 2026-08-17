@@ -6,7 +6,7 @@ import { registeredTimeFailure } from './upstream-time-policy';
 import { parseBearerToken } from './bearer-token.parser';
 
 export interface UpstreamTokenVerifier {
-  verify(input: Readonly<{ authorization?: string }>): Promise<VerifiedUpstreamIdentity>;
+  verify(input: Readonly<{ authorization?: string; requestId?: string }>): Promise<VerifiedUpstreamIdentity>;
 }
 
 /** Pure verification boundary: it has no registry, Customer, Prisma, or signing dependency. */

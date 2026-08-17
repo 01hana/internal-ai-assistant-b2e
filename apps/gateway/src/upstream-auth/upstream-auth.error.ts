@@ -25,3 +25,16 @@ export class UpstreamAuthenticationError extends Error {
     return this.#reasonCode;
   }
 }
+
+/**
+ * Internal boundary for registered-profile, JWKS, and verifier infrastructure.
+ * It intentionally retains no low-level cause or diagnostic values.
+ */
+export class UpstreamIdentityServiceUnavailableError extends Error {
+  readonly category = 'infrastructure';
+
+  constructor() {
+    super('Upstream identity service is unavailable.');
+    this.name = 'UpstreamIdentityServiceUnavailableError';
+  }
+}

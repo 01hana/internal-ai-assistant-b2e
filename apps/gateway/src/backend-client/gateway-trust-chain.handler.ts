@@ -46,7 +46,7 @@ export class GatewayTrustChainHandler {
   async createSession(input: CreateSessionInput): Promise<unknown> {
     if (!isCreateSessionInput(input)) throw new GatewayTrustChainInputError();
 
-    const verifiedIdentity = await this.dependencies.upstreamTokenVerifier.verify({ authorization: input.authorization });
+    const verifiedIdentity = await this.dependencies.upstreamTokenVerifier.verify({ authorization: input.authorization, requestId: input.requestId });
     const canonicalIdentity = await this.dependencies.canonicalIdentityResolver.resolve({
       identity: verifiedIdentity,
       requestId: input.requestId
@@ -61,7 +61,7 @@ export class GatewayTrustChainHandler {
   async sendStreamMessage(input: SendStreamMessageInput): Promise<ReadableStream<Uint8Array>> {
     if (!isSendStreamMessageInput(input)) throw new GatewayTrustChainInputError();
 
-    const verifiedIdentity = await this.dependencies.upstreamTokenVerifier.verify({ authorization: input.authorization });
+    const verifiedIdentity = await this.dependencies.upstreamTokenVerifier.verify({ authorization: input.authorization, requestId: input.requestId });
     const canonicalIdentity = await this.dependencies.canonicalIdentityResolver.resolve({
       identity: verifiedIdentity,
       requestId: input.requestId
@@ -101,7 +101,7 @@ class GatewayTrustChainInputError extends Error {
 }
 
 async function resolveCanonicalIdentity(dependencies: GatewayTrustChainHandlerDependencies, authorization: string | undefined, requestId: string) {
-  const verifiedIdentity = await dependencies.upstreamTokenVerifier.verify({ authorization });
+  const verifiedIdentity = await dependencies.upstreamTokenVerifier.verify({ authorization, requestId });
   return dependencies.canonicalIdentityResolver.resolve({ identity: verifiedIdentity, requestId });
 }
 

@@ -139,16 +139,22 @@
 
 ### Tasks
 
-- [ ] T047 Add failing verifier-audit tests in `apps/gateway/test/upstream-auth/upstream-auth-telemetry.spec.ts` for no candidate, disabled profile, signature/key/issuer/audience/claim failures, profile mismatch, ambiguity, and success.
-- [ ] T048 Implement verifier event taxonomy in `apps/gateway/src/upstream-auth/upstream-auth-telemetry.ts` and safe profile decision fields in `apps/gateway/src/audit/gateway-identity-audit.writer.ts`; verify T047.
-- [ ] T049 Add resolver-audit regression tests in `apps/gateway/test/integration-registry/canonical-identity-resolver.spec.ts` for binding missing/disabled, HostApp mismatch, and Customer binding authority.
-- [ ] T050 Add failing error mapping tests in `apps/gateway/test/operations/gateway-assistant.controller.spec.ts` for generic verifier 401, existing resolver 403, profile/JWKS generic 5xx, and no profile/Customer enumeration.
-- [ ] T051 Implement safe error/telemetry wiring in `apps/gateway/src/upstream-auth/upstream-auth.error.ts`, `apps/gateway/src/operations/gateway-assistant.controller.ts`, and audit surfaces; verify T050 without changing public enumeration protections.
-- [ ] T052 Extend `apps/gateway/test/upstream-auth/upstream-auth-redaction.spec.ts` and `apps/gateway/test/identity/internal-token-redaction.spec.ts` to reject Authorization/Bearer/full JWT/claims/private key/raw JWKS/URL-secret leakage; record `FEATURE004_OBSERVABILITY_READY` when all pass.
+- [X] T047 Add failing verifier-audit tests in `apps/gateway/test/upstream-auth/upstream-auth-telemetry.spec.ts` for no candidate, disabled profile, signature/key/issuer/audience/claim failures, profile mismatch, ambiguity, and success.
+- [X] T048 Implement verifier event taxonomy in `apps/gateway/src/upstream-auth/upstream-auth-telemetry.ts` and safe profile decision fields in `apps/gateway/src/audit/gateway-identity-audit.writer.ts`; verify T047.
+- [X] T049 Add resolver-audit regression tests in `apps/gateway/test/integration-registry/canonical-identity-resolver.spec.ts` for binding missing/disabled, HostApp mismatch, and Customer binding authority.
+- [X] T050 Add failing error mapping tests in `apps/gateway/test/operations/gateway-assistant.controller.spec.ts` for generic verifier 401, existing resolver 403, profile/JWKS generic 5xx, and no profile/Customer enumeration.
+- [X] T051 Implement safe error/telemetry wiring in `apps/gateway/src/upstream-auth/upstream-auth.error.ts`, `apps/gateway/src/operations/gateway-assistant.controller.ts`, and audit surfaces; verify T050 without changing public enumeration protections.
+- [X] T052 Extend `apps/gateway/test/upstream-auth/upstream-auth-redaction.spec.ts` and `apps/gateway/test/identity/internal-token-redaction.spec.ts` to reject Authorization/Bearer/full JWT/claims/private key/raw JWKS/URL-secret leakage; record `FEATURE004_OBSERVABILITY_READY` when all pass.
 
 ### Acceptance Gate
 
 `FEATURE004_OBSERVABILITY_READY`: verifier and resolver events are separated; public 401/403/5xx behavior is safe and sensitive output is redacted.
+
+`UPSTREAM_AUTH_TELEMETRY_READY=YES` — T047–T048 verifier telemetry boundary evidence completed.
+
+`FEATURE004_OBSERVABILITY_READY=YES` — T050–T052 public error, redaction, and non-enumeration gate completed.
+
+`RESOLVER_AUDIT_BOUNDARY_LOCKED=YES` — T049 resolver-owned binding, Customer, and HostApp audit regressions completed.
 
 ## Batch 7 — Direct JWT and Token Exchange Fixtures
 

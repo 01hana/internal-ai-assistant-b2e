@@ -2529,6 +2529,7 @@ export const GatewayIdentityAuditEventScalarFieldEnum = {
   reasonCode: 'reasonCode',
   customerId: 'customerId',
   integrationId: 'integrationId',
+  profileId: 'profileId',
   actorId: 'actorId',
   hostApp: 'hostApp',
   jti: 'jti',

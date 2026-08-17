@@ -88,7 +88,7 @@ describe('Gateway Assistant read/restore contracts', () => {
   it('uses the same verify → resolve → fixed read-client chain and stops after auth or resolution failure', async () => {
     const harness = createHandlerHarness();
     await harness.handler.getSessionMessages({ authorization: 'Bearer upstream', sessionId: 'session-a', query: { limit: '1' }, requestId: 'handler-read' });
-    expect(harness.verifyCalls).toEqual([{ authorization: 'Bearer upstream' }]);
+    expect(harness.verifyCalls).toEqual([{ authorization: 'Bearer upstream', requestId: 'handler-read' }]);
     expect(harness.resolveCalls).toEqual([{ identity: verifiedIdentity, requestId: 'handler-read' }]);
     expect(harness.historyCalls).toEqual([{ identity: canonicalIdentity, sessionId: 'session-a', query: { limit: '1' }, input: { requestId: 'handler-read', traceparent: undefined } }]);
 

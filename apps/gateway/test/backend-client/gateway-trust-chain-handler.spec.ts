@@ -112,7 +112,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     const harness = createHarness();
     await harness.handler.createSession(createSessionInput);
 
-    expect(harness.verifyInputs).toEqual([{ authorization: createSessionInput.authorization }]);
+    expect(harness.verifyInputs).toEqual([{ authorization: createSessionInput.authorization, requestId: createSessionInput.requestId }]);
     expect(harness.resolveInputs).toEqual([{ identity: verifiedIdentity, requestId: createSessionInput.requestId }]);
     expect(harness.resolveInputs[0].identity).toBe(verifiedIdentity);
     expect(harness.createCalls).toEqual([{
@@ -127,7 +127,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     const harness = createHarness();
     await harness.handler.sendStreamMessage(sendStreamMessageInput);
 
-    expect(harness.verifyInputs).toEqual([{ authorization: sendStreamMessageInput.authorization }]);
+    expect(harness.verifyInputs).toEqual([{ authorization: sendStreamMessageInput.authorization, requestId: sendStreamMessageInput.requestId }]);
     expect(harness.resolveInputs).toEqual([{ identity: verifiedIdentity, requestId: sendStreamMessageInput.requestId }]);
     expect(harness.resolveInputs[0].identity).toBe(verifiedIdentity);
     expect(harness.sendCalls).toEqual([{
@@ -148,7 +148,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     const harness = createHarness({ verifyFailure: new UpstreamAuthenticationError('invalid_signature') });
 
     await expect(harness.handler.createSession(createSessionInput)).rejects.toMatchObject({ status: 401, code: 'UPSTREAM_IDENTITY_INVALID' });
-    expect(harness.verifyInputs).toEqual([{ authorization: createSessionInput.authorization }]);
+    expect(harness.verifyInputs).toEqual([{ authorization: createSessionInput.authorization, requestId: createSessionInput.requestId }]);
     expect(harness.resolveInputs).toEqual([]);
     expect(harness.createCalls).toEqual([]);
     expect(harness.sendCalls).toEqual([]);
@@ -158,7 +158,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     const harness = createHarness({ verifyFailure: new UpstreamAuthenticationError('invalid_signature') });
 
     await expect(harness.handler.sendStreamMessage(sendStreamMessageInput)).rejects.toMatchObject({ status: 401, code: 'UPSTREAM_IDENTITY_INVALID' });
-    expect(harness.verifyInputs).toEqual([{ authorization: sendStreamMessageInput.authorization }]);
+    expect(harness.verifyInputs).toEqual([{ authorization: sendStreamMessageInput.authorization, requestId: sendStreamMessageInput.requestId }]);
     expect(harness.resolveInputs).toEqual([]);
     expect(harness.createCalls).toEqual([]);
     expect(harness.sendCalls).toEqual([]);
@@ -169,7 +169,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     const harness = createHarness({ verifyFailure: failure });
 
     await expect(harness.handler.createSession(createSessionInput)).rejects.toBe(failure);
-    expect(harness.verifyInputs).toEqual([{ authorization: createSessionInput.authorization }]);
+    expect(harness.verifyInputs).toEqual([{ authorization: createSessionInput.authorization, requestId: createSessionInput.requestId }]);
     expect(harness.resolveInputs).toEqual([]);
     expect(harness.createCalls).toEqual([]);
     expect(harness.getSessionCalls).toEqual([]);
@@ -181,7 +181,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     const harness = createHarness({ resolveFailure: new IdentityResolutionError('unknown_binding') });
 
     await expect(harness.handler.createSession(createSessionInput)).rejects.toMatchObject({ status: 403, code: 'IDENTITY_ISSUANCE_DENIED' });
-    expect(harness.verifyInputs).toEqual([{ authorization: createSessionInput.authorization }]);
+    expect(harness.verifyInputs).toEqual([{ authorization: createSessionInput.authorization, requestId: createSessionInput.requestId }]);
     expect(harness.resolveInputs).toEqual([{ identity: verifiedIdentity, requestId: createSessionInput.requestId }]);
     expect(harness.createCalls).toEqual([]);
     expect(harness.sendCalls).toEqual([]);
@@ -192,7 +192,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     const harness = createHarness({ resolveFailure: new IdentityResolutionError('unknown_binding') });
 
     await expect(harness.handler.sendStreamMessage(sendStreamMessageInput)).rejects.toMatchObject({ status: 403, code: 'IDENTITY_ISSUANCE_DENIED' });
-    expect(harness.verifyInputs).toEqual([{ authorization: sendStreamMessageInput.authorization }]);
+    expect(harness.verifyInputs).toEqual([{ authorization: sendStreamMessageInput.authorization, requestId: sendStreamMessageInput.requestId }]);
     expect(harness.resolveInputs).toEqual([{ identity: verifiedIdentity, requestId: sendStreamMessageInput.requestId }]);
     expect(harness.resolveInputs[0].identity).toBe(verifiedIdentity);
     expect(harness.createCalls).toEqual([]);
@@ -217,7 +217,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     await harness.handler.getSession(readInput);
     await harness.handler.getSessionMessages(historyInput);
 
-    expect(harness.verifyInputs).toEqual([{ authorization: readInput.authorization }, { authorization: historyInput.authorization }]);
+    expect(harness.verifyInputs).toEqual([{ authorization: readInput.authorization, requestId: readInput.requestId }, { authorization: historyInput.authorization, requestId: historyInput.requestId }]);
     expect(harness.resolveInputs).toEqual([{ identity: verifiedIdentity, requestId: readInput.requestId }, { identity: verifiedIdentity, requestId: historyInput.requestId }]);
     expect(harness.getSessionCalls).toEqual([{ identity: canonicalIdentity, sessionId: readInput.sessionId, input: { requestId: readInput.requestId, traceparent: readInput.traceparent } }]);
     expect(harness.historyCalls).toEqual([{ identity: canonicalIdentity, sessionId: historyInput.sessionId, query: historyInput.query, input: { requestId: historyInput.requestId, traceparent: undefined } }]);

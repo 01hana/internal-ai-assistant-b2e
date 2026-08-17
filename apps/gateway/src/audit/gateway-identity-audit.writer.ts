@@ -11,6 +11,7 @@ export type AppendGatewayIdentityAuditEventInput = Readonly<{
   reasonCode: string;
   customerId?: string;
   integrationId?: string;
+  profileId?: string;
   actorId?: string;
   hostApp?: string;
   jti?: string;
@@ -28,6 +29,7 @@ export class GatewayIdentityAuditWriter {
       reasonCode: safeCode(input.reasonCode),
       ...defined('customerId', optional(input.customerId)),
       ...defined('integrationId', optional(input.integrationId)),
+      ...defined('profileId', optional(input.profileId)),
       ...defined('actorId', optional(input.actorId)),
       ...defined('hostApp', optional(input.hostApp)),
       ...defined('jti', optional(input.jti)),

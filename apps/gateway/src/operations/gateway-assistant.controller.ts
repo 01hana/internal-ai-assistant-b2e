@@ -5,7 +5,7 @@ import { GatewayTrustChainHandler } from '../backend-client/gateway-trust-chain.
 import type { GatewayHistoryQuery } from '../backend-client/gateway-backend-client.service';
 import { IdentityResolutionError } from '../integration-registry/canonical-identity-resolver.service';
 import { IdentityServiceUnavailableError } from '../signing/identity-service-unavailable.error';
-import { UpstreamAuthenticationError } from '../upstream-auth/upstream-auth.error';
+import { UpstreamAuthenticationError, UpstreamIdentityServiceUnavailableError } from '../upstream-auth/upstream-auth.error';
 
 /**
  * Fixed Host operations only. This controller has no routing or identity
@@ -197,6 +197,9 @@ function projectTrustChainError(error: unknown): unknown {
   }
   if (error instanceof IdentityResolutionError) {
     return new HttpException({ statusCode: 403, code: 'IDENTITY_ISSUANCE_DENIED', message: 'Identity issuance cannot be completed.' }, 403);
+  }
+  if (error instanceof UpstreamIdentityServiceUnavailableError) {
+    return new HttpException({ statusCode: 503, code: 'IDENTITY_SERVICE_UNAVAILABLE', message: 'Identity service is unavailable.' }, 503);
   }
   if (error instanceof IdentityServiceUnavailableError) {
     return new HttpException({ statusCode: 503, code: 'IDENTITY_SERVICE_UNAVAILABLE', message: 'Identity service is unavailable.' }, 503);

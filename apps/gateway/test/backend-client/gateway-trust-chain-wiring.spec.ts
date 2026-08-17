@@ -17,6 +17,7 @@ import { HardenedJwksTransport } from '../../src/upstream-auth/jwks-transport.ad
 import { MultiProfileUpstreamTokenVerifier } from '../../src/upstream-auth/multi-profile-upstream-token-verifier';
 import { ProfileScopedVerifier } from '../../src/upstream-auth/profile-scoped-verifier';
 import { RoutingMetadataParser } from '../../src/upstream-auth/routing-metadata.parser';
+import { UpstreamAuthTelemetry } from '../../src/upstream-auth/upstream-auth-telemetry';
 import { TrustProfileRuntimeReadiness } from '../../src/integration-registry/trust-profile-runtime-readiness.service';
 
 const gatewayModulePath = resolve(__dirname, '../../src/gateway.module.ts');
@@ -45,6 +46,7 @@ describe('Gateway trust-chain production wiring contract (T068)', () => {
         expect(app.get(CandidateTrustProfileResolver)).toBeInstanceOf(CandidateTrustProfileResolver);
         expect(app.get(HardenedJwksTransport)).toBeInstanceOf(HardenedJwksTransport);
         expect(app.get(ProfileScopedVerifier)).toBeInstanceOf(ProfileScopedVerifier);
+        expect(app.get(UpstreamAuthTelemetry)).toBeInstanceOf(UpstreamAuthTelemetry);
         expect(app.get(TrustProfileRuntimeReadiness)).toBeInstanceOf(TrustProfileRuntimeReadiness);
         expect(() => app.get(RemoteJwksUpstreamTokenVerifier)).toThrow();
         expect(app.get(CanonicalIdentityResolver)).toBeInstanceOf(CanonicalIdentityResolver);

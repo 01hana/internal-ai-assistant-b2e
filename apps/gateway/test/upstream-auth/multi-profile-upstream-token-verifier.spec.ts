@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ProfileScopedVerificationError } from '../../src/upstream-auth/profile-scoped-verifier';
 import { MalformedRoutingMetadataError } from '../../src/upstream-auth/routing-metadata.parser';
+import { UpstreamIdentityServiceUnavailableError } from '../../src/upstream-auth/upstream-auth.error';
 import type { VerifiedUpstreamIdentity } from '../../src/upstream-auth/verified-upstream-identity';
 
 const modulePath = '../../src/upstream-auth/multi-profile-upstream-token-verifier';
@@ -52,7 +53,7 @@ describe('Multi-profile upstream token verifier (T030/T031)', () => {
       'profile-a': identity,
       'profile-b': new ProfileScopedVerificationError('infrastructure')
     });
-    await expect(verifier.verify({ authorization: `Bearer ${compactToken}` })).rejects.toMatchObject({ category: 'infrastructure' });
+    await expect(verifier.verify({ authorization: `Bearer ${compactToken}` })).rejects.toBeInstanceOf(UpstreamIdentityServiceUnavailableError);
   });
 
   it('classifies malformed routing metadata as generic authentication failure', async () => {

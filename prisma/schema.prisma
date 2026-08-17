@@ -319,6 +319,7 @@ model GatewayIdentityAuditEvent {
   reasonCode    String
   customerId    String?
   integrationId String?
+  profileId     String?
   actorId       String?
   hostApp       String?
   jti           String?

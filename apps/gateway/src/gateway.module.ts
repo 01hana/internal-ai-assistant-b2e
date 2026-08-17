@@ -23,6 +23,7 @@ import { HardenedJwksTransport } from './upstream-auth/jwks-transport.adapter';
 import { MultiProfileUpstreamTokenVerifier } from './upstream-auth/multi-profile-upstream-token-verifier';
 import { ProfileScopedVerifier } from './upstream-auth/profile-scoped-verifier';
 import { RoutingMetadataParser } from './upstream-auth/routing-metadata.parser';
+import { UpstreamAuthTelemetry } from './upstream-auth/upstream-auth-telemetry';
 
 @Module({
   imports: [GatewayConfigModule, GatewayHealthModule, JwksModule, GatewaySigningKeyPersistenceModule],
@@ -56,20 +57,27 @@ import { RoutingMetadataParser } from './upstream-auth/routing-metadata.parser';
       useFactory: (transport: HardenedJwksTransport) => new ProfileScopedVerifier({ transport })
     },
     {
+      provide: UpstreamAuthTelemetry,
+      inject: [GatewayIdentityAuditWriter],
+      useFactory: (writer: GatewayIdentityAuditWriter) => new UpstreamAuthTelemetry(writer)
+    },
+    {
       provide: MultiProfileUpstreamTokenVerifier,
-      inject: [RoutingMetadataParser, CandidateTrustProfileResolver, ProfileScopedVerifier, GatewayConfigService, TrustProfileRuntimeReadiness],
+      inject: [RoutingMetadataParser, CandidateTrustProfileResolver, ProfileScopedVerifier, GatewayConfigService, TrustProfileRuntimeReadiness, UpstreamAuthTelemetry],
       useFactory: async (
         parser: RoutingMetadataParser,
         candidateResolver: CandidateTrustProfileResolver,
         profileVerifier: ProfileScopedVerifier,
         config: GatewayConfigService,
-        readiness: TrustProfileRuntimeReadiness
+        readiness: TrustProfileRuntimeReadiness,
+        telemetry: UpstreamAuthTelemetry
       ) => {
         await readiness.assertReady();
         return new MultiProfileUpstreamTokenVerifier({
           parser,
           candidateResolver,
           profileVerifier,
+          telemetry,
           clockToleranceSeconds: config.config.upstreamClockToleranceSeconds
         });
       }

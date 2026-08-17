@@ -4,6 +4,9 @@ import type { Response } from 'express';
 import { GatewayAssistantController } from '../../src/operations/gateway-assistant.controller';
 import type { GatewayTrustChainHandler } from '../../src/backend-client/gateway-trust-chain.handler';
 import { IdentityServiceUnavailableError } from '../../src/signing/identity-service-unavailable.error';
+import { IdentityResolutionError } from '../../src/integration-registry/canonical-identity-resolver.service';
+import { MultiProfileInfrastructureError } from '../../src/upstream-auth/multi-profile-upstream-token-verifier';
+import { UpstreamAuthenticationError } from '../../src/upstream-auth/upstream-auth.error';
 
 /**
  * These tests cover only the Host-controller stream lifecycle. They use a
@@ -84,6 +87,63 @@ describe('GatewayAssistantController signing-unavailable projection', () => {
   });
 });
 
+describe('GatewayAssistantController trust-chain public error taxonomy (T050/T051)', () => {
+  const upstreamEnvelope = { statusCode: 401, code: 'UPSTREAM_IDENTITY_INVALID', message: 'Upstream identity is invalid.' };
+  const resolverEnvelope = { statusCode: 403, code: 'IDENTITY_ISSUANCE_DENIED', message: 'Identity issuance cannot be completed.' };
+  const infrastructureEnvelope = { statusCode: 503, code: 'IDENTITY_SERVICE_UNAVAILABLE', message: 'Identity service is unavailable.' };
+
+  it.each([
+    'missing_or_malformed_token', 'invalid_signature', 'invalid_kid', 'issuer_mismatch', 'audience_mismatch', 'invalid_claim_shape'
+  ] as const)('maps verifier credential %s to the same generic 401 envelope', async (reason) => {
+    const controller = new GatewayAssistantController({ createSession: jest.fn(async () => { throw new UpstreamAuthenticationError(reason); }) } as unknown as GatewayTrustChainHandler);
+    await expectHttpError(controller.createSession('Bearer profile-a.secret-token', 'request-401', undefined, {}), upstreamEnvelope, ['profile-a', 'secret-token', reason]);
+  });
+
+  it.each(['unknown_binding', 'disabled_binding', 'host_app_mismatch', 'invalid_binding'] as const)('maps resolver denial %s to the same generic 403 envelope', async (reason) => {
+    const controller = new GatewayAssistantController({ createSession: jest.fn(async () => { throw new IdentityResolutionError(reason); }) } as unknown as GatewayTrustChainHandler);
+    await expectHttpError(controller.createSession('Bearer customer-a.token', 'request-403', undefined, {}), resolverEnvelope, ['customer-a', 'token', reason]);
+  });
+
+  it('maps registry, profile/JWKS, and transport infrastructure to one generic 503 envelope across fixed pre-stream operations', async () => {
+    const raw = 'profile-a issuer=https://issuer.secret.test/jwks?credential=secret database unavailable';
+    const create = new GatewayAssistantController({ createSession: jest.fn(async () => { throw new MultiProfileInfrastructureError(); }) } as unknown as GatewayTrustChainHandler);
+    await expectHttpError(create.createSession('Bearer upstream-token', 'request-503-create', undefined, {}), infrastructureEnvelope, [raw, 'profile-a', 'issuer']);
+
+    const read = new GatewayAssistantController({ getSession: jest.fn(async () => { throw new MultiProfileInfrastructureError(); }) } as unknown as GatewayTrustChainHandler);
+    await expectHttpError(read.getSession('Bearer upstream-token', 'request-503-read', undefined, 'session-a', {}, undefined, new TestResponse() as unknown as Response), infrastructureEnvelope, ['upstream-token', 'profile-a']);
+
+    const stream = new GatewayAssistantController({ sendStreamMessage: jest.fn(async () => { throw new MultiProfileInfrastructureError(); }) } as unknown as GatewayTrustChainHandler);
+    await expectHttpError(stream.sendStreamMessage('Bearer upstream-token', 'request-503-stream', undefined, 'session-a', { message: 'hello' }, new TestResponse() as unknown as Response), infrastructureEnvelope, ['upstream-token', 'profile-a']);
+  });
+
+  it('does not project arbitrary programming errors as identity infrastructure', async () => {
+    const error = new Error('programming failure profile-a');
+    const controller = new GatewayAssistantController({ createSession: jest.fn(async () => { throw error; }) } as unknown as GatewayTrustChainHandler);
+    await expect(controller.createSession('Bearer upstream-token', 'request-unclassified', undefined, {})).rejects.toBe(error);
+  });
+
+  it('does not publicly distinguish profile, issuer, JWKS, or binding variants within their categories', async () => {
+    const authResponses = await Promise.all(['profile-a-missing', 'profile-b-missing', 'unknown-issuer', 'known-issuer-bad-signature'].map(async (_variant) => {
+      const controller = new GatewayAssistantController({ createSession: jest.fn(async () => { throw new UpstreamAuthenticationError('invalid_signature'); }) } as unknown as GatewayTrustChainHandler);
+      return httpResponse(controller.createSession('Bearer sentinel', 'request-auth-enumeration', undefined, {}));
+    }));
+    expect(authResponses).toEqual([upstreamEnvelope, upstreamEnvelope, upstreamEnvelope, upstreamEnvelope]);
+
+    const resolverResponses = await Promise.all(['customer-a-missing-binding', 'customer-b-disabled-binding'].map(async (variant) => {
+      const reason = variant.includes('missing') ? 'unknown_binding' : 'disabled_binding';
+      const controller = new GatewayAssistantController({ createSession: jest.fn(async () => { throw new IdentityResolutionError(reason); }) } as unknown as GatewayTrustChainHandler);
+      return httpResponse(controller.createSession('Bearer sentinel', 'request-binding-enumeration', undefined, {}));
+    }));
+    expect(resolverResponses).toEqual([resolverEnvelope, resolverEnvelope]);
+
+    const infrastructureResponses = await Promise.all(['profile-a-jwks', 'profile-b-jwks'].map(async () => {
+      const controller = new GatewayAssistantController({ createSession: jest.fn(async () => { throw new MultiProfileInfrastructureError(); }) } as unknown as GatewayTrustChainHandler);
+      return httpResponse(controller.createSession('Bearer sentinel', 'request-jwks-enumeration', undefined, {}));
+    }));
+    expect(infrastructureResponses).toEqual([infrastructureEnvelope, infrastructureEnvelope]);
+  });
+});
+
 describe('GatewayAssistantController read/restore input and response boundary', () => {
   it('delegates fixed GET session input and writes only the verified Backend JSON envelope/status', async () => {
     const handler = {
@@ -161,4 +221,26 @@ function createErroredStream(): Readonly<{ stream: ReadableStream<Uint8Array>; r
 
 function expectNoSensitiveOutput(value: string, sentinels: readonly string[]): void {
   expect(sentinels.filter((sentinel) => value.includes(sentinel)).map(() => 'sse-output:secret-category')).toEqual([]);
+}
+
+async function expectHttpError(operation: Promise<unknown>, expected: Readonly<Record<string, unknown>>, hidden: readonly string[]): Promise<void> {
+  try {
+    await operation;
+    throw new Error('Expected HTTP projection.');
+  } catch (error) {
+    expect(error).toBeInstanceOf(HttpException);
+    const response = (error as HttpException).getResponse();
+    expect(response).toEqual(expected);
+    expectNoSensitiveOutput(JSON.stringify(response), hidden);
+  }
+}
+
+async function httpResponse(operation: Promise<unknown>): Promise<unknown> {
+  try {
+    await operation;
+    throw new Error('Expected HTTP projection.');
+  } catch (error) {
+    expect(error).toBeInstanceOf(HttpException);
+    return (error as HttpException).getResponse();
+  }
 }

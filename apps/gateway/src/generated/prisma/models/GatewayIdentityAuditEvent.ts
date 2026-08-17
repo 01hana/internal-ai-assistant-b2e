@@ -33,6 +33,7 @@ export type GatewayIdentityAuditEventMinAggregateOutputType = {
   reasonCode: string | null
   customerId: string | null
   integrationId: string | null
+  profileId: string | null
   actorId: string | null
   hostApp: string | null
   jti: string | null
@@ -48,6 +49,7 @@ export type GatewayIdentityAuditEventMaxAggregateOutputType = {
   reasonCode: string | null
   customerId: string | null
   integrationId: string | null
+  profileId: string | null
   actorId: string | null
   hostApp: string | null
   jti: string | null
@@ -63,6 +65,7 @@ export type GatewayIdentityAuditEventCountAggregateOutputType = {
   reasonCode: number
   customerId: number
   integrationId: number
+  profileId: number
   actorId: number
   hostApp: number
   jti: number
@@ -80,6 +83,7 @@ export type GatewayIdentityAuditEventMinAggregateInputType = {
   reasonCode?: true
   customerId?: true
   integrationId?: true
+  profileId?: true
   actorId?: true
   hostApp?: true
   jti?: true
@@ -95,6 +99,7 @@ export type GatewayIdentityAuditEventMaxAggregateInputType = {
   reasonCode?: true
   customerId?: true
   integrationId?: true
+  profileId?: true
   actorId?: true
   hostApp?: true
   jti?: true
@@ -110,6 +115,7 @@ export type GatewayIdentityAuditEventCountAggregateInputType = {
   reasonCode?: true
   customerId?: true
   integrationId?: true
+  profileId?: true
   actorId?: true
   hostApp?: true
   jti?: true
@@ -198,6 +204,7 @@ export type GatewayIdentityAuditEventGroupByOutputType = {
   reasonCode: string
   customerId: string | null
   integrationId: string | null
+  profileId: string | null
   actorId: string | null
   hostApp: string | null
   jti: string | null
@@ -234,6 +241,7 @@ export type GatewayIdentityAuditEventWhereInput = {
   reasonCode?: Prisma.StringFilter<"GatewayIdentityAuditEvent"> | string
   customerId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   integrationId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
+  profileId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   actorId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   hostApp?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   jti?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
@@ -250,6 +258,7 @@ export type GatewayIdentityAuditEventOrderByWithRelationInput = {
   reasonCode?: Prisma.SortOrder
   customerId?: Prisma.SortOrderInput | Prisma.SortOrder
   integrationId?: Prisma.SortOrderInput | Prisma.SortOrder
+  profileId?: Prisma.SortOrderInput | Prisma.SortOrder
   actorId?: Prisma.SortOrderInput | Prisma.SortOrder
   hostApp?: Prisma.SortOrderInput | Prisma.SortOrder
   jti?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -269,6 +278,7 @@ export type GatewayIdentityAuditEventWhereUniqueInput = Prisma.AtLeast<{
   reasonCode?: Prisma.StringFilter<"GatewayIdentityAuditEvent"> | string
   customerId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   integrationId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
+  profileId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   actorId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   hostApp?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   jti?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
@@ -285,6 +295,7 @@ export type GatewayIdentityAuditEventOrderByWithAggregationInput = {
   reasonCode?: Prisma.SortOrder
   customerId?: Prisma.SortOrderInput | Prisma.SortOrder
   integrationId?: Prisma.SortOrderInput | Prisma.SortOrder
+  profileId?: Prisma.SortOrderInput | Prisma.SortOrder
   actorId?: Prisma.SortOrderInput | Prisma.SortOrder
   hostApp?: Prisma.SortOrderInput | Prisma.SortOrder
   jti?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -306,6 +317,7 @@ export type GatewayIdentityAuditEventScalarWhereWithAggregatesInput = {
   reasonCode?: Prisma.StringWithAggregatesFilter<"GatewayIdentityAuditEvent"> | string
   customerId?: Prisma.StringNullableWithAggregatesFilter<"GatewayIdentityAuditEvent"> | string | null
   integrationId?: Prisma.StringNullableWithAggregatesFilter<"GatewayIdentityAuditEvent"> | string | null
+  profileId?: Prisma.StringNullableWithAggregatesFilter<"GatewayIdentityAuditEvent"> | string | null
   actorId?: Prisma.StringNullableWithAggregatesFilter<"GatewayIdentityAuditEvent"> | string | null
   hostApp?: Prisma.StringNullableWithAggregatesFilter<"GatewayIdentityAuditEvent"> | string | null
   jti?: Prisma.StringNullableWithAggregatesFilter<"GatewayIdentityAuditEvent"> | string | null
@@ -320,6 +332,7 @@ export type GatewayIdentityAuditEventCreateInput = {
   outcome: string
   reasonCode: string
   integrationId?: string | null
+  profileId?: string | null
   actorId?: string | null
   hostApp?: string | null
   jti?: string | null
@@ -336,6 +349,7 @@ export type GatewayIdentityAuditEventUncheckedCreateInput = {
   reasonCode: string
   customerId?: string | null
   integrationId?: string | null
+  profileId?: string | null
   actorId?: string | null
   hostApp?: string | null
   jti?: string | null
@@ -350,6 +364,7 @@ export type GatewayIdentityAuditEventUpdateInput = {
   outcome?: Prisma.StringFieldUpdateOperationsInput | string
   reasonCode?: Prisma.StringFieldUpdateOperationsInput | string
   integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jti?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -366,6 +381,7 @@ export type GatewayIdentityAuditEventUncheckedUpdateInput = {
   reasonCode?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jti?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -381,6 +397,7 @@ export type GatewayIdentityAuditEventCreateManyInput = {
   reasonCode: string
   customerId?: string | null
   integrationId?: string | null
+  profileId?: string | null
   actorId?: string | null
   hostApp?: string | null
   jti?: string | null
@@ -395,6 +412,7 @@ export type GatewayIdentityAuditEventUpdateManyMutationInput = {
   outcome?: Prisma.StringFieldUpdateOperationsInput | string
   reasonCode?: Prisma.StringFieldUpdateOperationsInput | string
   integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jti?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -410,6 +428,7 @@ export type GatewayIdentityAuditEventUncheckedUpdateManyInput = {
   reasonCode?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jti?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -435,6 +454,7 @@ export type GatewayIdentityAuditEventCountOrderByAggregateInput = {
   reasonCode?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
   integrationId?: Prisma.SortOrder
+  profileId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   hostApp?: Prisma.SortOrder
   jti?: Prisma.SortOrder
@@ -450,6 +470,7 @@ export type GatewayIdentityAuditEventMaxOrderByAggregateInput = {
   reasonCode?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
   integrationId?: Prisma.SortOrder
+  profileId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   hostApp?: Prisma.SortOrder
   jti?: Prisma.SortOrder
@@ -465,6 +486,7 @@ export type GatewayIdentityAuditEventMinOrderByAggregateInput = {
   reasonCode?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
   integrationId?: Prisma.SortOrder
+  profileId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   hostApp?: Prisma.SortOrder
   jti?: Prisma.SortOrder
@@ -521,6 +543,7 @@ export type GatewayIdentityAuditEventCreateWithoutCustomerInput = {
   outcome: string
   reasonCode: string
   integrationId?: string | null
+  profileId?: string | null
   actorId?: string | null
   hostApp?: string | null
   jti?: string | null
@@ -535,6 +558,7 @@ export type GatewayIdentityAuditEventUncheckedCreateWithoutCustomerInput = {
   outcome: string
   reasonCode: string
   integrationId?: string | null
+  profileId?: string | null
   actorId?: string | null
   hostApp?: string | null
   jti?: string | null
@@ -579,6 +603,7 @@ export type GatewayIdentityAuditEventScalarWhereInput = {
   reasonCode?: Prisma.StringFilter<"GatewayIdentityAuditEvent"> | string
   customerId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   integrationId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
+  profileId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   actorId?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   hostApp?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
   jti?: Prisma.StringNullableFilter<"GatewayIdentityAuditEvent"> | string | null
@@ -593,6 +618,7 @@ export type GatewayIdentityAuditEventCreateManyCustomerInput = {
   outcome: string
   reasonCode: string
   integrationId?: string | null
+  profileId?: string | null
   actorId?: string | null
   hostApp?: string | null
   jti?: string | null
@@ -607,6 +633,7 @@ export type GatewayIdentityAuditEventUpdateWithoutCustomerInput = {
   outcome?: Prisma.StringFieldUpdateOperationsInput | string
   reasonCode?: Prisma.StringFieldUpdateOperationsInput | string
   integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jti?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -621,6 +648,7 @@ export type GatewayIdentityAuditEventUncheckedUpdateWithoutCustomerInput = {
   outcome?: Prisma.StringFieldUpdateOperationsInput | string
   reasonCode?: Prisma.StringFieldUpdateOperationsInput | string
   integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jti?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -635,6 +663,7 @@ export type GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerInput = {
   outcome?: Prisma.StringFieldUpdateOperationsInput | string
   reasonCode?: Prisma.StringFieldUpdateOperationsInput | string
   integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jti?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -652,6 +681,7 @@ export type GatewayIdentityAuditEventSelect<ExtArgs extends runtime.Types.Extens
   reasonCode?: boolean
   customerId?: boolean
   integrationId?: boolean
+  profileId?: boolean
   actorId?: boolean
   hostApp?: boolean
   jti?: boolean
@@ -668,6 +698,7 @@ export type GatewayIdentityAuditEventSelectCreateManyAndReturn<ExtArgs extends r
   reasonCode?: boolean
   customerId?: boolean
   integrationId?: boolean
+  profileId?: boolean
   actorId?: boolean
   hostApp?: boolean
   jti?: boolean
@@ -684,6 +715,7 @@ export type GatewayIdentityAuditEventSelectUpdateManyAndReturn<ExtArgs extends r
   reasonCode?: boolean
   customerId?: boolean
   integrationId?: boolean
+  profileId?: boolean
   actorId?: boolean
   hostApp?: boolean
   jti?: boolean
@@ -700,13 +732,14 @@ export type GatewayIdentityAuditEventSelectScalar = {
   reasonCode?: boolean
   customerId?: boolean
   integrationId?: boolean
+  profileId?: boolean
   actorId?: boolean
   hostApp?: boolean
   jti?: boolean
   kid?: boolean
 }
 
-export type GatewayIdentityAuditEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "timestamp" | "requestId" | "eventType" | "outcome" | "reasonCode" | "customerId" | "integrationId" | "actorId" | "hostApp" | "jti" | "kid", ExtArgs["result"]["gatewayIdentityAuditEvent"]>
+export type GatewayIdentityAuditEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "timestamp" | "requestId" | "eventType" | "outcome" | "reasonCode" | "customerId" | "integrationId" | "profileId" | "actorId" | "hostApp" | "jti" | "kid", ExtArgs["result"]["gatewayIdentityAuditEvent"]>
 export type GatewayIdentityAuditEventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.GatewayIdentityAuditEvent$customerArgs<ExtArgs>
 }
@@ -731,6 +764,7 @@ export type $GatewayIdentityAuditEventPayload<ExtArgs extends runtime.Types.Exte
     reasonCode: string
     customerId: string | null
     integrationId: string | null
+    profileId: string | null
     actorId: string | null
     hostApp: string | null
     jti: string | null
@@ -1167,6 +1201,7 @@ export interface GatewayIdentityAuditEventFieldRefs {
   readonly reasonCode: Prisma.FieldRef<"GatewayIdentityAuditEvent", 'String'>
   readonly customerId: Prisma.FieldRef<"GatewayIdentityAuditEvent", 'String'>
   readonly integrationId: Prisma.FieldRef<"GatewayIdentityAuditEvent", 'String'>
+  readonly profileId: Prisma.FieldRef<"GatewayIdentityAuditEvent", 'String'>
   readonly actorId: Prisma.FieldRef<"GatewayIdentityAuditEvent", 'String'>
   readonly hostApp: Prisma.FieldRef<"GatewayIdentityAuditEvent", 'String'>
   readonly jti: Prisma.FieldRef<"GatewayIdentityAuditEvent", 'String'>
