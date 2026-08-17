@@ -7,9 +7,9 @@ export interface GatewayEnvironment {
   internalIssuer: string;
   internalAudience: string;
   publicJwksUrl: string;
-  upstreamIssuer: string;
-  upstreamAudience: string;
-  upstreamJwksUri: string;
+  bootstrapUpstreamIssuer?: string;
+  bootstrapUpstreamAudience?: string;
+  bootstrapUpstreamJwksUri?: string;
   upstreamClockToleranceSeconds: number;
   internalTokenTtlSeconds: number;
   backendBaseUrl: string;
@@ -40,11 +40,14 @@ export class GatewayConfigService {
     return this.environment;
   }
 
-  get upstreamVerification(): GatewayUpstreamVerificationConfig {
+  get bootstrapUpstreamVerification(): GatewayUpstreamVerificationConfig {
+    const issuer = this.environment.bootstrapUpstreamIssuer;
+    const audience = this.environment.bootstrapUpstreamAudience;
+    const jwksUri = this.environment.bootstrapUpstreamJwksUri;
     return Object.freeze({
-      issuer: this.environment.upstreamIssuer,
-      audience: this.environment.upstreamAudience,
-      jwksUri: this.environment.upstreamJwksUri,
+      issuer: requireIssuer(issuer),
+      audience: requireNonBlankString(audience),
+      jwksUri: requireUrl(jwksUri),
       clockToleranceSeconds: this.environment.upstreamClockToleranceSeconds
     });
   }
@@ -55,9 +58,7 @@ export function validateGatewayEnvironment(input: Record<string, unknown>): Gate
     internalIssuer: requireIssuer(input.GATEWAY_INTERNAL_JWT_ISSUER),
     internalAudience: requireNonBlankString(input.GATEWAY_INTERNAL_JWT_AUDIENCE),
     publicJwksUrl: requireUrl(input.GATEWAY_PUBLIC_JWKS_URL),
-    upstreamIssuer: requireIssuer(input.GATEWAY_UPSTREAM_JWT_ISSUER),
-    upstreamAudience: requireNonBlankString(input.GATEWAY_UPSTREAM_JWT_AUDIENCE),
-    upstreamJwksUri: requireUrl(input.GATEWAY_UPSTREAM_JWKS_URI),
+    ...optionalBootstrapUpstreamPolicy(input),
     upstreamClockToleranceSeconds: requireIntegerInRange(
       input.GATEWAY_UPSTREAM_JWT_CLOCK_TOLERANCE_SECONDS,
       0,
@@ -69,6 +70,18 @@ export function validateGatewayEnvironment(input: Record<string, unknown>): Gate
     allowedOrigins: requireAllowedOrigins(input.GATEWAY_ALLOWED_ORIGINS),
     localSigningBootstrapEnabled: optionalBoolean(input.GATEWAY_LOCAL_SIGNING_BOOTSTRAP_ENABLED, false),
     port: requireIntegerInRange(input.GATEWAY_PORT ?? 4000, 1, 65_535)
+  };
+}
+
+function optionalBootstrapUpstreamPolicy(input: Record<string, unknown>): Pick<GatewayEnvironment, 'bootstrapUpstreamIssuer' | 'bootstrapUpstreamAudience' | 'bootstrapUpstreamJwksUri'> {
+  const issuer = input.GATEWAY_UPSTREAM_JWT_ISSUER;
+  const audience = input.GATEWAY_UPSTREAM_JWT_AUDIENCE;
+  const jwksUri = input.GATEWAY_UPSTREAM_JWKS_URI;
+  if (issuer === undefined && audience === undefined && jwksUri === undefined) return {};
+  return {
+    bootstrapUpstreamIssuer: typeof issuer === 'string' ? issuer : undefined,
+    bootstrapUpstreamAudience: typeof audience === 'string' ? audience : undefined,
+    bootstrapUpstreamJwksUri: typeof jwksUri === 'string' ? jwksUri : undefined
   };
 }
 

@@ -16,32 +16,34 @@ export type TrustProfileActivationInput = Readonly<{
 
 type ActivationRepository = Readonly<{
   findBindingByIntegrationId(integrationId: string): Promise<unknown>;
-  findEnabledExactPolicy(input: TrustProfileActivationInput): Promise<readonly unknown[]>;
+  findEnabledExactPolicy(input: ActivePolicyInput): Promise<readonly unknown[]>;
   findById?(id: string): Promise<{ integrationId: string; version: number } | null>;
 }>;
+
+type ActivePolicyInput = Pick<TrustProfileActivationInput, 'id' | 'integrationId' | 'expectedIssuer' | 'expectedAudience' | 'jwksUri'> & Readonly<{ algorithm: 'RS256' }>;
 
 export type { JwksSourceRegistrationPolicy } from '../upstream-auth/jwks-source-policy';
 
 export class TrustProfileActivationValidator {
   constructor(private readonly dependencies: Readonly<{ repository: ActivationRepository; jwksSourcePolicy: JwksSourceRegistrationPolicy }>) {}
 
-  async validate(input: TrustProfileActivationInput): Promise<TrustProfileActivationInput> {
+  async validate(input: TrustProfileActivationInput, repository: ActivationRepository = this.dependencies.repository): Promise<TrustProfileActivationInput> {
     const profile = normalize(input);
     try { this.dependencies.jwksSourcePolicy.validate(profile.jwksUri); } catch { throw new TrustProfileActivationError(); }
-    const binding = await this.dependencies.repository.findBindingByIntegrationId(profile.integrationId);
+    const binding = await repository.findBindingByIntegrationId(profile.integrationId);
     if (!binding) throw new TrustProfileActivationError();
-    if (profile.replacesProfileId) await this.validateReplacement(profile);
+    if (profile.replacesProfileId) await this.validateReplacement(profile, repository);
     if (profile.enabled && profile.lifecycle === 'active') {
-      const duplicates = await this.dependencies.repository.findEnabledExactPolicy(profile);
+      const duplicates = await repository.findEnabledExactPolicy(profile as ActivePolicyInput);
       if (duplicates.length > 0) throw new TrustProfileActivationError();
     }
     return Object.freeze(profile);
   }
 
-  private async validateReplacement(profile: TrustProfileActivationInput) {
+  private async validateReplacement(profile: TrustProfileActivationInput, repository: ActivationRepository) {
     if (profile.replacesProfileId === profile.id) throw new TrustProfileActivationError();
-    if (!this.dependencies.repository.findById) throw new TrustProfileActivationError();
-    const predecessor = await this.dependencies.repository.findById(profile.replacesProfileId!);
+    if (!repository.findById) throw new TrustProfileActivationError();
+    const predecessor = await repository.findById(profile.replacesProfileId!);
     if (!predecessor || predecessor.integrationId !== profile.integrationId || predecessor.version >= profile.version) throw new TrustProfileActivationError();
   }
 }

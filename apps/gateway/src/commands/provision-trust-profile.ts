@@ -43,10 +43,14 @@ export class ProvisionTrustProfileCommand {
         const profile = await this.dependencies.repository.update(normalized.id, toMutablePolicyData(validated), transaction);
         return toResult(profile, true);
       });
-      await this.dependencies.auditWriter.append({ requestId: normalized.requestId, eventType: `trust_profile_${normalized.action}`, outcome: 'success', reasonCode: result.changed ? 'changed' : 'replayed', integrationId: result.integrationId });
-      await this.dependencies.invalidation.invalidate(result.id);
+      const outcomes = await Promise.allSettled([
+        this.dependencies.auditWriter.append({ requestId: normalized.requestId, eventType: `trust_profile_${normalized.action}`, outcome: 'success', reasonCode: result.changed ? 'changed' : 'replayed', integrationId: result.integrationId }),
+        this.dependencies.invalidation.invalidate(result.id)
+      ]);
+      if (outcomes.some((outcome) => outcome.status === 'rejected')) throw new ProvisionTrustProfilePostCommitError();
       return result;
     } catch (error) {
+      if (error instanceof ProvisionTrustProfilePostCommitError) throw error;
       if (error instanceof ProvisionTrustProfileError || error instanceof TrustProfileActivationError) throw new ProvisionTrustProfileError();
       throw error;
     }
@@ -80,5 +84,16 @@ function toResult(profile: TrustProfileRecord, changed: boolean): ProvisionTrust
 }
 
 export class ProvisionTrustProfileError extends Error {
+  readonly committed: boolean = false;
+
   constructor() { super('Trust profile provisioning cannot be completed.'); }
+}
+
+export class ProvisionTrustProfilePostCommitError extends ProvisionTrustProfileError {
+  override readonly committed = true;
+
+  constructor() {
+    super();
+    this.name = 'ProvisionTrustProfilePostCommitError';
+  }
 }

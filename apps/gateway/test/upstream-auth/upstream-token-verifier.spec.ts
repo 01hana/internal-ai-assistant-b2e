@@ -13,7 +13,7 @@ describe('Upstream RS256 Remote-JWKS verifier (T028)', () => {
   it('preserves the configured issuer through environment validation and rejects a trailing-slash mismatch', async () => {
     const { validateGatewayEnvironment, GatewayConfigService } = require('../../src/config/gateway-config.service') as {
       validateGatewayEnvironment?: (input: Record<string, unknown>) => Record<string, unknown>;
-      GatewayConfigService?: new (environment: Record<string, unknown>) => { upstreamVerification: unknown };
+      GatewayConfigService?: new (environment: Record<string, unknown>) => { bootstrapUpstreamVerification: unknown };
     };
     const { RemoteJwksUpstreamTokenVerifier } = require('../../src/upstream-auth/upstream-token-verifier.service') as {
       RemoteJwksUpstreamTokenVerifier?: new (config: unknown) => { verify(input: unknown): Promise<unknown> };
@@ -23,12 +23,12 @@ describe('Upstream RS256 Remote-JWKS verifier (T028)', () => {
     expect(RemoteJwksUpstreamTokenVerifier).toEqual(expect.any(Function));
 
     const environment = validateGatewayEnvironment?.(gatewayEnvironmentFor(fixture));
-    const config = new (GatewayConfigService as new (environment: Record<string, unknown>) => { upstreamVerification: unknown })(environment ?? {}).upstreamVerification;
+    const config = new (GatewayConfigService as new (environment: Record<string, unknown>) => { bootstrapUpstreamVerification: unknown })(environment ?? {}).bootstrapUpstreamVerification;
     const verifier = new (RemoteJwksUpstreamTokenVerifier as new (config: unknown) => { verify(input: unknown): Promise<unknown> })(config);
 
     await expect(verifier.verify({ authorization: `Bearer ${await fixture.issue()}` })).resolves.toMatchObject({ integrationId: 'integration-a' });
     const mismatchedEnvironment = validateGatewayEnvironment?.({ ...gatewayEnvironmentFor(fixture), GATEWAY_UPSTREAM_JWT_ISSUER: `${fixture.issuer}/` });
-    const mismatchedConfig = new (GatewayConfigService as new (environment: Record<string, unknown>) => { upstreamVerification: unknown })(mismatchedEnvironment ?? {}).upstreamVerification;
+    const mismatchedConfig = new (GatewayConfigService as new (environment: Record<string, unknown>) => { bootstrapUpstreamVerification: unknown })(mismatchedEnvironment ?? {}).bootstrapUpstreamVerification;
     const mismatchedVerifier = new (RemoteJwksUpstreamTokenVerifier as new (config: unknown) => { verify(input: unknown): Promise<unknown> })(mismatchedConfig);
     await expect(mismatchedVerifier.verify({ authorization: `Bearer ${await fixture.issue()}` })).rejects.toMatchObject({ status: 401, code: 'UPSTREAM_IDENTITY_INVALID', reasonCode: 'issuer_mismatch' });
   });

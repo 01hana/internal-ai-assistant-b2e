@@ -111,20 +111,24 @@
 
 ### Tasks
 
-- [ ] T037 Add failing legacy-bootstrap tests in `apps/gateway/test/config/trust-profile-bootstrap.spec.ts` for complete/incomplete legacy environment, explicit integration ID, missing binding, invalid issuer/audience/JWKS, and conflicting profile.
-- [ ] T038 Implement controlled legacy bootstrap in `apps/gateway/src/commands/bootstrap-legacy-upstream-trust-profile.ts` using `GatewayConfigService`, binding validation, and `TrustProfileRepository`; verify T037.
-- [ ] T039 Add failing `PROFILE_ONLY_RUNTIME_CUTOVER` tests in `apps/gateway/test/config/gateway-config.spec.ts` for valid profile runtime, no DB profile, invalid profile with legacy env present, and absence of global-verifier fallback.
-- [ ] T040 Update `apps/gateway/src/config/gateway-config.service.ts` and `apps/gateway/src/gateway.module.ts` for profile-only runtime cutover after T039; verify cutover only follows Batch 4 and valid bootstrap profile.
-- [ ] T041 Add failing lifecycle tests in `apps/gateway/test/integration-registry/trust-profile-lifecycle.spec.ts` for enabled/disabled profile, disabled IntegrationBinding regression, successor validation, atomic predecessor/successor transition, partial replacement rollback, and no dual active issuer.
-- [ ] T042 Implement `apps/gateway/src/integration-registry/trust-profile-lifecycle.service.ts` and repository transaction support; verify T041 and safe audit/invalidation hooks.
-- [ ] T043 Add failing trust-profile cache tests in `apps/gateway/test/integration-registry/trust-profile-cache.spec.ts` for bounded TTL, disable/update/replacement invalidation, and process-restart reload.
-- [ ] T044 Implement `apps/gateway/src/integration-registry/trust-profile-cache.ts` for candidate/profile caching only; verify T043 and do not reimplement JWKS or binding cache.
-- [ ] T045 Update `.env.example` and `README.md` with bootstrap-only legacy configuration and profile-only runtime guidance; verify configuration examples cannot imply a runtime fallback.
-- [ ] T046 Run bootstrap/cutover/lifecycle/cache regression tests and record `PROFILE_ONLY_RUNTIME_READY` and `LEGACY_RUNTIME_AUTHORITY_REMOVED=YES`.
+- [X] T037 Add failing legacy-bootstrap tests in `apps/gateway/test/config/trust-profile-bootstrap.spec.ts` for complete/incomplete legacy environment, explicit integration ID, missing binding, invalid issuer/audience/JWKS, and conflicting profile.
+- [X] T038 Implement controlled legacy bootstrap in `apps/gateway/src/commands/bootstrap-legacy-upstream-trust-profile.ts` using `GatewayConfigService`, binding validation, and `TrustProfileRepository`; verify T037.
+- [X] T039 Add failing `PROFILE_ONLY_RUNTIME_CUTOVER` tests in `apps/gateway/test/config/gateway-config.spec.ts` for valid profile runtime, no DB profile, invalid profile with legacy env present, and absence of global-verifier fallback.
+- [X] T040 Update `apps/gateway/src/config/gateway-config.service.ts` and `apps/gateway/src/gateway.module.ts` for profile-only runtime cutover after T039; verify cutover only follows Batch 4 and valid bootstrap profile.
+- [X] T041 Add failing lifecycle tests in `apps/gateway/test/integration-registry/trust-profile-lifecycle.spec.ts` for enabled/disabled profile, disabled IntegrationBinding regression, successor validation, atomic predecessor/successor transition, partial replacement rollback, and no dual active issuer.
+- [X] T042 Implement `apps/gateway/src/integration-registry/trust-profile-lifecycle.service.ts` and repository transaction support; verify T041 and safe audit/invalidation hooks.
+- [X] T043 Add failing trust-profile cache tests in `apps/gateway/test/integration-registry/trust-profile-cache.spec.ts` for bounded TTL, disable/update/replacement invalidation, and process-restart reload.
+- [X] T044 Implement `apps/gateway/src/integration-registry/trust-profile-cache.ts` for candidate/profile caching only; verify T043 and do not reimplement JWKS or binding cache.
+- [X] T045 Update `.env.example` and `README.md` with bootstrap-only legacy configuration and profile-only runtime guidance; verify configuration examples cannot imply a runtime fallback.
+- [X] T046 Run bootstrap/cutover/lifecycle/cache regression tests and record `PROFILE_ONLY_RUNTIME_READY` and `LEGACY_RUNTIME_AUTHORITY_REMOVED=YES`.
 
 ### Acceptance Gate
 
 `PROFILE_ONLY_RUNTIME_READY`: legacy values are bootstrap input only; profile runtime, lifecycle invalidation, and trust-profile cache work without JWKS/binding cache duplication.
+
+`PROFILE_ONLY_RUNTIME_READY=YES` — Batch 5 bootstrap, cutover, lifecycle, cache, and documentation acceptance completed.
+
+`LEGACY_RUNTIME_AUTHORITY_REMOVED=YES` — Legacy issuer, audience, and JWKS values remain bootstrap-only and are not active runtime verification authority.
 
 ## Batch 6 — Audit, Errors, and Security Observability
 

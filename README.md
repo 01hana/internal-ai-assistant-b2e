@@ -55,6 +55,57 @@ uses the existing `new → published → JWKS proof → active` lifecycle. It is
 local development evidence only: it does not close Feature 003 GAP-001–GAP-004
 or change the production rollout decision.
 
+### Gateway Profile-only Upstream Trust
+
+Gateway verifies browser `Authorization` credentials only against persisted
+`RegisteredUpstreamTrustProfile` records. Runtime startup fails closed unless
+storage contains at least one enabled, `active`, RS256 profile with a valid
+issuer, audience, and registered JWKS policy. The runtime setting
+`GATEWAY_UPSTREAM_JWT_CLOCK_TOLERANCE_SECONDS` is platform-wide, must be an
+integer from 0 through 300 seconds, and is not stored per profile.
+
+`GATEWAY_UPSTREAM_JWT_ISSUER`, `GATEWAY_UPSTREAM_JWT_AUDIENCE`, and
+`GATEWAY_UPSTREAM_JWKS_URI` are optional bootstrap-only migration inputs. They
+are not required for profile-only runtime, including when absent or partially
+present, and are never a verifier fallback. A complete legacy trio is required
+only when an operator invokes `BootstrapLegacyUpstreamTrustProfileCommand` as a
+deployment-controlled command/service operation; Gateway startup never invokes
+it automatically.
+
+To migrate one legacy upstream policy, first provision the existing
+`IntegrationBinding`, then provide the complete legacy trio and explicitly
+supply its `integrationId` to that controlled bootstrap operation. The anchor
+is never inferred from a JWT, issuer, audience, JWKS URI, Customer, or HostApp.
+Verify that an enabled, active `RegisteredUpstreamTrustProfile` was persisted,
+then roll out profile-only Gateway runtime. The legacy trio may be removed from
+normal deployment configuration after bootstrap.
+
+A trust profile owns upstream verification policy only. After profile
+verification, the request continues through `VerifiedUpstreamIdentity` and
+`CanonicalIdentityResolver`; the existing `IntegrationBinding` remains the
+sole Customer and HostApp admission authority before internal JWT issuance and
+Backend access. Profiles contain neither `customerId` nor `allowedHostApp`.
+
+Profile disablement changes `enabled=true, lifecycle=active` to
+`enabled=false, lifecycle=disabled` and does not change
+`IntegrationBinding.enabled`. Issuer migration uses a controlled atomic
+replacement from an active predecessor plus draft successor to a replaced,
+disabled predecessor plus active successor. V1 has no dual-issuer authority
+window; normal signing-key rotation remains within one issuer/profile JWKS.
+
+Bootstrap JWKS URIs still undergo the production registration policy: HTTPS is
+required, credentials and fragments are rejected, unsafe local/private
+destinations are rejected, and redirects are not trusted as a new source.
+Deployment configuration does not bypass those checks.
+
+Candidate policy records use a process-local trust-profile cache with a
+30-second default and 60-second maximum TTL. Control-plane mutations invalidate
+it; a process restart reloads records from storage, and an expired cache entry
+whose storage refresh fails is not served. This cache contains neither JWKS
+verification keys nor IntegrationBinding, Customer, or canonical identity data;
+JWKS caching remains profile-scoped and IntegrationBinding reads remain direct
+database reads in v1.
+
 ### Start the Local Baseline
 
 Install dependencies and start the local app and database:

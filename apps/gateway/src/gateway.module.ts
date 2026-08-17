@@ -11,7 +11,9 @@ import { InternalIdentityTokenIssuer } from './identity/internal-identity-token-
 import { CanonicalIdentityResolver } from './integration-registry/canonical-identity-resolver.service';
 import { CandidateTrustProfileResolver } from './integration-registry/candidate-trust-profile.resolver';
 import { IntegrationBindingRepository } from './integration-registry/integration-binding.repository';
+import { TrustProfileCache } from './integration-registry/trust-profile-cache';
 import { TrustProfileRepository } from './integration-registry/trust-profile.repository';
+import { TrustProfileRuntimeReadiness } from './integration-registry/trust-profile-runtime-readiness.service';
 import { JwksModule } from './jwks/jwks.module';
 import { ActiveSigningKeyResolver } from './signing/active-signing-key-resolver';
 import { GATEWAY_PRISMA_CLIENT, GatewaySigningKeyPersistenceModule } from './signing/gateway-signing-key-persistence.module';
@@ -33,8 +35,18 @@ import { RoutingMetadataParser } from './upstream-auth/routing-metadata.parser';
     },
     {
       provide: CandidateTrustProfileResolver,
+      inject: [TrustProfileCache],
+      useFactory: (cache: TrustProfileCache) => new CandidateTrustProfileResolver(cache)
+    },
+    {
+      provide: TrustProfileCache,
       inject: [TrustProfileRepository],
-      useFactory: (repository: TrustProfileRepository) => new CandidateTrustProfileResolver(repository)
+      useFactory: (repository: TrustProfileRepository) => new TrustProfileCache({ repository })
+    },
+    {
+      provide: TrustProfileRuntimeReadiness,
+      inject: [TrustProfileRepository],
+      useFactory: (repository: TrustProfileRepository) => new TrustProfileRuntimeReadiness(repository)
     },
     RoutingMetadataParser,
     HardenedJwksTransport,
@@ -45,10 +57,22 @@ import { RoutingMetadataParser } from './upstream-auth/routing-metadata.parser';
     },
     {
       provide: MultiProfileUpstreamTokenVerifier,
-      inject: [RoutingMetadataParser, CandidateTrustProfileResolver, ProfileScopedVerifier, GatewayConfigService],
-      useFactory: (parser: RoutingMetadataParser, candidateResolver: CandidateTrustProfileResolver, profileVerifier: ProfileScopedVerifier, config: GatewayConfigService) => new MultiProfileUpstreamTokenVerifier({
-        parser, candidateResolver, profileVerifier, clockToleranceSeconds: config.config.upstreamClockToleranceSeconds
-      })
+      inject: [RoutingMetadataParser, CandidateTrustProfileResolver, ProfileScopedVerifier, GatewayConfigService, TrustProfileRuntimeReadiness],
+      useFactory: async (
+        parser: RoutingMetadataParser,
+        candidateResolver: CandidateTrustProfileResolver,
+        profileVerifier: ProfileScopedVerifier,
+        config: GatewayConfigService,
+        readiness: TrustProfileRuntimeReadiness
+      ) => {
+        await readiness.assertReady();
+        return new MultiProfileUpstreamTokenVerifier({
+          parser,
+          candidateResolver,
+          profileVerifier,
+          clockToleranceSeconds: config.config.upstreamClockToleranceSeconds
+        });
+      }
     },
     {
       provide: IntegrationBindingRepository,

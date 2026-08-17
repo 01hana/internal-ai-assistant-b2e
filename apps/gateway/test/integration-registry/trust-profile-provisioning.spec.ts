@@ -34,6 +34,18 @@ describe('Controlled trust-profile provisioning contract (T008/T009)', () => {
     expect(invalid.repository.create).not.toHaveBeenCalled();
   });
 
+  it('attempts invalidation after a committed audit failure without exposing hook details', async () => {
+    const { command, invalidation, audit } = createCommand();
+    audit.append.mockRejectedValueOnce(new Error('audit unavailable'));
+
+    await expect(command.execute(input())).rejects.toMatchObject({
+      name: 'ProvisionTrustProfilePostCommitError',
+      committed: true,
+      message: 'Trust profile provisioning cannot be completed.'
+    });
+    expect(invalidation.invalidate).toHaveBeenCalledWith('profile-a');
+  });
+
   it('rejects an update that attempts to re-anchor an existing profile to another integration', async () => {
     const { command, repository } = createCommand({ existing: record({ integrationId: 'integration-a' }) });
     await expect(command.execute(input({ action: 'update', integrationId: 'integration-b' }))).rejects.toThrow('Trust profile provisioning cannot be completed.');

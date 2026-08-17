@@ -30,7 +30,7 @@ describe('Gateway configuration contract', () => {
   it('returns typed, safe configuration without performing identity work', () => {
     const target = require(configTarget) as {
       validateGatewayEnvironment?: (input: Record<string, unknown>) => Record<string, unknown>;
-      GatewayConfigService?: new (environment: Record<string, unknown>) => { upstreamVerification: Record<string, unknown> };
+      GatewayConfigService?: new (environment: Record<string, unknown>) => { bootstrapUpstreamVerification: Record<string, unknown> };
     };
     const config = target.validateGatewayEnvironment?.(validEnvironment());
 
@@ -43,14 +43,27 @@ describe('Gateway configuration contract', () => {
       port: 4000
     });
     expect(config).not.toHaveProperty('privateKey');
-    expect(new (target.GatewayConfigService as new (environment: Record<string, unknown>) => { upstreamVerification: Record<string, unknown> })(config ?? {}).upstreamVerification).toEqual({
+    expect(new (target.GatewayConfigService as new (environment: Record<string, unknown>) => { bootstrapUpstreamVerification: Record<string, unknown> })(config ?? {}).bootstrapUpstreamVerification).toEqual({
       issuer: 'http://upstream.test', audience: 'upstream-audience', jwksUri: 'http://upstream.test/.well-known/jwks.json', clockToleranceSeconds: 0
     });
+  });
+
+  it('allows absent or partial legacy bootstrap settings for profile-only runtime, but rejects them when bootstrap access is requested', () => {
+    const target = require(configTarget) as {
+      validateGatewayEnvironment?: (input: Record<string, unknown>) => Record<string, unknown>;
+      GatewayConfigService?: new (environment: Record<string, unknown>) => { bootstrapUpstreamVerification: Record<string, unknown> };
+    };
+    for (const environment of [withoutLegacy(), { ...withoutLegacy(), GATEWAY_UPSTREAM_JWT_ISSUER: 'https://issuer.example.test' }, { ...withoutLegacy(), GATEWAY_UPSTREAM_JWT_ISSUER: 'https://issuer.example.test', GATEWAY_UPSTREAM_JWT_AUDIENCE: 'audience' }]) {
+      const config = target.validateGatewayEnvironment?.(environment);
+      expect(config).toBeDefined();
+      expect(() => new (target.GatewayConfigService as new (environment: Record<string, unknown>) => { bootstrapUpstreamVerification: Record<string, unknown> })(config ?? {}).bootstrapUpstreamVerification).toThrow('Invalid Gateway configuration.');
+    }
   });
 
   it('preserves trimmed issuer strings exactly while normalizing network endpoints', () => {
     const target = require(configTarget) as {
       validateGatewayEnvironment?: (input: Record<string, unknown>) => Record<string, unknown>;
+      GatewayConfigService?: new (environment: Record<string, unknown>) => { bootstrapUpstreamVerification: Record<string, unknown> };
     };
 
     const config = target.validateGatewayEnvironment?.({
@@ -60,11 +73,9 @@ describe('Gateway configuration contract', () => {
       GATEWAY_UPSTREAM_JWKS_URI: 'https://upstream.example'
     });
 
-    expect(config).toMatchObject({
-      internalIssuer: 'https://gateway.example',
-      upstreamIssuer: 'https://issuer.example/',
-      upstreamJwksUri: 'https://upstream.example/'
-    });
+    expect(config).toMatchObject({ internalIssuer: 'https://gateway.example' });
+    const service = new (target.GatewayConfigService as new (environment: Record<string, unknown>) => { bootstrapUpstreamVerification: Record<string, unknown> })(config ?? {});
+    expect(service.bootstrapUpstreamVerification).toMatchObject({ issuer: 'https://issuer.example/', jwksUri: 'https://upstream.example/' });
   });
 
   it.each(['key-reference', 'file:/tmp/gateway-private.pem', './.keys/gateway-private.pem', 'provider://gateway/signing-key'])(
@@ -141,4 +152,12 @@ function validEnvironment(): Record<string, unknown> {
     GATEWAY_ALLOWED_ORIGINS: 'http://localhost:3001',
     GATEWAY_PORT: '4000'
   };
+}
+
+function withoutLegacy(): Record<string, unknown> {
+  const environment = validEnvironment();
+  delete environment.GATEWAY_UPSTREAM_JWT_ISSUER;
+  delete environment.GATEWAY_UPSTREAM_JWT_AUDIENCE;
+  delete environment.GATEWAY_UPSTREAM_JWKS_URI;
+  return environment;
 }

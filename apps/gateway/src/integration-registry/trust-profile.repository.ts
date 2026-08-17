@@ -20,16 +20,24 @@ export class TrustProfileRepository {
     return client.registeredUpstreamTrustProfile.findUnique({ where: { id }, select });
   }
 
-  findByIntegrationId(integrationId: string): Promise<TrustProfileRecord[]> {
-    return this.client.registeredUpstreamTrustProfile.findMany({ where: { integrationId }, orderBy: { version: 'asc' }, select });
+  findByIntegrationId(integrationId: string, client: TrustProfileDelegateClient = this.client): Promise<TrustProfileRecord[]> {
+    return client.registeredUpstreamTrustProfile.findMany({ where: { integrationId }, orderBy: { version: 'asc' }, select });
   }
 
   findEnabledByIssuer(expectedIssuer: string): Promise<TrustProfileRecord[]> {
     return this.client.registeredUpstreamTrustProfile.findMany({ where: { expectedIssuer, enabled: true, lifecycle: 'active' }, orderBy: { id: 'asc' }, select });
   }
 
-  findEnabledExactPolicy(input: Pick<TrustProfileRecord, 'id' | 'integrationId' | 'expectedIssuer' | 'expectedAudience' | 'jwksUri' | 'algorithm'>): Promise<TrustProfileRecord[]> {
-    return this.client.registeredUpstreamTrustProfile.findMany({
+  findEnabledActiveProfiles(): Promise<TrustProfileRecord[]> {
+    return this.client.registeredUpstreamTrustProfile.findMany({ where: { enabled: true, lifecycle: 'active' }, orderBy: { id: 'asc' }, select });
+  }
+
+  findEnabledActiveByIntegrationId(integrationId: string, client: TrustProfileDelegateClient = this.client): Promise<TrustProfileRecord[]> {
+    return client.registeredUpstreamTrustProfile.findMany({ where: { integrationId, enabled: true, lifecycle: 'active' }, orderBy: { id: 'asc' }, select });
+  }
+
+  findEnabledExactPolicy(input: Pick<TrustProfileRecord, 'id' | 'integrationId' | 'expectedIssuer' | 'expectedAudience' | 'jwksUri' | 'algorithm'>, client: TrustProfileDelegateClient = this.client): Promise<TrustProfileRecord[]> {
+    return client.registeredUpstreamTrustProfile.findMany({
       where: {
         id: { not: input.id }, integrationId: input.integrationId, expectedIssuer: input.expectedIssuer,
         expectedAudience: input.expectedAudience, jwksUri: input.jwksUri, algorithm: input.algorithm,
@@ -66,5 +74,29 @@ export class TrustProfileRepository {
 
   disable(id: string, client: TrustProfileDelegateClient): Promise<TrustProfileRecord> {
     return this.update(id, { enabled: false, lifecycle: 'disabled' }, client);
+  }
+
+  async disableActive(id: string, client: TrustProfileDelegateClient): Promise<boolean> {
+    const result = await client.registeredUpstreamTrustProfile.updateMany({
+      where: { id, enabled: true, lifecycle: 'active' },
+      data: { enabled: false, lifecycle: 'disabled' }
+    });
+    return result.count === 1;
+  }
+
+  async activateDraftSuccessor(id: string, client: TrustProfileDelegateClient): Promise<boolean> {
+    const result = await client.registeredUpstreamTrustProfile.updateMany({
+      where: { id, enabled: false, lifecycle: 'draft' },
+      data: { enabled: true, lifecycle: 'active' }
+    });
+    return result.count === 1;
+  }
+
+  async replaceActivePredecessor(id: string, client: TrustProfileDelegateClient): Promise<boolean> {
+    const result = await client.registeredUpstreamTrustProfile.updateMany({
+      where: { id, enabled: true, lifecycle: 'active' },
+      data: { enabled: false, lifecycle: 'replaced' }
+    });
+    return result.count === 1;
   }
 }
