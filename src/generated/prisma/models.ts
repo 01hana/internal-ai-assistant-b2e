@@ -10,6 +10,7 @@
  */
 export type * from './models/Customer'
 export type * from './models/IntegrationBinding'
+export type * from './models/RegisteredUpstreamTrustProfile'
 export type * from './models/GatewaySigningKey'
 export type * from './models/GatewayIdentityAuditEvent'
 export type * from './models/AssistantSession'

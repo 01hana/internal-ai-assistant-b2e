@@ -67,6 +67,23 @@ describeGatewayRegistry('Customer A/B IntegrationBinding isolation (T037)', () =
       reasonCode: 'identity_issuance_denied'
     });
   });
+
+  it('retains IntegrationBinding as the sole Customer and HostApp authority after profile persistence is added', async () => {
+    await prisma.registeredUpstreamTrustProfile.create({
+      data: {
+        id: 'profile-a', integrationId: 'integration-a', expectedIssuer: 'https://issuer.example.test', expectedAudience: 'gateway-audience',
+        jwksUri: 'https://issuer.example.test/jwks.json', algorithm: 'RS256', enabled: true, lifecycle: 'active', version: 1
+      }
+    });
+    const resolver = createResolver(prisma);
+
+    await expect(resolver.resolve({ identity: verifiedIdentity('integration-a'), requestId: 'request-profile-authority' })).resolves.toMatchObject({
+      customerId: 'customer-a', hostApp: 'admin'
+    });
+    const profile = await prisma.registeredUpstreamTrustProfile.findUniqueOrThrow({ where: { id: 'profile-a' } });
+    expect(profile).not.toHaveProperty('customerId');
+    expect(profile).not.toHaveProperty('allowedHostApp');
+  });
 });
 
 function createResolver(prisma: ReturnType<typeof createGatewayPrismaClient>) {

@@ -250,10 +250,49 @@ model IntegrationBinding {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  customer                     Customer                       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  registeredUpstreamTrustProfiles RegisteredUpstreamTrustProfile[]
 
   @@index([customerId])
   @@index([customerId, allowedHostApp])
+}
+
+enum RegisteredUpstreamTrustProfileAlgorithm {
+  RS256
+}
+
+enum RegisteredUpstreamTrustProfileLifecycle {
+  draft
+  active
+  disabled
+  replaced
+}
+
+/// Gateway-owned upstream verification policy. Customer and HostApp authority
+/// remain exclusively on its anchored IntegrationBinding.
+model RegisteredUpstreamTrustProfile {
+  id                String                                  @id @default(cuid())
+  integrationId     String
+  expectedIssuer    String
+  expectedAudience  String
+  jwksUri           String
+  algorithm         RegisteredUpstreamTrustProfileAlgorithm @default(RS256)
+  enabled           Boolean                                 @default(false)
+  lifecycle         RegisteredUpstreamTrustProfileLifecycle @default(draft)
+  version           Int
+  replacesProfileId String?
+  createdAt         DateTime                                @default(now())
+  updatedAt         DateTime                                @updatedAt
+
+  integrationBinding IntegrationBinding                     @relation(fields: [integrationId], references: [integrationId], onDelete: Restrict)
+  replacesProfile    RegisteredUpstreamTrustProfile?        @relation("RegisteredUpstreamTrustProfileReplacement", fields: [replacesProfileId], references: [id], onDelete: Restrict)
+  replacementProfiles RegisteredUpstreamTrustProfile[]      @relation("RegisteredUpstreamTrustProfileReplacement")
+
+  @@unique([integrationId, version])
+  @@index([expectedIssuer, enabled])
+  @@index([integrationId])
+  @@index([lifecycle, enabled])
+  @@index([replacesProfileId])
 }
 
 model GatewaySigningKey {

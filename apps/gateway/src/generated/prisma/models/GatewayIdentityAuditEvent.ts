@@ -513,10 +513,6 @@ export type GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInp
   deleteMany?: Prisma.GatewayIdentityAuditEventScalarWhereInput | Prisma.GatewayIdentityAuditEventScalarWhereInput[]
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
 export type GatewayIdentityAuditEventCreateWithoutCustomerInput = {
   id?: string
   timestamp?: Date | string

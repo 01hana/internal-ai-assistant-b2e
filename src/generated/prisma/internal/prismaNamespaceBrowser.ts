@@ -53,6 +53,7 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   Customer: 'Customer',
   IntegrationBinding: 'IntegrationBinding',
+  RegisteredUpstreamTrustProfile: 'RegisteredUpstreamTrustProfile',
   GatewaySigningKey: 'GatewaySigningKey',
   GatewayIdentityAuditEvent: 'GatewayIdentityAuditEvent',
   AssistantSession: 'AssistantSession',
@@ -112,6 +113,24 @@ export const IntegrationBindingScalarFieldEnum = {
 } as const
 
 export type IntegrationBindingScalarFieldEnum = (typeof IntegrationBindingScalarFieldEnum)[keyof typeof IntegrationBindingScalarFieldEnum]
+
+
+export const RegisteredUpstreamTrustProfileScalarFieldEnum = {
+  id: 'id',
+  integrationId: 'integrationId',
+  expectedIssuer: 'expectedIssuer',
+  expectedAudience: 'expectedAudience',
+  jwksUri: 'jwksUri',
+  algorithm: 'algorithm',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesProfileId: 'replacesProfileId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RegisteredUpstreamTrustProfileScalarFieldEnum = (typeof RegisteredUpstreamTrustProfileScalarFieldEnum)[keyof typeof RegisteredUpstreamTrustProfileScalarFieldEnum]
 
 
 export const GatewaySigningKeyScalarFieldEnum = {
@@ -601,6 +620,14 @@ export const QueryMode = {
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
 export const JsonNullValueFilter = {
   DbNull: DbNull,
   JsonNull: JsonNull,
@@ -608,12 +635,4 @@ export const JsonNullValueFilter = {
 } as const
 
 export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
-
-
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 

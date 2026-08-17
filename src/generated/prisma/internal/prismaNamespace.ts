@@ -386,6 +386,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   Customer: 'Customer',
   IntegrationBinding: 'IntegrationBinding',
+  RegisteredUpstreamTrustProfile: 'RegisteredUpstreamTrustProfile',
   GatewaySigningKey: 'GatewaySigningKey',
   GatewayIdentityAuditEvent: 'GatewayIdentityAuditEvent',
   AssistantSession: 'AssistantSession',
@@ -425,7 +426,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "customer" | "integrationBinding" | "gatewaySigningKey" | "gatewayIdentityAuditEvent" | "assistantSession" | "assistantMessage" | "assistantContextState" | "executionPlan" | "answerDecision" | "clarificationQuestion" | "groundingCheck" | "toolDefinition" | "customerToolPolicy" | "toolCall" | "evidenceRef" | "auditEvent" | "feedbackEvent" | "reviewItem" | "approvalRequest" | "actionDraft" | "escalationRequest" | "queryUnderstandingResult" | "knowledgeDocument" | "knowledgeChunk" | "retrievalRun" | "retrievalCandidate"
+    modelProps: "customer" | "integrationBinding" | "registeredUpstreamTrustProfile" | "gatewaySigningKey" | "gatewayIdentityAuditEvent" | "assistantSession" | "assistantMessage" | "assistantContextState" | "executionPlan" | "answerDecision" | "clarificationQuestion" | "groundingCheck" | "toolDefinition" | "customerToolPolicy" | "toolCall" | "evidenceRef" | "auditEvent" | "feedbackEvent" | "reviewItem" | "approvalRequest" | "actionDraft" | "escalationRequest" | "queryUnderstandingResult" | "knowledgeDocument" | "knowledgeChunk" | "retrievalRun" | "retrievalCandidate"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -574,6 +575,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.IntegrationBindingCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.IntegrationBindingCountAggregateOutputType> | number
+        }
+      }
+    }
+    RegisteredUpstreamTrustProfile: {
+      payload: Prisma.$RegisteredUpstreamTrustProfilePayload<ExtArgs>
+      fields: Prisma.RegisteredUpstreamTrustProfileFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RegisteredUpstreamTrustProfileFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RegisteredUpstreamTrustProfileFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload>
+        }
+        findFirst: {
+          args: Prisma.RegisteredUpstreamTrustProfileFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RegisteredUpstreamTrustProfileFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload>
+        }
+        findMany: {
+          args: Prisma.RegisteredUpstreamTrustProfileFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload>[]
+        }
+        create: {
+          args: Prisma.RegisteredUpstreamTrustProfileCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload>
+        }
+        createMany: {
+          args: Prisma.RegisteredUpstreamTrustProfileCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RegisteredUpstreamTrustProfileCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload>[]
+        }
+        delete: {
+          args: Prisma.RegisteredUpstreamTrustProfileDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload>
+        }
+        update: {
+          args: Prisma.RegisteredUpstreamTrustProfileUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload>
+        }
+        deleteMany: {
+          args: Prisma.RegisteredUpstreamTrustProfileDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RegisteredUpstreamTrustProfileUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RegisteredUpstreamTrustProfileUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload>[]
+        }
+        upsert: {
+          args: Prisma.RegisteredUpstreamTrustProfileUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RegisteredUpstreamTrustProfilePayload>
+        }
+        aggregate: {
+          args: Prisma.RegisteredUpstreamTrustProfileAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRegisteredUpstreamTrustProfile>
+        }
+        groupBy: {
+          args: Prisma.RegisteredUpstreamTrustProfileGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RegisteredUpstreamTrustProfileGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RegisteredUpstreamTrustProfileCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RegisteredUpstreamTrustProfileCountAggregateOutputType> | number
         }
       }
     }
@@ -2411,6 +2486,24 @@ export const IntegrationBindingScalarFieldEnum = {
 export type IntegrationBindingScalarFieldEnum = (typeof IntegrationBindingScalarFieldEnum)[keyof typeof IntegrationBindingScalarFieldEnum]
 
 
+export const RegisteredUpstreamTrustProfileScalarFieldEnum = {
+  id: 'id',
+  integrationId: 'integrationId',
+  expectedIssuer: 'expectedIssuer',
+  expectedAudience: 'expectedAudience',
+  jwksUri: 'jwksUri',
+  algorithm: 'algorithm',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesProfileId: 'replacesProfileId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RegisteredUpstreamTrustProfileScalarFieldEnum = (typeof RegisteredUpstreamTrustProfileScalarFieldEnum)[keyof typeof RegisteredUpstreamTrustProfileScalarFieldEnum]
+
+
 export const GatewaySigningKeyScalarFieldEnum = {
   kid: 'kid',
   publicJwk: 'publicJwk',
@@ -2898,6 +2991,14 @@ export const QueryMode = {
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
 export const JsonNullValueFilter = {
   DbNull: DbNull,
   JsonNull: JsonNull,
@@ -2905,14 +3006,6 @@ export const JsonNullValueFilter = {
 } as const
 
 export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
-
-
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
 
@@ -2953,6 +3046,48 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'DateTime[]'
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
+ * Reference to a field of type 'RegisteredUpstreamTrustProfileAlgorithm'
+ */
+export type EnumRegisteredUpstreamTrustProfileAlgorithmFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileAlgorithm'>
+    
+
+
+/**
+ * Reference to a field of type 'RegisteredUpstreamTrustProfileAlgorithm[]'
+ */
+export type ListEnumRegisteredUpstreamTrustProfileAlgorithmFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileAlgorithm[]'>
+    
+
+
+/**
+ * Reference to a field of type 'RegisteredUpstreamTrustProfileLifecycle'
+ */
+export type EnumRegisteredUpstreamTrustProfileLifecycleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileLifecycle'>
+    
+
+
+/**
+ * Reference to a field of type 'RegisteredUpstreamTrustProfileLifecycle[]'
+ */
+export type ListEnumRegisteredUpstreamTrustProfileLifecycleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileLifecycle[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Int'
+ */
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+/**
+ * Reference to a field of type 'Int[]'
+ */
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 
@@ -3093,20 +3228,6 @@ export type EnumClarificationQuestionStatusFieldRefInput<$PrismaModel> = FieldRe
  * Reference to a field of type 'ClarificationQuestionStatus[]'
  */
 export type ListEnumClarificationQuestionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ClarificationQuestionStatus[]'>
-    
-
-
-/**
- * Reference to a field of type 'Int'
- */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-/**
- * Reference to a field of type 'Int[]'
- */
-export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 
@@ -3473,6 +3594,7 @@ export type PrismaClientOptions = ({
 export type GlobalOmitConfig = {
   customer?: Prisma.CustomerOmit
   integrationBinding?: Prisma.IntegrationBindingOmit
+  registeredUpstreamTrustProfile?: Prisma.RegisteredUpstreamTrustProfileOmit
   gatewaySigningKey?: Prisma.GatewaySigningKeyOmit
   gatewayIdentityAuditEvent?: Prisma.GatewayIdentityAuditEventOmit
   assistantSession?: Prisma.AssistantSessionOmit

@@ -293,3 +293,20 @@ export const GatewaySigningKeyStatus = {
 } as const
 
 export type GatewaySigningKeyStatus = (typeof GatewaySigningKeyStatus)[keyof typeof GatewaySigningKeyStatus]
+
+
+export const RegisteredUpstreamTrustProfileAlgorithm = {
+  RS256: 'RS256'
+} as const
+
+export type RegisteredUpstreamTrustProfileAlgorithm = (typeof RegisteredUpstreamTrustProfileAlgorithm)[keyof typeof RegisteredUpstreamTrustProfileAlgorithm]
+
+
+export const RegisteredUpstreamTrustProfileLifecycle = {
+  draft: 'draft',
+  active: 'active',
+  disabled: 'disabled',
+  replaced: 'replaced'
+} as const
+
+export type RegisteredUpstreamTrustProfileLifecycle = (typeof RegisteredUpstreamTrustProfileLifecycle)[keyof typeof RegisteredUpstreamTrustProfileLifecycle]

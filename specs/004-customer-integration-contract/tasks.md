@@ -17,16 +17,16 @@
 
 ### Tasks
 
-- [ ] T001 [P] Add failing schema-authority contract coverage in `apps/gateway/test/integration-registry/trust-profile-persistence.spec.ts` proving a profile has no `customerId` or `allowedHostApp` authority and `IntegrationBinding` remains sole owner.
-- [ ] T002 [P] Add failing activation-validation cases in `apps/gateway/test/integration-registry/trust-profile-activation.spec.ts` for missing binding, blank issuer/audience, unsafe JWKS URI, unsupported algorithm, invalid lifecycle, and duplicate profile-decision risk.
-- [ ] T003 Define `RegisteredUpstreamTrustProfile` in `prisma/schema.prisma` with integration reference, issuer, exact audience, JWKS source, RS256 policy, enabled state, replacement/version metadata, timestamps, indexes, and no Customer/HostApp duplicate fields; verify T001.
-- [ ] T004 Create additive root migration under `prisma/migrations/<timestamp>_feature004_trust_profiles/migration.sql` for the approved schema only; validate with `npm run prisma:generate` and root migration checks.
-- [ ] T005 Implement `apps/gateway/src/integration-registry/trust-profile.repository.ts` for enabled candidate lookup, profile lookup, controlled create/update/replace/disable, and no Customer resolution; verify repository cases in `apps/gateway/test/integration-registry/trust-profile-repository.spec.ts`.
-- [ ] T006 Implement `apps/gateway/src/integration-registry/trust-profile-activation.validator.ts` from T002, explicitly excluding runtime binding-enabled and HostApp admission decisions; verify all T002 cases pass.
-- [ ] T007 [P] Add persistence/repository structural regression coverage in `apps/gateway/test/integration-registry/customer-binding-isolation.spec.ts` proving `IntegrationBinding.customerId` and `allowedHostApp` remain unchanged authorities.
-- [ ] T008 Add controlled profile provisioning support in `apps/gateway/src/commands/provision-trust-profile.ts`, following `provision-integration-binding.ts` conventions, with create/replace/disable, activation validation, safe audit hook, and cache-invalidation interface; verify in `apps/gateway/test/integration-registry/trust-profile-provisioning.spec.ts`.
-- [ ] T009 Add command idempotency/conflict/no-public-admin-surface tests in `apps/gateway/test/integration-registry/trust-profile-provisioning.spec.ts` before finalizing `provision-trust-profile.ts` behavior.
-- [ ] T010 Run root Prisma validation/generation and focused Gateway persistence tests; record `TRUST_PROFILE_PERSISTENCE_READY` only if no runtime verifier wiring changed.
+- [X] T001 [P] Add failing schema-authority contract coverage in `apps/gateway/test/integration-registry/trust-profile-persistence.spec.ts` proving a profile has no `customerId` or `allowedHostApp` authority and `IntegrationBinding` remains sole owner.
+- [X] T002 [P] Add failing activation-validation cases in `apps/gateway/test/integration-registry/trust-profile-activation.spec.ts` for missing binding, blank issuer/audience, unsafe JWKS URI, unsupported algorithm, invalid lifecycle, and duplicate profile-decision risk.
+- [X] T003 Define `RegisteredUpstreamTrustProfile` in `prisma/schema.prisma` with integration reference, issuer, exact audience, JWKS source, RS256 policy, enabled state, replacement/version metadata, timestamps, indexes, and no Customer/HostApp duplicate fields; verify T001.
+- [X] T004 Create additive root migration under `prisma/migrations/<timestamp>_feature004_trust_profiles/migration.sql` for the approved schema only; validate with `npm run prisma:generate` and root migration checks.
+- [X] T005 Implement `apps/gateway/src/integration-registry/trust-profile.repository.ts` for enabled candidate lookup, profile lookup, controlled create/update/replace/disable, and no Customer resolution; verify repository cases in `apps/gateway/test/integration-registry/trust-profile-repository.spec.ts`.
+- [X] T006 Implement `apps/gateway/src/integration-registry/trust-profile-activation.validator.ts` from T002, explicitly excluding runtime binding-enabled and HostApp admission decisions; verify all T002 cases pass.
+- [X] T007 [P] Add persistence/repository structural regression coverage in `apps/gateway/test/integration-registry/customer-binding-isolation.spec.ts` proving `IntegrationBinding.customerId` and `allowedHostApp` remain unchanged authorities.
+- [X] T008 Add controlled profile provisioning support in `apps/gateway/src/commands/provision-trust-profile.ts`, following `provision-integration-binding.ts` conventions, with create/replace/disable, activation validation, safe audit hook, and cache-invalidation interface; verify in `apps/gateway/test/integration-registry/trust-profile-provisioning.spec.ts`.
+- [X] T009 Add command idempotency/conflict/no-public-admin-surface tests in `apps/gateway/test/integration-registry/trust-profile-provisioning.spec.ts` before finalizing `provision-trust-profile.ts` behavior.
+- [X] T010 Run root Prisma validation/generation and focused Gateway persistence tests; record `TRUST_PROFILE_PERSISTENCE_READY` only if no runtime verifier wiring changed.
 
 ### Acceptance Gate
 

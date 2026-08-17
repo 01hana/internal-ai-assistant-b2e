@@ -191,6 +191,7 @@ export type IntegrationBindingWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"IntegrationBinding"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"IntegrationBinding"> | Date | string
   customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileListRelationFilter
 }
 
 export type IntegrationBindingOrderByWithRelationInput = {
@@ -201,6 +202,7 @@ export type IntegrationBindingOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   customer?: Prisma.CustomerOrderByWithRelationInput
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileOrderByRelationAggregateInput
 }
 
 export type IntegrationBindingWhereUniqueInput = Prisma.AtLeast<{
@@ -214,6 +216,7 @@ export type IntegrationBindingWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"IntegrationBinding"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"IntegrationBinding"> | Date | string
   customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileListRelationFilter
 }, "integrationId">
 
 export type IntegrationBindingOrderByWithAggregationInput = {
@@ -247,6 +250,7 @@ export type IntegrationBindingCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   customer: Prisma.CustomerCreateNestedOneWithoutIntegrationBindingsInput
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileCreateNestedManyWithoutIntegrationBindingInput
 }
 
 export type IntegrationBindingUncheckedCreateInput = {
@@ -256,6 +260,7 @@ export type IntegrationBindingUncheckedCreateInput = {
   enabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileUncheckedCreateNestedManyWithoutIntegrationBindingInput
 }
 
 export type IntegrationBindingUpdateInput = {
@@ -265,6 +270,7 @@ export type IntegrationBindingUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   customer?: Prisma.CustomerUpdateOneRequiredWithoutIntegrationBindingsNestedInput
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileUpdateManyWithoutIntegrationBindingNestedInput
 }
 
 export type IntegrationBindingUncheckedUpdateInput = {
@@ -274,6 +280,7 @@ export type IntegrationBindingUncheckedUpdateInput = {
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileUncheckedUpdateManyWithoutIntegrationBindingNestedInput
 }
 
 export type IntegrationBindingCreateManyInput = {
@@ -339,6 +346,11 @@ export type IntegrationBindingMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
 }
 
+export type IntegrationBindingScalarRelationFilter = {
+  is?: Prisma.IntegrationBindingWhereInput
+  isNot?: Prisma.IntegrationBindingWhereInput
+}
+
 export type IntegrationBindingCreateNestedManyWithoutCustomerInput = {
   create?: Prisma.XOR<Prisma.IntegrationBindingCreateWithoutCustomerInput, Prisma.IntegrationBindingUncheckedCreateWithoutCustomerInput> | Prisma.IntegrationBindingCreateWithoutCustomerInput[] | Prisma.IntegrationBindingUncheckedCreateWithoutCustomerInput[]
   connectOrCreate?: Prisma.IntegrationBindingCreateOrConnectWithoutCustomerInput | Prisma.IntegrationBindingCreateOrConnectWithoutCustomerInput[]
@@ -389,12 +401,27 @@ export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
 }
 
+export type IntegrationBindingCreateNestedOneWithoutRegisteredUpstreamTrustProfilesInput = {
+  create?: Prisma.XOR<Prisma.IntegrationBindingCreateWithoutRegisteredUpstreamTrustProfilesInput, Prisma.IntegrationBindingUncheckedCreateWithoutRegisteredUpstreamTrustProfilesInput>
+  connectOrCreate?: Prisma.IntegrationBindingCreateOrConnectWithoutRegisteredUpstreamTrustProfilesInput
+  connect?: Prisma.IntegrationBindingWhereUniqueInput
+}
+
+export type IntegrationBindingUpdateOneRequiredWithoutRegisteredUpstreamTrustProfilesNestedInput = {
+  create?: Prisma.XOR<Prisma.IntegrationBindingCreateWithoutRegisteredUpstreamTrustProfilesInput, Prisma.IntegrationBindingUncheckedCreateWithoutRegisteredUpstreamTrustProfilesInput>
+  connectOrCreate?: Prisma.IntegrationBindingCreateOrConnectWithoutRegisteredUpstreamTrustProfilesInput
+  upsert?: Prisma.IntegrationBindingUpsertWithoutRegisteredUpstreamTrustProfilesInput
+  connect?: Prisma.IntegrationBindingWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.IntegrationBindingUpdateToOneWithWhereWithoutRegisteredUpstreamTrustProfilesInput, Prisma.IntegrationBindingUpdateWithoutRegisteredUpstreamTrustProfilesInput>, Prisma.IntegrationBindingUncheckedUpdateWithoutRegisteredUpstreamTrustProfilesInput>
+}
+
 export type IntegrationBindingCreateWithoutCustomerInput = {
   integrationId: string
   allowedHostApp: string
   enabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileCreateNestedManyWithoutIntegrationBindingInput
 }
 
 export type IntegrationBindingUncheckedCreateWithoutCustomerInput = {
@@ -403,6 +430,7 @@ export type IntegrationBindingUncheckedCreateWithoutCustomerInput = {
   enabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileUncheckedCreateNestedManyWithoutIntegrationBindingInput
 }
 
 export type IntegrationBindingCreateOrConnectWithoutCustomerInput = {
@@ -443,6 +471,58 @@ export type IntegrationBindingScalarWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"IntegrationBinding"> | Date | string
 }
 
+export type IntegrationBindingCreateWithoutRegisteredUpstreamTrustProfilesInput = {
+  integrationId: string
+  allowedHostApp: string
+  enabled?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  customer: Prisma.CustomerCreateNestedOneWithoutIntegrationBindingsInput
+}
+
+export type IntegrationBindingUncheckedCreateWithoutRegisteredUpstreamTrustProfilesInput = {
+  integrationId: string
+  customerId: string
+  allowedHostApp: string
+  enabled?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type IntegrationBindingCreateOrConnectWithoutRegisteredUpstreamTrustProfilesInput = {
+  where: Prisma.IntegrationBindingWhereUniqueInput
+  create: Prisma.XOR<Prisma.IntegrationBindingCreateWithoutRegisteredUpstreamTrustProfilesInput, Prisma.IntegrationBindingUncheckedCreateWithoutRegisteredUpstreamTrustProfilesInput>
+}
+
+export type IntegrationBindingUpsertWithoutRegisteredUpstreamTrustProfilesInput = {
+  update: Prisma.XOR<Prisma.IntegrationBindingUpdateWithoutRegisteredUpstreamTrustProfilesInput, Prisma.IntegrationBindingUncheckedUpdateWithoutRegisteredUpstreamTrustProfilesInput>
+  create: Prisma.XOR<Prisma.IntegrationBindingCreateWithoutRegisteredUpstreamTrustProfilesInput, Prisma.IntegrationBindingUncheckedCreateWithoutRegisteredUpstreamTrustProfilesInput>
+  where?: Prisma.IntegrationBindingWhereInput
+}
+
+export type IntegrationBindingUpdateToOneWithWhereWithoutRegisteredUpstreamTrustProfilesInput = {
+  where?: Prisma.IntegrationBindingWhereInput
+  data: Prisma.XOR<Prisma.IntegrationBindingUpdateWithoutRegisteredUpstreamTrustProfilesInput, Prisma.IntegrationBindingUncheckedUpdateWithoutRegisteredUpstreamTrustProfilesInput>
+}
+
+export type IntegrationBindingUpdateWithoutRegisteredUpstreamTrustProfilesInput = {
+  integrationId?: Prisma.StringFieldUpdateOperationsInput | string
+  allowedHostApp?: Prisma.StringFieldUpdateOperationsInput | string
+  enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutIntegrationBindingsNestedInput
+}
+
+export type IntegrationBindingUncheckedUpdateWithoutRegisteredUpstreamTrustProfilesInput = {
+  integrationId?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  allowedHostApp?: Prisma.StringFieldUpdateOperationsInput | string
+  enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type IntegrationBindingCreateManyCustomerInput = {
   integrationId: string
   allowedHostApp: string
@@ -457,6 +537,7 @@ export type IntegrationBindingUpdateWithoutCustomerInput = {
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileUpdateManyWithoutIntegrationBindingNestedInput
 }
 
 export type IntegrationBindingUncheckedUpdateWithoutCustomerInput = {
@@ -465,6 +546,7 @@ export type IntegrationBindingUncheckedUpdateWithoutCustomerInput = {
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  registeredUpstreamTrustProfiles?: Prisma.RegisteredUpstreamTrustProfileUncheckedUpdateManyWithoutIntegrationBindingNestedInput
 }
 
 export type IntegrationBindingUncheckedUpdateManyWithoutCustomerInput = {
@@ -476,6 +558,35 @@ export type IntegrationBindingUncheckedUpdateManyWithoutCustomerInput = {
 }
 
 
+/**
+ * Count Type IntegrationBindingCountOutputType
+ */
+
+export type IntegrationBindingCountOutputType = {
+  registeredUpstreamTrustProfiles: number
+}
+
+export type IntegrationBindingCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  registeredUpstreamTrustProfiles?: boolean | IntegrationBindingCountOutputTypeCountRegisteredUpstreamTrustProfilesArgs
+}
+
+/**
+ * IntegrationBindingCountOutputType without action
+ */
+export type IntegrationBindingCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the IntegrationBindingCountOutputType
+   */
+  select?: Prisma.IntegrationBindingCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * IntegrationBindingCountOutputType without action
+ */
+export type IntegrationBindingCountOutputTypeCountRegisteredUpstreamTrustProfilesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RegisteredUpstreamTrustProfileWhereInput
+}
+
 
 export type IntegrationBindingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   integrationId?: boolean
@@ -485,6 +596,8 @@ export type IntegrationBindingSelect<ExtArgs extends runtime.Types.Extensions.In
   createdAt?: boolean
   updatedAt?: boolean
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
+  registeredUpstreamTrustProfiles?: boolean | Prisma.IntegrationBinding$registeredUpstreamTrustProfilesArgs<ExtArgs>
+  _count?: boolean | Prisma.IntegrationBindingCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["integrationBinding"]>
 
 export type IntegrationBindingSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -519,6 +632,8 @@ export type IntegrationBindingSelectScalar = {
 export type IntegrationBindingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"integrationId" | "customerId" | "allowedHostApp" | "enabled" | "createdAt" | "updatedAt", ExtArgs["result"]["integrationBinding"]>
 export type IntegrationBindingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
+  registeredUpstreamTrustProfiles?: boolean | Prisma.IntegrationBinding$registeredUpstreamTrustProfilesArgs<ExtArgs>
+  _count?: boolean | Prisma.IntegrationBindingCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type IntegrationBindingIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
@@ -531,6 +646,7 @@ export type $IntegrationBindingPayload<ExtArgs extends runtime.Types.Extensions.
   name: "IntegrationBinding"
   objects: {
     customer: Prisma.$CustomerPayload<ExtArgs>
+    registeredUpstreamTrustProfiles: Prisma.$RegisteredUpstreamTrustProfilePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     integrationId: string
@@ -934,6 +1050,7 @@ readonly fields: IntegrationBindingFieldRefs;
 export interface Prisma__IntegrationBindingClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  registeredUpstreamTrustProfiles<T extends Prisma.IntegrationBinding$registeredUpstreamTrustProfilesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.IntegrationBinding$registeredUpstreamTrustProfilesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RegisteredUpstreamTrustProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1367,6 +1484,30 @@ export type IntegrationBindingDeleteManyArgs<ExtArgs extends runtime.Types.Exten
    * Limit how many IntegrationBindings to delete.
    */
   limit?: number
+}
+
+/**
+ * IntegrationBinding.registeredUpstreamTrustProfiles
+ */
+export type IntegrationBinding$registeredUpstreamTrustProfilesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RegisteredUpstreamTrustProfile
+   */
+  select?: Prisma.RegisteredUpstreamTrustProfileSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RegisteredUpstreamTrustProfile
+   */
+  omit?: Prisma.RegisteredUpstreamTrustProfileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RegisteredUpstreamTrustProfileInclude<ExtArgs> | null
+  where?: Prisma.RegisteredUpstreamTrustProfileWhereInput
+  orderBy?: Prisma.RegisteredUpstreamTrustProfileOrderByWithRelationInput | Prisma.RegisteredUpstreamTrustProfileOrderByWithRelationInput[]
+  cursor?: Prisma.RegisteredUpstreamTrustProfileWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RegisteredUpstreamTrustProfileScalarFieldEnum | Prisma.RegisteredUpstreamTrustProfileScalarFieldEnum[]
 }
 
 /**

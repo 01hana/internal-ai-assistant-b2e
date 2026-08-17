@@ -50,6 +50,12 @@ export type Customer = Prisma.CustomerModel
  */
 export type IntegrationBinding = Prisma.IntegrationBindingModel
 /**
+ * Model RegisteredUpstreamTrustProfile
+ * Gateway-owned upstream verification policy. Customer and HostApp authority
+ * remain exclusively on its anchored IntegrationBinding.
+ */
+export type RegisteredUpstreamTrustProfile = Prisma.RegisteredUpstreamTrustProfileModel
+/**
  * Model GatewaySigningKey
  * 
  */
