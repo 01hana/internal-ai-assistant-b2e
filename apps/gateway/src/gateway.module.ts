@@ -9,22 +9,46 @@ import type { PrismaClient } from './generated/prisma/client';
 import { GatewayHealthModule } from './health/gateway-health.module';
 import { InternalIdentityTokenIssuer } from './identity/internal-identity-token-issuer.service';
 import { CanonicalIdentityResolver } from './integration-registry/canonical-identity-resolver.service';
+import { CandidateTrustProfileResolver } from './integration-registry/candidate-trust-profile.resolver';
 import { IntegrationBindingRepository } from './integration-registry/integration-binding.repository';
+import { TrustProfileRepository } from './integration-registry/trust-profile.repository';
 import { JwksModule } from './jwks/jwks.module';
 import { ActiveSigningKeyResolver } from './signing/active-signing-key-resolver';
 import { GATEWAY_PRISMA_CLIENT, GatewaySigningKeyPersistenceModule } from './signing/gateway-signing-key-persistence.module';
 import { GatewaySigningKeyRepository } from './signing/gateway-signing-key.repository';
 import { SigningKeyProvider } from './signing/signing-key-provider';
-import { RemoteJwksUpstreamTokenVerifier } from './upstream-auth/upstream-token-verifier.service';
+import { HardenedJwksTransport } from './upstream-auth/jwks-transport.adapter';
+import { MultiProfileUpstreamTokenVerifier } from './upstream-auth/multi-profile-upstream-token-verifier';
+import { ProfileScopedVerifier } from './upstream-auth/profile-scoped-verifier';
+import { RoutingMetadataParser } from './upstream-auth/routing-metadata.parser';
 
 @Module({
   imports: [GatewayConfigModule, GatewayHealthModule, JwksModule, GatewaySigningKeyPersistenceModule],
   controllers: [GatewayAssistantController],
   providers: [
     {
-      provide: RemoteJwksUpstreamTokenVerifier,
-      inject: [GatewayConfigService],
-      useFactory: (config: GatewayConfigService) => new RemoteJwksUpstreamTokenVerifier(config.upstreamVerification)
+      provide: TrustProfileRepository,
+      inject: [GATEWAY_PRISMA_CLIENT],
+      useFactory: (client: PrismaClient) => new TrustProfileRepository(client)
+    },
+    {
+      provide: CandidateTrustProfileResolver,
+      inject: [TrustProfileRepository],
+      useFactory: (repository: TrustProfileRepository) => new CandidateTrustProfileResolver(repository)
+    },
+    RoutingMetadataParser,
+    HardenedJwksTransport,
+    {
+      provide: ProfileScopedVerifier,
+      inject: [HardenedJwksTransport],
+      useFactory: (transport: HardenedJwksTransport) => new ProfileScopedVerifier({ transport })
+    },
+    {
+      provide: MultiProfileUpstreamTokenVerifier,
+      inject: [RoutingMetadataParser, CandidateTrustProfileResolver, ProfileScopedVerifier, GatewayConfigService],
+      useFactory: (parser: RoutingMetadataParser, candidateResolver: CandidateTrustProfileResolver, profileVerifier: ProfileScopedVerifier, config: GatewayConfigService) => new MultiProfileUpstreamTokenVerifier({
+        parser, candidateResolver, profileVerifier, clockToleranceSeconds: config.config.upstreamClockToleranceSeconds
+      })
     },
     {
       provide: IntegrationBindingRepository,
@@ -70,9 +94,9 @@ import { RemoteJwksUpstreamTokenVerifier } from './upstream-auth/upstream-token-
     },
     {
       provide: GatewayTrustChainHandler,
-      inject: [RemoteJwksUpstreamTokenVerifier, CanonicalIdentityResolver, GatewayBackendClient],
+      inject: [MultiProfileUpstreamTokenVerifier, CanonicalIdentityResolver, GatewayBackendClient],
       useFactory: (
-        upstreamTokenVerifier: RemoteJwksUpstreamTokenVerifier,
+        upstreamTokenVerifier: MultiProfileUpstreamTokenVerifier,
         canonicalIdentityResolver: CanonicalIdentityResolver,
         gatewayBackendClient: GatewayBackendClient
       ) => new GatewayTrustChainHandler({ upstreamTokenVerifier, canonicalIdentityResolver, gatewayBackendClient })

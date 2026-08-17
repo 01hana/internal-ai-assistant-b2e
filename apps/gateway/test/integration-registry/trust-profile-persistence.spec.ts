@@ -33,10 +33,10 @@ describe('Registered upstream trust-profile persistence authority contract (T001
     expect(binding).toMatch(/enabled\s+Boolean/);
   });
 
-  it('does not change the existing Gateway verifier composition', () => {
+  it('keeps trust-profile verification separate from persisted Customer and HostApp authority', () => {
     const gatewayModule = readFileSync(modulePath, 'utf8');
-    expect(gatewayModule).toMatch(/RemoteJwksUpstreamTokenVerifier/);
-    expect(gatewayModule).not.toMatch(/TrustProfileRepository/);
+    expect(gatewayModule).toMatch(/MultiProfileUpstreamTokenVerifier/);
+    expect(gatewayModule).toMatch(/TrustProfileRepository/);
     expect(gatewayModule).not.toMatch(/ProvisionTrustProfile/);
   });
 });

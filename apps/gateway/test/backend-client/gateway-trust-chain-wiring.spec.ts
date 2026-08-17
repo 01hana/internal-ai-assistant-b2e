@@ -1,14 +1,22 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { NestFactory } from '@nestjs/core';
+import { Test } from '@nestjs/testing';
 import { GatewayIdentityAuditWriter } from '../../src/audit/gateway-identity-audit.writer';
 import { GatewayBackendClient } from '../../src/backend-client/gateway-backend-client.service';
 import { GatewayTrustChainHandler } from '../../src/backend-client/gateway-trust-chain.handler';
 import { GatewayModule } from '../../src/gateway.module';
+import { GATEWAY_PRISMA_CLIENT } from '../../src/signing/gateway-signing-key-persistence.module';
 import { CanonicalIdentityResolver } from '../../src/integration-registry/canonical-identity-resolver.service';
+import { CandidateTrustProfileResolver } from '../../src/integration-registry/candidate-trust-profile.resolver';
 import { IntegrationBindingRepository } from '../../src/integration-registry/integration-binding.repository';
+import { TrustProfileRepository } from '../../src/integration-registry/trust-profile.repository';
 import { GatewaySigningKeyRepository } from '../../src/signing/gateway-signing-key.repository';
 import { RemoteJwksUpstreamTokenVerifier } from '../../src/upstream-auth/upstream-token-verifier.service';
+import { HardenedJwksTransport } from '../../src/upstream-auth/jwks-transport.adapter';
+import { MultiProfileUpstreamTokenVerifier } from '../../src/upstream-auth/multi-profile-upstream-token-verifier';
+import { ProfileScopedVerifier } from '../../src/upstream-auth/profile-scoped-verifier';
+import { RoutingMetadataParser } from '../../src/upstream-auth/routing-metadata.parser';
 
 const gatewayModulePath = resolve(__dirname, '../../src/gateway.module.ts');
 
@@ -26,7 +34,13 @@ describe('Gateway trust-chain production wiring contract (T068)', () => {
       const app = await NestFactory.createApplicationContext(GatewayModule, { logger: false });
       try {
         expect(app.get(GatewayTrustChainHandler)).toBeInstanceOf(GatewayTrustChainHandler);
-        expect(app.get(RemoteJwksUpstreamTokenVerifier)).toBeInstanceOf(RemoteJwksUpstreamTokenVerifier);
+        expect(app.get(MultiProfileUpstreamTokenVerifier)).toBeInstanceOf(MultiProfileUpstreamTokenVerifier);
+        expect(app.get(RoutingMetadataParser)).toBeInstanceOf(RoutingMetadataParser);
+        expect(app.get(TrustProfileRepository)).toBeInstanceOf(TrustProfileRepository);
+        expect(app.get(CandidateTrustProfileResolver)).toBeInstanceOf(CandidateTrustProfileResolver);
+        expect(app.get(HardenedJwksTransport)).toBeInstanceOf(HardenedJwksTransport);
+        expect(app.get(ProfileScopedVerifier)).toBeInstanceOf(ProfileScopedVerifier);
+        expect(() => app.get(RemoteJwksUpstreamTokenVerifier)).toThrow();
         expect(app.get(CanonicalIdentityResolver)).toBeInstanceOf(CanonicalIdentityResolver);
         expect(app.get(GatewayBackendClient)).toBeInstanceOf(GatewayBackendClient);
         expect(app.get(IntegrationBindingRepository)).toBeInstanceOf(IntegrationBindingRepository);
@@ -34,6 +48,25 @@ describe('Gateway trust-chain production wiring contract (T068)', () => {
         expect(app.get(GatewaySigningKeyRepository)).toBeInstanceOf(GatewaySigningKeyRepository);
       } finally {
         await app.close();
+      }
+    });
+  });
+
+  it('uses registered profiles for an unknown issuer without a remote-verifier fallback', async () => {
+    await withGatewayEnvironment(async () => {
+      const registryClient = { registeredUpstreamTrustProfile: { findMany: jest.fn(async () => []) } };
+      const module = await Test.createTestingModule({ imports: [GatewayModule] })
+        .overrideProvider(GATEWAY_PRISMA_CLIENT)
+        .useValue(registryClient)
+        .compile();
+      try {
+        const verifier = module.get(MultiProfileUpstreamTokenVerifier);
+        const token = 'eyJhbGciOiJSUzI1NiIsImtpZCI6ImtpZCJ9.eyJpc3MiOiJodHRwczovL3Vua25vd24udGVzdCJ9.signature';
+        await expect(verifier.verify({ authorization: `Bearer ${token}` })).rejects.toMatchObject({ reasonCode: 'invalid_signature' });
+        expect(registryClient.registeredUpstreamTrustProfile.findMany).toHaveBeenCalledTimes(1);
+        expect(() => module.get(RemoteJwksUpstreamTokenVerifier)).toThrow();
+      } finally {
+        await module.close();
       }
     });
   });

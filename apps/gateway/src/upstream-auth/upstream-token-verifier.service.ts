@@ -3,8 +3,7 @@ import type { GatewayUpstreamVerificationConfig } from '../config/gateway-config
 import { UpstreamAuthenticationError, type UpstreamAuthReasonCode } from './upstream-auth.error';
 import { createVerifiedUpstreamIdentity, type VerifiedUpstreamIdentity } from './verified-upstream-identity';
 import { registeredTimeFailure } from './upstream-time-policy';
-
-const COMPACT_JWT_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+import { parseBearerToken } from './bearer-token.parser';
 
 export interface UpstreamTokenVerifier {
   verify(input: Readonly<{ authorization?: string }>): Promise<VerifiedUpstreamIdentity>;
@@ -44,14 +43,6 @@ function validateConfig(config: GatewayUpstreamVerificationConfig): GatewayUpstr
   }
   return Object.freeze({ ...config });
 }
-
-function parseBearerToken(authorization: string | undefined): string {
-  if (typeof authorization !== 'string') throw new UpstreamAuthenticationError('missing_or_malformed_token');
-  const match = /^Bearer ([^\s]+)$/.exec(authorization);
-  if (!match || !COMPACT_JWT_PATTERN.test(match[1])) throw new UpstreamAuthenticationError('missing_or_malformed_token');
-  return match[1];
-}
-
 
 function classifyJoseFailure(error: unknown): UpstreamAuthReasonCode {
   const details = joseErrorDetails(error);

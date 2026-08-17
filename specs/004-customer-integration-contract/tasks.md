@@ -88,17 +88,19 @@
 
 ### Tasks
 
-- [ ] T030 Add failing `VerifiedProfileDecision` tests in `apps/gateway/test/upstream-auth/multi-profile-upstream-token-verifier.spec.ts` for zero, exactly-one, multiple, disabled profile, verified integration/profile mismatch, and shared issuer/audience/JWKS/key.
-- [ ] T031 Add failing static authority tests in `apps/gateway/test/upstream-auth/multi-profile-upstream-token-verifier.spec.ts` proving the multi-profile verifier cannot query `IntegrationBinding`, Customer, HostApp authority, or construct `CanonicalGatewayIdentity`.
-- [ ] T032 Implement `apps/gateway/src/upstream-auth/multi-profile-upstream-token-verifier.ts` using parser, candidate resolver, profile-scoped verifier, canonical claim validation, and exact-one decision; verify T030–T031.
-- [ ] T033 Add no-legacy-fallback tests in `apps/gateway/test/upstream-auth/multi-profile-upstream-token-verifier.spec.ts` before Gateway wiring; verify verifier failure is generic 401.
-- [ ] T034 Update `apps/gateway/src/gateway.module.ts` to compose `TrustProfileRepository`, `CandidateTrustProfileResolver`, profile-scoped verification, and `MultiProfileUpstreamTokenVerifier` behind `UpstreamTokenVerifier`; verify `apps/gateway/test/backend-client/gateway-trust-chain-wiring.spec.ts`.
-- [ ] T035 Add Gateway handler/route regression coverage in `apps/gateway/test/backend-client/gateway-trust-chain-handler.spec.ts` proving the handler and resolver contracts are unchanged under multi-profile verifier wiring.
-- [ ] T036 Run focused upstream-auth/wiring tests and record `MULTI_PROFILE_GATEWAY_PATH_READY` only when no legacy verifier fallback exists in the new runtime path.
+- [X] T030 Add failing `VerifiedProfileDecision` tests in `apps/gateway/test/upstream-auth/multi-profile-upstream-token-verifier.spec.ts` for zero, exactly-one, multiple, disabled profile, verified integration/profile mismatch, and shared issuer/audience/JWKS/key.
+- [X] T031 Add failing static authority tests in `apps/gateway/test/upstream-auth/multi-profile-upstream-token-verifier.spec.ts` proving the multi-profile verifier cannot query `IntegrationBinding`, Customer, HostApp authority, or construct `CanonicalGatewayIdentity`.
+- [X] T032 Implement `apps/gateway/src/upstream-auth/multi-profile-upstream-token-verifier.ts` using parser, candidate resolver, profile-scoped verifier, canonical claim validation, and exact-one decision; verify T030–T031.
+- [X] T033 Add no-legacy-fallback tests in `apps/gateway/test/upstream-auth/multi-profile-upstream-token-verifier.spec.ts` before Gateway wiring; verify verifier failure is generic 401.
+- [X] T034 Update `apps/gateway/src/gateway.module.ts` to compose `TrustProfileRepository`, `CandidateTrustProfileResolver`, profile-scoped verification, and `MultiProfileUpstreamTokenVerifier` behind `UpstreamTokenVerifier`; verify `apps/gateway/test/backend-client/gateway-trust-chain-wiring.spec.ts`.
+- [X] T035 Add Gateway handler/route regression coverage in `apps/gateway/test/backend-client/gateway-trust-chain-handler.spec.ts` proving the handler and resolver contracts are unchanged under multi-profile verifier wiring.
+- [X] T036 Run focused upstream-auth/wiring tests and record `MULTI_PROFILE_GATEWAY_PATH_READY` only when no legacy verifier fallback exists in the new runtime path.
 
 ### Acceptance Gate
 
 `MULTI_PROFILE_GATEWAY_PATH_READY`: exactly-one profile decision feeds the unchanged resolver path; no binding/Customer authority or legacy fallback exists in verifier composition.
+
+`MULTI_PROFILE_GATEWAY_PATH_READY=YES` — T030–T036 acceptance evidence completed.
 
 ## Batch 5 — Bootstrap, Profile-only Cutover, Lifecycle, and Profile Cache
 

@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { IdentityResolutionError } from '../../src/integration-registry/canonical-identity-resolver.service';
 import type { CanonicalGatewayIdentity } from '../../src/identity/canonical-gateway-identity';
 import { UpstreamAuthenticationError } from '../../src/upstream-auth/upstream-auth.error';
+import { MultiProfileInfrastructureError } from '../../src/upstream-auth/multi-profile-upstream-token-verifier';
 import type { VerifiedUpstreamIdentity } from '../../src/upstream-auth/verified-upstream-identity';
 
 const repositoryRoot = resolve(__dirname, '../../../..');
@@ -102,6 +103,11 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     expect(Object.getOwnPropertyNames(Handler.prototype).sort()).toEqual(['constructor', 'createSession', 'getSession', 'getSessionMessages', 'sendStreamMessage']);
   });
 
+  it('has no legacy verifier, multi-profile implementation, registry, or binding authority', () => {
+    const source = readFileSync(handlerPath, 'utf8');
+    expect(source).not.toMatch(/RemoteJwksUpstreamTokenVerifier|GATEWAY_UPSTREAM_JWT_(?:ISSUER|AUDIENCE|JWKS_URI)|TrustProfileRepository|CandidateTrustProfileResolver|RoutingMetadataParser|ProfileScopedVerifier|HardenedJwksTransport|VerifiedProfileDecision|IntegrationBindingRepository|customerId|allowedHostApp|CustomerScope/);
+  });
+
   it('chains verified upstream identity to canonical identity and then create-session transport by reference', async () => {
     const harness = createHarness();
     await harness.handler.createSession(createSessionInput);
@@ -158,6 +164,19 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     expect(harness.sendCalls).toEqual([]);
   });
 
+  it('propagates multi-profile infrastructure failure without resolution, transport, retry, or fallback', async () => {
+    const failure = new MultiProfileInfrastructureError();
+    const harness = createHarness({ verifyFailure: failure });
+
+    await expect(harness.handler.createSession(createSessionInput)).rejects.toBe(failure);
+    expect(harness.verifyInputs).toEqual([{ authorization: createSessionInput.authorization }]);
+    expect(harness.resolveInputs).toEqual([]);
+    expect(harness.createCalls).toEqual([]);
+    expect(harness.getSessionCalls).toEqual([]);
+    expect(harness.historyCalls).toEqual([]);
+    expect(harness.sendCalls).toEqual([]);
+  });
+
   it('stops before Backend transport when canonical identity resolution rejects', async () => {
     const harness = createHarness({ resolveFailure: new IdentityResolutionError('unknown_binding') });
 
@@ -166,6 +185,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     expect(harness.resolveInputs).toEqual([{ identity: verifiedIdentity, requestId: createSessionInput.requestId }]);
     expect(harness.createCalls).toEqual([]);
     expect(harness.sendCalls).toEqual([]);
+    expect(harness.verifyInputs).toHaveLength(1);
   });
 
   it('stops SSE Backend transport when canonical identity resolution rejects', async () => {
@@ -177,6 +197,30 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     expect(harness.resolveInputs[0].identity).toBe(verifiedIdentity);
     expect(harness.createCalls).toEqual([]);
     expect(harness.sendCalls).toEqual([]);
+    expect(harness.verifyInputs).toHaveLength(1);
+  });
+
+  it('does not repeat verification or resolution after a Backend failure', async () => {
+    const failure = new Error('backend unavailable');
+    const harness = createHarness({ backendFailure: failure });
+
+    await expect(harness.handler.createSession(createSessionInput)).rejects.toBe(failure);
+    expect(harness.verifyInputs).toHaveLength(1);
+    expect(harness.resolveInputs).toHaveLength(1);
+    expect(harness.createCalls).toHaveLength(1);
+  });
+
+  it('preserves read and history dispatch through the same identity chain', async () => {
+    const harness = createHarness();
+    const readInput = { authorization: createSessionInput.authorization, sessionId: 'session-owned-001', requestId: 'read-request', traceparent: createSessionInput.traceparent };
+    const historyInput = { authorization: createSessionInput.authorization, sessionId: 'session-owned-001', query: { limit: '1', order: 'asc' as const }, requestId: 'history-request' };
+    await harness.handler.getSession(readInput);
+    await harness.handler.getSessionMessages(historyInput);
+
+    expect(harness.verifyInputs).toEqual([{ authorization: readInput.authorization }, { authorization: historyInput.authorization }]);
+    expect(harness.resolveInputs).toEqual([{ identity: verifiedIdentity, requestId: readInput.requestId }, { identity: verifiedIdentity, requestId: historyInput.requestId }]);
+    expect(harness.getSessionCalls).toEqual([{ identity: canonicalIdentity, sessionId: readInput.sessionId, input: { requestId: readInput.requestId, traceparent: readInput.traceparent } }]);
+    expect(harness.historyCalls).toEqual([{ identity: canonicalIdentity, sessionId: historyInput.sessionId, query: historyInput.query, input: { requestId: historyInput.requestId, traceparent: undefined } }]);
   });
 
   it.each([
@@ -234,17 +278,21 @@ describe('Gateway trust-chain handler contract (T068)', () => {
   });
 });
 
-function createHarness(options: Readonly<{ verifyFailure?: Error; resolveFailure?: Error }> = {}): Readonly<{
+function createHarness(options: Readonly<{ verifyFailure?: Error; resolveFailure?: Error; backendFailure?: Error }> = {}): Readonly<{
   handler: GatewayTrustChainHandler;
   verifyInputs: Array<Readonly<{ authorization?: string }>>;
   resolveInputs: Array<Readonly<{ identity: VerifiedUpstreamIdentity; requestId: string }>>;
   createCalls: Array<Readonly<{ identity: CanonicalGatewayIdentity; input: ClientCreateSessionInput }>>;
+  getSessionCalls: Array<Readonly<{ identity: CanonicalGatewayIdentity; sessionId: string; input: Readonly<{ requestId: string; traceparent?: string }> }>>;
+  historyCalls: Array<Readonly<{ identity: CanonicalGatewayIdentity; sessionId: string; query: Readonly<{ limit?: string; cursor?: string; order?: 'asc' }>; input: Readonly<{ requestId: string; traceparent?: string }> }>>;
   sendCalls: Array<Readonly<{ identity: CanonicalGatewayIdentity; sessionId: string; input: ClientSendStreamMessageInput }>>;
 }> {
   const Handler = loadGatewayTrustChainHandler();
   const verifyInputs: Array<Readonly<{ authorization?: string }>> = [];
   const resolveInputs: Array<Readonly<{ identity: VerifiedUpstreamIdentity; requestId: string }>> = [];
   const createCalls: Array<Readonly<{ identity: CanonicalGatewayIdentity; input: ClientCreateSessionInput }>> = [];
+  const getSessionCalls: Array<Readonly<{ identity: CanonicalGatewayIdentity; sessionId: string; input: Readonly<{ requestId: string; traceparent?: string }> }>> = [];
+  const historyCalls: Array<Readonly<{ identity: CanonicalGatewayIdentity; sessionId: string; query: Readonly<{ limit?: string; cursor?: string; order?: 'asc' }>; input: Readonly<{ requestId: string; traceparent?: string }> }>> = [];
   const sendCalls: Array<Readonly<{ identity: CanonicalGatewayIdentity; sessionId: string; input: ClientSendStreamMessageInput }>> = [];
   const handler = new Handler({
     upstreamTokenVerifier: {
@@ -264,17 +312,19 @@ function createHarness(options: Readonly<{ verifyFailure?: Error; resolveFailure
     gatewayBackendClient: {
       async createSession(identity, input) {
         createCalls.push({ identity, input });
+        if (options.backendFailure) throw options.backendFailure;
         return { requestId: input.requestId };
       },
-      async getSession() { return { statusCode: 200, body: {} }; },
-      async getSessionMessages() { return { statusCode: 200, body: {} }; },
+      async getSession(identity, sessionId, input) { getSessionCalls.push({ identity, sessionId, input }); if (options.backendFailure) throw options.backendFailure; return { statusCode: 200, body: {} }; },
+      async getSessionMessages(identity, sessionId, query, input) { historyCalls.push({ identity, sessionId, query, input }); if (options.backendFailure) throw options.backendFailure; return { statusCode: 200, body: {} }; },
       async sendStreamMessage(identity, sessionId, input) {
         sendCalls.push({ identity, sessionId, input });
+        if (options.backendFailure) throw options.backendFailure;
         return new ReadableStream<Uint8Array>();
       }
     }
   });
-  return Object.freeze({ handler, verifyInputs, resolveInputs, createCalls, sendCalls });
+  return Object.freeze({ handler, verifyInputs, resolveInputs, createCalls, getSessionCalls, historyCalls, sendCalls });
 }
 
 function loadGatewayTrustChainHandler(): GatewayTrustChainHandlerConstructor {
