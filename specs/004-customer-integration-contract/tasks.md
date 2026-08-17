@@ -62,18 +62,18 @@
 
 ### Tasks
 
-- [ ] T018 Research installed `jose@5.10.0` Remote JWKS extension points in `specs/004-customer-integration-contract/research-jose-transport.md`: custom fetch, redirects, timeout, response bounds, DNS/IP validation, cache/refresh, and unknown-kid behavior; select the minimum adapter boundary.
-- [ ] T019 Add failing profile-scoped verification tests in `apps/gateway/test/upstream-auth/profile-scoped-verifier.spec.ts` for exact issuer/audience, RS256, nonblank kid, invalid signature, time failures, malformed canonical claims, and empty roles/scopes.
-- [ ] T020 Extract reusable profile-scoped verification from `apps/gateway/src/upstream-auth/upstream-token-verifier.service.ts` into `apps/gateway/src/upstream-auth/profile-scoped-verifier.ts`, retaining existing `jose` semantics; verify T019.
-- [ ] T021 Add failing production JWKS registration tests in `apps/gateway/test/upstream-auth/jwks-source-policy.spec.ts` for HTTP, URL credentials/fragments, redirects, localhost/loopback, link-local, private, multicast, unspecified, and unsafe DNS destinations.
-- [ ] T022 Implement `apps/gateway/src/upstream-auth/jwks-source-policy.ts` and any minimal `apps/gateway/src/upstream-auth/jwks-transport.adapter.ts` required by T018; verify T021 including DNS rebinding and connection-time destination checks.
-- [ ] T023 Add failing transport-bound tests in `apps/gateway/test/upstream-auth/jwks-transport.spec.ts` for connection timeout, response bounds/content shape, invalid JWKS, and production rejection of test-only exceptions.
-- [ ] T024 Implement bounded timeout/response/content/redirect behavior in `apps/gateway/src/upstream-auth/jwks-transport.adapter.ts`; verify T023.
-- [ ] T025 Add failing JWKS cache tests in `apps/gateway/test/upstream-auth/profile-scoped-verifier.spec.ts` for profile isolation, unknown-kid refresh, bounded refresh/retry, network failure fail-closed, and same-issuer key rotation.
-- [ ] T026 Implement profile-isolated JWKS cache/refresh behavior in `apps/gateway/src/upstream-auth/profile-scoped-verifier.ts`; verify T025 without retry amplification.
-- [ ] T027 [P] Add explicit test-only loopback fixture policy in `apps/gateway/test/upstream-auth/upstream-jwks.fixture.ts` and `apps/gateway/test/upstream-auth/jwks-source-policy.spec.ts`, proving production cannot enable it.
-- [ ] T028 Re-run existing `apps/gateway/test/upstream-auth/upstream-token-verifier.spec.ts` and `upstream-identity.spec.ts` as compatibility regressions after extraction.
-- [ ] T029 Run all Batch 3 tests and record `PROFILE_SCOPED_VERIFICATION_READY` and `JWKS_SECURITY_GATE=PASS`; do not allow Phase 9 production acceptance if T018–T028 are incomplete.
+- [X] T018 Research installed `jose@5.10.0` Remote JWKS extension points in `specs/004-customer-integration-contract/research-jose-transport.md`: custom fetch, redirects, timeout, response bounds, DNS/IP validation, cache/refresh, and unknown-kid behavior; select the minimum adapter boundary.
+- [X] T019 Add failing profile-scoped verification tests in `apps/gateway/test/upstream-auth/profile-scoped-verifier.spec.ts` for exact issuer/audience, RS256, nonblank kid, invalid signature, time failures, malformed canonical claims, and empty roles/scopes.
+- [X] T020 Extract reusable profile-scoped verification from `apps/gateway/src/upstream-auth/upstream-token-verifier.service.ts` into `apps/gateway/src/upstream-auth/profile-scoped-verifier.ts`, retaining existing `jose` semantics; verify T019.
+- [X] T021 Add failing production JWKS registration tests in `apps/gateway/test/upstream-auth/jwks-source-policy.spec.ts` for HTTP, URL credentials/fragments, redirects, localhost/loopback, link-local, private, multicast, unspecified, and unsafe DNS destinations.
+- [X] T022 Implement `apps/gateway/src/upstream-auth/jwks-source-policy.ts` and any minimal `apps/gateway/src/upstream-auth/jwks-transport.adapter.ts` required by T018; verify T021 including DNS rebinding and connection-time destination checks.
+- [X] T023 Add failing transport-bound tests in `apps/gateway/test/upstream-auth/jwks-transport.spec.ts` for connection timeout, response bounds/content shape, invalid JWKS, and production rejection of test-only exceptions.
+- [X] T024 Implement bounded timeout/response/content/redirect behavior in `apps/gateway/src/upstream-auth/jwks-transport.adapter.ts`; verify T023.
+- [X] T025 Add failing JWKS cache tests in `apps/gateway/test/upstream-auth/profile-scoped-verifier.spec.ts` for profile isolation, unknown-kid refresh, bounded refresh/retry, network failure fail-closed, and same-issuer key rotation.
+- [X] T026 Implement profile-isolated JWKS cache/refresh behavior in `apps/gateway/src/upstream-auth/profile-scoped-verifier.ts`; verify T025 without retry amplification.
+- [X] T027 [P] Add explicit test-only loopback fixture policy in `apps/gateway/test/upstream-auth/upstream-jwks.fixture.ts` and `apps/gateway/test/upstream-auth/jwks-source-policy.spec.ts`, proving production cannot enable it.
+- [X] T028 Re-run existing `apps/gateway/test/upstream-auth/upstream-token-verifier.spec.ts` and `upstream-identity.spec.ts` as compatibility regressions after extraction.
+- [X] T029 Run all Batch 3 tests and record `PROFILE_SCOPED_VERIFICATION_READY` and `JWKS_SECURITY_GATE=PASS`; do not allow Phase 9 production acceptance if T018–T028 are incomplete.
 
 ### Acceptance Gate
 

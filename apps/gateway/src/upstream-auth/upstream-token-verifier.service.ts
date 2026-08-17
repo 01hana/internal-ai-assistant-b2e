@@ -2,6 +2,7 @@ import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify, type JWTVerifyGet
 import type { GatewayUpstreamVerificationConfig } from '../config/gateway-config.service';
 import { UpstreamAuthenticationError, type UpstreamAuthReasonCode } from './upstream-auth.error';
 import { createVerifiedUpstreamIdentity, type VerifiedUpstreamIdentity } from './verified-upstream-identity';
+import { registeredTimeFailure } from './upstream-time-policy';
 
 const COMPACT_JWT_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
@@ -27,7 +28,8 @@ export class RemoteJwksUpstreamTokenVerifier implements UpstreamTokenVerifier {
       const { payload } = await jwtVerify(token, this.keySet, {
         algorithms: ['RS256'], issuer: this.config.issuer, audience: this.config.audience, clockTolerance: this.config.clockToleranceSeconds
       });
-      validateRegisteredTimes(payload, this.config.clockToleranceSeconds);
+      const timeFailure = registeredTimeFailure(payload, this.config.clockToleranceSeconds);
+      if (timeFailure) throw new UpstreamAuthenticationError(timeFailure);
       return createVerifiedUpstreamIdentity(payload as Record<string, unknown>);
     } catch (error) {
       if (error instanceof UpstreamAuthenticationError) throw error;
@@ -50,16 +52,6 @@ function parseBearerToken(authorization: string | undefined): string {
   return match[1];
 }
 
-function validateRegisteredTimes(claims: { iat?: unknown; exp?: unknown; nbf?: unknown }, clockToleranceSeconds: number): void {
-  const now = Math.floor(Date.now() / 1000);
-  if (!numericDate(claims.iat) || claims.iat > now + clockToleranceSeconds) throw new UpstreamAuthenticationError('invalid_iat');
-  if (!numericDate(claims.exp) || claims.exp <= now - clockToleranceSeconds) throw new UpstreamAuthenticationError('token_expired');
-  if (claims.nbf !== undefined && (!numericDate(claims.nbf) || claims.nbf > now + clockToleranceSeconds)) throw new UpstreamAuthenticationError('token_not_yet_valid');
-}
-
-function numericDate(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
-}
 
 function classifyJoseFailure(error: unknown): UpstreamAuthReasonCode {
   const details = joseErrorDetails(error);

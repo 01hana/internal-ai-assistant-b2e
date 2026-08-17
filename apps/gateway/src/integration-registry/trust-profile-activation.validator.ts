@@ -1,4 +1,5 @@
-import { isIP } from 'node:net';
+import { ProductionJwksSourceRegistrationPolicy, type JwksSourceRegistrationPolicy } from '../upstream-auth/jwks-source-policy';
+export { ProductionJwksSourceRegistrationPolicy } from '../upstream-auth/jwks-source-policy';
 
 export type TrustProfileActivationInput = Readonly<{
   id: string;
@@ -19,27 +20,14 @@ type ActivationRepository = Readonly<{
   findById?(id: string): Promise<{ integrationId: string; version: number } | null>;
 }>;
 
-export interface JwksSourceRegistrationPolicy {
-  validate(value: string): void;
-}
-
-/** Batch 1 registration policy only. DNS, redirects, and connection-time checks belong to Batch 3. */
-export class ProductionJwksSourceRegistrationPolicy implements JwksSourceRegistrationPolicy {
-  validate(value: string): void {
-    let url: URL;
-    try { url = new URL(value); } catch { throw new TrustProfileActivationError(); }
-    if (url.protocol !== 'https:' || url.username || url.password || url.hash || !url.hostname || unsafeHost(url.hostname)) {
-      throw new TrustProfileActivationError();
-    }
-  }
-}
+export type { JwksSourceRegistrationPolicy } from '../upstream-auth/jwks-source-policy';
 
 export class TrustProfileActivationValidator {
   constructor(private readonly dependencies: Readonly<{ repository: ActivationRepository; jwksSourcePolicy: JwksSourceRegistrationPolicy }>) {}
 
   async validate(input: TrustProfileActivationInput): Promise<TrustProfileActivationInput> {
     const profile = normalize(input);
-    this.dependencies.jwksSourcePolicy.validate(profile.jwksUri);
+    try { this.dependencies.jwksSourcePolicy.validate(profile.jwksUri); } catch { throw new TrustProfileActivationError(); }
     const binding = await this.dependencies.repository.findBindingByIntegrationId(profile.integrationId);
     if (!binding) throw new TrustProfileActivationError();
     if (profile.replacesProfileId) await this.validateReplacement(profile);
@@ -77,14 +65,6 @@ function normalize(input: TrustProfileActivationInput): TrustProfileActivationIn
 function required(value: unknown): string {
   if (typeof value !== 'string' || !value.trim() || [...value].some((character) => (character.codePointAt(0) ?? 0) <= 31 || character.codePointAt(0) === 127)) throw new TrustProfileActivationError();
   return value.trim();
-}
-
-function unsafeHost(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/\.+$/, '');
-  const normalized = host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
-  if (normalized === 'localhost' || normalized.endsWith('.localhost')) return true;
-  if (isIP(normalized)) return true;
-  return false;
 }
 
 export class TrustProfileActivationError extends Error {
