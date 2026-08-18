@@ -41,6 +41,12 @@ describeGatewayRegistry('real local signing-key, persisted metadata, and JWKS in
       expect(JSON.stringify(document)).not.toMatch(/keyreference|notbefore|activatedat|retireafter|retiredat|"(?:d|p|q|dp|dq|qi)"/i);
       expect(verified.payload.customer_id).toBe('customer-a');
 
+      const runtimeProfile = await seedRuntimeReadiness(prisma);
+      expect(runtimeProfile).toMatchObject({
+        id: 'profile-local-signing-smoke', integrationId: 'integration-local-signing-smoke',
+        algorithm: 'RS256', enabled: true, lifecycle: 'active'
+      });
+
       const runtime = await startGatewayRuntime(database.databaseUrl, temporaryFile.fileReference);
       try {
         const response = await request(runtime.app.getHttpServer()).get('/.well-known/jwks.json');
@@ -124,15 +130,25 @@ async function createKey(prisma: ReturnType<typeof createGatewayPrismaClient>, k
   await prisma.gatewaySigningKey.create({ data: { kid, publicJwk: publicJwk as Prisma.InputJsonValue, keyReference, status } });
 }
 
+async function seedRuntimeReadiness(prisma: ReturnType<typeof createGatewayPrismaClient>) {
+  await prisma.customer.create({ data: { id: 'customer-local-signing-smoke' } });
+  await prisma.integrationBinding.create({ data: {
+    integrationId: 'integration-local-signing-smoke', customerId: 'customer-local-signing-smoke', allowedHostApp: 'admin', enabled: true
+  } });
+  return prisma.registeredUpstreamTrustProfile.create({ data: {
+    id: 'profile-local-signing-smoke', integrationId: 'integration-local-signing-smoke',
+    expectedIssuer: 'https://issuer.example.test', expectedAudience: 'gateway-local-signing-smoke',
+    jwksUri: 'https://issuer.example.test/.well-known/jwks.json', algorithm: 'RS256',
+    enabled: true, lifecycle: 'active', version: 1, replacesProfileId: null
+  } });
+}
+
 async function startGatewayRuntime(databaseUrl: string, signingKeyReference: string) {
   const environment = {
     DATABASE_URL: databaseUrl,
     GATEWAY_INTERNAL_JWT_ISSUER: 'http://gateway.local.test',
     GATEWAY_INTERNAL_JWT_AUDIENCE: 'feature003-local-audience',
     GATEWAY_PUBLIC_JWKS_URL: 'http://gateway.local.test/.well-known/jwks.json',
-    GATEWAY_UPSTREAM_JWT_ISSUER: 'http://upstream.local.test',
-    GATEWAY_UPSTREAM_JWT_AUDIENCE: 'upstream-audience',
-    GATEWAY_UPSTREAM_JWKS_URI: 'http://upstream.local.test/.well-known/jwks.json',
     GATEWAY_UPSTREAM_JWT_CLOCK_TOLERANCE_SECONDS: '0',
     GATEWAY_INTERNAL_JWT_TTL_SECONDS: '300',
     GATEWAY_BACKEND_BASE_URL: 'http://backend.local.test',

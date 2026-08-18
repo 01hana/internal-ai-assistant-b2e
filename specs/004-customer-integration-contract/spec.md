@@ -139,7 +139,7 @@ A Customer frontend can use the same Assistant SDK model regardless of whether i
 
 - **FR-001**: The system MUST support onboarding through both Direct Trusted JWT and Trusted Server-side Token Exchange patterns using one common Gateway-facing identity contract.
 - **FR-002**: The system MUST allow each usable Customer Integration to have a registered upstream trust profile that references that stable integration identity. The trust profile MUST NOT independently determine Customer or create a second Customer binding authority.
-- **FR-003**: A registered trust profile MUST define the referenced integration identity, allowed Host Application, one active trusted issuer, one exact expected audience, verification-key or JWKS source, allowed cryptographic policy, enabled/disabled trust lifecycle, and upstream verification requirements. It MUST NOT contain or determine Customer authority.
+- **FR-003**: A registered trust profile MUST define the referenced integration identity, one active trusted issuer, one exact expected audience, verification-key or JWKS source, allowed cryptographic policy, enabled/disabled trust lifecycle, and upstream verification requirements. The effective registered integration contract MUST obtain allowed Host Application semantics only by authoritative reference through the trust profile's anchored `IntegrationBinding`. The trust profile MUST NOT contain or independently determine `allowedHostApp`, HostApp admission authority, or Customer authority.
 - **FR-004**: The system MUST accept identity authority only after successful cryptographic verification against a registered trust profile.
 - **FR-005**: A verified upstream identity MUST provide non-blank `integration_id`, `sub`, `org_id`, and `host_app` semantics consistent with its registered integration contract.
 - **FR-006**: `integration_id` MUST identify an Assistant Platform-registered integration and MUST NOT be generated, selected, or inferred from browser state, Host routes, page context, local storage, organization identifiers, user identifiers, or Customer-specific legacy identifiers.
@@ -180,7 +180,7 @@ A Customer frontend can use the same Assistant SDK model regardless of whether i
 
 - **Canonical Upstream Identity Contract v1**: The common verified identity semantics that every Customer credential must provide to Gateway, independent of Customer-native claim names.
 - **Customer Integration**: A stable Assistant Platform integration identity. The existing IntegrationBinding is the sole mapping from that identity to one existing Customer.
-- **Registered Upstream Trust Profile**: The registered upstream verification policy associated with one Customer Integration. It references the integration identity but does not contain or determine Customer authority.
+- **Registered Upstream Trust Profile**: The registered upstream verification policy associated with one Customer Integration. It references the integration identity but does not contain or determine Customer or HostApp admission authority; HostApp admission remains with the anchored IntegrationBinding.
 - **Trusted Server-side Exchange Boundary**: A Customer-controlled trusted service boundary that may translate legacy identity into the common upstream contract.
 - **Verified Upstream Identity**: The authenticated integration, subject, organization, Host Application, and approved authorization projections available only after valid verification and profile evaluation.
 

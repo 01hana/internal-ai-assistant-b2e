@@ -187,16 +187,26 @@
 
 ### Tasks
 
-- [ ] T057 Add A/B multi-Customer integration coverage in `apps/gateway/test/integration/multi-profile-trust-chain.spec.ts` for different issuer/JWKS, cross-profile/binding denial, shared issuer/JWKS/key, wrong audience/integration, HostApp mismatch, disabled profile/binding, Customer-like claims, zero candidate, and ambiguity.
-- [ ] T058 Add full Gateway→Backend E2E harness in `apps/gateway/test/integration/feature004-gateway-backend.e2e.spec.ts` using both fixtures and real profile verifier → resolver → internal JWT → Feature 002 verifier across create/read/history/SSE routes.
-- [ ] T059 Add CustomerScope isolation assertions to `apps/gateway/test/integration/feature004-gateway-backend.e2e.spec.ts` proving Customer A cannot read Customer B session/history or affect B state.
-- [ ] T060 Add static authority guards in `apps/gateway/test/integration/multi-profile-trust-chain.spec.ts` preventing profile `customerId`/`allowedHostApp`, verifier Customer/resolver imports, browser identity authority, and legacy verifier fallback.
-- [ ] T061 Execute and record Gateway/Feature 003/Feature 002 regressions, `npm run prisma:generate`, build, typecheck, lint, SSRF negatives, redaction scans, and narrow transport/internal-JWT checks in `specs/004-customer-integration-contract/verification.md`.
-- [ ] T062 Evaluate every exit criterion in `specs/004-customer-integration-contract/verification.md` and mark `FEATURE004_IMPLEMENTATION_ACCEPTANCE_GATE=PASS` only with complete real evidence and no Customer-specific Gateway core logic.
+- [X] T057 Add A/B multi-Customer integration coverage in `apps/gateway/test/integration/multi-profile-trust-chain.spec.ts` for different issuer/JWKS, cross-profile/binding denial, shared issuer/JWKS/key, wrong audience/integration, HostApp mismatch, disabled profile/binding, Customer-like claims, zero candidate, and ambiguity.
+- [X] T058 Add full Gateway→Backend E2E harness in `apps/gateway/test/integration/feature004-gateway-backend.e2e.spec.ts` using both fixtures and real profile verifier → resolver → internal JWT → Feature 002 verifier across create/read/history/SSE routes.
+- [X] T059 Add CustomerScope isolation assertions to `apps/gateway/test/integration/feature004-gateway-backend.e2e.spec.ts` proving Customer A cannot read Customer B session/history or affect B state.
+- [X] T060 Add static authority guards in `apps/gateway/test/integration/multi-profile-trust-chain.spec.ts` preventing profile `customerId`/`allowedHostApp`, verifier Customer/resolver imports, browser identity authority, and legacy verifier fallback.
+- [X] T061 Execute and record Gateway/Feature 003/Feature 002 regressions, `npm run prisma:generate`, build, typecheck, lint, SSRF negatives, redaction scans, and narrow transport/internal-JWT checks in `specs/004-customer-integration-contract/verification.md`.
+- [X] T062 Evaluate every exit criterion in `specs/004-customer-integration-contract/verification.md` and mark `FEATURE004_IMPLEMENTATION_ACCEPTANCE_GATE=PASS` only with complete real evidence and no Customer-specific Gateway core logic.
 
 ### Acceptance Gate
 
 `FEATURE004_IMPLEMENTATION_ACCEPTANCE_GATE=PASS`: real multi-profile A/B evidence, unchanged Gateway→Backend chain, CustomerScope isolation, all regressions, and all security gates pass.
+
+`MULTI_CUSTOMER_TRUST_CHAIN_READY=YES` — T057 and T060 migration-backed verifier-to-resolver integration evidence completed.
+
+`GATEWAY_BACKEND_E2E_READY=YES` — T058 proves the Direct and Token Exchange Gateway HTTP → Backend HTTP chain, including the production Feature 002 remote internal-JWT verifier.
+
+`CUSTOMER_SCOPE_ISOLATION_E2E_READY=YES` — T059 proves cross-Customer read/history/SSE isolation and binding-owned Customer authority.
+
+`FEATURE004_FINAL_VERIFICATION_READY=YES` — T061 verification matrix is complete.
+
+`FEATURE004_IMPLEMENTATION_ACCEPTANCE_GATE=PASS` — T062 confirms every final exit criterion has complete real evidence, no critical skips, no authority contradiction, and no Customer-specific Gateway core logic.
 
 ## Cross-Batch Dependency Map
 

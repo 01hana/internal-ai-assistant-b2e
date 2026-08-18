@@ -9,6 +9,7 @@ export type InternalIdentityTestConfig = {
   issuer: string;
   audience: string;
   jwks: { readonly keys: ReadonlyArray<Readonly<Record<string, unknown>>> };
+  jwksUri?: string;
 };
 
 export type InternalIdentityTestingModule = {
@@ -32,7 +33,8 @@ export function createInternalIdentityTestConfig(
   return Object.freeze({
     issuer: input.issuer,
     audience: input.audience,
-    jwks: Object.freeze({ keys: Object.freeze(keys) })
+    jwks: Object.freeze({ keys: Object.freeze(keys) }),
+    ...(input.jwksUri === undefined ? {} : { jwksUri: input.jwksUri })
   });
 }
 

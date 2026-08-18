@@ -431,6 +431,8 @@ export type { InternalIdentityTestConfig } from './internal-identity-test-module
 
 export type Us1TestAppOptions = {
   internalIdentity?: InternalIdentityTestConfig;
+  /** Retains the production remote-JWKS verifier for transport-level identity tests. */
+  internalIdentityVerifierMode?: 'static' | 'remote';
   forceMessageServiceErrorForSessionId?: string;
 };
 
@@ -446,7 +448,7 @@ export async function createUs1TestAppWithState(
   process.env.OPENAI_API_KEY = 'placeholder-openai-api-key';
   process.env.INTERNAL_IDENTITY_JWT_ISSUER = options.internalIdentity?.issuer ?? 'https://gateway.test.internal';
   process.env.INTERNAL_IDENTITY_JWT_AUDIENCE = options.internalIdentity?.audience ?? 'internal-assistant-core-test';
-  process.env.INTERNAL_IDENTITY_JWKS_URI = 'https://gateway.test.internal/.well-known/jwks.json';
+  process.env.INTERNAL_IDENTITY_JWKS_URI = options.internalIdentity?.jwksUri ?? 'https://gateway.test.internal/.well-known/jwks.json';
   process.env.ENABLE_SWAGGER_DOCS = 'false';
   process.env.SWAGGER_PATH = 'docs';
 
@@ -462,7 +464,7 @@ export async function createUs1TestAppWithState(
   const { createStaticInternalIdentityTokenVerifier } = await import('../../src/identity/internal-identity-token-verifier');
   const { INTERNAL_IDENTITY_CONFIG, INTERNAL_IDENTITY_TOKEN_VERIFIER } = await import('../../src/identity/identity-token.types');
   const { PrismaService } = await import('../../src/prisma/prisma.service');
-  const moduleRef = await Test.createTestingModule({
+  const builder = Test.createTestingModule({
     imports: [AppModule],
     providers: [{ provide: INTERNAL_IDENTITY_TEST_CONFIG, useValue: internalIdentity }]
   })
@@ -473,17 +475,17 @@ export async function createUs1TestAppWithState(
       jwksUri: process.env.INTERNAL_IDENTITY_JWKS_URI,
       clockToleranceSeconds: 0
     })
-    .overrideProvider(INTERNAL_IDENTITY_TOKEN_VERIFIER)
-    .useValue(
-      createStaticInternalIdentityTokenVerifier(internalIdentity)
-    )
     .overrideProvider(PrismaService)
     .useValue({
       onModuleInit: jest.fn(),
       onModuleDestroy: jest.fn(),
       db: prismaMock
-    })
-    .compile();
+    });
+  if (options.internalIdentityVerifierMode !== 'remote') {
+    builder.overrideProvider(INTERNAL_IDENTITY_TOKEN_VERIFIER)
+      .useValue(createStaticInternalIdentityTokenVerifier(internalIdentity));
+  }
+  const moduleRef = await builder.compile();
 
   const { AssistantMessageService } = await import('../../src/assistant/message/assistant-message.service');
   const { AssistantSseEventBuilder } = await import('../../src/assistant/sse/assistant-sse-event.builder');
