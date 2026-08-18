@@ -12,9 +12,10 @@ export type UpstreamJwksFixture = Readonly<{
   close(): Promise<void>;
 }>;
 
-export async function createUpstreamJwksFixture(): Promise<UpstreamJwksFixture> {
-  const old = await signer('phase3-upstream-old-key');
-  const fresh = await signer('phase3-upstream-new-key');
+export async function createUpstreamJwksFixture(options: Readonly<{ authorityLabel?: string }> = {}): Promise<UpstreamJwksFixture> {
+  const label = authorityLabel(options.authorityLabel);
+  const old = await signer(`${label}-old-key`);
+  const fresh = await signer(`${label}-new-key`);
   let published = [old];
   const server = createServer((request, response) => {
     if (request.url !== '/jwks') {
@@ -44,6 +45,10 @@ export async function createUpstreamJwksFixture(): Promise<UpstreamJwksFixture> 
     publishKeys: (keys) => { published = keys.map((key) => key === 'old' ? old : fresh); },
     close: () => close(server)
   });
+}
+
+function authorityLabel(value: string | undefined): string {
+  return typeof value === 'string' && /^[a-z0-9-]+$/i.test(value) ? value : 'phase3-upstream';
 }
 
 async function signer(kid: string): Promise<{ privateKey: KeyLike; kid: string; jwk: JWK }> {

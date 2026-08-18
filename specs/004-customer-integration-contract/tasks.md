@@ -165,14 +165,18 @@
 
 ### Tasks
 
-- [ ] T053 [P] Add Direct JWT fixture contract tests in `apps/gateway/test/upstream-auth/direct-jwt.fixture.spec.ts` for asymmetric key/JWKS, exact audience, short TTL, canonical claims, and empty roles/scopes.
-- [ ] T054 Implement generic Customer A fixture in `apps/gateway/test/upstream-auth/direct-jwt.fixture.ts`; verify T053 and prohibit Customer-specific claim mapping.
-- [ ] T055 [P] Add Token Exchange fixture contract tests in `apps/gateway/test/upstream-auth/token-exchange.fixture.spec.ts` for trusted server-side native identity simulation, separate issuer/JWKS/key, short TTL, canonical output, and browser non-authority.
-- [ ] T056 Implement generic Customer B fixture in `apps/gateway/test/upstream-auth/token-exchange.fixture.ts`; verify T055 and prohibit Shinmone fields, browser signing, production credentials, and production exchange behavior.
+- [X] T053 [P] Add Direct JWT fixture contract tests in `apps/gateway/test/upstream-auth/direct-jwt.fixture.spec.ts` for asymmetric key/JWKS, exact audience, short TTL, canonical claims, and empty roles/scopes.
+- [X] T054 Implement generic Customer A fixture in `apps/gateway/test/upstream-auth/direct-jwt.fixture.ts`; verify T053 and prohibit Customer-specific claim mapping.
+- [X] T055 [P] Add Token Exchange fixture contract tests in `apps/gateway/test/upstream-auth/token-exchange.fixture.spec.ts` for trusted server-side native identity simulation, separate issuer/JWKS/key, short TTL, canonical output, and browser non-authority.
+- [X] T056 Implement generic Customer B fixture in `apps/gateway/test/upstream-auth/token-exchange.fixture.ts`; verify T055 and prohibit Shinmone fields, browser signing, production credentials, and production exchange behavior.
 
 ### Acceptance Gate
 
 `REFERENCE_INTEGRATION_FIXTURES_READY`: Direct JWT and Token Exchange fixtures are generic and traverse the same production verifier abstraction.
+
+`DIRECT_JWT_REFERENCE_FIXTURE_READY=YES` — T053–T054 generic Direct JWT fixture evidence completed.
+
+`REFERENCE_INTEGRATION_FIXTURES_READY=YES` — T053–T056 generic Direct JWT and Token Exchange fixture evidence completed.
 
 ## Batch 8 — Multi-Customer Integration, E2E, and Final Acceptance
 
