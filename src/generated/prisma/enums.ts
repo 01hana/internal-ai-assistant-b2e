@@ -295,6 +295,74 @@ export const GatewaySigningKeyStatus = {
 export type GatewaySigningKeyStatus = (typeof GatewaySigningKeyStatus)[keyof typeof GatewaySigningKeyStatus]
 
 
+export const ManagedExchangeLifecycle = {
+  draft: 'draft',
+  active: 'active',
+  disabled: 'disabled',
+  replaced: 'replaced'
+} as const
+
+export type ManagedExchangeLifecycle = (typeof ManagedExchangeLifecycle)[keyof typeof ManagedExchangeLifecycle]
+
+
+export const ManagedIdentityProviderType = {
+  delegated_http: 'delegated_http',
+  idx_delegated: 'idx_delegated'
+} as const
+
+export type ManagedIdentityProviderType = (typeof ManagedIdentityProviderType)[keyof typeof ManagedIdentityProviderType]
+
+
+export const ManagedHttpMethod = {
+  POST: 'POST'
+} as const
+
+export type ManagedHttpMethod = (typeof ManagedHttpMethod)[keyof typeof ManagedHttpMethod]
+
+
+export const ManagedCredentialPlacement = {
+  authorization_bearer: 'authorization_bearer'
+} as const
+
+export type ManagedCredentialPlacement = (typeof ManagedCredentialPlacement)[keyof typeof ManagedCredentialPlacement]
+
+
+export const ManagedOrganizationMode = {
+  verified: 'verified',
+  fixed_single_organization: 'fixed_single_organization'
+} as const
+
+export type ManagedOrganizationMode = (typeof ManagedOrganizationMode)[keyof typeof ManagedOrganizationMode]
+
+
+export const ManagedPermissionMode = {
+  allow_empty: 'allow_empty',
+  required: 'required'
+} as const
+
+export type ManagedPermissionMode = (typeof ManagedPermissionMode)[keyof typeof ManagedPermissionMode]
+
+
+export const ManagedSigningKeyStatus = {
+  new: 'new',
+  published: 'published',
+  active: 'active',
+  retiring: 'retiring',
+  retired: 'retired'
+} as const
+
+export type ManagedSigningKeyStatus = (typeof ManagedSigningKeyStatus)[keyof typeof ManagedSigningKeyStatus]
+
+
+export const ManagedExchangeAuditOutcome = {
+  success: 'success',
+  denied: 'denied',
+  unavailable: 'unavailable'
+} as const
+
+export type ManagedExchangeAuditOutcome = (typeof ManagedExchangeAuditOutcome)[keyof typeof ManagedExchangeAuditOutcome]
+
+
 export const RegisteredUpstreamTrustProfileAlgorithm = {
   RS256: 'RS256'
 } as const

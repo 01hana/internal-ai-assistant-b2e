@@ -252,9 +252,258 @@ model IntegrationBinding {
 
   customer                     Customer                       @relation(fields: [customerId], references: [id], onDelete: Restrict)
   registeredUpstreamTrustProfiles RegisteredUpstreamTrustProfile[]
+  managedIntegrationExchangeConfigs ManagedIntegrationExchangeConfig[]
 
   @@index([customerId])
   @@index([customerId, allowedHostApp])
+}
+
+enum ManagedExchangeLifecycle {
+  draft
+  active
+  disabled
+  replaced
+}
+
+enum ManagedIdentityProviderType {
+  delegated_http
+  idx_delegated
+}
+
+enum ManagedHttpMethod {
+  POST
+}
+
+enum ManagedCredentialPlacement {
+  authorization_bearer
+}
+
+enum ManagedOrganizationMode {
+  verified
+  fixed_single_organization
+}
+
+enum ManagedPermissionMode {
+  allow_empty
+  required
+}
+
+enum ManagedSigningKeyStatus {
+  new
+  published
+  active
+  retiring
+  retired
+}
+
+enum ManagedExchangeAuditOutcome {
+  success
+  denied
+  unavailable
+}
+
+/// Registered upstream native-credential verification policy. It never owns a Customer or canonical identity.
+model ManagedIdentityProviderInstance {
+  id                      String                       @id @default(cuid())
+  providerType            ManagedIdentityProviderType
+  endpointUri             String
+  httpMethod              ManagedHttpMethod
+  credentialPlacement     ManagedCredentialPlacement
+  timeoutMilliseconds     Int
+  responseContractVersion String
+  contractConfig          Json
+  declaredAnchorKinds     String[]
+  enabled                 Boolean                      @default(false)
+  lifecycle               ManagedExchangeLifecycle     @default(draft)
+  version                 Int
+  replacesProviderId      String?
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @updatedAt
+
+  integrationConfigs      ManagedIntegrationExchangeConfig[]
+  permissionSources       ManagedPermissionSourceInstance[] @relation("ManagedPermissionSourceProvider")
+  replacesProvider        ManagedIdentityProviderInstance? @relation("ManagedIdentityProviderReplacement", fields: [replacesProviderId], references: [id], onDelete: Restrict)
+  replacementProviders    ManagedIdentityProviderInstance[] @relation("ManagedIdentityProviderReplacement")
+
+  @@index([providerType, enabled, lifecycle])
+  @@index([replacesProviderId])
+}
+
+/// Server-owned selector-to-integration configuration. The selector is opaque lookup data only.
+model ManagedIntegrationExchangeConfig {
+  id                    String                   @id @default(cuid())
+  publicSelector        String                   @unique
+  integrationId         String
+  providerInstanceId    String
+  canonicalHostApp      String
+  organizationMode      ManagedOrganizationMode
+  fixedOrganizationId   String?
+  enabled               Boolean                  @default(false)
+  lifecycle             ManagedExchangeLifecycle @default(draft)
+  version               Int
+  replacesConfigId      String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  integrationBinding    IntegrationBinding       @relation(fields: [integrationId], references: [integrationId], onDelete: Restrict)
+  providerInstance      ManagedIdentityProviderInstance @relation(fields: [providerInstanceId], references: [id], onDelete: Restrict)
+  admissionPolicies     ManagedIntegrationAdmissionPolicy[]
+  permissionPolicies    ManagedPermissionPolicy[]
+  replacesConfig        ManagedIntegrationExchangeConfig? @relation("ManagedIntegrationExchangeConfigReplacement", fields: [replacesConfigId], references: [id], onDelete: Restrict)
+  replacementConfigs    ManagedIntegrationExchangeConfig[] @relation("ManagedIntegrationExchangeConfigReplacement")
+
+  @@unique([integrationId, version])
+  @@index([integrationId])
+  @@index([providerInstanceId])
+  @@index([enabled, lifecycle])
+  @@index([replacesConfigId])
+}
+
+/// Exact registered verified-anchor requirements for one exchange configuration.
+model ManagedIntegrationAdmissionPolicy {
+  id                    String                   @id @default(cuid())
+  integrationConfigId   String
+  anchorRequirements    Json
+  enabled               Boolean                  @default(false)
+  lifecycle             ManagedExchangeLifecycle @default(draft)
+  version               Int
+  replacesPolicyId      String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  integrationConfig     ManagedIntegrationExchangeConfig @relation(fields: [integrationConfigId], references: [id], onDelete: Restrict)
+  replacesPolicy        ManagedIntegrationAdmissionPolicy? @relation("ManagedIntegrationAdmissionPolicyReplacement", fields: [replacesPolicyId], references: [id], onDelete: Restrict)
+  replacementPolicies   ManagedIntegrationAdmissionPolicy[] @relation("ManagedIntegrationAdmissionPolicyReplacement")
+
+  @@unique([integrationConfigId, version])
+  @@index([integrationConfigId, enabled, lifecycle])
+  @@index([replacesPolicyId])
+}
+
+/// Reusable server-controlled permission-source configuration; secret material is referenced, never stored.
+model ManagedPermissionSourceInstance {
+  id                       String                   @id @default(cuid())
+  sourceType               String
+  endpointUri              String?
+  providerInstanceId       String?
+  serviceCredentialReference String?
+  adapterContractReference String
+  contractConfig           Json
+  enabled                  Boolean                  @default(false)
+  lifecycle                ManagedExchangeLifecycle @default(draft)
+  version                  Int
+  replacesSourceId         String?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  providerInstance         ManagedIdentityProviderInstance? @relation("ManagedPermissionSourceProvider", fields: [providerInstanceId], references: [id], onDelete: Restrict)
+  permissionPolicies       ManagedPermissionPolicy[]
+  replacesSource           ManagedPermissionSourceInstance? @relation("ManagedPermissionSourceReplacement", fields: [replacesSourceId], references: [id], onDelete: Restrict)
+  replacementSources       ManagedPermissionSourceInstance[] @relation("ManagedPermissionSourceReplacement")
+
+  @@index([sourceType, enabled, lifecycle])
+  @@index([replacesSourceId])
+}
+
+/// Selected permission policy for one exchange configuration.
+model ManagedPermissionPolicy {
+  id                       String                   @id @default(cuid())
+  integrationConfigId      String
+  mode                     ManagedPermissionMode
+  permissionSourceInstanceId String?
+  normalizerType           String?
+  projectionContractVersion String?
+  projectionContract       Json?
+  enabled                  Boolean                  @default(false)
+  lifecycle                ManagedExchangeLifecycle @default(draft)
+  version                  Int
+  replacesPolicyId         String?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  integrationConfig        ManagedIntegrationExchangeConfig @relation(fields: [integrationConfigId], references: [id], onDelete: Restrict)
+  permissionSourceInstance ManagedPermissionSourceInstance? @relation(fields: [permissionSourceInstanceId], references: [id], onDelete: Restrict)
+  replacesPolicy           ManagedPermissionPolicy? @relation("ManagedPermissionPolicyReplacement", fields: [replacesPolicyId], references: [id], onDelete: Restrict)
+  replacementPolicies      ManagedPermissionPolicy[] @relation("ManagedPermissionPolicyReplacement")
+
+  @@unique([integrationConfigId, version])
+  @@index([integrationConfigId, enabled, lifecycle])
+  @@index([permissionSourceInstanceId])
+  @@index([replacesPolicyId])
+}
+
+/// Separate managed upstream issuer authority; it is not Gateway's internal issuer.
+model ManagedUpstreamIssuer {
+  id                    String                   @id @default(cuid())
+  issuer                String
+  expectedAudience      String
+  publicJwksUri         String
+  enabled               Boolean                  @default(false)
+  lifecycle             ManagedExchangeLifecycle @default(draft)
+  version               Int
+  replacesIssuerId      String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  signingKeys           ManagedUpstreamSigningKey[]
+  replacesIssuer        ManagedUpstreamIssuer? @relation("ManagedUpstreamIssuerReplacement", fields: [replacesIssuerId], references: [id], onDelete: Restrict)
+  replacementIssuers    ManagedUpstreamIssuer[] @relation("ManagedUpstreamIssuerReplacement")
+
+  @@unique([issuer, version])
+  @@index([enabled, lifecycle])
+  @@index([replacesIssuerId])
+}
+
+/// Managed public signing-key metadata. `keyReference` is a reference only; private key material is not persisted.
+model ManagedUpstreamSigningKey {
+  id                    String                   @id @default(cuid())
+  issuerId              String
+  kid                   String                   @unique
+  publicJwk             Json
+  keyReference          String
+  status                ManagedSigningKeyStatus  @default(new)
+  enabled               Boolean                  @default(false)
+  lifecycle             ManagedExchangeLifecycle @default(draft)
+  version               Int
+  replacesKeyId         String?
+  notBefore             DateTime?
+  activatedAt           DateTime?
+  retireAfter           DateTime?
+  retiredAt             DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  issuer                ManagedUpstreamIssuer    @relation(fields: [issuerId], references: [id], onDelete: Restrict)
+  replacesKey           ManagedUpstreamSigningKey? @relation("ManagedUpstreamSigningKeyReplacement", fields: [replacesKeyId], references: [id], onDelete: Restrict)
+  replacementKeys       ManagedUpstreamSigningKey[] @relation("ManagedUpstreamSigningKeyReplacement")
+
+  @@unique([issuerId, version])
+  @@index([issuerId, status, enabled, lifecycle])
+  @@index([replacesKeyId])
+}
+
+/// Safe exchange outcome only; it intentionally has no Customer, credential, token, payload, or secret fields.
+model ManagedExchangeAuditEvent {
+  id                    String                    @id @default(cuid())
+  timestamp             DateTime                  @default(now())
+  requestId             String
+  integrationId         String?
+  integrationConfigId   String?
+  providerType          ManagedIdentityProviderType?
+  providerInstanceId    String?
+  outcome               ManagedExchangeAuditOutcome
+  reasonCode            String
+  admissionResult       String?
+  permissionResult      String?
+  issuanceResult        String?
+  jti                   String?
+  kid                   String?
+  latencyCategory       String?
+
+  @@index([requestId])
+  @@index([timestamp])
+  @@index([integrationId, timestamp])
+  @@index([integrationConfigId, timestamp])
 }
 
 enum RegisteredUpstreamTrustProfileAlgorithm {

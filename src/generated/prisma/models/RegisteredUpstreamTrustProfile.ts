@@ -606,14 +606,6 @@ export type EnumRegisteredUpstreamTrustProfileLifecycleFieldUpdateOperationsInpu
   set?: $Enums.RegisteredUpstreamTrustProfileLifecycle
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type RegisteredUpstreamTrustProfileUpdateOneWithoutReplacementProfilesNestedInput = {
   create?: Prisma.XOR<Prisma.RegisteredUpstreamTrustProfileCreateWithoutReplacementProfilesInput, Prisma.RegisteredUpstreamTrustProfileUncheckedCreateWithoutReplacementProfilesInput>
   connectOrCreate?: Prisma.RegisteredUpstreamTrustProfileCreateOrConnectWithoutReplacementProfilesInput
@@ -636,10 +628,6 @@ export type RegisteredUpstreamTrustProfileUpdateManyWithoutReplacesProfileNested
   update?: Prisma.RegisteredUpstreamTrustProfileUpdateWithWhereUniqueWithoutReplacesProfileInput | Prisma.RegisteredUpstreamTrustProfileUpdateWithWhereUniqueWithoutReplacesProfileInput[]
   updateMany?: Prisma.RegisteredUpstreamTrustProfileUpdateManyWithWhereWithoutReplacesProfileInput | Prisma.RegisteredUpstreamTrustProfileUpdateManyWithWhereWithoutReplacesProfileInput[]
   deleteMany?: Prisma.RegisteredUpstreamTrustProfileScalarWhereInput | Prisma.RegisteredUpstreamTrustProfileScalarWhereInput[]
-}
-
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
 }
 
 export type RegisteredUpstreamTrustProfileUncheckedUpdateManyWithoutReplacesProfileNestedInput = {

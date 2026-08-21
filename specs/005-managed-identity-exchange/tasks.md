@@ -17,42 +17,42 @@
 **Dependencies**: None.  
 **Acceptance gate**: `MANAGED_EXCHANGE_FOUNDATION_READY` — additive persistence validates; selectors/version history are safe; no Customer, secret, or native-credential authority exists.
 
-- [ ] T001 Create security/contract scaffolding in `apps/gateway/test/managed-identity-exchange/domain-contracts.spec.ts`
+- [x] T001 Create security/contract scaffolding in `apps/gateway/test/managed-identity-exchange/domain-contracts.spec.ts`
   - Goal: Define the failing boundary tests for immutable values, strict exchange request/error envelopes, opaque selector non-authority, no native-credential/audit persistence, and managed-versus-Gateway signing separation.
   - Implementation: Add test-only contract factories and source guards; do not add runtime code.
   - Tests: `domain-contracts.spec.ts` fails before T005 domain contracts exist.
   - Depends on: none.
   - Done when: The intended domain/public boundaries are executable and redaction assertions are explicit.
 
-- [ ] T002 Create Feature 005 Prisma models and enums in `prisma/schema.prisma`
+- [x] T002 Create Feature 005 Prisma models and enums in `prisma/schema.prisma`
   - Goal: Model provider instances, versioned exchange configs/selectors, admission/permission policies, permission sources, managed issuer/signing keys, and separate audit events.
   - Implementation: Add typed lifecycle/status/version/replacement fields, safe references only, structural `integrationId` FK, globally unique `publicSelector`/managed `kid`, and no `customerId`, native credential, JWT, private key, or arbitrary secret fields.
   - Tests: Satisfy T001 schema/source guards; run `npx prisma validate` after the migration task.
   - Depends on: T001.
   - Done when: The schema represents the plan's authorities without a canonicalization-policy phantom or Gateway signing/audit relation.
 
-- [ ] T003 Add the additive Feature 005 root migration and PostgreSQL active-state constraints in `prisma/migrations/<timestamp>_managed_identity_exchange/migration.sql`
+- [x] T003 Add the additive Feature 005 root migration and PostgreSQL active-state constraints in `prisma/migrations/<timestamp>_managed_identity_exchange/migration.sql`
   - Goal: Enforce selector uniqueness, version histories, FK/index constraints, one enabled-active config/policy/key per applicable anchor, and one V1 active managed issuer.
   - Implementation: Create only additive tables/enums/indexes/checks, including partial unique indexes for active rows; preserve existing lineage and Feature 002–004 tables.
   - Tests: Write migration-backed v1→v2, stale-selector, active selector collision, policy-history, and dual-active transaction tests in `apps/gateway/test/managed-identity-exchange/persistence.spec.ts` first.
   - Depends on: T002.
   - Done when: Migration-backed tests prove history is retained, stale selectors fail closed, and two committed active rows cannot exist.
 
-- [ ] T004 Implement migration-backed persistence coverage in `apps/gateway/test/managed-identity-exchange/persistence.spec.ts`
+- [x] T004 Implement migration-backed persistence coverage in `apps/gateway/test/managed-identity-exchange/persistence.spec.ts`
   - Goal: Prove selector/version and partial-unique behavior against the real isolated registry database.
   - Implementation: Use `test/support/gateway-registry-db.helper.ts`; test same integration replaced v1 plus active v2, global selector collision across integrations, and one active policy per selected configuration.
   - Tests: Run with the existing registry DB gate plus `npx prisma validate` and `npm run prisma:generate`.
   - Depends on: T003.
   - Done when: The schema gate supplies direct DB evidence rather than application-only uniqueness claims.
 
-- [ ] T005 Implement pure Feature 005 domain values, ports, and typed errors in `apps/gateway/src/managed-identity-exchange/domain/`
+- [x] T005 Implement pure Feature 005 domain values, ports, and typed errors in `apps/gateway/src/managed-identity-exchange/domain/`
   - Goal: Provide immutable `VerifiedExternalIdentity`, `VerifiedAnchor`, canonical managed identity, normalized permissions, adapter/issuer/audit ports, and credential/denial/infrastructure/issuance errors.
   - Implementation: Keep Prisma records, raw DTOs, IDX claims, Customer code, Gateway internal signing, and Feature 004 resolver imports outside this directory.
   - Tests: Make T001 contract tests pass; add focused immutability/unit tests alongside `domain-contracts.spec.ts`.
   - Depends on: T001.
   - Done when: All core interfaces are provider-neutral and expose no browser/native credential authority after verification.
 
-- [ ] T006 Implement Feature 005 persistence repositories in `apps/gateway/src/managed-identity-exchange/persistence/`
+- [x] T006 Implement Feature 005 persistence repositories in `apps/gateway/src/managed-identity-exchange/persistence/`
   - Goal: Add narrow repositories for every managed model, including `findEnabledActiveByPublicSelector`, transaction-scoped lookup/mutation, and audit persistence.
   - Implementation: Return managed records only; lookup follows `publicSelector → active config → integrationId`, with no Customer resolution or binding/HostApp admission decision.
   - Tests: Extend `persistence.spec.ts` for repository lookup and inactive/replaced selector exclusion.

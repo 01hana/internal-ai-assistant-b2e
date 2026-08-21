@@ -386,6 +386,14 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   Customer: 'Customer',
   IntegrationBinding: 'IntegrationBinding',
+  ManagedIdentityProviderInstance: 'ManagedIdentityProviderInstance',
+  ManagedIntegrationExchangeConfig: 'ManagedIntegrationExchangeConfig',
+  ManagedIntegrationAdmissionPolicy: 'ManagedIntegrationAdmissionPolicy',
+  ManagedPermissionSourceInstance: 'ManagedPermissionSourceInstance',
+  ManagedPermissionPolicy: 'ManagedPermissionPolicy',
+  ManagedUpstreamIssuer: 'ManagedUpstreamIssuer',
+  ManagedUpstreamSigningKey: 'ManagedUpstreamSigningKey',
+  ManagedExchangeAuditEvent: 'ManagedExchangeAuditEvent',
   RegisteredUpstreamTrustProfile: 'RegisteredUpstreamTrustProfile',
   GatewaySigningKey: 'GatewaySigningKey',
   GatewayIdentityAuditEvent: 'GatewayIdentityAuditEvent',
@@ -426,7 +434,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "customer" | "integrationBinding" | "registeredUpstreamTrustProfile" | "gatewaySigningKey" | "gatewayIdentityAuditEvent" | "assistantSession" | "assistantMessage" | "assistantContextState" | "executionPlan" | "answerDecision" | "clarificationQuestion" | "groundingCheck" | "toolDefinition" | "customerToolPolicy" | "toolCall" | "evidenceRef" | "auditEvent" | "feedbackEvent" | "reviewItem" | "approvalRequest" | "actionDraft" | "escalationRequest" | "queryUnderstandingResult" | "knowledgeDocument" | "knowledgeChunk" | "retrievalRun" | "retrievalCandidate"
+    modelProps: "customer" | "integrationBinding" | "managedIdentityProviderInstance" | "managedIntegrationExchangeConfig" | "managedIntegrationAdmissionPolicy" | "managedPermissionSourceInstance" | "managedPermissionPolicy" | "managedUpstreamIssuer" | "managedUpstreamSigningKey" | "managedExchangeAuditEvent" | "registeredUpstreamTrustProfile" | "gatewaySigningKey" | "gatewayIdentityAuditEvent" | "assistantSession" | "assistantMessage" | "assistantContextState" | "executionPlan" | "answerDecision" | "clarificationQuestion" | "groundingCheck" | "toolDefinition" | "customerToolPolicy" | "toolCall" | "evidenceRef" | "auditEvent" | "feedbackEvent" | "reviewItem" | "approvalRequest" | "actionDraft" | "escalationRequest" | "queryUnderstandingResult" | "knowledgeDocument" | "knowledgeChunk" | "retrievalRun" | "retrievalCandidate"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -575,6 +583,598 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.IntegrationBindingCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.IntegrationBindingCountAggregateOutputType> | number
+        }
+      }
+    }
+    ManagedIdentityProviderInstance: {
+      payload: Prisma.$ManagedIdentityProviderInstancePayload<ExtArgs>
+      fields: Prisma.ManagedIdentityProviderInstanceFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ManagedIdentityProviderInstanceFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ManagedIdentityProviderInstanceFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload>
+        }
+        findFirst: {
+          args: Prisma.ManagedIdentityProviderInstanceFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ManagedIdentityProviderInstanceFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload>
+        }
+        findMany: {
+          args: Prisma.ManagedIdentityProviderInstanceFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload>[]
+        }
+        create: {
+          args: Prisma.ManagedIdentityProviderInstanceCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload>
+        }
+        createMany: {
+          args: Prisma.ManagedIdentityProviderInstanceCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ManagedIdentityProviderInstanceCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload>[]
+        }
+        delete: {
+          args: Prisma.ManagedIdentityProviderInstanceDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload>
+        }
+        update: {
+          args: Prisma.ManagedIdentityProviderInstanceUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload>
+        }
+        deleteMany: {
+          args: Prisma.ManagedIdentityProviderInstanceDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ManagedIdentityProviderInstanceUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ManagedIdentityProviderInstanceUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload>[]
+        }
+        upsert: {
+          args: Prisma.ManagedIdentityProviderInstanceUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIdentityProviderInstancePayload>
+        }
+        aggregate: {
+          args: Prisma.ManagedIdentityProviderInstanceAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateManagedIdentityProviderInstance>
+        }
+        groupBy: {
+          args: Prisma.ManagedIdentityProviderInstanceGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedIdentityProviderInstanceGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ManagedIdentityProviderInstanceCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedIdentityProviderInstanceCountAggregateOutputType> | number
+        }
+      }
+    }
+    ManagedIntegrationExchangeConfig: {
+      payload: Prisma.$ManagedIntegrationExchangeConfigPayload<ExtArgs>
+      fields: Prisma.ManagedIntegrationExchangeConfigFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ManagedIntegrationExchangeConfigFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ManagedIntegrationExchangeConfigFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload>
+        }
+        findFirst: {
+          args: Prisma.ManagedIntegrationExchangeConfigFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ManagedIntegrationExchangeConfigFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload>
+        }
+        findMany: {
+          args: Prisma.ManagedIntegrationExchangeConfigFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload>[]
+        }
+        create: {
+          args: Prisma.ManagedIntegrationExchangeConfigCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload>
+        }
+        createMany: {
+          args: Prisma.ManagedIntegrationExchangeConfigCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ManagedIntegrationExchangeConfigCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload>[]
+        }
+        delete: {
+          args: Prisma.ManagedIntegrationExchangeConfigDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload>
+        }
+        update: {
+          args: Prisma.ManagedIntegrationExchangeConfigUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload>
+        }
+        deleteMany: {
+          args: Prisma.ManagedIntegrationExchangeConfigDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ManagedIntegrationExchangeConfigUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ManagedIntegrationExchangeConfigUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload>[]
+        }
+        upsert: {
+          args: Prisma.ManagedIntegrationExchangeConfigUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationExchangeConfigPayload>
+        }
+        aggregate: {
+          args: Prisma.ManagedIntegrationExchangeConfigAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateManagedIntegrationExchangeConfig>
+        }
+        groupBy: {
+          args: Prisma.ManagedIntegrationExchangeConfigGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedIntegrationExchangeConfigGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ManagedIntegrationExchangeConfigCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedIntegrationExchangeConfigCountAggregateOutputType> | number
+        }
+      }
+    }
+    ManagedIntegrationAdmissionPolicy: {
+      payload: Prisma.$ManagedIntegrationAdmissionPolicyPayload<ExtArgs>
+      fields: Prisma.ManagedIntegrationAdmissionPolicyFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload>
+        }
+        findFirst: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload>
+        }
+        findMany: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload>[]
+        }
+        create: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload>
+        }
+        createMany: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload>[]
+        }
+        delete: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload>
+        }
+        update: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload>
+        }
+        deleteMany: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload>[]
+        }
+        upsert: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedIntegrationAdmissionPolicyPayload>
+        }
+        aggregate: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateManagedIntegrationAdmissionPolicy>
+        }
+        groupBy: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedIntegrationAdmissionPolicyGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ManagedIntegrationAdmissionPolicyCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedIntegrationAdmissionPolicyCountAggregateOutputType> | number
+        }
+      }
+    }
+    ManagedPermissionSourceInstance: {
+      payload: Prisma.$ManagedPermissionSourceInstancePayload<ExtArgs>
+      fields: Prisma.ManagedPermissionSourceInstanceFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ManagedPermissionSourceInstanceFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ManagedPermissionSourceInstanceFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload>
+        }
+        findFirst: {
+          args: Prisma.ManagedPermissionSourceInstanceFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ManagedPermissionSourceInstanceFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload>
+        }
+        findMany: {
+          args: Prisma.ManagedPermissionSourceInstanceFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload>[]
+        }
+        create: {
+          args: Prisma.ManagedPermissionSourceInstanceCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload>
+        }
+        createMany: {
+          args: Prisma.ManagedPermissionSourceInstanceCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ManagedPermissionSourceInstanceCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload>[]
+        }
+        delete: {
+          args: Prisma.ManagedPermissionSourceInstanceDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload>
+        }
+        update: {
+          args: Prisma.ManagedPermissionSourceInstanceUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload>
+        }
+        deleteMany: {
+          args: Prisma.ManagedPermissionSourceInstanceDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ManagedPermissionSourceInstanceUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ManagedPermissionSourceInstanceUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload>[]
+        }
+        upsert: {
+          args: Prisma.ManagedPermissionSourceInstanceUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionSourceInstancePayload>
+        }
+        aggregate: {
+          args: Prisma.ManagedPermissionSourceInstanceAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateManagedPermissionSourceInstance>
+        }
+        groupBy: {
+          args: Prisma.ManagedPermissionSourceInstanceGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedPermissionSourceInstanceGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ManagedPermissionSourceInstanceCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedPermissionSourceInstanceCountAggregateOutputType> | number
+        }
+      }
+    }
+    ManagedPermissionPolicy: {
+      payload: Prisma.$ManagedPermissionPolicyPayload<ExtArgs>
+      fields: Prisma.ManagedPermissionPolicyFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ManagedPermissionPolicyFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ManagedPermissionPolicyFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload>
+        }
+        findFirst: {
+          args: Prisma.ManagedPermissionPolicyFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ManagedPermissionPolicyFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload>
+        }
+        findMany: {
+          args: Prisma.ManagedPermissionPolicyFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload>[]
+        }
+        create: {
+          args: Prisma.ManagedPermissionPolicyCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload>
+        }
+        createMany: {
+          args: Prisma.ManagedPermissionPolicyCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ManagedPermissionPolicyCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload>[]
+        }
+        delete: {
+          args: Prisma.ManagedPermissionPolicyDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload>
+        }
+        update: {
+          args: Prisma.ManagedPermissionPolicyUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload>
+        }
+        deleteMany: {
+          args: Prisma.ManagedPermissionPolicyDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ManagedPermissionPolicyUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ManagedPermissionPolicyUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload>[]
+        }
+        upsert: {
+          args: Prisma.ManagedPermissionPolicyUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedPermissionPolicyPayload>
+        }
+        aggregate: {
+          args: Prisma.ManagedPermissionPolicyAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateManagedPermissionPolicy>
+        }
+        groupBy: {
+          args: Prisma.ManagedPermissionPolicyGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedPermissionPolicyGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ManagedPermissionPolicyCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedPermissionPolicyCountAggregateOutputType> | number
+        }
+      }
+    }
+    ManagedUpstreamIssuer: {
+      payload: Prisma.$ManagedUpstreamIssuerPayload<ExtArgs>
+      fields: Prisma.ManagedUpstreamIssuerFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ManagedUpstreamIssuerFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ManagedUpstreamIssuerFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload>
+        }
+        findFirst: {
+          args: Prisma.ManagedUpstreamIssuerFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ManagedUpstreamIssuerFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload>
+        }
+        findMany: {
+          args: Prisma.ManagedUpstreamIssuerFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload>[]
+        }
+        create: {
+          args: Prisma.ManagedUpstreamIssuerCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload>
+        }
+        createMany: {
+          args: Prisma.ManagedUpstreamIssuerCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ManagedUpstreamIssuerCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload>[]
+        }
+        delete: {
+          args: Prisma.ManagedUpstreamIssuerDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload>
+        }
+        update: {
+          args: Prisma.ManagedUpstreamIssuerUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload>
+        }
+        deleteMany: {
+          args: Prisma.ManagedUpstreamIssuerDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ManagedUpstreamIssuerUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ManagedUpstreamIssuerUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload>[]
+        }
+        upsert: {
+          args: Prisma.ManagedUpstreamIssuerUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamIssuerPayload>
+        }
+        aggregate: {
+          args: Prisma.ManagedUpstreamIssuerAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateManagedUpstreamIssuer>
+        }
+        groupBy: {
+          args: Prisma.ManagedUpstreamIssuerGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedUpstreamIssuerGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ManagedUpstreamIssuerCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedUpstreamIssuerCountAggregateOutputType> | number
+        }
+      }
+    }
+    ManagedUpstreamSigningKey: {
+      payload: Prisma.$ManagedUpstreamSigningKeyPayload<ExtArgs>
+      fields: Prisma.ManagedUpstreamSigningKeyFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ManagedUpstreamSigningKeyFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ManagedUpstreamSigningKeyFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload>
+        }
+        findFirst: {
+          args: Prisma.ManagedUpstreamSigningKeyFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ManagedUpstreamSigningKeyFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload>
+        }
+        findMany: {
+          args: Prisma.ManagedUpstreamSigningKeyFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload>[]
+        }
+        create: {
+          args: Prisma.ManagedUpstreamSigningKeyCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload>
+        }
+        createMany: {
+          args: Prisma.ManagedUpstreamSigningKeyCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ManagedUpstreamSigningKeyCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload>[]
+        }
+        delete: {
+          args: Prisma.ManagedUpstreamSigningKeyDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload>
+        }
+        update: {
+          args: Prisma.ManagedUpstreamSigningKeyUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload>
+        }
+        deleteMany: {
+          args: Prisma.ManagedUpstreamSigningKeyDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ManagedUpstreamSigningKeyUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ManagedUpstreamSigningKeyUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload>[]
+        }
+        upsert: {
+          args: Prisma.ManagedUpstreamSigningKeyUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedUpstreamSigningKeyPayload>
+        }
+        aggregate: {
+          args: Prisma.ManagedUpstreamSigningKeyAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateManagedUpstreamSigningKey>
+        }
+        groupBy: {
+          args: Prisma.ManagedUpstreamSigningKeyGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedUpstreamSigningKeyGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ManagedUpstreamSigningKeyCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedUpstreamSigningKeyCountAggregateOutputType> | number
+        }
+      }
+    }
+    ManagedExchangeAuditEvent: {
+      payload: Prisma.$ManagedExchangeAuditEventPayload<ExtArgs>
+      fields: Prisma.ManagedExchangeAuditEventFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ManagedExchangeAuditEventFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ManagedExchangeAuditEventFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload>
+        }
+        findFirst: {
+          args: Prisma.ManagedExchangeAuditEventFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ManagedExchangeAuditEventFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload>
+        }
+        findMany: {
+          args: Prisma.ManagedExchangeAuditEventFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload>[]
+        }
+        create: {
+          args: Prisma.ManagedExchangeAuditEventCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload>
+        }
+        createMany: {
+          args: Prisma.ManagedExchangeAuditEventCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ManagedExchangeAuditEventCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload>[]
+        }
+        delete: {
+          args: Prisma.ManagedExchangeAuditEventDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload>
+        }
+        update: {
+          args: Prisma.ManagedExchangeAuditEventUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload>
+        }
+        deleteMany: {
+          args: Prisma.ManagedExchangeAuditEventDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ManagedExchangeAuditEventUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ManagedExchangeAuditEventUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload>[]
+        }
+        upsert: {
+          args: Prisma.ManagedExchangeAuditEventUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ManagedExchangeAuditEventPayload>
+        }
+        aggregate: {
+          args: Prisma.ManagedExchangeAuditEventAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateManagedExchangeAuditEvent>
+        }
+        groupBy: {
+          args: Prisma.ManagedExchangeAuditEventGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedExchangeAuditEventGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ManagedExchangeAuditEventCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ManagedExchangeAuditEventCountAggregateOutputType> | number
         }
       }
     }
@@ -2486,6 +3086,158 @@ export const IntegrationBindingScalarFieldEnum = {
 export type IntegrationBindingScalarFieldEnum = (typeof IntegrationBindingScalarFieldEnum)[keyof typeof IntegrationBindingScalarFieldEnum]
 
 
+export const ManagedIdentityProviderInstanceScalarFieldEnum = {
+  id: 'id',
+  providerType: 'providerType',
+  endpointUri: 'endpointUri',
+  httpMethod: 'httpMethod',
+  credentialPlacement: 'credentialPlacement',
+  timeoutMilliseconds: 'timeoutMilliseconds',
+  responseContractVersion: 'responseContractVersion',
+  contractConfig: 'contractConfig',
+  declaredAnchorKinds: 'declaredAnchorKinds',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesProviderId: 'replacesProviderId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedIdentityProviderInstanceScalarFieldEnum = (typeof ManagedIdentityProviderInstanceScalarFieldEnum)[keyof typeof ManagedIdentityProviderInstanceScalarFieldEnum]
+
+
+export const ManagedIntegrationExchangeConfigScalarFieldEnum = {
+  id: 'id',
+  publicSelector: 'publicSelector',
+  integrationId: 'integrationId',
+  providerInstanceId: 'providerInstanceId',
+  canonicalHostApp: 'canonicalHostApp',
+  organizationMode: 'organizationMode',
+  fixedOrganizationId: 'fixedOrganizationId',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesConfigId: 'replacesConfigId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedIntegrationExchangeConfigScalarFieldEnum = (typeof ManagedIntegrationExchangeConfigScalarFieldEnum)[keyof typeof ManagedIntegrationExchangeConfigScalarFieldEnum]
+
+
+export const ManagedIntegrationAdmissionPolicyScalarFieldEnum = {
+  id: 'id',
+  integrationConfigId: 'integrationConfigId',
+  anchorRequirements: 'anchorRequirements',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesPolicyId: 'replacesPolicyId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedIntegrationAdmissionPolicyScalarFieldEnum = (typeof ManagedIntegrationAdmissionPolicyScalarFieldEnum)[keyof typeof ManagedIntegrationAdmissionPolicyScalarFieldEnum]
+
+
+export const ManagedPermissionSourceInstanceScalarFieldEnum = {
+  id: 'id',
+  sourceType: 'sourceType',
+  endpointUri: 'endpointUri',
+  providerInstanceId: 'providerInstanceId',
+  serviceCredentialReference: 'serviceCredentialReference',
+  adapterContractReference: 'adapterContractReference',
+  contractConfig: 'contractConfig',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesSourceId: 'replacesSourceId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedPermissionSourceInstanceScalarFieldEnum = (typeof ManagedPermissionSourceInstanceScalarFieldEnum)[keyof typeof ManagedPermissionSourceInstanceScalarFieldEnum]
+
+
+export const ManagedPermissionPolicyScalarFieldEnum = {
+  id: 'id',
+  integrationConfigId: 'integrationConfigId',
+  mode: 'mode',
+  permissionSourceInstanceId: 'permissionSourceInstanceId',
+  normalizerType: 'normalizerType',
+  projectionContractVersion: 'projectionContractVersion',
+  projectionContract: 'projectionContract',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesPolicyId: 'replacesPolicyId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedPermissionPolicyScalarFieldEnum = (typeof ManagedPermissionPolicyScalarFieldEnum)[keyof typeof ManagedPermissionPolicyScalarFieldEnum]
+
+
+export const ManagedUpstreamIssuerScalarFieldEnum = {
+  id: 'id',
+  issuer: 'issuer',
+  expectedAudience: 'expectedAudience',
+  publicJwksUri: 'publicJwksUri',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesIssuerId: 'replacesIssuerId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedUpstreamIssuerScalarFieldEnum = (typeof ManagedUpstreamIssuerScalarFieldEnum)[keyof typeof ManagedUpstreamIssuerScalarFieldEnum]
+
+
+export const ManagedUpstreamSigningKeyScalarFieldEnum = {
+  id: 'id',
+  issuerId: 'issuerId',
+  kid: 'kid',
+  publicJwk: 'publicJwk',
+  keyReference: 'keyReference',
+  status: 'status',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesKeyId: 'replacesKeyId',
+  notBefore: 'notBefore',
+  activatedAt: 'activatedAt',
+  retireAfter: 'retireAfter',
+  retiredAt: 'retiredAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedUpstreamSigningKeyScalarFieldEnum = (typeof ManagedUpstreamSigningKeyScalarFieldEnum)[keyof typeof ManagedUpstreamSigningKeyScalarFieldEnum]
+
+
+export const ManagedExchangeAuditEventScalarFieldEnum = {
+  id: 'id',
+  timestamp: 'timestamp',
+  requestId: 'requestId',
+  integrationId: 'integrationId',
+  integrationConfigId: 'integrationConfigId',
+  providerType: 'providerType',
+  providerInstanceId: 'providerInstanceId',
+  outcome: 'outcome',
+  reasonCode: 'reasonCode',
+  admissionResult: 'admissionResult',
+  permissionResult: 'permissionResult',
+  issuanceResult: 'issuanceResult',
+  jti: 'jti',
+  kid: 'kid',
+  latencyCategory: 'latencyCategory'
+} as const
+
+export type ManagedExchangeAuditEventScalarFieldEnum = (typeof ManagedExchangeAuditEventScalarFieldEnum)[keyof typeof ManagedExchangeAuditEventScalarFieldEnum]
+
+
 export const RegisteredUpstreamTrustProfileScalarFieldEnum = {
   id: 'id',
   integrationId: 'integrationId',
@@ -2992,14 +3744,6 @@ export const QueryMode = {
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
-
-
 export const JsonNullValueFilter = {
   DbNull: DbNull,
   JsonNull: JsonNull,
@@ -3007,6 +3751,14 @@ export const JsonNullValueFilter = {
 } as const
 
 export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
 
@@ -3051,30 +3803,44 @@ export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
 
 
 /**
- * Reference to a field of type 'RegisteredUpstreamTrustProfileAlgorithm'
+ * Reference to a field of type 'ManagedIdentityProviderType'
  */
-export type EnumRegisteredUpstreamTrustProfileAlgorithmFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileAlgorithm'>
+export type EnumManagedIdentityProviderTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedIdentityProviderType'>
     
 
 
 /**
- * Reference to a field of type 'RegisteredUpstreamTrustProfileAlgorithm[]'
+ * Reference to a field of type 'ManagedIdentityProviderType[]'
  */
-export type ListEnumRegisteredUpstreamTrustProfileAlgorithmFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileAlgorithm[]'>
+export type ListEnumManagedIdentityProviderTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedIdentityProviderType[]'>
     
 
 
 /**
- * Reference to a field of type 'RegisteredUpstreamTrustProfileLifecycle'
+ * Reference to a field of type 'ManagedHttpMethod'
  */
-export type EnumRegisteredUpstreamTrustProfileLifecycleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileLifecycle'>
+export type EnumManagedHttpMethodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedHttpMethod'>
     
 
 
 /**
- * Reference to a field of type 'RegisteredUpstreamTrustProfileLifecycle[]'
+ * Reference to a field of type 'ManagedHttpMethod[]'
  */
-export type ListEnumRegisteredUpstreamTrustProfileLifecycleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileLifecycle[]'>
+export type ListEnumManagedHttpMethodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedHttpMethod[]'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedCredentialPlacement'
+ */
+export type EnumManagedCredentialPlacementFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedCredentialPlacement'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedCredentialPlacement[]'
+ */
+export type ListEnumManagedCredentialPlacementFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedCredentialPlacement[]'>
     
 
 
@@ -3103,6 +3869,104 @@ export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'J
  * Reference to a field of type 'QueryMode'
  */
 export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedExchangeLifecycle'
+ */
+export type EnumManagedExchangeLifecycleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedExchangeLifecycle'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedExchangeLifecycle[]'
+ */
+export type ListEnumManagedExchangeLifecycleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedExchangeLifecycle[]'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedOrganizationMode'
+ */
+export type EnumManagedOrganizationModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedOrganizationMode'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedOrganizationMode[]'
+ */
+export type ListEnumManagedOrganizationModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedOrganizationMode[]'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedPermissionMode'
+ */
+export type EnumManagedPermissionModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedPermissionMode'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedPermissionMode[]'
+ */
+export type ListEnumManagedPermissionModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedPermissionMode[]'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedSigningKeyStatus'
+ */
+export type EnumManagedSigningKeyStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedSigningKeyStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedSigningKeyStatus[]'
+ */
+export type ListEnumManagedSigningKeyStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedSigningKeyStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedExchangeAuditOutcome'
+ */
+export type EnumManagedExchangeAuditOutcomeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedExchangeAuditOutcome'>
+    
+
+
+/**
+ * Reference to a field of type 'ManagedExchangeAuditOutcome[]'
+ */
+export type ListEnumManagedExchangeAuditOutcomeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ManagedExchangeAuditOutcome[]'>
+    
+
+
+/**
+ * Reference to a field of type 'RegisteredUpstreamTrustProfileAlgorithm'
+ */
+export type EnumRegisteredUpstreamTrustProfileAlgorithmFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileAlgorithm'>
+    
+
+
+/**
+ * Reference to a field of type 'RegisteredUpstreamTrustProfileAlgorithm[]'
+ */
+export type ListEnumRegisteredUpstreamTrustProfileAlgorithmFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileAlgorithm[]'>
+    
+
+
+/**
+ * Reference to a field of type 'RegisteredUpstreamTrustProfileLifecycle'
+ */
+export type EnumRegisteredUpstreamTrustProfileLifecycleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileLifecycle'>
+    
+
+
+/**
+ * Reference to a field of type 'RegisteredUpstreamTrustProfileLifecycle[]'
+ */
+export type ListEnumRegisteredUpstreamTrustProfileLifecycleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RegisteredUpstreamTrustProfileLifecycle[]'>
     
 
 
@@ -3595,6 +4459,14 @@ export type PrismaClientOptions = ({
 export type GlobalOmitConfig = {
   customer?: Prisma.CustomerOmit
   integrationBinding?: Prisma.IntegrationBindingOmit
+  managedIdentityProviderInstance?: Prisma.ManagedIdentityProviderInstanceOmit
+  managedIntegrationExchangeConfig?: Prisma.ManagedIntegrationExchangeConfigOmit
+  managedIntegrationAdmissionPolicy?: Prisma.ManagedIntegrationAdmissionPolicyOmit
+  managedPermissionSourceInstance?: Prisma.ManagedPermissionSourceInstanceOmit
+  managedPermissionPolicy?: Prisma.ManagedPermissionPolicyOmit
+  managedUpstreamIssuer?: Prisma.ManagedUpstreamIssuerOmit
+  managedUpstreamSigningKey?: Prisma.ManagedUpstreamSigningKeyOmit
+  managedExchangeAuditEvent?: Prisma.ManagedExchangeAuditEventOmit
   registeredUpstreamTrustProfile?: Prisma.RegisteredUpstreamTrustProfileOmit
   gatewaySigningKey?: Prisma.GatewaySigningKeyOmit
   gatewayIdentityAuditEvent?: Prisma.GatewayIdentityAuditEventOmit

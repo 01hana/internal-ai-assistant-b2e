@@ -53,6 +53,14 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   Customer: 'Customer',
   IntegrationBinding: 'IntegrationBinding',
+  ManagedIdentityProviderInstance: 'ManagedIdentityProviderInstance',
+  ManagedIntegrationExchangeConfig: 'ManagedIntegrationExchangeConfig',
+  ManagedIntegrationAdmissionPolicy: 'ManagedIntegrationAdmissionPolicy',
+  ManagedPermissionSourceInstance: 'ManagedPermissionSourceInstance',
+  ManagedPermissionPolicy: 'ManagedPermissionPolicy',
+  ManagedUpstreamIssuer: 'ManagedUpstreamIssuer',
+  ManagedUpstreamSigningKey: 'ManagedUpstreamSigningKey',
+  ManagedExchangeAuditEvent: 'ManagedExchangeAuditEvent',
   RegisteredUpstreamTrustProfile: 'RegisteredUpstreamTrustProfile',
   GatewaySigningKey: 'GatewaySigningKey',
   GatewayIdentityAuditEvent: 'GatewayIdentityAuditEvent',
@@ -113,6 +121,158 @@ export const IntegrationBindingScalarFieldEnum = {
 } as const
 
 export type IntegrationBindingScalarFieldEnum = (typeof IntegrationBindingScalarFieldEnum)[keyof typeof IntegrationBindingScalarFieldEnum]
+
+
+export const ManagedIdentityProviderInstanceScalarFieldEnum = {
+  id: 'id',
+  providerType: 'providerType',
+  endpointUri: 'endpointUri',
+  httpMethod: 'httpMethod',
+  credentialPlacement: 'credentialPlacement',
+  timeoutMilliseconds: 'timeoutMilliseconds',
+  responseContractVersion: 'responseContractVersion',
+  contractConfig: 'contractConfig',
+  declaredAnchorKinds: 'declaredAnchorKinds',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesProviderId: 'replacesProviderId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedIdentityProviderInstanceScalarFieldEnum = (typeof ManagedIdentityProviderInstanceScalarFieldEnum)[keyof typeof ManagedIdentityProviderInstanceScalarFieldEnum]
+
+
+export const ManagedIntegrationExchangeConfigScalarFieldEnum = {
+  id: 'id',
+  publicSelector: 'publicSelector',
+  integrationId: 'integrationId',
+  providerInstanceId: 'providerInstanceId',
+  canonicalHostApp: 'canonicalHostApp',
+  organizationMode: 'organizationMode',
+  fixedOrganizationId: 'fixedOrganizationId',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesConfigId: 'replacesConfigId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedIntegrationExchangeConfigScalarFieldEnum = (typeof ManagedIntegrationExchangeConfigScalarFieldEnum)[keyof typeof ManagedIntegrationExchangeConfigScalarFieldEnum]
+
+
+export const ManagedIntegrationAdmissionPolicyScalarFieldEnum = {
+  id: 'id',
+  integrationConfigId: 'integrationConfigId',
+  anchorRequirements: 'anchorRequirements',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesPolicyId: 'replacesPolicyId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedIntegrationAdmissionPolicyScalarFieldEnum = (typeof ManagedIntegrationAdmissionPolicyScalarFieldEnum)[keyof typeof ManagedIntegrationAdmissionPolicyScalarFieldEnum]
+
+
+export const ManagedPermissionSourceInstanceScalarFieldEnum = {
+  id: 'id',
+  sourceType: 'sourceType',
+  endpointUri: 'endpointUri',
+  providerInstanceId: 'providerInstanceId',
+  serviceCredentialReference: 'serviceCredentialReference',
+  adapterContractReference: 'adapterContractReference',
+  contractConfig: 'contractConfig',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesSourceId: 'replacesSourceId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedPermissionSourceInstanceScalarFieldEnum = (typeof ManagedPermissionSourceInstanceScalarFieldEnum)[keyof typeof ManagedPermissionSourceInstanceScalarFieldEnum]
+
+
+export const ManagedPermissionPolicyScalarFieldEnum = {
+  id: 'id',
+  integrationConfigId: 'integrationConfigId',
+  mode: 'mode',
+  permissionSourceInstanceId: 'permissionSourceInstanceId',
+  normalizerType: 'normalizerType',
+  projectionContractVersion: 'projectionContractVersion',
+  projectionContract: 'projectionContract',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesPolicyId: 'replacesPolicyId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedPermissionPolicyScalarFieldEnum = (typeof ManagedPermissionPolicyScalarFieldEnum)[keyof typeof ManagedPermissionPolicyScalarFieldEnum]
+
+
+export const ManagedUpstreamIssuerScalarFieldEnum = {
+  id: 'id',
+  issuer: 'issuer',
+  expectedAudience: 'expectedAudience',
+  publicJwksUri: 'publicJwksUri',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesIssuerId: 'replacesIssuerId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedUpstreamIssuerScalarFieldEnum = (typeof ManagedUpstreamIssuerScalarFieldEnum)[keyof typeof ManagedUpstreamIssuerScalarFieldEnum]
+
+
+export const ManagedUpstreamSigningKeyScalarFieldEnum = {
+  id: 'id',
+  issuerId: 'issuerId',
+  kid: 'kid',
+  publicJwk: 'publicJwk',
+  keyReference: 'keyReference',
+  status: 'status',
+  enabled: 'enabled',
+  lifecycle: 'lifecycle',
+  version: 'version',
+  replacesKeyId: 'replacesKeyId',
+  notBefore: 'notBefore',
+  activatedAt: 'activatedAt',
+  retireAfter: 'retireAfter',
+  retiredAt: 'retiredAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ManagedUpstreamSigningKeyScalarFieldEnum = (typeof ManagedUpstreamSigningKeyScalarFieldEnum)[keyof typeof ManagedUpstreamSigningKeyScalarFieldEnum]
+
+
+export const ManagedExchangeAuditEventScalarFieldEnum = {
+  id: 'id',
+  timestamp: 'timestamp',
+  requestId: 'requestId',
+  integrationId: 'integrationId',
+  integrationConfigId: 'integrationConfigId',
+  providerType: 'providerType',
+  providerInstanceId: 'providerInstanceId',
+  outcome: 'outcome',
+  reasonCode: 'reasonCode',
+  admissionResult: 'admissionResult',
+  permissionResult: 'permissionResult',
+  issuanceResult: 'issuanceResult',
+  jti: 'jti',
+  kid: 'kid',
+  latencyCategory: 'latencyCategory'
+} as const
+
+export type ManagedExchangeAuditEventScalarFieldEnum = (typeof ManagedExchangeAuditEventScalarFieldEnum)[keyof typeof ManagedExchangeAuditEventScalarFieldEnum]
 
 
 export const RegisteredUpstreamTrustProfileScalarFieldEnum = {
@@ -621,14 +781,6 @@ export const QueryMode = {
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
-
-
 export const JsonNullValueFilter = {
   DbNull: DbNull,
   JsonNull: JsonNull,
@@ -636,4 +788,12 @@ export const JsonNullValueFilter = {
 } as const
 
 export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 

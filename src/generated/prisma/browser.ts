@@ -28,6 +28,46 @@ export type Customer = Prisma.CustomerModel
  */
 export type IntegrationBinding = Prisma.IntegrationBindingModel
 /**
+ * Model ManagedIdentityProviderInstance
+ * Registered upstream native-credential verification policy. It never owns a Customer or canonical identity.
+ */
+export type ManagedIdentityProviderInstance = Prisma.ManagedIdentityProviderInstanceModel
+/**
+ * Model ManagedIntegrationExchangeConfig
+ * Server-owned selector-to-integration configuration. The selector is opaque lookup data only.
+ */
+export type ManagedIntegrationExchangeConfig = Prisma.ManagedIntegrationExchangeConfigModel
+/**
+ * Model ManagedIntegrationAdmissionPolicy
+ * Exact registered verified-anchor requirements for one exchange configuration.
+ */
+export type ManagedIntegrationAdmissionPolicy = Prisma.ManagedIntegrationAdmissionPolicyModel
+/**
+ * Model ManagedPermissionSourceInstance
+ * Reusable server-controlled permission-source configuration; secret material is referenced, never stored.
+ */
+export type ManagedPermissionSourceInstance = Prisma.ManagedPermissionSourceInstanceModel
+/**
+ * Model ManagedPermissionPolicy
+ * Selected permission policy for one exchange configuration.
+ */
+export type ManagedPermissionPolicy = Prisma.ManagedPermissionPolicyModel
+/**
+ * Model ManagedUpstreamIssuer
+ * Separate managed upstream issuer authority; it is not Gateway's internal issuer.
+ */
+export type ManagedUpstreamIssuer = Prisma.ManagedUpstreamIssuerModel
+/**
+ * Model ManagedUpstreamSigningKey
+ * Managed public signing-key metadata. `keyReference` is a reference only; private key material is not persisted.
+ */
+export type ManagedUpstreamSigningKey = Prisma.ManagedUpstreamSigningKeyModel
+/**
+ * Model ManagedExchangeAuditEvent
+ * Safe exchange outcome only; it intentionally has no Customer, credential, token, payload, or secret fields.
+ */
+export type ManagedExchangeAuditEvent = Prisma.ManagedExchangeAuditEventModel
+/**
  * Model RegisteredUpstreamTrustProfile
  * Gateway-owned upstream verification policy. Customer and HostApp authority
  * remain exclusively on its anchored IntegrationBinding.
