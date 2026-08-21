@@ -1,0 +1,2 @@
+import { VersionedManagedExchangeProvisionCommand, controlPlaneValidator } from './managed-exchange-control-plane';
+export class ProvisionManagedIdentityProviderCommand extends VersionedManagedExchangeProvisionCommand { constructor(dependencies: Omit<ConstructorParameters<typeof VersionedManagedExchangeProvisionCommand>[0], 'kind' | 'validator'>) { super({ ...dependencies, kind: 'provider', validator: controlPlaneValidator('provider') }); } }

@@ -3,6 +3,7 @@ import type { GatewaySigningKey, Prisma, PrismaClient } from '../generated/prism
 export type ActiveSigningKeyRecord = Pick<GatewaySigningKey, 'kid' | 'publicJwk' | 'keyReference' | 'status'>;
 export type JwksVisibleSigningKeyRecord = Pick<GatewaySigningKey, 'kid' | 'publicJwk' | 'status'>;
 export type GatewaySigningKeyRecord = Pick<GatewaySigningKey, 'kid' | 'publicJwk' | 'keyReference' | 'status' | 'notBefore' | 'activatedAt' | 'retireAfter' | 'retiredAt'>;
+export type GatewaySigningKeyCollisionRecord = Pick<GatewaySigningKey, 'kid' | 'publicJwk' | 'keyReference'>;
 export type GatewaySigningKeyTransaction = Pick<Prisma.TransactionClient, 'gatewaySigningKey' | 'gatewayIdentityAuditEvent'>;
 export type GatewaySigningKeyClient = Pick<PrismaClient, 'gatewaySigningKey' | 'gatewayIdentityAuditEvent' | '$transaction'>;
 type GatewaySigningKeyDelegateClient = Pick<GatewaySigningKeyClient, 'gatewaySigningKey'> | Pick<GatewaySigningKeyTransaction, 'gatewaySigningKey'>;
@@ -31,6 +32,10 @@ export class GatewaySigningKeyRepository {
       where: { kid },
       select: { kid: true, publicJwk: true, keyReference: true, status: true, notBefore: true, activatedAt: true, retireAfter: true, retiredAt: true }
     });
+  }
+
+  findAllForCollision(): Promise<GatewaySigningKeyCollisionRecord[]> {
+    return this.client.gatewaySigningKey.findMany({ select: { kid: true, publicJwk: true, keyReference: true } });
   }
 
   transaction<T>(callback: (transaction: GatewaySigningKeyTransaction) => Promise<T>): Promise<T> {

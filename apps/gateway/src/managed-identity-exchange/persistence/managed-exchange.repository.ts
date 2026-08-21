@@ -1,7 +1,7 @@
 import type {
   ManagedExchangeAuditEvent, ManagedIdentityProviderInstance, ManagedIntegrationAdmissionPolicy,
   ManagedIntegrationExchangeConfig, ManagedPermissionPolicy, ManagedPermissionSourceInstance,
-  ManagedUpstreamIssuer, ManagedUpstreamSigningKey, Prisma, PrismaClient
+  ManagedUpstreamIssuer, ManagedUpstreamSigningKey, ManagedSigningKeyStatus, ManagedExchangeLifecycle, Prisma, PrismaClient
 } from '../../generated/prisma/client';
 
 export type ManagedExchangeTransaction = Pick<Prisma.TransactionClient,
@@ -75,6 +75,9 @@ export class ManagedIntegrationExchangeConfigRepository {
   findByIntegrationId(integrationId: string): Promise<ManagedIntegrationExchangeConfigRecord[]> {
     return this.client.managedIntegrationExchangeConfig.findMany({ where: { integrationId }, orderBy: { version: 'asc' }, select: configSelect });
   }
+  findEnabledActiveByIntegrationId(integrationId: string): Promise<ManagedIntegrationExchangeConfigRecord[]> {
+    return this.client.managedIntegrationExchangeConfig.findMany({ where: { integrationId, enabled: true, lifecycle: 'active' }, select: configSelect });
+  }
   transaction<T>(callback: (transaction: ManagedExchangeTransaction) => Promise<T>): Promise<T> {
     return this.client.$transaction((transaction) => callback(transaction));
   }
@@ -127,6 +130,80 @@ export class ManagedExchangeAuditRepository {
   append(data: Prisma.ManagedExchangeAuditEventCreateInput): Promise<ManagedExchangeAuditRecord> {
     return this.client.managedExchangeAuditEvent.create({ data, select: auditSelect });
   }
+}
+
+/**
+ * Narrow lifecycle repository used only by Feature 005 direct provisioning.
+ * It deliberately maps a finite set of managed tables; callers cannot name a
+ * model, supply raw SQL, or mutate Feature 004/Gateway signing records.
+ */
+export type ManagedExchangeLifecycleKind = 'provider' | 'config' | 'admission' | 'source' | 'permission' | 'issuer' | 'key';
+export class ManagedExchangeLifecycleRepository {
+  constructor(private readonly client: ManagedExchangeClient) {}
+  transaction<T>(callback: (transaction: ManagedExchangeTransaction) => Promise<T>): Promise<T> { return this.client.$transaction((transaction) => callback(transaction)); }
+  async findById(kind: ManagedExchangeLifecycleKind, id: string, transaction: ManagedExchangeTransaction): Promise<Record<string, unknown> | null> {
+    const delegate = this.delegate(kind, transaction);
+    return delegate.findUnique({ where: { id } }) as Promise<Record<string, unknown> | null>;
+  }
+  async create(kind: ManagedExchangeLifecycleKind, data: Record<string, unknown>, transaction: ManagedExchangeTransaction): Promise<Record<string, unknown>> {
+    return this.delegate(kind, transaction).create({ data }) as Promise<Record<string, unknown>>;
+  }
+  async disable(kind: ManagedExchangeLifecycleKind, id: string, transaction: ManagedExchangeTransaction): Promise<Record<string, unknown>> {
+    const result = await this.delegate(kind, transaction).updateMany({ where: { id, enabled: true, lifecycle: 'active' }, data: { enabled: false, lifecycle: 'disabled' } });
+    if (result.count !== 1) throw new Error('conditional lifecycle state mismatch');
+    return (await this.delegate(kind, transaction).findUnique({ where: { id } })) as Record<string, unknown>;
+  }
+  async replace(kind: ManagedExchangeLifecycleKind, predecessorId: string, successor: Record<string, unknown>, transaction: ManagedExchangeTransaction): Promise<Record<string, unknown>> {
+    const predecessor = await this.findById(kind, predecessorId, transaction);
+    if (!predecessor || predecessor.enabled !== true || predecessor.lifecycle !== 'active' || !sameAnchor(kind, predecessor, successor)) throw new Error('invalid replacement');
+    const result = await this.delegate(kind, transaction).updateMany({ where: { id: predecessorId, enabled: true, lifecycle: 'active' }, data: { enabled: false, lifecycle: 'replaced' } });
+    if (result.count !== 1) throw new Error('stale predecessor');
+    // The partial active unique index permits this order. If insert fails, the
+    // enclosing transaction rolls the predecessor back to active.
+    return this.create(kind, { ...successor, enabled: true, lifecycle: 'active', version: Number(predecessor.version) + 1, [replacementField(kind)]: predecessor.id }, transaction);
+  }
+  /** Key-only consistency operation; other managed lifecycle kinds retain generic behavior. */
+  async transitionSigningKey(id: string, from: ManagedSigningKeyStatus, to: ManagedSigningKeyStatus, transaction: ManagedExchangeTransaction): Promise<Record<string, unknown>> {
+    const target = signingTransition(to);
+    const result = await transaction.managedUpstreamSigningKey.updateMany({
+      where: { id, status: from, enabled: target.fromEnabled, lifecycle: target.fromLifecycle },
+      data: target.data
+    });
+    if (result.count !== 1) throw new Error('illegal signing key transition');
+    return transaction.managedUpstreamSigningKey.findUnique({ where: { id } }) as Promise<Record<string, unknown>>;
+  }
+  async replaceSigningKey(predecessorId: string, successor: Record<string, unknown>, transaction: ManagedExchangeTransaction): Promise<Record<string, unknown>> {
+    const predecessor = await this.findById('key', predecessorId, transaction);
+    if (!predecessor || predecessor.enabled !== true || predecessor.lifecycle !== 'active' || predecessor.status !== 'active' || !sameAnchor('key', predecessor, successor)) throw new Error('invalid signing key replacement');
+    const replaced = await transaction.managedUpstreamSigningKey.updateMany({
+      where: { id: predecessorId, enabled: true, lifecycle: 'active', status: 'active' },
+      data: { enabled: false, lifecycle: 'replaced', status: 'retired', retiredAt: new Date() }
+    });
+    if (replaced.count !== 1) throw new Error('stale signing key predecessor');
+    return this.create('key', { ...successor, enabled: true, lifecycle: 'active', status: 'active', version: Number(predecessor.version) + 1, replacesKeyId: predecessor.id }, transaction);
+  }
+  private delegate(kind: ManagedExchangeLifecycleKind, client: ManagedExchangeTransaction): { findUnique(input: unknown): Promise<unknown>; create(input: unknown): Promise<unknown>; updateMany(input: unknown): Promise<{ count: number }> } {
+    const names = { provider: 'managedIdentityProviderInstance', config: 'managedIntegrationExchangeConfig', admission: 'managedIntegrationAdmissionPolicy', source: 'managedPermissionSourceInstance', permission: 'managedPermissionPolicy', issuer: 'managedUpstreamIssuer', key: 'managedUpstreamSigningKey' } as const;
+    return client[names[kind]] as never;
+  }
+}
+
+function signingTransition(to: ManagedSigningKeyStatus): Readonly<{ fromEnabled: boolean; fromLifecycle: ManagedExchangeLifecycle; data: Record<string, unknown> }> {
+  if (to === 'published') return { fromEnabled: false, fromLifecycle: 'draft', data: { status: 'published' } };
+  if (to === 'active') return { fromEnabled: false, fromLifecycle: 'draft', data: { status: 'active', enabled: true, lifecycle: 'active', activatedAt: new Date() } };
+  if (to === 'retiring') return { fromEnabled: true, fromLifecycle: 'active', data: { status: 'retiring', enabled: false, lifecycle: 'disabled', retireAfter: new Date() } };
+  if (to === 'retired') return { fromEnabled: false, fromLifecycle: 'disabled', data: { status: 'retired', retiredAt: new Date() } };
+  throw new Error('unknown signing key transition');
+}
+
+function replacementField(kind: ManagedExchangeLifecycleKind): string {
+  return ({ provider: 'replacesProviderId', config: 'replacesConfigId', admission: 'replacesPolicyId', source: 'replacesSourceId', permission: 'replacesPolicyId', issuer: 'replacesIssuerId', key: 'replacesKeyId' } as const)[kind];
+}
+function sameAnchor(kind: ManagedExchangeLifecycleKind, predecessor: Record<string, unknown>, successor: Record<string, unknown>): boolean {
+  if (kind === 'config') return predecessor.integrationId === successor.integrationId;
+  if (kind === 'admission' || kind === 'permission') return predecessor.integrationConfigId === successor.integrationConfigId;
+  if (kind === 'key') return predecessor.issuerId === successor.issuerId;
+  return true;
 }
 
 function select<T extends object>(...keys: readonly (keyof T)[]): { readonly [K in keyof T]: boolean } {

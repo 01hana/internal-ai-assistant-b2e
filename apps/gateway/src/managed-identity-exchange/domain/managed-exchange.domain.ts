@@ -90,6 +90,11 @@ export interface PermissionNormalizer {
   normalize(material: TrustedPermissionMaterial): readonly NormalizedPermission[];
 }
 
+/** Lookup only; implementations are fixed deployment registries, never browser-selected plugins. */
+export interface PermissionNormalizerRegistry {
+  resolve(normalizerType: string): PermissionNormalizer | undefined;
+}
+
 export interface IntegrationAdmissionPort {
   admit(input: Readonly<{ identity: VerifiedExternalIdentity; integrationConfigId: string }>): Promise<void>;
 }

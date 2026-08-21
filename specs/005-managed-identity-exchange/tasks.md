@@ -66,42 +66,42 @@
 **Dependencies**: Phase 1.  
 **Acceptance gate**: `MANAGED_EXCHANGE_READINESS_READY` — invalid, ambiguous, disabled, incomplete, or IDX-unvalidated configuration cannot become ready.
 
-- [ ] T007 Implement provider-instance lifecycle provisioning in `apps/gateway/src/commands/provision-managed-identity-provider.ts`
+- [x] T007 Implement provider-instance lifecycle provisioning in `apps/gateway/src/commands/provision-managed-identity-provider.ts`
   - Goal: Create/update/disable/version provider instances using registered types and validated fixed contracts.
   - Implementation: Apply pre-validation, conditional transaction mutation, safe post-commit audit/invalidation, and no controller/raw-SQL lifecycle path.
   - Tests: Add failing provider lifecycle/contract validation cases in `apps/gateway/test/managed-identity-exchange/provisioning.spec.ts`.
   - Depends on: T006.
   - Done when: Invalid provider endpoint/contract records cannot be enabled.
 
-- [ ] T008 Implement exchange-configuration provisioning and atomic replacement in `apps/gateway/src/commands/provision-managed-integration-exchange-config.ts`
+- [x] T008 Implement exchange-configuration provisioning and atomic replacement in `apps/gateway/src/commands/provision-managed-integration-exchange-config.ts`
   - Goal: Server-generate an immutable new `publicSelector`; create successors with a higher version and atomically replace the active predecessor.
   - Implementation: Reject caller-supplied/reused selectors and in-place anchor mutation; commit successor activation and predecessor replacement together.
   - Tests: Extend `provisioning.spec.ts` with selector generation, fresh selector per successor, stale selector 401 lookup, rollback, and no dual/no-active committed interval cases.
   - Depends on: T006, T007.
   - Done when: Selector lookup is only a safe browser lookup, never structural identity authority.
 
-- [ ] T009 Implement admission-policy and permission-policy/source lifecycle commands in `apps/gateway/src/commands/provision-managed-*.ts`
+- [x] T009 Implement admission-policy and permission-policy/source lifecycle commands in `apps/gateway/src/commands/provision-managed-*.ts`
   - Goal: Provision versioned exact-anchor admission policies and validated permission source/policy records under one configuration.
   - Implementation: Preserve version history; validate lifecycle and references; do not introduce arbitrary mapping expressions, native credential inputs, or Customer/HostApp authority.
   - Tests: Add policy history, disabled record, ambiguous active policy, and unsafe source-contract negatives to `provisioning.spec.ts`.
   - Depends on: T006, T008.
   - Done when: Each selected config can have exactly one deterministic active policy of each applicable kind.
 
-- [ ] T010 Implement managed issuer and signing-key lifecycle configuration in `apps/gateway/src/commands/provision-managed-upstream-issuer.ts` and `apps/gateway/src/commands/provision-managed-upstream-signing-key.ts`
+- [x] T010 Implement managed issuer and signing-key lifecycle configuration in `apps/gateway/src/commands/provision-managed-upstream-issuer.ts` and `apps/gateway/src/commands/provision-managed-upstream-signing-key.ts`
   - Goal: Directly provision separate managed issuer/key metadata before runtime issuance exists.
   - Implementation: Require RS256, exact issuer/audience, public JWK, safe key reference, globally unique `kid`, lifecycle/version checks, and no Gateway key identity/material reuse.
   - Tests: Add lifecycle and key-reference validation cases in `provisioning.spec.ts`.
   - Depends on: T006.
   - Done when: Issuer/key configuration is lifecycle controlled but remains separate from Gateway internal signing.
 
-- [ ] T011 Implement read-only readiness validation in `apps/gateway/src/managed-identity-exchange/persistence/managed-exchange-readiness.validator.ts`
+- [x] T011 Implement read-only readiness validation in `apps/gateway/src/managed-identity-exchange/persistence/managed-exchange-readiness.validator.ts`
   - Goal: Require enabled binding/config/provider, deterministic admission, canonical fields/org strategy, valid permission mode, active managed issuer/key, and compatible active Feature 004 profile.
   - Implementation: For `required`, require source/adapter/normalizer/projection; for `allow_empty`, permit no source but validate one if configured; keep IDX not-ready without its authoritative external contract.
   - Tests: Write readiness-positive and fail-closed matrix tests first in `apps/gateway/test/managed-identity-exchange/readiness.spec.ts`.
   - Depends on: T007–T010.
   - Done when: Readiness has no mutations, decoding, fallback, Customer lookup, or Gateway internal signer use.
 
-- [ ] T012 Complete DB-backed control-plane and readiness regression gate in `apps/gateway/test/managed-identity-exchange/{provisioning,readiness}.spec.ts`
+- [x] T012 Complete DB-backed control-plane and readiness regression gate in `apps/gateway/test/managed-identity-exchange/{provisioning,readiness}.spec.ts`
   - Goal: Exercise lifecycle rollback, post-commit behavior, disabled dependencies, selector collision, and Feature 004 compatibility prerequisites.
   - Implementation: Use the existing isolated registry database helper only.
   - Tests: Run focused DB suites, Prisma validate/generate, and Phase 1 guards.
