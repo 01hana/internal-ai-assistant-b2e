@@ -150,35 +150,35 @@
 **Dependencies**: T017–T020 may begin after Phase 1; T021 and this phase gate require Phase 2 readiness.  
 **Acceptance gate**: `MANAGED_DELEGATED_TRANSPORT_READY` — registered transport rejects SSRF/rebind/redirect/timeout/response hazards and native credentials have one permitted destination.
 
-- [ ] T017 [P] Define delegated endpoint and transport security tests in `apps/gateway/test/managed-identity-exchange/delegated-transport.spec.ts`
+- [x] T017 [P] Define delegated endpoint and transport security tests in `apps/gateway/test/managed-identity-exchange/delegated-transport.spec.ts`
   - Goal: Establish failing coverage for HTTPS, URL credentials/fragments, private/special-use/mixed DNS, rebinding, redirects, MIME/body limits, deadline, and no retry after native forwarding.
   - Implementation: Inject DNS/request/clock doubles and only test-local loopback fixture transport.
   - Tests: `delegated-transport.spec.ts`.
   - Depends on: T006.
   - Done when: The suite has deterministic adversarial cases before transport code exists.
 
-- [ ] T018 Implement registered delegated endpoint validation in `apps/gateway/src/managed-identity-exchange/providers/delegated-endpoint.policy.ts`
+- [x] T018 Implement registered delegated endpoint validation in `apps/gateway/src/managed-identity-exchange/providers/delegated-endpoint.policy.ts`
   - Goal: Validate provisioned endpoint/method/content/timeout/contract data before enablement.
   - Implementation: Reuse Feature 004's exported public-destination classification primitive unchanged; reject browser-provided routes, headers, extraction/mapping rules, credentials, and fragments.
   - Tests: Make applicable T017 registration negatives pass.
   - Depends on: T017.
   - Done when: Only a fixed registered identity-provider endpoint can receive a native credential.
 
-- [ ] T019 Implement hardened delegated transport in `apps/gateway/src/managed-identity-exchange/providers/delegated-http.transport.ts`
+- [x] T019 Implement hardened delegated transport in `apps/gateway/src/managed-identity-exchange/providers/delegated-http.transport.ts`
   - Goal: Execute pre- and connection-time DNS validation, one fixed deadline, bounded response parsing, strict MIME/status, and redirect denial.
   - Implementation: Use Feature 005-owned request construction/typed errors; no automatic retry after forwarding and no Feature 004 transport refactor.
   - Tests: Make all T017 transport/rebind cases pass.
   - Depends on: T017, T018.
   - Done when: Transport errors are typed, generic externally, and never retain native credential diagnostics.
 
-- [ ] T020 Implement the fixed `delegated-http/v1` adapter and registry in `apps/gateway/src/managed-identity-exchange/providers/`
+- [x] T020 Implement the fixed `delegated-http/v1` adapter and registry in `apps/gateway/src/managed-identity-exchange/providers/`
   - Goal: Verify native credentials via fixed provisioned response contract and return only `VerifiedExternalIdentity`/typed outcome.
   - Implementation: Require nonblank verified subject, declared anchors, optional verified organization/trusted permission reference; prohibit arbitrary JSONPath, expression evaluation, decode-only trust, and core provider branches.
   - Tests: Add adapter contract/rejected/unavailable/malformed tests in `apps/gateway/test/managed-identity-exchange/delegated-provider.spec.ts`.
   - Depends on: T019, T005.
   - Done when: Adapters never canonicalize, issue, or select integrations.
 
-- [ ] T021 Implement disabled IDX adapter shell and synthetic-only contract in `apps/gateway/src/managed-identity-exchange/providers/idx-delegated-verification.adapter.ts`
+- [x] T021 Implement disabled IDX adapter shell and synthetic-only contract in `apps/gateway/src/managed-identity-exchange/providers/idx-delegated-verification.adapter.ts`
   - Goal: Represent IDX as a known but fail-closed provider type pending validated external contract.
   - Implementation: Reject production readiness without endpoint/method/authenticated schemas/failure semantics/anchors; add no ES512/JWKS/decode-only/kid/UUID/UserType logic.
   - Tests: Add source/readiness tests in `apps/gateway/test/managed-identity-exchange/idx-disabled.spec.ts`.

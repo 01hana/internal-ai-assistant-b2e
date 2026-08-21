@@ -1,4 +1,5 @@
 import type { ProviderInstancePolicy, ServerProvisionedContract } from '../domain/managed-exchange.domain';
+import { DelegatedEndpointPolicy } from '../providers/delegated-endpoint.policy';
 import { PermissionSourceContractValidatorRegistry, ProjectionContractValidator, ProviderContractValidatorRegistry } from './managed-contract-registries';
 
 export class ManagedExchangeActivationError extends Error {
@@ -7,11 +8,11 @@ export class ManagedExchangeActivationError extends Error {
 
 /** Validates provisioned policy only. It never calls an adapter or a remote endpoint. */
 export class ManagedExchangeActivationValidator {
-  constructor(private readonly providers = new ProviderContractValidatorRegistry(), private readonly sources = new PermissionSourceContractValidatorRegistry(), private readonly projections = new ProjectionContractValidator()) {}
+  constructor(private readonly providers = new ProviderContractValidatorRegistry(), private readonly sources = new PermissionSourceContractValidatorRegistry(), private readonly projections = new ProjectionContractValidator(), private readonly endpoints = new DelegatedEndpointPolicy()) {}
   validateProvider(input: Readonly<Record<string, unknown>>, requirePersistedId = true): ProviderInstancePolicy {
     const endpointUri = https(input.endpointUri);
     const type = required(input.providerType);
-    if (!['delegated_http', 'idx_delegated'].includes(type) || input.httpMethod !== 'POST' || input.credentialPlacement !== 'authorization_bearer') throw new ManagedExchangeActivationError();
+    if (input.httpMethod !== 'POST' || input.credentialPlacement !== 'authorization_bearer') throw new ManagedExchangeActivationError();
     const timeoutMilliseconds = input.timeoutMilliseconds;
     if (!Number.isInteger(timeoutMilliseconds) || typeof timeoutMilliseconds !== 'number' || timeoutMilliseconds < 1 || timeoutMilliseconds > 5_000) throw new ManagedExchangeActivationError();
     const responseContractVersion = required(input.responseContractVersion);
@@ -19,6 +20,7 @@ export class ManagedExchangeActivationValidator {
     if (new Set(declaredAnchorKinds).size !== declaredAnchorKinds.length) throw new ManagedExchangeActivationError();
     const providerContract = contract(input.contractConfig);
     this.providers.validate(type, responseContractVersion, providerContract);
+    try { this.endpoints.validate({ providerType: type, endpointUri, httpMethod: 'POST', credentialPlacement: 'authorization_bearer', timeoutMilliseconds, responseContractVersion }); } catch { throw new ManagedExchangeActivationError(); }
     return Object.freeze({ id: requirePersistedId ? required(input.id) : optionalId(input.id), providerType: type, endpointUri, httpMethod: 'POST', credentialPlacement: 'authorization_bearer', timeoutMilliseconds, responseContractVersion, declaredAnchorKinds: Object.freeze(declaredAnchorKinds), providerContract });
   }
 
