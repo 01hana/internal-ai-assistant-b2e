@@ -115,28 +115,28 @@
 **Dependencies**: Phase 2 gate.  
 **Acceptance gate**: `MANAGED_ADMISSION_CANONICALIZATION_READY` — exact verified-anchor admission and deterministic canonicalization pass without Customer or browser authority.
 
-- [ ] T013 Add selector A→B replay and exact-anchor admission tests in `apps/gateway/test/managed-identity-exchange/integration-admission.spec.ts`
+- [x] T013 Add selector A→B replay and exact-anchor admission tests in `apps/gateway/test/managed-identity-exchange/integration-admission.spec.ts`
   - Goal: Prove one verified identity admitted to A cannot obtain a B token merely by changing the selector.
   - Implementation: Cover missing/unsupported/empty/ambiguous policies and server-owned anchor matching; tests must fail before the service is added.
   - Tests: `integration-admission.spec.ts`.
   - Depends on: T012.
   - Done when: Public selector success alone cannot authorize integration admission.
 
-- [ ] T014 Implement exact verified-anchor admission in `apps/gateway/src/managed-identity-exchange/admission/integration-admission.service.ts`
+- [x] T014 Implement exact verified-anchor admission in `apps/gateway/src/managed-identity-exchange/admission/integration-admission.service.ts`
   - Goal: Evaluate exactly one selected active policy against adapter-declared immutable anchors.
   - Implementation: Reject instead of inferring provider-native claims; do not read Customer, binding Customer data, HostApp admission data, or browser context.
   - Tests: Make T013 pass and add source guards for authority separation.
   - Depends on: T013.
   - Done when: A selector-replay attempt stops before canonicalization and issuance.
 
-- [ ] T015 Add canonicalization source and empty-role tests in `apps/gateway/test/managed-identity-exchange/canonicalization.spec.ts`
+- [x] T015 Add canonicalization source and empty-role tests in `apps/gateway/test/managed-identity-exchange/canonicalization.spec.ts`
   - Goal: Specify verified subject, verified/fixed organization, configured integration/HostApp, valid empty scopes, and fixed `roles: []` behavior.
   - Implementation: Include browser/native claims, missing org strategy, blank fields, and Customer-like claim non-authority negatives.
   - Tests: `canonicalization.spec.ts` fails before implementation.
   - Depends on: T012.
   - Done when: The test suite directly names every canonical claim's sole allowed source.
 
-- [ ] T016 Implement canonicalization in `apps/gateway/src/managed-identity-exchange/canonicalization/managed-canonicalization.service.ts`
+- [x] T016 Implement canonicalization in `apps/gateway/src/managed-identity-exchange/canonicalization/managed-canonicalization.service.ts`
   - Goal: Produce `integration_id`, `sub`, `org_id`, `host_app`, `roles: []`, and permission scopes only from trusted/admitted input.
   - Implementation: Use typed configuration authority; never create a separate policy entity, resolve Customer, decide final binding HostApp admission, or infer roles.
   - Tests: Make T015 pass and retain T013 replay prevention.
