@@ -61,7 +61,11 @@ export class ManagedExchangeActivationValidator {
   validateIssuer(input: Readonly<Record<string, unknown>>): void { https(input.issuer); required(input.expectedAudience); https(input.publicJwksUri); }
   validateSigningKey(input: Readonly<Record<string, unknown>>): void {
     required(input.kid); required(input.keyReference);
-    if (!plain(input.publicJwk) || input.publicJwk.kty !== 'RSA' || !nonBlank(input.publicJwk.n) || !nonBlank(input.publicJwk.e) || 'd' in input.publicJwk) throw new ManagedExchangeActivationError();
+    const publicJwk = input.publicJwk;
+    if (!plain(publicJwk) || publicJwk.kty !== 'RSA' || !nonBlank(publicJwk.n) || !nonBlank(publicJwk.e) ||
+      ['d', 'p', 'q', 'dp', 'dq', 'qi', 'oth', 'k'].some((field) => field in publicJwk) ||
+      (publicJwk.alg !== undefined && publicJwk.alg !== 'RS256') ||
+      (publicJwk.use !== undefined && publicJwk.use !== 'sig')) throw new ManagedExchangeActivationError();
   }
 }
 

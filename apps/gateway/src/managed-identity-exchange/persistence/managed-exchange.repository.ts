@@ -36,6 +36,8 @@ export type ManagedUpstreamIssuerRecord = Pick<ManagedUpstreamIssuer,
 export type ManagedUpstreamSigningKeyRecord = Pick<ManagedUpstreamSigningKey,
   'id' | 'issuerId' | 'kid' | 'publicJwk' | 'keyReference' | 'status' | 'enabled' | 'lifecycle' |
   'version' | 'replacesKeyId' | 'notBefore' | 'activatedAt' | 'retireAfter' | 'retiredAt'>;
+export type ManagedJwksVisibleSigningKeyRecord = Pick<ManagedUpstreamSigningKey,
+  'issuerId' | 'kid' | 'publicJwk' | 'status'>;
 export type ManagedExchangeAuditRecord = Pick<ManagedExchangeAuditEvent,
   'id' | 'timestamp' | 'requestId' | 'integrationId' | 'integrationConfigId' | 'providerType' |
   'providerInstanceId' | 'outcome' | 'reasonCode' | 'admissionResult' | 'permissionResult' |
@@ -48,6 +50,7 @@ const sourceSelect = select<ManagedPermissionSourceInstanceRecord>('id', 'source
 const permissionSelect = select<ManagedPermissionPolicyRecord>('id', 'integrationConfigId', 'mode', 'permissionSourceInstanceId', 'normalizerType', 'projectionContractVersion', 'projectionContract', 'enabled', 'lifecycle', 'version', 'replacesPolicyId');
 const issuerSelect = select<ManagedUpstreamIssuerRecord>('id', 'issuer', 'expectedAudience', 'publicJwksUri', 'enabled', 'lifecycle', 'version', 'replacesIssuerId');
 const keySelect = select<ManagedUpstreamSigningKeyRecord>('id', 'issuerId', 'kid', 'publicJwk', 'keyReference', 'status', 'enabled', 'lifecycle', 'version', 'replacesKeyId', 'notBefore', 'activatedAt', 'retireAfter', 'retiredAt');
+const jwksKeySelect = select<ManagedJwksVisibleSigningKeyRecord>('issuerId', 'kid', 'publicJwk', 'status');
 const auditSelect = select<ManagedExchangeAuditRecord>('id', 'timestamp', 'requestId', 'integrationId', 'integrationConfigId', 'providerType', 'providerInstanceId', 'outcome', 'reasonCode', 'admissionResult', 'permissionResult', 'issuanceResult', 'jti', 'kid', 'latencyCategory');
 
 /** Persistence boundary for server-owned provider configuration only. */
@@ -121,6 +124,12 @@ export class ManagedUpstreamSigningKeyRepository {
   constructor(private readonly client: ManagedExchangeClient) {}
   findEnabledActiveByIssuerId(issuerId: string): Promise<ManagedUpstreamSigningKeyRecord[]> {
     return this.client.managedUpstreamSigningKey.findMany({ where: { issuerId, enabled: true, lifecycle: 'active', status: 'active' }, select: keySelect });
+  }
+  findJwksVisibleByIssuerId(issuerId: string): Promise<ManagedJwksVisibleSigningKeyRecord[]> {
+    return this.client.managedUpstreamSigningKey.findMany({
+      where: { issuerId, status: { in: ['published', 'active', 'retiring'] } },
+      select: jwksKeySelect
+    });
   }
 }
 

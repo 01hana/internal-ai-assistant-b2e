@@ -1,4 +1,5 @@
 /** Provider-neutral, immutable values and ports for the managed exchange boundary. */
+import type { KeyLike } from 'jose';
 
 export const EXCHANGE_REQUEST_FIELDS = Object.freeze(['integrationSelector'] as const);
 export const EXCHANGE_PUBLIC_ERROR_CODES = Object.freeze([
@@ -106,7 +107,7 @@ export interface ManagedTokenIssuer {
 }
 
 export interface ManagedSigningKeyProvider {
-  findActive(): Promise<Readonly<{ issuer: string; audience: string; kid: string; keyReference: string }> | null>;
+  findActive(): Promise<Readonly<{ issuer: string; audience: string; kid: string; privateKey: KeyLike }>>;
 }
 
 export interface ManagedExchangeAuditPort {

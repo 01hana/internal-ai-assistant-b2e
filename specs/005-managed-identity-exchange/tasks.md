@@ -248,35 +248,35 @@
 **Dependencies**: T029 may begin after T006 and T010. T030 follows T029, and T032 may proceed after T029 alongside the T030 → T031 chain. T031 and this phase's final gate additionally require T016; T033 completes the gate after T031 and T032.  
 **Acceptance gate**: `MANAGED_SIGNING_DOMAIN_READY` — managed issuer/key/kid/JWKS are cryptographically and operationally distinct from Gateway internal signing.
 
-- [ ] T029 [P] Implement managed signing-key repository/provider in `apps/gateway/src/managed-identity-exchange/issuer/`
+- [x] T029 [P] Implement managed signing-key repository/provider in `apps/gateway/src/managed-identity-exchange/issuer/`
   - Goal: Resolve exactly one active managed key and safely load only its referenced private material through a low-level loader boundary.
   - Implementation: Keep Feature 005 models/repository separate from `GatewaySigningKey` and do not expose key references/private material.
   - Tests: Add key lifecycle/provider tests in `apps/gateway/test/managed-identity-exchange/managed-signing.spec.ts`.
   - Depends on: T006, T010.
   - Done when: Active/retiring/public key lifecycle can be evaluated without Gateway internal signing authority.
 
-- [ ] T030 Add signer-domain collision and public-key tests in `apps/gateway/test/managed-identity-exchange/managed-signing.spec.ts`
+- [x] T030 Add signer-domain collision and public-key tests in `apps/gateway/test/managed-identity-exchange/managed-signing.spec.ts`
   - Goal: Reject Gateway key references, equivalent public material, Gateway `kid`, or issuer identity reuse; require public-only JWKS serialization.
   - Implementation: Add failing cross-domain registration and redaction cases before signer implementation.
   - Tests: `managed-signing.spec.ts`.
   - Depends on: T029.
   - Done when: Managed/Gateway signing-domain separation is direct test evidence.
 
-- [ ] T031 Implement managed RS256 issuer in `apps/gateway/src/managed-identity-exchange/issuer/managed-upstream-token-issuer.ts`
+- [x] T031 Implement managed RS256 issuer in `apps/gateway/src/managed-identity-exchange/issuer/managed-upstream-token-issuer.ts`
   - Goal: Sign only six canonical claims using exact audience, nonblank managed `kid`, generated `jti`, and fixed ≤5-minute TTL.
   - Implementation: Reject noncanonical input and never issue Gateway internal JWTs or select integrations.
   - Tests: Make T030 tests pass; add issuer/audience/TTL/claim-shape signature tests.
   - Depends on: T030, T016.
   - Done when: Issued tokens are Feature 004-shaped upstream JWTs only.
 
-- [ ] T032 [P] Implement the managed JWKS service/controller in `apps/gateway/src/managed-identity-exchange/issuer/{managed-jwks.service.ts,managed-jwks.controller.ts}`
+- [x] T032 [P] Implement the managed JWKS service/controller in `apps/gateway/src/managed-identity-exchange/issuer/{managed-jwks.service.ts,managed-jwks.controller.ts}`
   - Goal: Publish public active/retiring/published managed keys at `/.well-known/managed-identity-exchange-jwks.json` with bounded cache control.
   - Implementation: Exclude private fields, references, Gateway keys, and internal JWKS endpoint reuse.
   - Tests: Add endpoint/cache-control/private-material exclusion tests in `apps/gateway/test/managed-identity-exchange/managed-jwks.spec.ts`.
   - Depends on: T029.
   - Done when: The endpoint exposes only valid managed public JWKs.
 
-- [ ] T033 Complete managed signing/JWKS lifecycle and signature regression gate in `apps/gateway/test/managed-identity-exchange/{managed-signing,managed-jwks}.spec.ts`
+- [x] T033 Complete managed signing/JWKS lifecycle and signature regression gate in `apps/gateway/test/managed-identity-exchange/{managed-signing,managed-jwks}.spec.ts`
   - Goal: Verify key replacement, disabled/invalid states, signing isolation, exact claims, and public JWKS visibility.
   - Implementation: Run no production integration composition yet.
   - Tests: Focused signing/JWKS suites plus Phase 1 DB tests.
