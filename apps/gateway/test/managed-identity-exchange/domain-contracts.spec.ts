@@ -51,20 +51,17 @@ describe('Managed identity exchange domain contracts (T001)', () => {
   it('supplies every permission adapter runtime input through a server-owned source policy', () => {
     const domain = require(domainPath) as typeof import('../../src/managed-identity-exchange/domain/managed-exchange.domain');
     const policy: PermissionSourcePolicy = {
-      id: 'source-a', sourceType: 'synthetic', endpointUri: 'https://permissions.example.test/resolve',
-      adapterContractReference: 'synthetic/v1', sourceContract: Object.freeze({ responseShape: 'permission-v1' }),
-      serviceCredentialReference: 'deployment-secret-reference'
+      id: 'source-a', sourceType: 'synthetic', adapterContractReference: 'synthetic/v1'
     };
     const input: ResolvePermissionInput = {
       admittedIdentity: domain.createVerifiedExternalIdentity({ subject: 'actor-a', anchors: [{ kind: 'tenant', value: 'tenant-a' }] }),
-      serverOwnedIntegrationContext: { integrationId: 'integration-a', hostApp: 'admin' }, permissionSourcePolicy: policy, requestId: 'request-a'
+      serverOwnedIntegrationContext: { integrationId: 'integration-a', hostApp: 'admin' }, serviceCredentialReference: 'deployment-secret-reference',
+      permissionSourcePolicy: policy, requestId: 'request-a'
     };
 
-    expect(input.permissionSourcePolicy).toEqual(expect.objectContaining({
-      endpointUri: 'https://permissions.example.test/resolve', adapterContractReference: 'synthetic/v1',
-      sourceContract: { responseShape: 'permission-v1' }, serviceCredentialReference: 'deployment-secret-reference'
-    }));
-    expect(JSON.stringify(policy)).not.toMatch(/customerId|nativeCredential|authorization\s*:|privateKey|secret(?!-reference)/i);
+    expect(Object.keys(input.permissionSourcePolicy).sort()).toEqual(['adapterContractReference', 'id', 'sourceType']);
+    expect(input.serviceCredentialReference).toBe('deployment-secret-reference');
+    expect(JSON.stringify(input)).not.toMatch(/customerId|nativeCredential|authorization\s*:|privateKey|secret(?!-reference)/i);
   });
 
   it('keeps the domain free of Customer, Prisma, IDX, Gateway signer, and Feature 004 runtime authority', () => {

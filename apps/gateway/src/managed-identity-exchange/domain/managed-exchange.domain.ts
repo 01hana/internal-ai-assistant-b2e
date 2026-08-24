@@ -57,14 +57,11 @@ export interface IdentityProviderAdapterRegistry {
   resolve(providerType: string): IdentityProviderAdapter | undefined;
 }
 
-/** Server-owned source policy; endpoint, contract, and credential reference are never browser supplied. */
+/** Narrow runtime source selector; provisioning-only details never reach an adapter. */
 export type PermissionSourcePolicy = Readonly<{
   id: string;
   sourceType: string;
-  endpointUri?: string;
   adapterContractReference: string;
-  sourceContract: ServerProvisionedContract;
-  serviceCredentialReference?: string;
 }>;
 
 export type ResolvePermissionInput = Readonly<{
@@ -72,6 +69,7 @@ export type ResolvePermissionInput = Readonly<{
   trustedPermissionReference?: string;
   trustedPermissionMaterial?: TrustedPermissionMaterial;
   serverOwnedIntegrationContext: Readonly<{ integrationId: string; hostApp: string }>;
+  serviceCredentialReference?: string;
   permissionSourcePolicy: PermissionSourcePolicy;
   requestId: string;
 }>;

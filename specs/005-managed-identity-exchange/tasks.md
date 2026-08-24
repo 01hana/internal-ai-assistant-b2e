@@ -192,49 +192,49 @@
 **Dependencies**: T022–T027 require the Phase 2 and Phase 3 gates. T028 additionally requires T021; this phase's acceptance gate therefore cannot pass until T028 completes.  
 **Acceptance gate**: `MANAGED_PERMISSION_PIPELINE_READY` — no Permission Source sees browser credentials; absence, authoritative empty result, outage, and semantic denial are distinguished.
 
-- [ ] T022 Implement permission source repositories and registry in `apps/gateway/src/managed-identity-exchange/{persistence,permissions}/`
+- [x] T022 Implement permission source repositories and registry in `apps/gateway/src/managed-identity-exchange/{persistence,permissions}/`
   - Goal: Resolve enabled sources/adapters/normalizers by server-owned policy only.
   - Implementation: Expose typed source input and `serviceCredentialReference` only; do not accept raw request/native values.
   - Tests: Add repository/registry tests in `apps/gateway/test/managed-identity-exchange/permission-source.spec.ts`.
   - Depends on: T012, T016.
   - Done when: Source selection cannot be controlled by selector text, browser data, or native claims.
 
-- [ ] T023 Add Permission Source native-credential boundary tests in `apps/gateway/test/managed-identity-exchange/permission-source.spec.ts`
+- [x] T023 Add Permission Source native-credential boundary tests in `apps/gateway/test/managed-identity-exchange/permission-source.spec.ts`
   - Goal: Prove contracts requesting browser Authorization, raw native credential/JWT, or callback data are rejected and sources receive none.
   - Implementation: Include static source guards and a test adapter capture assertion.
   - Tests: `permission-source.spec.ts` must fail before adapter input is implemented.
   - Depends on: T022.
   - Done when: Native credentials are documented and enforced as forwarded only once to the selected identity Provider.
 
-- [ ] T024 Implement trusted-input Permission Source adapter boundary in `apps/gateway/src/managed-identity-exchange/permissions/permission-source-adapter.registry.ts`
+- [x] T024 Implement trusted-input Permission Source adapter boundary in `apps/gateway/src/managed-identity-exchange/permissions/permission-source-adapter.registry.ts`
   - Goal: Pass only admitted identity, trusted material/reference, server-owned integration context, and controlled service credential reference.
   - Implementation: Reject forbidden contract capabilities both at validation and runtime.
   - Tests: Make T023 pass.
   - Depends on: T023.
   - Done when: A source cannot gain a native credential through any adapter path.
 
-- [ ] T025 Implement immutable normalizer and constrained scope projection in `apps/gateway/src/managed-identity-exchange/permissions/`
+- [x] T025 Implement immutable normalizer and constrained scope projection in `apps/gateway/src/managed-identity-exchange/permissions/`
   - Goal: Convert only trusted source material to immutable `NormalizedPermission[]` and then allowed Feature 004 scope strings.
   - Implementation: Use registered normalizer/projection contracts; no arbitrary mapping, role projection, UUID hardcoding, or raw provider response persistence.
   - Tests: Add normalizer/projection validity and semantic-denial tests in `apps/gateway/test/managed-identity-exchange/permission-normalization.spec.ts`.
   - Depends on: T024.
   - Done when: V1 roles remain empty and scopes have an explicit trusted projection.
 
-- [ ] T026 Specify permission absence, authoritative-empty, outage, and required-mode failures in `apps/gateway/test/managed-identity-exchange/permission-pipeline.spec.ts`
+- [x] T026 Specify permission absence, authoritative-empty, outage, and required-mode failures in `apps/gateway/test/managed-identity-exchange/permission-pipeline.spec.ts`
   - Goal: Make `allow_empty` no-source and successful empty source distinct from configured source timeout/5xx/malformed/unavailable and semantic denial.
   - Implementation: Require no JWT on failure; assert 503 for configured availability failures and 403 for semantic/projection denial.
   - Tests: `permission-pipeline.spec.ts` fails before pipeline orchestration.
   - Depends on: T025.
   - Done when: No configured outage can silently produce `permission_scopes: []`.
 
-- [ ] T027 Implement permission policy pipeline in `apps/gateway/src/managed-identity-exchange/permissions/managed-permission.service.ts`
+- [x] T027 Implement permission policy pipeline in `apps/gateway/src/managed-identity-exchange/permissions/managed-permission.service.ts`
   - Goal: Enforce `allow_empty`/`required` semantics and use only admitted trusted input.
   - Implementation: Skip outbound work only for `allow_empty` without a source; any configured source failure stops issuance with the correct typed category.
   - Tests: Make T026 pass.
   - Depends on: T026.
   - Done when: Empty scopes are authorized only by policy absence or successful authoritative empty output.
 
-- [ ] T028 Add synthetic IDX permission normalizer fixture and Phase 5 regression gate in `apps/gateway/test/managed-identity-exchange/`
+- [x] T028 Add synthetic IDX permission normalizer fixture and Phase 5 regression gate in `apps/gateway/test/managed-identity-exchange/`
   - Goal: Exercise adapter/normalizer mechanics without a production IDX endpoint, UUID mapping, or role mapping.
   - Implementation: Keep the fixture test-only and server-controlled.
   - Tests: Run permission source, normalizer, pipeline, readiness, and authority/redaction guards.
