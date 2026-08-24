@@ -290,35 +290,35 @@
 **Dependencies**: All required Phase 2–6 gates.  
 **Acceptance gate**: `MANAGED_EXCHANGE_API_READY` — all 17 ordered steps, fail-closed errors, request IDs, and redacted audit behavior pass.
 
-- [ ] T034 Add ordered 17-step exchange-service tests in `apps/gateway/test/managed-identity-exchange/exchange.service.spec.ts`
+- [x] T034 Add ordered 17-step exchange-service tests in `apps/gateway/test/managed-identity-exchange/exchange.service.spec.ts`
   - Goal: Require lookup/readiness → provider verification → identity → admission → canonicalization → permissions → issuer/key → signing → success audit → response order.
   - Implementation: Assert every failure stops later steps, provider calls are outside transactions, and success-audit failure withholds the already-created token.
   - Tests: `exchange.service.spec.ts` fails before service composition.
   - Depends on: T028, T033.
   - Done when: Reference equality/trusted-context boundary evidence covers the full authority sequence.
 
-- [ ] T035 Implement managed exchange orchestration in `apps/gateway/src/managed-identity-exchange/exchange.service.ts`
+- [x] T035 Implement managed exchange orchestration in `apps/gateway/src/managed-identity-exchange/exchange.service.ts`
   - Goal: Compose selected active configuration, registry/provider, readiness, admission, canonicalization, permission pipeline, issuer, and audit exactly once in the prescribed order.
   - Implementation: No calls to Feature 004 candidate/resolver/internal issuer and no Customer lookup; signing is the final authority-producing step.
   - Tests: Make T034 pass.
   - Depends on: T034.
   - Done when: The service returns only a managed credential result or typed safe failure.
 
-- [ ] T036 Add strict API/public-error/redaction tests in `apps/gateway/test/managed-identity-exchange/exchange.controller.spec.ts`
+- [x] T036 Add strict API/public-error/redaction tests in `apps/gateway/test/managed-identity-exchange/exchange.controller.spec.ts`
   - Goal: Specify Bearer-only input, exact body, request-ID/trace behavior, 400/401/403/503 non-enumerating envelopes, and no native/JWT/endpoint/key/anchor/Customer leakage.
   - Implementation: Cover unknown/disabled selector equivalence, provider rejection, admission denial, permission denial/outage, and issuer/audit infrastructure failures.
   - Tests: `exchange.controller.spec.ts` fails before controller/projector implementation.
   - Depends on: T035.
   - Done when: Public response semantics are security-tested independently of Feature 004 Assistant routes.
 
-- [ ] T037 Implement controller, DTO validation, and Feature 005 error projector in `apps/gateway/src/managed-identity-exchange/{exchange.controller.ts,exchange-request.validation.ts,exchange-error.projector.ts}`
+- [x] T037 Implement controller, DTO validation, and Feature 005 error projector in `apps/gateway/src/managed-identity-exchange/{exchange.controller.ts,exchange-request.validation.ts,exchange-error.projector.ts}`
   - Goal: Expose only `POST /api/v1/identity/exchange` and `{ accessToken, tokenType, expiresIn, requestId }` success output.
   - Implementation: Normalize request ID; reject extra authority-like body fields; preserve optional trace only for tracing; do not modify existing Gateway operation projector.
   - Tests: Make T036 pass.
   - Depends on: T036.
   - Done when: Controller public behavior is generic and non-enumerating.
 
-- [ ] T038 Implement Feature 005 audit writer/module composition and API gate in `apps/gateway/src/managed-identity-exchange/{persistence/managed-exchange-audit.writer.ts,managed-identity-exchange.module.ts}`
+- [x] T038 Implement Feature 005 audit writer/module composition and API gate in `apps/gateway/src/managed-identity-exchange/{persistence/managed-exchange-audit.writer.ts,managed-identity-exchange.module.ts}`
   - Goal: Persist one safe exchange outcome with no native credentials, Authorization, managed JWT, raw response, permission payload, secret, or Customer ID; register only Feature 005 routes/services.
   - Implementation: Keep managed writer/model distinct from `GatewayIdentityAuditEvent`; add module wiring without replacing Feature 004 trust paths.
   - Tests: Add audit-write/redaction/request-ID integration tests and run T034–T037 suites.

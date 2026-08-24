@@ -24,9 +24,10 @@ import { MultiProfileUpstreamTokenVerifier } from './upstream-auth/multi-profile
 import { ProfileScopedVerifier } from './upstream-auth/profile-scoped-verifier';
 import { RoutingMetadataParser } from './upstream-auth/routing-metadata.parser';
 import { UpstreamAuthTelemetry } from './upstream-auth/upstream-auth-telemetry';
+import { ManagedIdentityExchangeModule } from './managed-identity-exchange/managed-identity-exchange.module';
 
 @Module({
-  imports: [GatewayConfigModule, GatewayHealthModule, JwksModule, GatewaySigningKeyPersistenceModule],
+  imports: [GatewayConfigModule, GatewayHealthModule, JwksModule, GatewaySigningKeyPersistenceModule, ManagedIdentityExchangeModule],
   controllers: [GatewayAssistantController],
   providers: [
     {
