@@ -27,9 +27,9 @@
 **Dependencies**: Phase 1.  
 **Completion gate**: `IDX_ENUM_MIGRATION_READY` — old records remain valid; new enum values exist; enum presence alone cannot make IDX ready.
 
-- [ ] T005 Update `ManagedHttpMethod` and `ManagedPermissionMode` in `prisma/schema.prisma` to add only `GET` and `provider_trusted`. Tests: satisfy T002 source/schema expectations; retain every existing enum value. Depends on: T002.
-- [ ] T006 Add one additive root enum migration in `prisma/migrations/<timestamp>_feature006_idx_provider/migration.sql`. Tests: apply against the existing migration lineage; do not add tables, columns, Customer fields, credentials, raw payloads, or SDK storage. Depends on: T005.
-- [ ] T007 Refresh generated Prisma client and add DB-backed enum compatibility coverage in `apps/gateway/test/managed-identity-exchange/persistence.spec.ts`. Tests: use `RUN_GATEWAY_REGISTRY_DB_TESTS=true`, prove legacy rows/readiness are unchanged, and run `npx prisma validate` plus `npm run prisma:generate`. Depends on: T006.
+- [x] T005 Update `ManagedHttpMethod` and `ManagedPermissionMode` in `prisma/schema.prisma` to add only `GET` and `provider_trusted`. Tests: satisfy T002 source/schema expectations; retain every existing enum value. Depends on: T002.
+- [x] T006 Add one additive root enum migration in `prisma/migrations/<timestamp>_feature006_idx_provider/migration.sql`. Tests: apply against the existing migration lineage; do not add tables, columns, Customer fields, credentials, raw payloads, or SDK storage. Depends on: T005.
+- [x] T007 Refresh generated Prisma client and add DB-backed enum compatibility coverage in `apps/gateway/test/managed-identity-exchange/persistence.spec.ts`. Tests: use `RUN_GATEWAY_REGISTRY_DB_TESTS=true`, prove legacy rows/readiness are unchanged, and run `npx prisma validate` plus `npm run prisma:generate`. Depends on: T006.
 
 ## Phase 3 — Fixed IDX Provider Contract
 

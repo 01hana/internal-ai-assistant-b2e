@@ -314,7 +314,8 @@ export type ManagedIdentityProviderType = (typeof ManagedIdentityProviderType)[k
 
 
 export const ManagedHttpMethod = {
-  POST: 'POST'
+  POST: 'POST',
+  GET: 'GET'
 } as const
 
 export type ManagedHttpMethod = (typeof ManagedHttpMethod)[keyof typeof ManagedHttpMethod]
@@ -337,7 +338,8 @@ export type ManagedOrganizationMode = (typeof ManagedOrganizationMode)[keyof typ
 
 export const ManagedPermissionMode = {
   allow_empty: 'allow_empty',
-  required: 'required'
+  required: 'required',
+  provider_trusted: 'provider_trusted'
 } as const
 
 export type ManagedPermissionMode = (typeof ManagedPermissionMode)[keyof typeof ManagedPermissionMode]

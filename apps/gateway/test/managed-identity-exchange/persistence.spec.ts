@@ -1,4 +1,5 @@
 import { createGatewayPrismaClient } from '../../src/integration-registry/gateway-prisma-client.factory';
+import { ManagedHttpMethod, ManagedPermissionMode } from '../../src/generated/prisma/client';
 import { createGatewayRegistryDatabase } from '../../../../test/support/gateway-registry-db.helper';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -22,7 +23,7 @@ describe('Feature 006 additive enum and persistence contract — failing-first (
 
 const describeRegistry = process.env.RUN_GATEWAY_REGISTRY_DB_TESTS === 'true' ? describe : describe.skip;
 
-describeRegistry('Managed identity exchange persistence (T003/T004/T006)', () => {
+describeRegistry('Managed identity exchange persistence (T003/T004/T006/T007)', () => {
   let database: Awaited<ReturnType<typeof createGatewayRegistryDatabase>>;
   let prisma: ReturnType<typeof createGatewayPrismaClient>;
 
@@ -74,6 +75,36 @@ describeRegistry('Managed identity exchange persistence (T003/T004/T006)', () =>
     await expect(prisma.managedUpstreamIssuer.create({ data: issuer('issuer-b', 1, true, 'active') })).rejects.toThrow();
     await prisma.managedUpstreamSigningKey.create({ data: key('key-a', 'issuer-a', 'managed-kid-a', 1, true) });
     await expect(prisma.managedUpstreamSigningKey.create({ data: key('key-b', 'issuer-a', 'managed-kid-b', 2, true) })).rejects.toThrow();
+  });
+
+  it('T007 preserves legacy enum rows and represents additive GET and provider_trusted values', async () => {
+    const legacyProvider = await providerFor(prisma);
+    await prisma.managedIdentityProviderInstance.create({ data: {
+      id: 'provider-get', providerType: 'delegated_http', endpointUri: 'https://provider.example.test/get',
+      httpMethod: ManagedHttpMethod.GET, credentialPlacement: 'authorization_bearer', timeoutMilliseconds: 5000,
+      responseContractVersion: 'delegated-http/v1', contractConfig: {}, declaredAnchorKinds: ['tenant'], enabled: false, lifecycle: 'draft', version: 2
+    } });
+    await prisma.managedIntegrationExchangeConfig.create({ data: config('config-enums', 'selector-enums', legacyProvider.id, 1, true, 'active') });
+    await prisma.managedPermissionPolicy.create({ data: permission('permission-allow-empty', 'config-enums', 1, true, 'active') });
+    await prisma.managedPermissionPolicy.create({ data: {
+      ...permission('permission-required', 'config-enums', 2, false, 'replaced', 'permission-allow-empty'),
+      mode: ManagedPermissionMode.required
+    } });
+    await prisma.managedPermissionPolicy.create({ data: {
+      ...permission('permission-provider-trusted', 'config-enums', 3, false, 'replaced', 'permission-required'),
+      mode: ManagedPermissionMode.provider_trusted
+    } });
+
+    await expect(prisma.managedIdentityProviderInstance.findMany({ where: { id: { in: [legacyProvider.id, 'provider-get'] } }, orderBy: { version: 'asc' } })).resolves.toEqual([
+      expect.objectContaining({ id: legacyProvider.id, httpMethod: ManagedHttpMethod.POST }),
+      expect.objectContaining({ id: 'provider-get', httpMethod: ManagedHttpMethod.GET })
+    ]);
+    await expect(prisma.managedPermissionPolicy.findMany({ where: { integrationConfigId: 'config-enums' }, orderBy: { version: 'asc' } })).resolves.toEqual([
+      expect.objectContaining({ mode: ManagedPermissionMode.allow_empty }),
+      expect.objectContaining({ mode: ManagedPermissionMode.required }),
+      expect.objectContaining({ mode: ManagedPermissionMode.provider_trusted })
+    ]);
+    await expect(prisma.integrationBinding.findUnique({ where: { integrationId: 'integration-a' } })).resolves.toMatchObject({ customerId: 'customer-a', allowedHostApp: 'admin', enabled: true });
   });
 
   it('exposes repository boundaries for every managed record without a Customer lookup', async () => {
