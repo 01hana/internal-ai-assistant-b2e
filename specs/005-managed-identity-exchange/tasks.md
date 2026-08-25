@@ -332,49 +332,49 @@
 **Dependencies**: Phase 7 gate.  
 **Acceptance gate**: `FEATURE005_FRAMEWORK_IMPLEMENTATION_READY` may be set only after T045 passes; IDX production remains independently deferred.
 
-- [ ] T039 Create a synthetic delegated Identity Provider fixture in `apps/gateway/test/managed-identity-exchange/fixtures/synthetic-delegated-provider.fixture.ts`
+- [x] T039 Create a synthetic delegated Identity Provider fixture in `apps/gateway/test/managed-identity-exchange/fixtures/synthetic-delegated-provider.fixture.ts`
   - Goal: Provide test-only verified/rejected/malformed/timeout/5xx/oversized delegated responses and declared anchors/organization/trusted reference.
   - Implementation: Use isolated test transport/listener; never add Customer labels, production URL/secrets, or browser-selected routing.
   - Tests: Add fixture contract tests in `apps/gateway/test/managed-identity-exchange/synthetic-delegated-provider.spec.ts`.
   - Depends on: T038.
   - Done when: Generic provider behavior can test all transport/adapter categories without external infrastructure.
 
-- [ ] T040 Create a synthetic Permission Source fixture in `apps/gateway/test/managed-identity-exchange/fixtures/synthetic-permission-source.fixture.ts`
+- [x] T040 Create a synthetic Permission Source fixture in `apps/gateway/test/managed-identity-exchange/fixtures/synthetic-permission-source.fixture.ts`
   - Goal: Supply trusted material, authoritative empty results, semantic denials, and controlled outages for policy testing.
   - Implementation: Capture adapter inputs to enforce no native credential/browser Authorization forwarding.
   - Tests: Add fixture tests to `apps/gateway/test/managed-identity-exchange/synthetic-permission-source.spec.ts`.
   - Depends on: T039, T028.
   - Done when: Required/allow-empty safety evidence is deterministic and test-only.
 
-- [ ] T041 Add managed JWT → unchanged Feature 004 chain integration tests in `apps/gateway/test/managed-identity-exchange/feature004-compatibility.spec.ts`
+- [x] T041 Add managed JWT → unchanged Feature 004 chain integration tests in `apps/gateway/test/managed-identity-exchange/feature004-compatibility.spec.ts`
   - Goal: Verify a managed JWT through real Feature 004 profile verification/exact-one decision and `CanonicalIdentityResolver`, then assert binding-derived Customer/HostApp admission.
   - Implementation: Include compatible profile, wrong/missing profile, shared issuer/key exact-one behavior, and no direct invocation/modification of Feature 004 internals.
   - Tests: DB-gated `feature004-compatibility.spec.ts` fails before compatibility composition.
   - Depends on: T038–T040.
   - Done when: Managed output is merely another canonical upstream JWT at Feature 004's existing public boundary.
 
-- [ ] T042 Implement multi-integration/profile isolation evidence in `apps/gateway/test/managed-identity-exchange/feature004-compatibility.spec.ts`
+- [x] T042 Implement multi-integration/profile isolation evidence in `apps/gateway/test/managed-identity-exchange/feature004-compatibility.spec.ts`
   - Goal: Prove one adapter can serve A/B configs while replay, selector collision, profile ambiguity, wrong anchor, and cross-Customer attempts fail closed.
   - Implementation: Use independent configuration/profile/binding rows and identical lower-level identity fields where useful; never add A/B production branching.
   - Tests: Run with existing registry DB gate and Feature 004 multi-profile/resolver suites.
   - Depends on: T041.
   - Done when: Customer isolation derives only from existing Feature 004 binding resolution.
 
-- [ ] T043 Add direct Feature 004 path regression in `apps/gateway/test/managed-identity-exchange/direct-feature004-regression.spec.ts`
+- [x] T043 Add direct Feature 004 path regression in `apps/gateway/test/managed-identity-exchange/direct-feature004-regression.spec.ts`
   - Goal: Demonstrate Direct JWT fixture authentication remains operational without Feature 005 exchange invocation or fallback.
   - Implementation: Assert active Feature 004 verifier/profile chain does not import/use Feature 005 controller/service for direct onboarding.
   - Tests: Existing direct JWT, multi-profile, handler/wiring, and new regression suite.
   - Depends on: T042.
   - Done when: Feature 005 is additive and never becomes a direct-path replacement.
 
-- [ ] T044 Run end-to-end security, redaction, and negative integration matrix in `apps/gateway/test/managed-identity-exchange/feature005-security.spec.ts`
+- [x] T044 Run end-to-end security, redaction, and negative integration matrix in `apps/gateway/test/managed-identity-exchange/feature005-security.spec.ts`
   - Goal: Consolidate forged/decodable credential, selector replay, SSRF/rebind, no retry, permission outage, signing-domain isolation, public error, audit redaction, and no-Customer-authority evidence.
   - Implementation: Add static scans covering Feature 005 source paths and confirm no forbidden Feature 004/Customer/IDX logic.
   - Tests: `feature005-security.spec.ts` plus focused suites must fail for a deliberately unsafe test double before final verification.
   - Depends on: T043.
   - Done when: All security properties have reproducible focused evidence.
 
-- [ ] T045 Complete the Feature 005 framework verification and rollout gate in `specs/005-managed-identity-exchange/verification.md`
+- [x] T045 Complete the Feature 005 framework verification and rollout gate in `specs/005-managed-identity-exchange/verification.md`
   - Goal: Record executed commands/results for focused Gateway, DB-gated registry, Prisma validation/generation, root typecheck/lint/build, Gateway build, Feature 004 regression, and source/redaction scans.
   - Implementation: Document managed issuer/JWKS, readiness/lifecycle, API, synthetic providers, Feature 004 compatibility, direct-path preservation, and rollout/rollback evidence; do not claim IDX production readiness.
   - Tests: Run the full Phase 1–8 matrix and classify every skip; a critical failure/skip blocks the marker.

@@ -49,14 +49,15 @@ describeRuntime('Feature 003 production-like runtime alignment (T082)', () => {
     const [gatewayPort, backendPort] = await Promise.all([reservePort(), reservePort()]);
     const gatewayOrigin = `http://127.0.0.1:${gatewayPort}`;
     const backendOrigin = `http://127.0.0.1:${backendPort}`;
-    const environment = runtimeEnvironment({ databaseUrl: database.databaseUrl, gatewayOrigin, backendOrigin, authority, signingReference: signingFile.fileReference, gatewayPort, backendPort });
+    const environment = runtimeEnvironment({ databaseUrl: database.databaseUrl, gatewayOrigin, backendOrigin, signingReference: signingFile.fileReference, gatewayPort, backendPort });
     let gateway: ManagedProcess | undefined;
     let backend: ManagedProcess | undefined;
 
     try {
       await seedCoreData(rootPrisma);
+      await seedGatewayProfileRuntimePrerequisite(gatewayPrisma);
       gateway = start(gatewayEntry, environment);
-      await waitForJson(`${gatewayOrigin}/health`, (body) => body.status === 'healthy' && body.service === 'identity-gateway');
+      await waitForJson(`${gatewayOrigin}/health`, (body) => body.status === 'healthy' && body.service === 'identity-gateway', { process: gateway, label: 'Gateway', sensitive: [signingFile.fileReference] });
       await waitForJson(`${gatewayOrigin}/readiness`, (body) => body.status === 'not_ready' && body.productionReady === false);
       await expectPublicJwks(`${gatewayOrigin}/.well-known/jwks.json`, []);
 
@@ -87,48 +88,35 @@ describeRuntime('Feature 003 production-like runtime alignment (T082)', () => {
       });
       await expect(gatewayPrisma.gatewaySigningKey.findUnique({ where: { kid: signing.kid } })).resolves.toMatchObject({ status: 'published' });
 
-      const valid = await authority.issue({ integrationId: 'integration-a', subject: 'actor-shared', organizationId: 'org-shared', hostApp: 'admin', roles: [], permissionScopes: [] });
-      const validResponse = await fetch(`${gatewayOrigin}/api/v1/assistant/sessions`, {
-        method: 'POST', headers: { authorization: `Bearer ${valid}`, 'content-type': 'application/json' }, body: '{}'
+      const localAuthorityToken = await authority.issue({ integrationId: 'integration-a', subject: 'actor-shared', organizationId: 'org-shared', hostApp: 'admin', roles: [], permissionScopes: [] });
+      const localAuthorityResponse = await fetch(`${gatewayOrigin}/api/v1/assistant/sessions`, {
+        method: 'POST', headers: { authorization: `Bearer ${localAuthorityToken}`, 'content-type': 'application/json' }, body: '{}'
       });
-      expect(validResponse.status).toBe(503);
-      const validBody = await validResponse.text();
-      expectNoSensitiveValues(validBody, [
-        { surface: 'host-503', label: 'upstream-jwt', value: valid },
-        { surface: 'host-503', label: 'upstream-authorization', value: `Bearer ${valid}` },
+      expect(localAuthorityResponse.status).toBe(401);
+      const localAuthorityBody = await localAuthorityResponse.text();
+      expectNoSensitiveValues(localAuthorityBody, [
+        { surface: 'unregistered-local-authority-401', label: 'upstream-jwt', value: localAuthorityToken },
+        { surface: 'unregistered-local-authority-401', label: 'upstream-authorization', value: `Bearer ${localAuthorityToken}` },
         { surface: 'host-503', label: 'signing-reference', value: signingFile.fileReference }
       ]);
       expect(await rootPrisma.assistantSession.count()).toBe(0);
 
-      const expired = await authority.issue({ integrationId: 'integration-a', subject: 'actor-shared', organizationId: 'org-shared', hostApp: 'admin', roles: [], permissionScopes: [] }, {
-        issuedAt: Math.floor(Date.now() / 1000) - 600, expiresAt: Math.floor(Date.now() / 1000) - 300
-      });
-      const expiredResponse = await fetch(`${gatewayOrigin}/api/v1/assistant/sessions`, {
-        method: 'POST', headers: { authorization: `Bearer ${expired}`, 'content-type': 'application/json' }, body: '{}'
-      });
-      expect(expiredResponse.status).toBe(401);
-      const expiredBody = await expiredResponse.text();
-      expectNoSensitiveValues(expiredBody, [
-        { surface: 'host-401', label: 'upstream-jwt', value: expired },
-        { surface: 'host-401', label: 'upstream-authorization', value: `Bearer ${expired}` }
-      ]);
       expect(environment.GATEWAY_INTERNAL_JWT_TTL_SECONDS).toBe('300');
       expect(environment.GATEWAY_INTERNAL_JWT_ISSUER).toBe(environment.INTERNAL_IDENTITY_JWT_ISSUER);
       expect(environment.GATEWAY_INTERNAL_JWT_AUDIENCE).toBe(environment.INTERNAL_IDENTITY_JWT_AUDIENCE);
       expect(environment.INTERNAL_IDENTITY_JWKS_URI).toBe(`${gatewayOrigin}/.well-known/jwks.json`);
       expect(environment.GATEWAY_BACKEND_BASE_URL).toBe(backendOrigin);
+      expect(environment).not.toHaveProperty('GATEWAY_UPSTREAM_JWT_ISSUER');
+      expect(environment).not.toHaveProperty('GATEWAY_UPSTREAM_JWT_AUDIENCE');
+      expect(environment).not.toHaveProperty('GATEWAY_UPSTREAM_JWKS_URI');
       expectNoSensitiveValues(processOutput(gateway), [
-        { surface: 'gateway-process', label: 'valid-upstream-jwt', value: valid },
-        { surface: 'gateway-process', label: 'expired-upstream-jwt', value: expired },
-        { surface: 'gateway-process', label: 'valid-upstream-authorization', value: `Bearer ${valid}` },
-        { surface: 'gateway-process', label: 'expired-upstream-authorization', value: `Bearer ${expired}` },
+        { surface: 'gateway-process', label: 'local-upstream-jwt', value: localAuthorityToken },
+        { surface: 'gateway-process', label: 'local-upstream-authorization', value: `Bearer ${localAuthorityToken}` },
         { surface: 'gateway-process', label: 'signing-reference', value: signingFile.fileReference }
       ]);
       expectNoSensitiveValues(processOutput(backend), [
-        { surface: 'backend-process', label: 'valid-upstream-jwt', value: valid },
-        { surface: 'backend-process', label: 'expired-upstream-jwt', value: expired },
-        { surface: 'backend-process', label: 'valid-upstream-authorization', value: `Bearer ${valid}` },
-        { surface: 'backend-process', label: 'expired-upstream-authorization', value: `Bearer ${expired}` },
+        { surface: 'backend-process', label: 'local-upstream-jwt', value: localAuthorityToken },
+        { surface: 'backend-process', label: 'local-upstream-authorization', value: `Bearer ${localAuthorityToken}` },
         { surface: 'backend-process', label: 'signing-reference', value: signingFile.fileReference }
       ]);
     } finally {
@@ -143,16 +131,35 @@ describeRuntime('Feature 003 production-like runtime alignment (T082)', () => {
   }, 90_000);
 });
 
-function runtimeEnvironment(input: Readonly<{ databaseUrl: string; gatewayOrigin: string; backendOrigin: string; authority: Awaited<ReturnType<typeof createGatewayUpstreamTestAuthority>>; signingReference: string; gatewayPort: number; backendPort: number }>): Record<string, string> {
+function runtimeEnvironment(input: Readonly<{ databaseUrl: string; gatewayOrigin: string; backendOrigin: string; signingReference: string; gatewayPort: number; backendPort: number }>): Record<string, string> {
   return {
     NODE_ENV: 'test', DATABASE_URL: input.databaseUrl, POSTGRES_USER: 'test', POSTGRES_PASSWORD: 'test', POSTGRES_DB: 't082_runtime_test',
     LLM_PROVIDER: 'openai', LLM_MODEL: 'local-bootstrap-placeholder', OPENAI_API_KEY: 'local-bootstrap-placeholder',
     INTERNAL_IDENTITY_JWT_ISSUER: input.gatewayOrigin, INTERNAL_IDENTITY_JWT_AUDIENCE: 't082-backend', INTERNAL_IDENTITY_JWKS_URI: `${input.gatewayOrigin}/.well-known/jwks.json`, INTERNAL_IDENTITY_JWT_CLOCK_TOLERANCE_SECONDS: '0',
     ENABLE_RUNTIME_DEBUG: 'false', ENABLE_REDIS: 'false', ENABLE_SWAGGER_DOCS: 'false', SWAGGER_PATH: 'docs', PORT: String(input.backendPort),
-    GATEWAY_INTERNAL_JWT_ISSUER: input.gatewayOrigin, GATEWAY_INTERNAL_JWT_AUDIENCE: 't082-backend', GATEWAY_PUBLIC_JWKS_URL: `${input.gatewayOrigin}/.well-known/jwks.json`,
-    GATEWAY_UPSTREAM_JWT_ISSUER: input.authority.issuer, GATEWAY_UPSTREAM_JWT_AUDIENCE: input.authority.audience, GATEWAY_UPSTREAM_JWKS_URI: input.authority.jwksUri, GATEWAY_UPSTREAM_JWT_CLOCK_TOLERANCE_SECONDS: '0',
+    GATEWAY_INTERNAL_JWT_ISSUER: input.gatewayOrigin, GATEWAY_INTERNAL_JWT_AUDIENCE: 't082-backend', GATEWAY_PUBLIC_JWKS_URL: `${input.gatewayOrigin}/.well-known/jwks.json`, GATEWAY_UPSTREAM_JWT_CLOCK_TOLERANCE_SECONDS: '0',
     GATEWAY_INTERNAL_JWT_TTL_SECONDS: '300', GATEWAY_BACKEND_BASE_URL: input.backendOrigin, GATEWAY_SIGNING_KEY_REFERENCE: input.signingReference, GATEWAY_ALLOWED_ORIGINS: 'http://localhost:3001', GATEWAY_PORT: String(input.gatewayPort)
   };
+}
+
+async function seedGatewayProfileRuntimePrerequisite(prisma: ReturnType<typeof createGatewayPrismaClient>): Promise<void> {
+  await prisma.customer.create({ data: { id: 'customer-t082' } });
+  const binding = await prisma.integrationBinding.create({
+    data: { integrationId: 'integration-t082-runtime', customerId: 'customer-t082', allowedHostApp: 'admin', enabled: true }
+  });
+  const profile = await prisma.registeredUpstreamTrustProfile.create({
+    data: {
+      id: 't082-runtime-profile', integrationId: 'integration-t082-runtime', expectedIssuer: 'https://t082-profile.example.test',
+      expectedAudience: 't082-profile-audience', jwksUri: 'https://t082-profile.example.test/.well-known/jwks.json',
+      algorithm: 'RS256', enabled: true, lifecycle: 'active', version: 1, replacesProfileId: null
+    }
+  });
+
+  expect(await prisma.customer.count({ where: { id: 'customer-t082' } })).toBe(1);
+  expect(binding).toMatchObject({ integrationId: 'integration-t082-runtime', customerId: 'customer-t082', allowedHostApp: 'admin', enabled: true });
+  expect(profile).toMatchObject({ id: 't082-runtime-profile', integrationId: 'integration-t082-runtime', algorithm: 'RS256', enabled: true, lifecycle: 'active' });
+  expect(profile).not.toHaveProperty('customerId');
+  expect(profile).not.toHaveProperty('allowedHostApp');
 }
 
 function retirementPolicy(): KeyRetirementPolicy {
@@ -206,9 +213,14 @@ async function reservePort(): Promise<number> {
   }
 }
 
-async function waitForJson(url: string, predicate: (body: Record<string, unknown>) => boolean): Promise<void> {
+async function waitForJson(
+  url: string,
+  predicate: (body: Record<string, unknown>) => boolean,
+  context?: Readonly<{ process: ManagedProcess; label: string; sensitive?: readonly string[] }>
+): Promise<void> {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
+    if (context && context.process.exitCode !== null) throw startupFailure(url, context, 'exited before readiness');
     try {
       const response = await fetch(url);
       const body = await response.json() as Record<string, unknown>;
@@ -218,7 +230,20 @@ async function waitForJson(url: string, predicate: (body: Record<string, unknown
     }
     await delay(100);
   }
-  throw new Error(`Timed out waiting for local runtime endpoint: ${new URL(url).pathname}`);
+  throw context ? startupFailure(url, context, 'timed out before readiness') : new Error(`Timed out waiting for local runtime endpoint: ${new URL(url).pathname}`);
+}
+
+function startupFailure(url: string, context: Readonly<{ process: ManagedProcess; label: string; sensitive?: readonly string[] }>, state: string): Error {
+  const diagnostic = safeProcessDiagnostic(processOutput(context.process), context.sensitive ?? []);
+  return new Error(`${context.label} ${state}: ${new URL(url).pathname}; exitCode=${String(context.process.exitCode)}; diagnostic=${diagnostic || '<none>'}`);
+}
+
+function safeProcessDiagnostic(value: string, sensitive: readonly string[]): string {
+  let result = value;
+  for (const item of sensitive) if (item) result = result.split(item).join('[REDACTED]');
+  result = result.replace(/(?:Authorization\s*[:=]\s*|Bearer\s+)[^\s"']+/gi, '[REDACTED_AUTH]');
+  result = result.replace(/-----BEGIN [^-]+-----[\s\S]*?-----END [^-]+-----/g, '[REDACTED_PEM]');
+  return result.replace(/\s+/g, ' ').trim().slice(0, 4_000);
 }
 
 async function expectPublicJwks(url: string, expectedKids: readonly string[]): Promise<void> {

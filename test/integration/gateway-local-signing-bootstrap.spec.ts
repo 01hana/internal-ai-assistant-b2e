@@ -17,6 +17,7 @@ const root = process.cwd();
 const gatewayEntry = join(root, 'apps/gateway/dist/main.js');
 const bootstrapEntry = join(root, 'apps/gateway/dist/commands/local-signing-bootstrap.js');
 const backendEntry = join(root, 'dist/src/main.js');
+type ManagedProcess = ChildProcess & { output: string[] };
 
 describeRuntime('Gateway local signing bootstrap', () => {
   it('activates one deterministic local key through real Gateway JWKS, is idempotent, permits allowed CORS, and is accepted by Backend', async () => {
@@ -35,13 +36,18 @@ describeRuntime('Gateway local signing bootstrap', () => {
     const gatewayOrigin = `http://127.0.0.1:${gatewayPort}`;
     const backendOrigin = `http://127.0.0.1:${backendPort}`;
     const environment = runtimeEnvironment({ databaseUrl: database.databaseUrl, gatewayOrigin, backendOrigin, signingReference: signingFile.fileReference, gatewayPort, backendPort });
-    let gateway: ChildProcess | undefined;
-    let backend: ChildProcess | undefined;
+    let gateway: ManagedProcess | undefined;
+    let backend: ManagedProcess | undefined;
 
     try {
       await seedCoreData(rootPrisma);
+      await seedGatewayProfileRuntimePrerequisite(gatewayPrisma);
       gateway = start(gatewayEntry, environment);
-      await waitFor(`${gatewayOrigin}/health`, (response) => response.ok);
+      await waitFor(`${gatewayOrigin}/health`, (response) => response.ok, {
+        process: gateway,
+        label: 'Gateway',
+        sensitive: [signing.privatePem, signingFile.fileReference]
+      });
 
       const first = await run(bootstrapEntry, environment);
       expect(first.exitCode).toBe(0);
@@ -128,15 +134,62 @@ function runtimeEnvironment(input: Readonly<{ databaseUrl: string; gatewayOrigin
     LLM_PROVIDER: 'openai', LLM_MODEL: 'local-bootstrap-placeholder', OPENAI_API_KEY: 'local-bootstrap-placeholder',
     INTERNAL_IDENTITY_JWT_ISSUER: input.gatewayOrigin, INTERNAL_IDENTITY_JWT_AUDIENCE: 'local-bootstrap-backend', INTERNAL_IDENTITY_JWKS_URI: `${input.gatewayOrigin}/.well-known/jwks.json`, INTERNAL_IDENTITY_JWT_CLOCK_TOLERANCE_SECONDS: '0',
     ENABLE_RUNTIME_DEBUG: 'false', ENABLE_REDIS: 'false', ENABLE_SWAGGER_DOCS: 'false', SWAGGER_PATH: 'docs', PORT: String(input.backendPort),
-    GATEWAY_INTERNAL_JWT_ISSUER: input.gatewayOrigin, GATEWAY_INTERNAL_JWT_AUDIENCE: 'local-bootstrap-backend', GATEWAY_PUBLIC_JWKS_URL: `${input.gatewayOrigin}/.well-known/jwks.json`,
-    GATEWAY_UPSTREAM_JWT_ISSUER: 'http://upstream.local.test', GATEWAY_UPSTREAM_JWT_AUDIENCE: 'upstream-local', GATEWAY_UPSTREAM_JWKS_URI: 'http://127.0.0.1:9/.well-known/jwks.json', GATEWAY_UPSTREAM_JWT_CLOCK_TOLERANCE_SECONDS: '0',
+    GATEWAY_INTERNAL_JWT_ISSUER: input.gatewayOrigin, GATEWAY_INTERNAL_JWT_AUDIENCE: 'local-bootstrap-backend', GATEWAY_PUBLIC_JWKS_URL: `${input.gatewayOrigin}/.well-known/jwks.json`, GATEWAY_UPSTREAM_JWT_CLOCK_TOLERANCE_SECONDS: '0',
     GATEWAY_INTERNAL_JWT_TTL_SECONDS: '300', GATEWAY_BACKEND_BASE_URL: input.backendOrigin, GATEWAY_SIGNING_KEY_REFERENCE: input.signingReference,
     GATEWAY_ALLOWED_ORIGINS: 'http://localhost:3001', GATEWAY_LOCAL_SIGNING_BOOTSTRAP_ENABLED: 'true', GATEWAY_PORT: String(input.gatewayPort)
   };
 }
 
-function start(entry: string, environment: Record<string, string>): ChildProcess {
-  return spawn(process.execPath, [entry], { cwd: root, env: { ...process.env, ...environment }, stdio: 'ignore' });
+async function seedGatewayProfileRuntimePrerequisite(prisma: ReturnType<typeof createGatewayPrismaClient>): Promise<void> {
+  await prisma.customer.create({ data: { id: 'customer-local-signing-bootstrap' } });
+  const binding = await prisma.integrationBinding.create({
+    data: {
+      integrationId: 'integration-local-signing-bootstrap',
+      customerId: 'customer-local-signing-bootstrap',
+      allowedHostApp: 'admin',
+      enabled: true
+    }
+  });
+  const profile = await prisma.registeredUpstreamTrustProfile.create({
+    data: {
+      id: 'local-signing-bootstrap-runtime-profile',
+      integrationId: 'integration-local-signing-bootstrap',
+      expectedIssuer: 'https://local-signing-bootstrap-profile.example.test',
+      expectedAudience: 'local-signing-bootstrap-profile-audience',
+      jwksUri: 'https://local-signing-bootstrap-profile.example.test/.well-known/jwks.json',
+      algorithm: 'RS256',
+      enabled: true,
+      lifecycle: 'active',
+      version: 1,
+      replacesProfileId: null
+    }
+  });
+
+  expect(binding).toMatchObject({
+    integrationId: 'integration-local-signing-bootstrap',
+    customerId: 'customer-local-signing-bootstrap',
+    allowedHostApp: 'admin',
+    enabled: true
+  });
+  expect(profile).toMatchObject({
+    id: 'local-signing-bootstrap-runtime-profile',
+    integrationId: 'integration-local-signing-bootstrap',
+    algorithm: 'RS256',
+    enabled: true,
+    lifecycle: 'active'
+  });
+  expect(profile).not.toHaveProperty('customerId');
+  expect(profile).not.toHaveProperty('allowedHostApp');
+}
+
+function start(entry: string, environment: Record<string, string>): ManagedProcess {
+  const child = spawn(process.execPath, [entry], { cwd: root, env: { ...process.env, ...environment }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const output: string[] = [];
+  child.stdout.on('data', (chunk: Buffer) => output.push(chunk.toString()));
+  child.stderr.on('data', (chunk: Buffer) => output.push(chunk.toString()));
+  const managed = child as ManagedProcess;
+  managed.output = output;
+  return managed;
 }
 
 async function run(entry: string, environment: Record<string, string>): Promise<Readonly<{ exitCode: number | null; output: string }>> {
@@ -149,19 +202,39 @@ async function run(entry: string, environment: Record<string, string>): Promise<
   });
 }
 
-async function waitFor(url: string, predicate: (response: Response) => boolean): Promise<void> {
+async function waitFor(
+  url: string,
+  predicate: (response: Response) => boolean,
+  context?: Readonly<{ process: ManagedProcess; label: string; sensitive?: readonly string[] }>
+): Promise<void> {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
+    if (context && context.process.exitCode !== null) throw startupFailure(url, context, 'exited before listener readiness');
     try {
       const response = await fetch(url);
       if (predicate(response)) return;
     } catch { /* listener is still starting */ }
     await delay(100);
   }
-  throw new Error('Local runtime did not become reachable.');
+  throw context ? startupFailure(url, context, 'timed out before listener readiness') : new Error('Local runtime did not become reachable.');
 }
 
-async function stop(child: ChildProcess | undefined): Promise<void> {
+function startupFailure(url: string, context: Readonly<{ process: ManagedProcess; label: string; sensitive?: readonly string[] }>, state: string): Error {
+  const diagnostic = safeProcessDiagnostic(context.process.output.join(''), context.sensitive ?? []);
+  return new Error(`${context.label} ${state}: ${new URL(url).pathname}; exitCode=${String(context.process.exitCode)}; diagnostic=${diagnostic || '<none>'}`);
+}
+
+function safeProcessDiagnostic(value: string, sensitive: readonly string[]): string {
+  let result = value;
+  for (const item of sensitive) if (item) result = result.split(item).join('[REDACTED]');
+  result = result.replace(/(?:Authorization\s*[:=]\s*|Bearer\s+)[^\s"']+/gi, '[REDACTED_AUTH]');
+  result = result.replace(/eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, '[REDACTED_JWT]');
+  result = result.replace(/-----BEGIN [^-]+-----[\s\S]*?-----END [^-]+-----/g, '[REDACTED_PEM]');
+  result = result.replace(/(keyReference|signingKeyReference|secret|password)\s*[:=]\s*[^\s,}]+/gi, '$1=[REDACTED]');
+  return result.replace(/\s+/g, ' ').trim().slice(0, 4_000);
+}
+
+async function stop(child: ManagedProcess | undefined): Promise<void> {
   if (!child || child.exitCode !== null) return;
   child.kill('SIGTERM');
   await Promise.race([new Promise<void>((resolve) => child.once('exit', () => resolve())), delay(2_000)]);
@@ -169,6 +242,8 @@ async function stop(child: ChildProcess | undefined): Promise<void> {
     child.kill('SIGKILL');
     await Promise.race([new Promise<void>((resolve) => child.once('exit', () => resolve())), delay(2_000)]);
   }
+  child.stdout?.destroy();
+  child.stderr?.destroy();
 }
 
 async function reservePort(): Promise<number> {

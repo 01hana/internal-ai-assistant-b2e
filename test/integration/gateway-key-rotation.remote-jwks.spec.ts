@@ -128,7 +128,15 @@ async function createContext(label: string) {
   const command = new RegisterSigningKeyCommand(lifecycle);
   const activeResolver = new ActiveSigningKeyResolver(repository, provider);
   const internalIssuer = new InternalIdentityTokenIssuer({ internalIssuer: issuer, internalAudience: audience, internalTokenTtlSeconds: 300 }, activeResolver);
-  const runtime = await startGatewayRuntime(database.databaseUrl, oldFile.fileReference);
+  await seedProfileRuntimePrerequisite(prisma);
+  const startupFetch = jest.spyOn(globalThis, 'fetch');
+  let runtime: Awaited<ReturnType<typeof startGatewayRuntime>>;
+  try {
+    runtime = await startGatewayRuntime(database.databaseUrl, oldFile.fileReference);
+    expect(startupFetch).not.toHaveBeenCalled();
+  } finally {
+    startupFetch.mockRestore();
+  }
 
   const context = {
     database,
@@ -298,6 +306,26 @@ async function startGatewayRuntime(databaseUrl: string, signingKeyReference: str
     }
     throw error;
   }
+}
+
+async function seedProfileRuntimePrerequisite(prisma: ReturnType<typeof createGatewayPrismaClient>): Promise<void> {
+  await prisma.customer.create({ data: { id: 'customer-a' } });
+  const binding = await prisma.integrationBinding.create({
+    data: { integrationId: 'integration-a', customerId: 'customer-a', allowedHostApp: 'admin', enabled: true }
+  });
+  const profile = await prisma.registeredUpstreamTrustProfile.create({
+    data: {
+      id: 'phase6c-runtime-profile', integrationId: 'integration-a', expectedIssuer: 'https://phase6c-upstream.example.test',
+      expectedAudience: 'phase6c-upstream', jwksUri: 'https://phase6c-upstream.example.test/.well-known/jwks.json',
+      algorithm: 'RS256', enabled: true, lifecycle: 'active', version: 1, replacesProfileId: null
+    }
+  });
+
+  expect(await prisma.customer.count({ where: { id: 'customer-a' } })).toBe(1);
+  expect(binding).toMatchObject({ integrationId: 'integration-a', customerId: 'customer-a', allowedHostApp: 'admin', enabled: true });
+  expect(profile).toMatchObject({ id: 'phase6c-runtime-profile', integrationId: 'integration-a', algorithm: 'RS256', enabled: true, lifecycle: 'active' });
+  expect(profile).not.toHaveProperty('customerId');
+  expect(profile).not.toHaveProperty('allowedHostApp');
 }
 
 function filePathFromReference(reference: string): string {
