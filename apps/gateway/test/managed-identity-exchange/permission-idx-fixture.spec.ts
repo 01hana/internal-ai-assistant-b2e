@@ -20,6 +20,27 @@ const fixturePath = resolve(__dirname, './fixtures/synthetic-idx-permission-norm
 const projectionContract = Object.freeze({ scopeSchema: 'managed-normalized-scopes/v1' });
 
 describe('Synthetic IDX permission normalizer fixture (T028)', () => {
+  it('T003 EXPECTED_RED: retains only immutable semantic IDX MenuDetail material', () => {
+    const identity = createVerifiedExternalIdentity({
+      subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }],
+      trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [{ menuId: 'ORDERS', actions: ['read', 'update'] }] } as unknown as TrustedPermissionMaterial
+    });
+    const material = identity.trustedPermissionMaterial as unknown as { kind: string; menus: readonly { menuId: string; actions: readonly string[] }[] };
+    expect(material).toEqual({ kind: 'idx-menu-detail/v1', menus: [{ menuId: 'ORDERS', actions: ['read', 'update'] }] });
+    expect(Object.isFrozen(material)).toBe(true);
+    expect(Object.isFrozen(material.menus)).toBe(true);
+  });
+
+  it.each([
+    { UUID: 'idx-uuid' }, { nativeAccessToken: 'token' }, { authorization: 'Bearer token' }, { claims: { sub: 'actor-a' } },
+    { response: { status: 200 } }, { customerId: 'customer-a' }, { integrationId: 'integration-a' }, { metadata: { arbitrary: true } }
+  ])('T003 EXPECTED_RED: rejects forbidden IDX material authority %o', (forbidden) => {
+    expect(() => createVerifiedExternalIdentity({
+      subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }],
+      trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [], ...forbidden } as unknown as TrustedPermissionMaterial
+    })).toThrow();
+  });
+
   it('registers the exact test-only normalizer without executing it during lookup', () => {
     const normalizer = new SyntheticIdxPermissionNormalizerFixture();
     const normalize = jest.spyOn(normalizer, 'normalize');

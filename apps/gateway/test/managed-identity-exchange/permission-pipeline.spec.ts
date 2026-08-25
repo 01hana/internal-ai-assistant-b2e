@@ -6,7 +6,7 @@ const servicePath = resolve(__dirname, '../../src/managed-identity-exchange/perm
 
 type Policy = Readonly<{
   integrationConfigId: string;
-  mode: 'allow_empty' | 'required';
+  mode: 'allow_empty' | 'required' | 'provider_trusted';
   permissionSourceInstanceId: string | null;
   normalizerType: string | null;
   projectionContractVersion: string | null;
@@ -35,6 +35,35 @@ type FuturePipeline = Readonly<{
 }>;
 
 describe('Managed permission pipeline semantics (T026 / T027)', () => {
+  it('T003 EXPECTED_RED: resolves IDX provider_trusted material without selecting a Permission Source', async () => {
+    const fixture = createFixture({
+      policy: policy({ mode: 'provider_trusted', permissionSourceInstanceId: null, normalizerType: 'idx-menu-detail/v1', projectionContractVersion: 'managed-permissions/v1', projectionContract: Object.freeze({ scopeSchema: 'managed-normalized-scopes/v1' }) })
+    });
+    const admittedIdentity = createVerifiedExternalIdentity({
+      subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }],
+      trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [{ menuId: 'ORDERS', actions: ['read'] }] } as unknown as TrustedPermissionMaterial
+    });
+    const scopes = await pipeline(fixture).resolve({ ...input(fixture.policy), admittedIdentity });
+    expect(scopes).toEqual(['orders:read']);
+    expect(fixture.permissionSources.findEnabledActiveById).not.toHaveBeenCalled();
+    expect(fixture.adapter.execute).not.toHaveBeenCalled();
+    expect(fixture.normalizer!.normalize).toHaveBeenCalledTimes(1);
+    expect(fixture.projector.project).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    undefined,
+    { kind: 'wrong-material/v1', values: ['orders:read'] }
+  ])('T003 EXPECTED_RED: fails closed for missing or wrong provider_trusted material', async (trustedPermissionMaterial) => {
+    const fixture = createFixture({
+      policy: policy({ mode: 'provider_trusted', permissionSourceInstanceId: null, normalizerType: 'idx-menu-detail/v1', projectionContractVersion: 'managed-permissions/v1', projectionContract: Object.freeze({ scopeSchema: 'managed-normalized-scopes/v1' }) })
+    });
+    const request = input(fixture.policy);
+    const admittedIdentity = createVerifiedExternalIdentity({ subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }], ...(trustedPermissionMaterial === undefined ? {} : { trustedPermissionMaterial: trustedPermissionMaterial as TrustedPermissionMaterial }) });
+    await expect(pipeline(fixture).resolve({ ...request, admittedIdentity })).rejects.toBeInstanceOf(ManagedExchangeIdentityDeniedError);
+    expect(fixture.adapter.execute).not.toHaveBeenCalled();
+  });
+
   it('returns frozen empty scopes for allow_empty without a configured source', async () => {
     const fixture = createFixture({ policy: policy({ mode: 'allow_empty', permissionSourceInstanceId: null, normalizerType: null, projectionContractVersion: null, projectionContract: null }) });
     const scopes = await pipeline(fixture).resolve(input(fixture.policy));

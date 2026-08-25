@@ -1,5 +1,24 @@
 import { createGatewayPrismaClient } from '../../src/integration-registry/gateway-prisma-client.factory';
 import { createGatewayRegistryDatabase } from '../../../../test/support/gateway-registry-db.helper';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+describe('Feature 006 additive enum and persistence contract — failing-first (T002)', () => {
+  const schema = () => readFileSync(resolve(__dirname, '../../../../prisma/schema.prisma'), 'utf8');
+
+  it('T002 EXPECTED_RED: declares GET and provider_trusted while retaining every existing enum value', () => {
+    const value = schema();
+    expect(value).toMatch(/enum ManagedHttpMethod\s*\{[^}]*\bPOST\b[^}]*\bGET\b[^}]*\}/s);
+    expect(value).toMatch(/enum ManagedPermissionMode\s*\{[^}]*\ballow_empty\b[^}]*\brequired\b[^}]*\bprovider_trusted\b[^}]*\}/s);
+  });
+
+  it('keeps Feature 006 persistence free of new Customer/token/raw-payload/SDK authority while allowing Feature 004 binding Customer persistence', () => {
+    const value = schema();
+    expect(value).toMatch(/model IntegrationBinding[\s\S]*customerId/);
+    const feature006 = value.slice(value.indexOf('model ManagedIdentityProviderInstance'), value.indexOf('model ManagedUpstreamIssuer'));
+    expect(feature006).not.toMatch(/nativeAccessToken|refreshToken|menuDetail|sdkState|customerId/i);
+  });
+});
 
 const describeRegistry = process.env.RUN_GATEWAY_REGISTRY_DB_TESTS === 'true' ? describe : describe.skip;
 

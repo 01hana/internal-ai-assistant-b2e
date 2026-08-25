@@ -16,10 +16,10 @@
 **Dependencies**: None.  
 **Completion gate**: `IDX_CONTRACT_TESTS_RED` — new IDX expectations fail only because Feature 006 is absent; existing Feature 005/004 regressions remain green.
 
-- [ ] T001 Create failing IDX provider-tuple and POST-regression tests in `apps/gateway/test/managed-identity-exchange/idx-provider-contract.spec.ts` for `idx_delegated`/`idx-menu-detail/v1`/GET/bearer/JSON/sole `idx_entry`, and prove generic `delegated_http/v1` remains POST. Tests: near-miss tuple failures; no browser endpoint or dynamic contract acceptance. Depends on: none.
-- [ ] T002 Create failing enum migration expectations in `apps/gateway/test/managed-identity-exchange/persistence.spec.ts` for retained `POST`, `allow_empty`, `required` plus additive `GET` and `provider_trusted`. Tests: no new Customer/token/MenuDetail/SDK persistence. Depends on: T001.
-- [ ] T003 Create failing closed-material and provider-trusted tests in `apps/gateway/test/managed-identity-exchange/permission-idx-fixture.spec.ts` and `permission-pipeline.spec.ts`. Tests: immutable `idx-menu-detail/v1`, null source ID, missing/wrong material denial, and proof no Permission Source adapter is invoked. Depends on: T001.
-- [ ] T004 Create failing incomplete-IDX readiness cases in `apps/gateway/test/managed-identity-exchange/readiness.spec.ts`. Tests: every missing Provider Instance, Entry policy, normalizer, projection, issuer/key, or Feature 004 profile prerequisite fails closed without an external call. Depends on: T001.
+- [x] T001 Create failing IDX provider-tuple and POST-regression tests in `apps/gateway/test/managed-identity-exchange/idx-provider-contract.spec.ts` for `idx_delegated`/`idx-menu-detail/v1`/GET/bearer/JSON/sole `idx_entry`, and prove generic `delegated_http/v1` remains POST. Tests: near-miss tuple failures; no browser endpoint or dynamic contract acceptance. Depends on: none.
+- [x] T002 Create failing enum migration expectations in `apps/gateway/test/managed-identity-exchange/persistence.spec.ts` for retained `POST`, `allow_empty`, `required` plus additive `GET` and `provider_trusted`. Tests: no new Customer/token/MenuDetail/SDK persistence. Depends on: T001.
+- [x] T003 Create failing closed-material and provider-trusted tests in `apps/gateway/test/managed-identity-exchange/permission-idx-fixture.spec.ts` and `permission-pipeline.spec.ts`. Tests: immutable `idx-menu-detail/v1`, null source ID, missing/wrong material denial, and proof no Permission Source adapter is invoked. Depends on: T001.
+- [x] T004 Create failing incomplete-IDX readiness cases in `apps/gateway/test/managed-identity-exchange/readiness.spec.ts`. Tests: every missing Provider Instance, Entry policy, normalizer, projection, issuer/key, or Feature 004 profile prerequisite fails closed without an external call. Depends on: T001.
 
 ## Phase 2 — Additive Prisma Enum Migration
 
