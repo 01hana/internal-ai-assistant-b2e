@@ -58,9 +58,9 @@ describe('Disabled IDX adapter shell (T021)', () => {
     expect(source).not.toMatch(/\['delegated_http', 'idx_delegated'\]|delegated_http.*idx_delegated/i);
   });
 
-  it('contains no outbound implementation, cryptography, claim mapping, or bypass', () => {
+  it('keeps the uncomposed adapter free of local crypto, Customer, permission, and signing authority', () => {
     const source = readFileSync(resolve(__dirname, '../../src/managed-identity-exchange/providers/idx-delegated-verification.adapter.ts'), 'utf8');
-    expect(source).not.toMatch(/DelegatedHttpTransport|fetch\(|httpsRequest|ES512|jose|JWKS|kid|publicKey|decodeJwt|JWT|UserType|IsAdmin|UUID|menu|permission|Customer|endpoint|ALLOW_IDX|SYNTHETIC|NODE_ENV/i);
+    expect(source).not.toMatch(/fetch\(|httpsRequest|ES512|jose|JWKS|kid|publicKey|decodeJwt|jwtVerify|crypto\.verify|CustomerScope|IntegrationBinding|ManagedTokenIssuer|PermissionSource|RefreshToken|GatewaySigningKey|customerId|integrationId|host_app|roles|scope|ALLOW_IDX|SYNTHETIC|NODE_ENV/i);
   });
 });
 

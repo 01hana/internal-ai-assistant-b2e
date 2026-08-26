@@ -75,8 +75,8 @@
 **Dependencies**: Phase 6.  
 **Completion gate**: `IDX_VERIFIED_IDENTITY_READY` — accepted credentials create the required verified identity; decoded claims cannot establish authority before acceptance.
 
-- [ ] T018 Add failing post-acceptance ordering and claim-consistency tests in `apps/gateway/test/managed-identity-exchange/idx-delegated-provider.spec.ts`. Tests: parser unreachable before acceptance; missing/mismatched `sub`/`UUID_User`, missing Company/Entry fail closed; UserType/IsAdmin/Permissions/Permission_Hash create no authority. Depends on: T017.
-- [ ] T019 Implement post-validation native claim parsing and verified identity construction in `apps/gateway/src/managed-identity-exchange/providers/idx-delegated-verification.adapter.ts`. Tests: map `sub`, `UUID_Company`, and `{ kind: "idx_entry", value: UUID_Entry }`; perform no ES512/JWKS/kid/time-only verification or role inference. Depends on: T018.
+- [x] T018 Add failing post-acceptance ordering and claim-consistency tests in `apps/gateway/test/managed-identity-exchange/idx-delegated-provider.spec.ts`. Tests: parser unreachable before acceptance; missing/mismatched `sub`/`UUID_User`, missing Company/Entry fail closed; UserType/IsAdmin/Permissions/Permission_Hash create no authority. Depends on: T017.
+- [x] T019 Implement post-validation native claim parsing and verified identity construction in `apps/gateway/src/managed-identity-exchange/providers/idx-delegated-verification.adapter.ts`. Tests: map `sub`, `UUID_Company`, and `{ kind: "idx_entry", value: UUID_Entry }`; perform no ES512/JWKS/kid/time-only verification or role inference. Depends on: T018.
 
 ## Phase 8 — Closed IDX Trusted Permission Material
 
