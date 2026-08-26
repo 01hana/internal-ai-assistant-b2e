@@ -114,7 +114,7 @@ export class ManagedIdentityExchangeService {
   private async verify(adapter: Readonly<{ verify(input: Readonly<{ nativeCredential: string; providerInstancePolicy: ProviderInstancePolicy; requestId: string }>): Promise<VerifiedExternalIdentity> }>, nativeCredential: string, providerInstancePolicy: ProviderInstancePolicy, requestId: string): Promise<VerifiedExternalIdentity> {
     try { return await adapter.verify({ nativeCredential, providerInstancePolicy, requestId }); }
     catch (error) {
-      if (error instanceof ManagedExchangeCredentialError || error instanceof ManagedExchangeInfrastructureError) throw error;
+      if (error instanceof ManagedExchangeCredentialError || error instanceof ManagedExchangeIdentityDeniedError || error instanceof ManagedExchangeInfrastructureError) throw error;
       throw new ManagedExchangeInfrastructureError();
     }
   }

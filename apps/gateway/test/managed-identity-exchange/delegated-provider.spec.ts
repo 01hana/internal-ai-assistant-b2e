@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   ManagedExchangeCredentialError,
+  ManagedExchangeIdentityDeniedError,
   ManagedExchangeInfrastructureError
 } from '../../src/managed-identity-exchange/domain/managed-exchange.domain';
 import { DelegatedHttpV1Adapter } from '../../src/managed-identity-exchange/providers/delegated-http-v1.adapter';
@@ -85,10 +86,13 @@ describe('Delegated HTTP V1 adapter (T020A)', () => {
     expect(transport.execute).not.toHaveBeenCalled();
   });
 
-  it('preserves credential and infrastructure failures from the transport without retrying', async () => {
+  it('preserves credential, identity-denied, and infrastructure failures from the transport without retrying', async () => {
     const credential = { execute: jest.fn(async () => { throw new ManagedExchangeCredentialError(); }) };
     await expect(new DelegatedHttpV1Adapter(credential as never).verify(input() as never)).rejects.toBeInstanceOf(ManagedExchangeCredentialError);
     expect(credential.execute).toHaveBeenCalledTimes(1);
+    const denied = { execute: jest.fn(async () => { throw new ManagedExchangeIdentityDeniedError(); }) };
+    await expect(new DelegatedHttpV1Adapter(denied as never).verify(input() as never)).rejects.toBeInstanceOf(ManagedExchangeIdentityDeniedError);
+    expect(denied.execute).toHaveBeenCalledTimes(1);
     const unavailable = { execute: jest.fn(async () => { throw new ManagedExchangeInfrastructureError(); }) };
     await expect(new DelegatedHttpV1Adapter(unavailable as never).verify(input() as never)).rejects.toBeInstanceOf(ManagedExchangeInfrastructureError);
     expect(unavailable.execute).toHaveBeenCalledTimes(1);

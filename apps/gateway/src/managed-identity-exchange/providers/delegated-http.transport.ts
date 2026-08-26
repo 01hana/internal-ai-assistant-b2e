@@ -1,7 +1,7 @@
 import { lookup } from 'node:dns/promises';
 import { request as httpsRequest } from 'node:https';
 import { assertPublicDestination } from '../../upstream-auth/jwks-source-policy';
-import { type VerifyNativeCredentialInput, ManagedExchangeCredentialError, ManagedExchangeInfrastructureError } from '../domain/managed-exchange.domain';
+import { type VerifyNativeCredentialInput, ManagedExchangeCredentialError, ManagedExchangeIdentityDeniedError, ManagedExchangeInfrastructureError } from '../domain/managed-exchange.domain';
 import { DelegatedEndpointPolicy } from './delegated-endpoint.policy';
 
 export const DELEGATED_HTTP_MAX_RESPONSE_BYTES = 256 * 1024;
@@ -53,7 +53,7 @@ export class DelegatedHttpTransport {
       return await deadline(this.executeBounded(url, input.nativeCredential, method, controller.signal), timeoutMs, controller, this.setTimer, this.clearTimer);
     } catch (error) {
       controller.abort();
-      if (error instanceof ManagedExchangeCredentialError || error instanceof ManagedExchangeInfrastructureError) throw error;
+      if (managedFailure(error)) throw error;
       throw new ManagedExchangeInfrastructureError();
     }
   }
@@ -72,13 +72,14 @@ export class DelegatedHttpTransport {
         },
         signal
       });
-      if (response.statusCode === 401 || response.statusCode === 403) throw new ManagedExchangeCredentialError();
+      if (response.statusCode === 401) throw new ManagedExchangeCredentialError();
+      if (response.statusCode === 403) throw new ManagedExchangeIdentityDeniedError();
       if (response.statusCode !== 200 || !jsonContentType(response.headers['content-type'])) throw new ManagedExchangeInfrastructureError();
       const bytes = await boundedBody(response.body, signal);
       return Object.freeze({ status: 200 as const, contentType: 'application/json' as const, body: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) });
     } catch (error) {
       try { response?.dispose?.(); } catch { /* preserve the generic transport failure */ }
-      throw error instanceof ManagedExchangeCredentialError ? error : new ManagedExchangeInfrastructureError();
+      throw managedFailure(error) ? error : new ManagedExchangeInfrastructureError();
     }
   }
 }
@@ -86,6 +87,10 @@ export class DelegatedHttpTransport {
 function storedMethod(value: unknown): DelegatedHttpRequestOptions['method'] {
   if (value === 'POST' || value === 'GET') return value;
   throw new ManagedExchangeInfrastructureError();
+}
+
+function managedFailure(error: unknown): error is ManagedExchangeCredentialError | ManagedExchangeIdentityDeniedError | ManagedExchangeInfrastructureError {
+  return error instanceof ManagedExchangeCredentialError || error instanceof ManagedExchangeIdentityDeniedError || error instanceof ManagedExchangeInfrastructureError;
 }
 
 async function nodeRequest(url: URL, options: DelegatedHttpRequestOptions): Promise<RawResponse> {
@@ -133,7 +138,7 @@ function deadline<T>(promise: Promise<T>, milliseconds: number, controller: Abor
     const timer = setTimer(() => { controller.abort(); reject(new ManagedExchangeInfrastructureError()); }, milliseconds);
     promise.then((value) => { clearTimer(timer); resolve(value); }, (error) => {
       clearTimer(timer);
-      reject(error instanceof ManagedExchangeCredentialError ? error : new ManagedExchangeInfrastructureError());
+      reject(managedFailure(error) ? error : new ManagedExchangeInfrastructureError());
     });
   });
 }

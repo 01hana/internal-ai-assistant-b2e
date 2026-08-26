@@ -14,7 +14,7 @@ const nativeCredential = 'DO_NOT_FORWARD_NATIVE_CREDENTIAL';
 const input = Object.freeze({ integrationSelector: 'selector-a', nativeCredential, requestId: 'request-a' });
 
 type Failure =
-  | 'configMissing' | 'providerMissing' | 'readiness' | 'adapterMissing' | 'providerCredential' | 'providerInfrastructure'
+  | 'configMissing' | 'providerMissing' | 'readiness' | 'adapterMissing' | 'providerCredential' | 'providerIdentityDenied' | 'providerInfrastructure'
   | 'admissionDenied' | 'policyZero' | 'policyAmbiguous' | 'permissionDenied' | 'permissionInfrastructure'
   | 'canonicalDenied' | 'canonicalInfrastructure' | 'issuerInfrastructure' | 'issuerFailure' | 'audit'
   | 'configInfrastructure' | 'providerRepositoryInfrastructure' | 'policyInfrastructure';
@@ -88,6 +88,7 @@ describe('Managed identity exchange ordered service contract (T034)', () => {
     ['readiness failure', 'readiness', ManagedExchangeInfrastructureError, ['config', 'provider', 'readiness']],
     ['missing adapter', 'adapterMissing', ManagedExchangeInfrastructureError, ['config', 'provider', 'readiness', 'adapter']],
     ['provider credential failure', 'providerCredential', ManagedExchangeCredentialError, ['config', 'provider', 'readiness', 'adapter', 'verify']],
+    ['provider identity denial', 'providerIdentityDenied', ManagedExchangeIdentityDeniedError, ['config', 'provider', 'readiness', 'adapter', 'verify']],
     ['provider infrastructure failure', 'providerInfrastructure', ManagedExchangeInfrastructureError, ['config', 'provider', 'readiness', 'adapter', 'verify']],
     ['admission denial', 'admissionDenied', ManagedExchangeCredentialError, ['config', 'provider', 'readiness', 'adapter', 'verify', 'admission']],
     ['no permission policy', 'policyZero', ManagedExchangeInfrastructureError, ['config', 'provider', 'readiness', 'adapter', 'verify', 'admission', 'policy']],
@@ -112,6 +113,10 @@ describe('Managed identity exchange ordered service contract (T034)', () => {
     const preserved = fixtureFor('providerCredential');
     await expect(new ManagedIdentityExchangeService(preserved.dependencies as never).exchange(input)).rejects.toBeInstanceOf(ManagedExchangeCredentialError);
     expect(preserved.calls.audit).toHaveBeenCalledWith({ requestId: 'request-a', integrationId: 'integration-a', integrationConfigId: 'config-a', providerType: 'delegated_http', providerInstanceId: 'provider-a', outcome: 'denied', reasonCode: 'managed_exchange_identity_invalid' });
+
+    const denied = fixtureFor('providerIdentityDenied');
+    await expect(new ManagedIdentityExchangeService(denied.dependencies as never).exchange(input)).rejects.toBeInstanceOf(ManagedExchangeIdentityDeniedError);
+    expect(denied.calls.audit).toHaveBeenCalledWith({ requestId: 'request-a', integrationId: 'integration-a', integrationConfigId: 'config-a', providerType: 'delegated_http', providerInstanceId: 'provider-a', outcome: 'denied', reasonCode: 'managed_exchange_identity_denied' });
 
     const failed = fixtureFor('providerCredential');
     failed.calls.audit.mockRejectedValueOnce(new Error('audit'));
@@ -144,7 +149,7 @@ function fixtureFor(failure?: Failure) {
   const config = { id: 'config-a', integrationId: 'integration-a', providerInstanceId: 'provider-a', canonicalHostApp: 'admin' };
   const provider = { ...providerPolicy, contractConfig: providerPolicy.providerContract, enabled: true, lifecycle: 'active', version: 1, replacesProviderId: null };
   const policy = { integrationConfigId: 'config-a', mode: 'required', permissionSourceInstanceId: 'source-a', normalizerType: 'synthetic-normalizer/v1', projectionContractVersion: 'managed-permissions/v1', projectionContract: { scopeSchema: 'managed-normalized-scopes/v1' } };
-  const verify = jest.fn(async () => { events.push('verify'); if (failure === 'providerCredential') throw new ManagedExchangeCredentialError(); if (failure === 'providerInfrastructure') throw new Error('provider'); return identity; });
+  const verify = jest.fn(async () => { events.push('verify'); if (failure === 'providerCredential') throw new ManagedExchangeCredentialError(); if (failure === 'providerIdentityDenied') throw new ManagedExchangeIdentityDeniedError(); if (failure === 'providerInfrastructure') throw new Error('provider'); return identity; });
   const calls = {
     config: jest.fn(async () => { events.push('config'); if (failure === 'configInfrastructure') throw new Error('config'); return failure === 'configMissing' ? null : config; }),
     provider: jest.fn(async () => { events.push('provider'); if (failure === 'providerRepositoryInfrastructure') throw new Error('provider'); return failure === 'providerMissing' ? null : provider; }),

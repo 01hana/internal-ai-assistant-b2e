@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ManagedExchangeActivationError, ManagedExchangeActivationValidator } from '../../src/managed-identity-exchange/persistence/managed-exchange-activation.validator';
-import { ManagedExchangeCredentialError, ManagedExchangeInfrastructureError } from '../../src/managed-identity-exchange/domain/managed-exchange.domain';
+import { ManagedExchangeCredentialError, ManagedExchangeIdentityDeniedError, ManagedExchangeInfrastructureError } from '../../src/managed-identity-exchange/domain/managed-exchange.domain';
 import { DelegatedEndpointPolicy, DelegatedEndpointPolicyError } from '../../src/managed-identity-exchange/providers/delegated-endpoint.policy';
 import { DelegatedHttpTransport } from '../../src/managed-identity-exchange/providers/delegated-http.transport';
 
@@ -119,7 +119,7 @@ describe('Delegated endpoint and HTTP transport (T017/T018/T019)', () => {
   it.each([
     ['redirect', response(302), ManagedExchangeInfrastructureError],
     ['credential rejection', response(401), ManagedExchangeCredentialError],
-    ['forbidden credential', response(403), ManagedExchangeCredentialError],
+    ['forbidden identity', response(403), ManagedExchangeIdentityDeniedError],
     ['unavailable provider', response(503), ManagedExchangeInfrastructureError],
     ['invalid MIME', response(200, 'text/html'), ManagedExchangeInfrastructureError],
     ['malformed JSON', response(200, 'application/json', [Buffer.from('{')]), ManagedExchangeInfrastructureError],
@@ -146,9 +146,9 @@ describe('Delegated endpoint and HTTP transport (T017/T018/T019)', () => {
     await expect(transport({ request: async () => response(200, 'application/json', [jsonOfSize(256 * 1024)]) }).execute(input() as never)).resolves.toBeDefined();
   });
 
-  it('classifies 401/403 as credential failures, never retries network/5xx failures, and redacts secrets', async () => {
+  it('classifies 401 as credential-invalid and 403 as identity-denied without retrying network/5xx failures', async () => {
     await expect(transport({ request: async () => response(401) }).execute(input() as never)).rejects.toBeInstanceOf(ManagedExchangeCredentialError);
-    await expect(transport({ request: async () => response(403) }).execute(input() as never)).rejects.toBeInstanceOf(ManagedExchangeCredentialError);
+    await expect(transport({ request: async () => response(403) }).execute(input() as never)).rejects.toBeInstanceOf(ManagedExchangeIdentityDeniedError);
     const request = jest.fn(async () => { throw new Error(nativeCredential); });
     const failure = await transport({ request }).execute(input() as never).catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(ManagedExchangeInfrastructureError);

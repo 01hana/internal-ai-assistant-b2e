@@ -5,6 +5,7 @@ import {
   type VerifiedAnchor,
   type VerifiedExternalIdentity,
   ManagedExchangeCredentialError,
+  ManagedExchangeIdentityDeniedError,
   ManagedExchangeInfrastructureError
 } from '../domain/managed-exchange.domain';
 import { ProviderContractValidatorRegistry } from '../persistence/managed-contract-registries';
@@ -26,7 +27,7 @@ export class DelegatedHttpV1Adapter implements IdentityProviderAdapter {
       const parsed = parseResponse(response.body, input.providerInstancePolicy.declaredAnchorKinds);
       return createVerifiedExternalIdentity(parsed);
     } catch (error) {
-      if (error instanceof ManagedExchangeCredentialError || error instanceof ManagedExchangeInfrastructureError) throw error;
+      if (error instanceof ManagedExchangeCredentialError || error instanceof ManagedExchangeIdentityDeniedError || error instanceof ManagedExchangeInfrastructureError) throw error;
       throw new ManagedExchangeInfrastructureError();
     }
   }

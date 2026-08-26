@@ -57,8 +57,8 @@
 **Dependencies**: Phase 4.  
 **Completion gate**: `IDX_ERROR_CLASSIFICATION_READY` — 401/403/503 meanings are distinct internally and existing public projector contracts are unchanged.
 
-- [ ] T014 Add failing classified IDX transport/provider tests in `apps/gateway/test/managed-identity-exchange/idx-delegated-provider.spec.ts` for 401 credential invalid, 403 identity denied, 500/503 unavailable, network/deadline/DNS unavailable, and malformed success unavailable. Tests: assert no raw HTTP body/status leaks. Depends on: T012.
-- [ ] T015 Preserve 401/403 distinction in `apps/gateway/src/managed-identity-exchange/providers/delegated-http.transport.ts` and `exchange.service.ts`. Tests: make T014 pass; retain `exchange-error.projector.ts` public 401/403/503 envelopes without IDX diagnostics. Depends on: T014.
+- [x] T014 Add failing classified IDX transport/provider tests in `apps/gateway/test/managed-identity-exchange/idx-delegated-provider.spec.ts` for 401 credential invalid, 403 identity denied, 500/503 unavailable, network/deadline/DNS unavailable, and malformed success unavailable. Tests: assert no raw HTTP body/status leaks. Depends on: T012.
+- [x] T015 Preserve 401/403 distinction in `apps/gateway/src/managed-identity-exchange/providers/delegated-http.transport.ts` and `exchange.service.ts`. Tests: make T014 pass; retain `exchange-error.projector.ts` public 401/403/503 envelopes without IDX diagnostics. Depends on: T014.
 
 ## Phase 6 — Strict IDX MenuDetail Validator
 
