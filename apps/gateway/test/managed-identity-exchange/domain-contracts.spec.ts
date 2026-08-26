@@ -86,7 +86,67 @@ describe('Managed identity exchange domain contracts (T001)', () => {
       expect(body).not.toMatch(/GatewaySigningKey/);
     }
   });
+
+  it('T020 accepts, copies, and deeply freezes only closed IDX semantic menu material', () => {
+    const domain = require(domainPath) as typeof import('../../src/managed-identity-exchange/domain/managed-exchange.domain');
+    const actions = ['read', 'update', 'export', 'approval'];
+    const menu = { menuId: ' SCM_ORDERS ', actions };
+    const menus = [menu, { menuId: 'SCM_ORDERS', actions: ['read'] }];
+    const identity = domain.createVerifiedExternalIdentity({ subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }], trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus } as never });
+
+    expect(identity.trustedPermissionMaterial).toEqual({ kind: 'idx-menu-detail/v1', menus: [{ menuId: 'SCM_ORDERS', actions: ['read', 'update', 'export', 'approval'] }, { menuId: 'SCM_ORDERS', actions: ['read'] }] });
+    const material = identity.trustedPermissionMaterial as unknown as { menus: readonly { menuId: string; actions: readonly string[] }[] };
+    expect(Object.isFrozen(identity.trustedPermissionMaterial)).toBe(true);
+    expect(Object.isFrozen(material.menus)).toBe(true);
+    expect(Object.isFrozen(material.menus[0])).toBe(true);
+    expect(Object.isFrozen(material.menus[0].actions)).toBe(true);
+    actions.push('delete'); menu.menuId = 'MUTATED'; menus.push({ menuId: 'MUTATED', actions: ['read'] });
+    expect(material.menus).toEqual([{ menuId: 'SCM_ORDERS', actions: ['read', 'update', 'export', 'approval'] }, { menuId: 'SCM_ORDERS', actions: ['read'] }]);
+  });
+
+  it('T020 accepts authoritative empty IDX menus and preserves scalar Feature 005 material', () => {
+    const domain = require(domainPath) as typeof import('../../src/managed-identity-exchange/domain/managed-exchange.domain');
+    const empty = domain.createVerifiedExternalIdentity({ subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }], trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [] } as never });
+    const scalar = domain.createVerifiedExternalIdentity({ subject: 'actor-a', anchors: [{ kind: 'tenant', value: 'tenant-a' }], trustedPermissionMaterial: { kind: 'managed-permission-material/v1', reference: 'permission-reference', values: ['orders:read'] } });
+    expect(empty.trustedPermissionMaterial).toEqual({ kind: 'idx-menu-detail/v1', menus: [] });
+    expect(Object.isFrozen((empty.trustedPermissionMaterial as unknown as { menus: unknown[] }).menus)).toBe(true);
+    expect(scalar.trustedPermissionMaterial).toEqual({ kind: 'managed-permission-material/v1', reference: 'permission-reference', values: ['orders:read'] });
+    expect(Object.isFrozen(scalar.trustedPermissionMaterial?.values)).toBe(true);
+  });
+
+  it.each([
+    { kind: 'idx-menu-detail/v1', menus: [], reference: 'x' }, { kind: 'idx-menu-detail/v1', menus: [], values: ['orders:read'] },
+    { kind: 'idx-menu-detail/v1', menus: [], UUID: 'raw' }, { kind: 'idx-menu-detail/v1', menus: [], nativeCredential: 'raw' },
+    { kind: 'idx-menu-detail/v1', menus: [], Authorization: 'Bearer raw' }, { kind: 'idx-menu-detail/v1', menus: [], token: 'raw' },
+    { kind: 'idx-menu-detail/v1', menus: [], claims: {} }, { kind: 'idx-menu-detail/v1', menus: [], body: {} }, { kind: 'idx-menu-detail/v1', menus: [], httpStatus: 200 },
+    { kind: 'idx-menu-detail/v1', menus: [], customerId: 'customer' }, { kind: 'idx-menu-detail/v1', menus: [], integrationId: 'integration' },
+    { kind: 'some-other-provider/v1', menus: [] }, null, [], 'material',
+  ])('T020 rejects closed-material hybrids, wrong kinds, and malformed material %o', (trustedPermissionMaterial) => {
+    expectIdxMaterialFailure(trustedPermissionMaterial);
+  });
+
+  it.each([
+    { menuId: '', actions: ['read'] }, { menuId: '   ', actions: ['read'] }, { menuId: 7, actions: ['read'] }, { menuId: 'BAD\u0000ID', actions: ['read'] },
+    { menuId: 'ORDERS', actions: 'read' }, { menuId: 'ORDERS', actions: [] }, { menuId: 'ORDERS', actions: ['update'] },
+    { menuId: 'ORDERS', actions: ['read', 'read'] }, { menuId: 'ORDERS', actions: ['update', 'read'] }, { menuId: 'ORDERS', actions: ['read', 'approval', 'update'] },
+    { menuId: 'ORDERS', actions: ['read', 'READ'] }, { menuId: 'ORDERS', actions: ['read', 'write'] }, { menuId: 'ORDERS', actions: ['read', null] },
+    { menuId: 'ORDERS', actions: ['read'], UUID_Menu: 'raw' }, null, [], 7,
+  ])('T020 rejects malformed, raw, or non-canonical IDX menu record %o', (menu) => {
+    expectIdxMaterialFailure({ kind: 'idx-menu-detail/v1', menus: [menu] });
+  });
+
+  it('T020 rejects symbol keys and non-plain IDX material objects', () => {
+    const symbolMaterial = { kind: 'idx-menu-detail/v1', menus: [], [Symbol('raw')]: true };
+    const nonPlain = Object.assign(Object.create({ inherited: true }), { kind: 'idx-menu-detail/v1', menus: [] });
+    expectIdxMaterialFailure(symbolMaterial);
+    expectIdxMaterialFailure(nonPlain);
+  });
 });
+
+function expectIdxMaterialFailure(trustedPermissionMaterial: unknown): void {
+  const domain = require(domainPath) as typeof import('../../src/managed-identity-exchange/domain/managed-exchange.domain');
+  expect(() => domain.createVerifiedExternalIdentity({ subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }], trustedPermissionMaterial } as never)).toThrow(domain.ManagedExchangeCredentialError);
+}
 
 function model(schema: string, name: string): string {
   const match = schema.match(new RegExp(`model ${name} \\{([\\s\\S]*?)\\n\\}`));

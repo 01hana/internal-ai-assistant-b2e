@@ -84,8 +84,8 @@
 **Dependencies**: Phase 7.  
 **Completion gate**: `IDX_TRUSTED_MATERIAL_READY` — scalar Feature 005 material remains valid and generic arbitrary provider JSON is impossible.
 
-- [ ] T020 Extend failing domain contract coverage in `apps/gateway/test/managed-identity-exchange/domain-contracts.spec.ts` for `idx-menu-detail/v1` immutability, unknown-key/wrong-kind rejection, forbidden UUID/token/claims/HTTP/Customer/integration fields, and scalar-material regression. Depends on: T019.
-- [ ] T021 Extend `TrustedPermissionMaterial` constructors and validation in `apps/gateway/src/managed-identity-exchange/domain/managed-exchange.domain.ts` with a closed discriminated IDX menu variant. Tests: make T020 pass; freeze nested records/actions and keep provider-specific details out of generic domain callers. Depends on: T020.
+- [x] T020 Extend failing domain contract coverage in `apps/gateway/test/managed-identity-exchange/domain-contracts.spec.ts` for `idx-menu-detail/v1` immutability, unknown-key/wrong-kind rejection, forbidden UUID/token/claims/HTTP/Customer/integration fields, and scalar-material regression. Depends on: T019.
+- [x] T021 Extend `TrustedPermissionMaterial` constructors and validation in `apps/gateway/src/managed-identity-exchange/domain/managed-exchange.domain.ts` with a closed discriminated IDX menu variant. Tests: make T020 pass; freeze nested records/actions and keep provider-specific details out of generic domain callers. Depends on: T020.
 
 ## Phase 9 — `provider_trusted` Permission Mode
 

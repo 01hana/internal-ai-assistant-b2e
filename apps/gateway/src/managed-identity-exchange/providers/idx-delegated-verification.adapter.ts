@@ -35,14 +35,14 @@ export class IdxDelegatedVerificationAdapter implements IdentityProviderAdapter 
       assertIdxAnchorContract(input.providerInstancePolicy.declaredAnchorKinds);
       if (!this.transport) throw new ManagedExchangeInfrastructureError();
       const response = await this.transport.execute(input);
-      this.menuDetailValidator.validate(response.body);
+      const menus = this.menuDetailValidator.validate(response.body);
       const claims = this.parseAcceptedClaims(input.nativeCredential);
       const subject = identifier(claims.sub);
       const user = identifier(claims.UUID_User);
       const organization = identifier(claims.UUID_Company);
       const entry = identifier(claims.UUID_Entry);
       if (subject !== user) throw new ManagedExchangeCredentialError();
-      return createVerifiedExternalIdentity({ subject, organization, anchors: [{ kind: 'idx_entry', value: entry }] });
+      return createVerifiedExternalIdentity({ subject, organization, anchors: [{ kind: 'idx_entry', value: entry }], trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus } });
     } catch (error) {
       if (error instanceof ManagedExchangeCredentialError || error instanceof ManagedExchangeIdentityDeniedError || error instanceof ManagedExchangeInfrastructureError) throw error;
       throw new ManagedExchangeInfrastructureError();

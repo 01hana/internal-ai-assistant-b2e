@@ -74,12 +74,20 @@ type FutureAdapter = new (transport?: { execute(input: unknown): Promise<unknown
 
 describe('IDX post-acceptance identity mapping (T018)', () => {
   it('maps an accepted ES512-header token without kid to the sole IDX identity authority', async () => {
-    const identity = await adapter().verify();
+    const fixture = adapter();
+    const identity = await fixture.verify();
 
-    expect(identity).toEqual({ subject: '60290329-0000-a000-0001-000000000001', organization: '60290329-0000-a000-0001-000000000001', anchors: [{ kind: 'idx_entry', value: '60290329-0000-a001-0001-000000000001' }] });
+    expect(identity).toEqual({ subject: '60290329-0000-a000-0001-000000000001', organization: '60290329-0000-a000-0001-000000000001', anchors: [{ kind: 'idx_entry', value: '60290329-0000-a001-0001-000000000001' }], trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [{ menuId: 'SCM_ORDERS', actions: ['read', 'update', 'export', 'approval'] }] } });
     expect(Object.isFrozen(identity)).toBe(true);
     expect(Object.isFrozen((identity as { anchors: readonly unknown[] }).anchors)).toBe(true);
     expect(Object.isFrozen((identity as { anchors: readonly unknown[] }).anchors[0])).toBe(true);
+    const material = (identity as { trustedPermissionMaterial: { menus: readonly { actions: readonly string[] }[] } }).trustedPermissionMaterial;
+    expect(Object.isFrozen(material)).toBe(true);
+    expect(Object.isFrozen(material.menus)).toBe(true);
+    expect(Object.isFrozen(material.menus[0])).toBe(true);
+    expect(Object.isFrozen(material.menus[0].actions)).toBe(true);
+    expect(fixture.execute).toHaveBeenCalledTimes(1);
+    expect(fixture.validateMenuDetail).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(identity)).not.toMatch(/SUPER_ADMIN|forged-|root:\*|Permissions|UserType|IsAdmin|MenuDetail/i);
   });
 
@@ -147,8 +155,9 @@ describe('IDX post-acceptance identity mapping (T018)', () => {
 function adapter(credential = token(acceptedClaims()), execute: (value: typeof input) => Promise<unknown> = async () => acceptedResponse(), parser?: (credential: string) => Record<string, unknown>) {
   const Adapter = IdxDelegatedVerificationAdapter as unknown as FutureAdapter;
   const executeMock = jest.fn(execute);
-  const value = new Adapter({ execute: executeMock }, new IdxMenuDetailValidator(), parser);
-  return { verify: (providerInstancePolicy: unknown = provider) => value.verify({ ...input, nativeCredential: credential, providerInstancePolicy }), execute: executeMock };
+  const validateMenuDetail = jest.fn((body: unknown) => new IdxMenuDetailValidator().validate(body));
+  const value = new Adapter({ execute: executeMock }, { validate: validateMenuDetail } as unknown as IdxMenuDetailValidator, parser);
+  return { verify: (providerInstancePolicy: unknown = provider) => value.verify({ ...input, nativeCredential: credential, providerInstancePolicy }), execute: executeMock, validateMenuDetail };
 }
 
 function policyFixture() {

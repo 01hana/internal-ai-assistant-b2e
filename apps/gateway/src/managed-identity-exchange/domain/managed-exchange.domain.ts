@@ -10,7 +10,16 @@ export type ExchangePublicErrorCode = typeof EXCHANGE_PUBLIC_ERROR_CODES[number]
 /** Immutable, server-provisioned and validated adapter configuration. It is never browser input or an expression mapper. */
 export type ServerProvisionedContract = Readonly<Record<string, unknown>>;
 export type VerifiedAnchor = Readonly<{ kind: string; value: string }>;
-export type TrustedPermissionMaterial = Readonly<{ kind: string; reference?: string; values?: readonly string[] }>;
+export const IDX_TRUSTED_MENU_ACTIONS = Object.freeze(['read', 'insert', 'update', 'delete', 'print', 'import', 'export', 'copy', 'approval'] as const);
+export type IdxTrustedMenuAction = typeof IDX_TRUSTED_MENU_ACTIONS[number];
+export type ScalarTrustedPermissionMaterial = Readonly<{ kind: string; reference?: string; values?: readonly string[]; menus?: never }>;
+export type IdxMenuDetailTrustedPermissionMaterial = Readonly<{
+  kind: 'idx-menu-detail/v1';
+  menus: readonly Readonly<{ menuId: string; actions: readonly IdxTrustedMenuAction[] }>[];
+  reference?: never;
+  values?: never;
+}>;
+export type TrustedPermissionMaterial = ScalarTrustedPermissionMaterial | IdxMenuDetailTrustedPermissionMaterial;
 export type NormalizedPermission = Readonly<{ subject: string; action: string }>;
 
 export type VerifiedExternalIdentity = Readonly<{
@@ -169,11 +178,45 @@ function optional(key: string, value: string | undefined, ErrorType: new () => E
 }
 
 function optionalMaterial(value: TrustedPermissionMaterial | undefined): Record<string, TrustedPermissionMaterial> {
-  if (!value) return {};
+  if (value === undefined) return {};
+  if (!plainRecord(value)) throw new ManagedExchangeCredentialError();
   const kind = required(value.kind, ManagedExchangeCredentialError);
+  if (kind === 'idx-menu-detail/v1') return { trustedPermissionMaterial: idxMenuMaterial(value) };
+  if (Object.prototype.hasOwnProperty.call(value, 'menus')) throw new ManagedExchangeCredentialError();
   const reference = value.reference === undefined ? undefined : required(value.reference, ManagedExchangeCredentialError);
+  if (value.values !== undefined && !Array.isArray(value.values)) throw new ManagedExchangeCredentialError();
   const values = value.values === undefined ? undefined : Object.freeze(value.values.map((item) => required(item, ManagedExchangeCredentialError)));
   return { trustedPermissionMaterial: Object.freeze({ kind, ...(reference === undefined ? {} : { reference }), ...(values === undefined ? {} : { values }) }) };
+}
+
+function idxMenuMaterial(value: Record<string, unknown>): IdxMenuDetailTrustedPermissionMaterial {
+  if (!exactOwnKeys(value, ['kind', 'menus']) || !Array.isArray(value.menus)) throw new ManagedExchangeCredentialError();
+  const menus = value.menus.map((menu) => {
+    if (!plainRecord(menu) || !exactOwnKeys(menu, ['menuId', 'actions']) || !Array.isArray(menu.actions)) throw new ManagedExchangeCredentialError();
+    const menuId = required(typeof menu.menuId === 'string' ? menu.menuId : undefined, ManagedExchangeCredentialError);
+    const actions: IdxTrustedMenuAction[] = [];
+    let previous = -1;
+    for (const action of menu.actions) {
+      const index = typeof action === 'string' ? IDX_TRUSTED_MENU_ACTIONS.indexOf(action as IdxTrustedMenuAction) : -1;
+      if (index < 0 || index <= previous) throw new ManagedExchangeCredentialError();
+      previous = index;
+      actions.push(action as IdxTrustedMenuAction);
+    }
+    if (actions[0] !== 'read') throw new ManagedExchangeCredentialError();
+    return Object.freeze({ menuId, actions: Object.freeze(actions) });
+  });
+  return Object.freeze({ kind: 'idx-menu-detail/v1', menus: Object.freeze(menus) });
+}
+
+function exactOwnKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
+  const keys = Reflect.ownKeys(value);
+  return keys.length === expected.length && keys.every((key) => typeof key === 'string' && expected.includes(key));
+}
+
+function plainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 function required(value: string | undefined, ErrorType: new () => Error): string {

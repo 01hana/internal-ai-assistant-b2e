@@ -20,7 +20,7 @@ const fixturePath = resolve(__dirname, './fixtures/synthetic-idx-permission-norm
 const projectionContract = Object.freeze({ scopeSchema: 'managed-normalized-scopes/v1' });
 
 describe('Synthetic IDX permission normalizer fixture (T028)', () => {
-  it('T003 EXPECTED_RED: retains only immutable semantic IDX MenuDetail material', () => {
+  it('T020 retains only immutable semantic IDX MenuDetail material', () => {
     const identity = createVerifiedExternalIdentity({
       subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }],
       trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [{ menuId: 'ORDERS', actions: ['read', 'update'] }] } as unknown as TrustedPermissionMaterial
@@ -34,7 +34,7 @@ describe('Synthetic IDX permission normalizer fixture (T028)', () => {
   it.each([
     { UUID: 'idx-uuid' }, { nativeAccessToken: 'token' }, { authorization: 'Bearer token' }, { claims: { sub: 'actor-a' } },
     { response: { status: 200 } }, { customerId: 'customer-a' }, { integrationId: 'integration-a' }, { metadata: { arbitrary: true } }
-  ])('T003 EXPECTED_RED: rejects forbidden IDX material authority %o', (forbidden) => {
+  ])('T020 rejects forbidden IDX material authority %o', (forbidden) => {
     expect(() => createVerifiedExternalIdentity({
       subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }],
       trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [], ...forbidden } as unknown as TrustedPermissionMaterial
