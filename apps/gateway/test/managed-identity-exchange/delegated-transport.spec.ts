@@ -12,6 +12,12 @@ const provider = (overrides: Record<string, unknown> = {}) => ({
   declaredAnchorKinds: Object.freeze(['organization']), providerContract: Object.freeze({ anchorSchema: 'managed-verified-anchors/v1', responseSchema: 'managed-verified-identity/v1' }), ...overrides
 });
 const input = (overrides: Record<string, unknown> = {}) => ({ nativeCredential, providerInstancePolicy: provider(), requestId: 'request-a', ...overrides });
+const getProvider = (overrides: Record<string, unknown> = {}) => ({
+  id: 'provider-get', providerType: 'idx_delegated', endpointUri: 'https://provider.example.test/menu-detail', httpMethod: 'GET',
+  credentialPlacement: 'authorization_bearer', timeoutMilliseconds: 1_000, responseContractVersion: 'idx-menu-detail/v1',
+  declaredAnchorKinds: Object.freeze(['idx_entry']), providerContract: Object.freeze({ responseSchema: 'idx-menu-detail/v1', contentType: 'application/json' }), ...overrides
+});
+const getInput = (overrides: Record<string, unknown> = {}) => ({ nativeCredential, providerInstancePolicy: getProvider(), requestId: 'request-get', ...overrides });
 const response = (statusCode = 200, contentType: string | string[] = 'application/json', chunks: readonly Uint8Array[] = [Buffer.from('{"opaque":true}')], dispose = jest.fn()) => ({ statusCode, headers: { 'content-type': contentType }, body: (async function* () { yield* chunks; })(), dispose });
 
 describe('Delegated endpoint and HTTP transport (T017/T018/T019)', () => {
@@ -65,6 +71,42 @@ describe('Delegated endpoint and HTTP transport (T017/T018/T019)', () => {
     });
     await expect(transport({ request }).execute(input() as never)).resolves.toEqual({ status: 200, contentType: 'application/json', body: { opaque: true } });
     expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('T011: executes the validated stored GET method with one opaque bearer credential and no browser headers', async () => {
+    const request = jest.fn(async (_url, options) => {
+      expect(options.method).toBe('GET');
+      expect(options.headers).toEqual({ accept: 'application/json', authorization: `Bearer ${nativeCredential}` });
+      expect(Object.keys(options.headers)).not.toEqual(expect.arrayContaining(['cookie', 'x-forwarded-for', 'origin', 'referer', 'user-agent']));
+      await options.lookup('provider.example.test');
+      return response();
+    });
+    await expect(transport({ request }).execute(getInput() as never)).resolves.toEqual({ status: 200, contentType: 'application/json', body: { opaque: true } });
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('T011: applies DNS, response safety, deadline, disposal, and no-retry protections to GET', async () => {
+    const unsafe = jest.fn(async () => response());
+    await expect(transport({ resolve: async () => ['127.0.0.1'], request: unsafe }).execute(getInput() as never)).rejects.toBeInstanceOf(ManagedExchangeInfrastructureError);
+    expect(unsafe).not.toHaveBeenCalled();
+
+    const rebindResolve = jest.fn().mockResolvedValueOnce(['8.8.8.8']).mockResolvedValueOnce(['127.0.0.1']);
+    const rebindRequest = jest.fn(async (url, options) => { await options.lookup(url.hostname); return response(); });
+    await expect(transport({ resolve: rebindResolve, request: rebindRequest }).execute(getInput() as never)).rejects.toBeInstanceOf(ManagedExchangeInfrastructureError);
+    expect(rebindRequest).toHaveBeenCalledTimes(1);
+
+    for (const unsafeResponse of [response(302), response(200, 'text/html'), response(200, 'application/json', [Buffer.from('{')]), response(200, 'application/json', [Buffer.alloc(256 * 1024 + 1)])]) {
+      await expect(transport({ request: async () => unsafeResponse }).execute(getInput() as never)).rejects.toBeInstanceOf(ManagedExchangeInfrastructureError);
+      expect(unsafeResponse.dispose).toHaveBeenCalledTimes(1);
+    }
+
+    const unavailable = jest.fn(async () => response(503));
+    await expect(transport({ request: unavailable }).execute(getInput() as never)).rejects.toBeInstanceOf(ManagedExchangeInfrastructureError);
+    expect(unavailable).toHaveBeenCalledTimes(1);
+    const network = jest.fn(async () => { throw new Error(nativeCredential); });
+    await expect(transport({ request: network }).execute(getInput() as never)).rejects.toBeInstanceOf(ManagedExchangeInfrastructureError);
+    expect(network).toHaveBeenCalledTimes(1);
+    await expect(transport({ timeoutMs: 10, resolve: () => new Promise(() => {}) }).execute(getInput() as never)).rejects.toBeInstanceOf(ManagedExchangeInfrastructureError);
   });
 
   it.each([

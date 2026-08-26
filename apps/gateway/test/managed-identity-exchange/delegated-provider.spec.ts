@@ -7,6 +7,7 @@ import {
 import { DelegatedHttpV1Adapter } from '../../src/managed-identity-exchange/providers/delegated-http-v1.adapter';
 import { IdentityProviderAdapterRegistry } from '../../src/managed-identity-exchange/providers/identity-provider-adapter.registry';
 import { IdxDelegatedVerificationAdapter } from '../../src/managed-identity-exchange/providers/idx-delegated-verification.adapter';
+import { ManagedExchangeActivationValidator } from '../../src/managed-identity-exchange/persistence/managed-exchange-activation.validator';
 
 const nativeCredential = 'DO_NOT_LEAK_NATIVE_SECRET';
 const rawSentinel = 'DO_NOT_LEAK_RAW_RESPONSE';
@@ -21,6 +22,12 @@ const response = (body: unknown) => ({ status: 200 as const, contentType: 'appli
 const body = (overrides: Record<string, unknown> = {}) => ({ subject: 'actor-a', anchors: [{ kind: 'organization', value: 'org-a' }], ...overrides });
 
 describe('Delegated HTTP V1 adapter (T020A)', () => {
+  it('T013: retains the generic delegated POST-only registered provider contract', () => {
+    const activation = new ManagedExchangeActivationValidator();
+    expect(activation.validateProvider({ ...policy(), contractConfig: policy().providerContract })).toMatchObject({ providerType: 'delegated_http', httpMethod: 'POST' });
+    expect(() => activation.validateProvider({ ...policy(), httpMethod: 'GET', contractConfig: policy().providerContract })).toThrow();
+  });
+
   it('resolves only the fixed delegated adapter without invoking verification', () => {
     const adapter = new DelegatedHttpV1Adapter(successful(body()) as never);
     const verify = jest.spyOn(adapter, 'verify');

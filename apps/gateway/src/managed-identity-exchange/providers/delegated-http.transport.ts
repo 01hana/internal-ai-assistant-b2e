@@ -8,7 +8,7 @@ export const DELEGATED_HTTP_MAX_RESPONSE_BYTES = 256 * 1024;
 export const DELEGATED_HTTP_MAX_DEADLINE_MS = 5_000;
 export type DelegatedHttpResponse = Readonly<{ status: 200; contentType: 'application/json'; body: unknown }>;
 export type DelegatedHttpRequestOptions = Readonly<{
-  method: 'POST';
+  method: 'POST' | 'GET';
   headers: Readonly<{ accept: 'application/json'; authorization: string }>;
   lookup(hostname: string): Promise<readonly string[]>;
   signal: AbortSignal;
@@ -46,10 +46,11 @@ export class DelegatedHttpTransport {
     const controller = new AbortController();
     try {
       const url = this.endpoints.validate(input.providerInstancePolicy);
+      const method = storedMethod(input.providerInstancePolicy.httpMethod);
       const configuredDeadline = input.providerInstancePolicy.timeoutMilliseconds;
       const timeoutMs = Math.min(configuredDeadline, this.dependencies.timeoutMs ?? configuredDeadline);
       if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > DELEGATED_HTTP_MAX_DEADLINE_MS) throw new ManagedExchangeInfrastructureError();
-      return await deadline(this.executeBounded(url, input.nativeCredential, controller.signal), timeoutMs, controller, this.setTimer, this.clearTimer);
+      return await deadline(this.executeBounded(url, input.nativeCredential, method, controller.signal), timeoutMs, controller, this.setTimer, this.clearTimer);
     } catch (error) {
       controller.abort();
       if (error instanceof ManagedExchangeCredentialError || error instanceof ManagedExchangeInfrastructureError) throw error;
@@ -57,12 +58,12 @@ export class DelegatedHttpTransport {
     }
   }
 
-  private async executeBounded(url: URL, credential: string, signal: AbortSignal): Promise<DelegatedHttpResponse> {
+  private async executeBounded(url: URL, credential: string, method: DelegatedHttpRequestOptions['method'], signal: AbortSignal): Promise<DelegatedHttpResponse> {
     let response: RawResponse | undefined;
     try {
       assertPublicDestination(await abortable(this.resolve(url.hostname), signal));
       response = await this.request(url, {
-        method: 'POST',
+        method,
         headers: Object.freeze({ accept: 'application/json', authorization: `Bearer ${credential}` }),
         lookup: async (hostname) => {
           const addresses = await abortable(this.resolve(hostname), signal);
@@ -80,6 +81,11 @@ export class DelegatedHttpTransport {
       throw error instanceof ManagedExchangeCredentialError ? error : new ManagedExchangeInfrastructureError();
     }
   }
+}
+
+function storedMethod(value: unknown): DelegatedHttpRequestOptions['method'] {
+  if (value === 'POST' || value === 'GET') return value;
+  throw new ManagedExchangeInfrastructureError();
 }
 
 async function nodeRequest(url: URL, options: DelegatedHttpRequestOptions): Promise<RawResponse> {

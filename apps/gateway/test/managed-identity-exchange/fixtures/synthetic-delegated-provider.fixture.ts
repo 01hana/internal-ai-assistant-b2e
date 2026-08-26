@@ -41,6 +41,7 @@ export function createSyntheticDelegatedProviderFixture(scenario: SyntheticDeleg
   const transport = new DelegatedHttpTransport({
     resolve: async () => ['8.8.8.8'],
     request: async (url: URL, options: DelegatedHttpRequestOptions) => {
+      if (options.method !== 'POST') throw new Error('Synthetic generic provider accepts POST only.');
       lastSignal = options.signal;
       requests.push(Object.freeze({
         endpoint: url.toString(), method: options.method, accept: options.headers.accept,

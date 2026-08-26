@@ -47,9 +47,9 @@
 **Dependencies**: Phase 3.  
 **Completion gate**: `IDX_GET_TRANSPORT_READY` — one registered IDX GET request is safe; generic delegated POST protections and behavior are unchanged.
 
-- [ ] T011 Add failing GET transport/security regression cases in `apps/gateway/test/managed-identity-exchange/delegated-transport.spec.ts`. Tests: method, one bearer forward/no retry, unsafe destination, redirect, bad content type, oversized body, deadline, DNS/rebinding, and POST regression. Depends on: T010.
-- [ ] T012 Extend request-method typing and execution in `apps/gateway/src/managed-identity-exchange/providers/delegated-http.transport.ts` to use only the validated stored GET/POST method. Tests: make T011 pass while preserving HTTPS, pre-request DNS, connection-time DNS, 256 KiB cap, ≤5s deadline, JSON-only response, and one-send semantics. Depends on: T011.
-- [ ] T013 Update `apps/gateway/src/managed-identity-exchange/providers/delegated-http-v1.adapter.ts` regression coverage in `delegated-provider.spec.ts` so existing `delegated_http/v1` remains POST-only and unaffected by IDX GET capability. Tests: all generic provider contract assertions stay green. Depends on: T012.
+- [x] T011 Add failing GET transport/security regression cases in `apps/gateway/test/managed-identity-exchange/delegated-transport.spec.ts`. Tests: method, one bearer forward/no retry, unsafe destination, redirect, bad content type, oversized body, deadline, DNS/rebinding, and POST regression. Depends on: T010.
+- [x] T012 Extend request-method typing and execution in `apps/gateway/src/managed-identity-exchange/providers/delegated-http.transport.ts` to use only the validated stored GET/POST method. Tests: make T011 pass while preserving HTTPS, pre-request DNS, connection-time DNS, 256 KiB cap, ≤5s deadline, JSON-only response, and one-send semantics. Depends on: T011.
+- [x] T013 Update `apps/gateway/src/managed-identity-exchange/providers/delegated-http-v1.adapter.ts` regression coverage in `delegated-provider.spec.ts` so existing `delegated_http/v1` remains POST-only and unaffected by IDX GET capability. Tests: all generic provider contract assertions stay green. Depends on: T012.
 
 ## Phase 5 — Internal Provider Error Classification
 
