@@ -7,7 +7,9 @@ type RegisteredProviderEndpoint = Pick<ProviderInstancePolicy,
 /** Fixed V1 provider endpoint and request-shape policy. */
 export class DelegatedEndpointPolicy {
   validate(input: RegisteredProviderEndpoint): URL {
-    if (input.providerType !== 'delegated_http' || input.httpMethod !== 'POST' || input.credentialPlacement !== 'authorization_bearer' || input.responseContractVersion !== 'delegated-http/v1' || !Number.isInteger(input.timeoutMilliseconds) || input.timeoutMilliseconds < 1 || input.timeoutMilliseconds > 5_000) {
+    const generic = input.providerType === 'delegated_http' && input.httpMethod === 'POST' && input.responseContractVersion === 'delegated-http/v1';
+    const idx = input.providerType === 'idx_delegated' && input.httpMethod === 'GET' && input.responseContractVersion === 'idx-menu-detail/v1';
+    if ((!generic && !idx) || input.credentialPlacement !== 'authorization_bearer' || !Number.isInteger(input.timeoutMilliseconds) || input.timeoutMilliseconds < 1 || input.timeoutMilliseconds > 5_000) {
       throw new DelegatedEndpointPolicyError();
     }
     try {

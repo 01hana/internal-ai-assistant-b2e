@@ -37,9 +37,9 @@
 **Dependencies**: Phase 2.  
 **Completion gate**: `IDX_PROVIDER_CONTRACT_READY` — exact IDX configuration is accepted; near misses fail closed; generic delegated POST is unchanged.
 
-- [ ] T008 Extend closed provider contract registry coverage in `apps/gateway/test/managed-identity-exchange/idx-provider-contract.spec.ts` for IDX response version, JSON contract, and sole `idx_entry` declaration. Tests: reject arbitrary methods, anchor kinds, JSONPath/expressions, dynamic headers, and Customer-specific values. Depends on: T007.
-- [ ] T009 Extend `apps/gateway/src/managed-identity-exchange/persistence/managed-contract-registries.ts` with the fixed `idx-menu-detail/v1` validator and active eligibility. Tests: make T008 pass without broadening generic contract registration. Depends on: T008.
-- [ ] T010 Extend `apps/gateway/src/managed-identity-exchange/persistence/managed-exchange-activation.validator.ts` and `providers/delegated-endpoint.policy.ts` to validate exactly the IDX GET/bearer/HTTPS tuple. Tests: add activation/provider-policy negatives in `idx-provider-contract.spec.ts`; no hardcoded endpoint, selector, Entry, Customer, or SCM value. Depends on: T009.
+- [x] T008 Extend closed provider contract registry coverage in `apps/gateway/test/managed-identity-exchange/idx-provider-contract.spec.ts` for IDX response version, JSON contract, and sole `idx_entry` declaration. Tests: reject arbitrary methods, anchor kinds, JSONPath/expressions, dynamic headers, and Customer-specific values. Depends on: T007.
+- [x] T009 Extend `apps/gateway/src/managed-identity-exchange/persistence/managed-contract-registries.ts` with the fixed `idx-menu-detail/v1` validator and active eligibility. Tests: make T008 pass without broadening generic contract registration. Depends on: T008.
+- [x] T010 Extend `apps/gateway/src/managed-identity-exchange/persistence/managed-exchange-activation.validator.ts` and `providers/delegated-endpoint.policy.ts` to validate exactly the IDX GET/bearer/HTTPS tuple. Tests: add activation/provider-policy negatives in `idx-provider-contract.spec.ts`; no hardcoded endpoint, selector, Entry, Customer, or SCM value. Depends on: T009.
 
 ## Phase 4 — Safe GET Delegated Transport
 

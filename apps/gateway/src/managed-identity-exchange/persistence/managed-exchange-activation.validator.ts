@@ -12,16 +12,18 @@ export class ManagedExchangeActivationValidator {
   validateProvider(input: Readonly<Record<string, unknown>>, requirePersistedId = true): ProviderInstancePolicy {
     const endpointUri = https(input.endpointUri);
     const type = required(input.providerType);
-    if (input.httpMethod !== 'POST' || input.credentialPlacement !== 'authorization_bearer') throw new ManagedExchangeActivationError();
+    const httpMethod = providerMethod(type);
+    if (input.httpMethod !== httpMethod || input.credentialPlacement !== 'authorization_bearer') throw new ManagedExchangeActivationError();
     const timeoutMilliseconds = input.timeoutMilliseconds;
     if (!Number.isInteger(timeoutMilliseconds) || typeof timeoutMilliseconds !== 'number' || timeoutMilliseconds < 1 || timeoutMilliseconds > 5_000) throw new ManagedExchangeActivationError();
     const responseContractVersion = required(input.responseContractVersion);
     const declaredAnchorKinds = strings(input.declaredAnchorKinds, true);
     if (new Set(declaredAnchorKinds).size !== declaredAnchorKinds.length) throw new ManagedExchangeActivationError();
+    if (type === 'idx_delegated' && (declaredAnchorKinds.length !== 1 || declaredAnchorKinds[0] !== 'idx_entry')) throw new ManagedExchangeActivationError();
     const providerContract = contract(input.contractConfig);
     this.providers.validate(type, responseContractVersion, providerContract);
-    try { this.endpoints.validate({ providerType: type, endpointUri, httpMethod: 'POST', credentialPlacement: 'authorization_bearer', timeoutMilliseconds, responseContractVersion }); } catch { throw new ManagedExchangeActivationError(); }
-    return Object.freeze({ id: requirePersistedId ? required(input.id) : optionalId(input.id), providerType: type, endpointUri, httpMethod: 'POST', credentialPlacement: 'authorization_bearer', timeoutMilliseconds, responseContractVersion, declaredAnchorKinds: Object.freeze(declaredAnchorKinds), providerContract });
+    try { this.endpoints.validate({ providerType: type, endpointUri, httpMethod, credentialPlacement: 'authorization_bearer', timeoutMilliseconds, responseContractVersion }); } catch { throw new ManagedExchangeActivationError(); }
+    return Object.freeze({ id: requirePersistedId ? required(input.id) : optionalId(input.id), providerType: type, endpointUri, httpMethod, credentialPlacement: 'authorization_bearer', timeoutMilliseconds, responseContractVersion, declaredAnchorKinds: Object.freeze(declaredAnchorKinds), providerContract });
   }
 
   validateAdmission(requirements: unknown): void {
@@ -74,6 +76,11 @@ function contract(value: unknown): ServerProvisionedContract {
   const serialized = JSON.stringify(value).toLowerCase();
   if (/jsonpath|\$\.|expression|\beval\b|browser/.test(serialized)) throw new ManagedExchangeActivationError();
   return Object.freeze({ ...value });
+}
+function providerMethod(type: string): 'POST' | 'GET' {
+  if (type === 'delegated_http') return 'POST';
+  if (type === 'idx_delegated') return 'GET';
+  throw new ManagedExchangeActivationError();
 }
 function https(value: unknown): string { const text = required(value); try { const url = new URL(text); if (url.protocol !== 'https:' || url.username || url.password || url.hash) throw new Error(); return url.toString(); } catch { throw new ManagedExchangeActivationError(); } }
 function strings(value: unknown, nonEmpty: boolean): string[] { if (!Array.isArray(value) || (nonEmpty && value.length === 0)) throw new ManagedExchangeActivationError(); return value.map(required); }

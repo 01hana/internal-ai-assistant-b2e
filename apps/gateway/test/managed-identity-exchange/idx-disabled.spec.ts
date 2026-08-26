@@ -10,9 +10,9 @@ import { IdxDelegatedVerificationAdapter } from '../../src/managed-identity-exch
 
 const nativeCredential = 'DO_NOT_LEAK_NATIVE_SECRET';
 const idxProvider = (overrides: Record<string, unknown> = {}) => ({
-  id: 'provider-idx', providerType: 'idx_delegated', endpointUri: 'https://idx.example.test/verify', httpMethod: 'POST',
-  credentialPlacement: 'authorization_bearer', timeoutMilliseconds: 1_000, responseContractVersion: 'idx-delegated/v1',
-  declaredAnchorKinds: ['organization'], contractConfig: { anchorSchema: 'managed-verified-anchors/v1', responseSchema: 'managed-verified-identity/v1' }, ...overrides
+  id: 'provider-idx', providerType: 'idx_delegated', endpointUri: 'https://idx.example.test/menu-detail', httpMethod: 'GET',
+  credentialPlacement: 'authorization_bearer', timeoutMilliseconds: 1_000, responseContractVersion: 'idx-menu-detail/v1',
+  declaredAnchorKinds: ['idx_entry'], contractConfig: { responseSchema: 'idx-menu-detail/v1', contentType: 'application/json' }, ...overrides
 });
 
 describe('Disabled IDX adapter shell (T021)', () => {
@@ -34,11 +34,11 @@ describe('Disabled IDX adapter shell (T021)', () => {
     expect(registry.resolve('unknown')).toBeUndefined();
   });
 
-  it('remains ineligible for provider contracts, activation, and readiness', async () => {
+  it('registers the fixed provider contract while the adapter and readiness remain disabled', async () => {
     const contracts = new ProviderContractValidatorRegistry();
-    expect(contracts.isActiveEligible('idx_delegated', 'idx-delegated/v1')).toBe(false);
-    expect(() => contracts.validate('idx_delegated', 'idx-delegated/v1', idxProvider().contractConfig)).toThrow();
-    expect(() => new ManagedExchangeActivationValidator().validateProvider(idxProvider())).toThrow();
+    expect(contracts.isActiveEligible('idx_delegated', 'idx-menu-detail/v1')).toBe(true);
+    expect(() => contracts.validate('idx_delegated', 'idx-menu-detail/v1', idxProvider().contractConfig)).not.toThrow();
+    expect(() => new ManagedExchangeActivationValidator().validateProvider(idxProvider())).not.toThrow();
     await expect(readinessWithIdx().assertReady('integration-a')).rejects.toThrow();
   });
 
@@ -51,10 +51,9 @@ describe('Disabled IDX adapter shell (T021)', () => {
       credentialPlacement: 'authorization_bearer', timeoutMilliseconds: 1_000, responseContractVersion: 'delegated-http/v1',
       declaredAnchorKinds: ['organization'], contractConfig: { anchorSchema: 'managed-verified-anchors/v1', responseSchema: 'managed-verified-identity/v1' }
     })).toMatchObject({ providerType: 'delegated_http' });
-    expect(() => activation.validateProvider(idxProvider())).toThrow();
+    expect(activation.validateProvider(idxProvider())).toMatchObject({ providerType: 'idx_delegated', httpMethod: 'GET' });
     expect(() => activation.validateProvider(idxProvider({ providerType: 'unknown_provider' }))).toThrow();
-    expect(validate).toHaveBeenCalledWith('idx_delegated', 'idx-delegated/v1', expect.any(Object));
-    expect(validate).toHaveBeenCalledWith('unknown_provider', 'idx-delegated/v1', expect.any(Object));
+    expect(validate).toHaveBeenCalledWith('idx_delegated', 'idx-menu-detail/v1', expect.any(Object));
     const source = readFileSync(resolve(__dirname, '../../src/managed-identity-exchange/persistence/managed-exchange-activation.validator.ts'), 'utf8');
     expect(source).not.toMatch(/\['delegated_http', 'idx_delegated'\]|delegated_http.*idx_delegated/i);
   });

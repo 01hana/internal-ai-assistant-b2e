@@ -13,8 +13,8 @@ const delegated = () => ({
   declaredAnchorKinds: ['organization'], contractConfig: { anchorSchema: 'managed-verified-anchors/v1', responseSchema: 'managed-verified-identity/v1' }
 });
 
-describe('Feature 006 IDX provider contract — failing-first (T001)', () => {
-  it('T001 EXPECTED_RED: accepts the exact future IDX GET/MenuDetail tuple after Feature 006 is implemented', () => {
+describe('Feature 006 IDX provider contract (T008/T009/T010)', () => {
+  it('T008: accepts the exact registered IDX GET/MenuDetail tuple for any server-provisioned safe HTTPS endpoint', () => {
     const contracts = new ProviderContractValidatorRegistry();
     const provider = idx({ endpointUri: 'https://browser.example.test/menu-detail' });
     expect(() => contracts.validate('idx_delegated', 'idx-menu-detail/v1', provider.contractConfig)).not.toThrow();
@@ -29,8 +29,12 @@ describe('Feature 006 IDX provider contract — failing-first (T001)', () => {
     { contractConfig: { responseSchema: 'idx-menu-detail/v1', expression: '$.Data' } },
     { contractConfig: { responseSchema: 'idx-menu-detail/v1', headers: { authorization: 'browser' } } },
     { contractConfig: { responseSchema: 'idx-menu-detail/v1', endpointOverride: 'https://browser-controlled.example.test/menu-detail' } },
-    { contractConfig: { responseSchema: 'idx-menu-detail/v1', customerId: 'customer-a' } }
-  ])('T001 ALREADY_GREEN_SECURITY_REGRESSION: keeps IDX near-miss configuration fail-closed: %o', (overrides) => {
+    { contractConfig: { responseSchema: 'idx-menu-detail/v1', endpointFromRequest: true } },
+    { contractConfig: { responseSchema: 'idx-menu-detail/v1', dynamicEndpoint: true } },
+    { contractConfig: { responseSchema: 'idx-menu-detail/v1', customerId: 'customer-a' } },
+    { contractConfig: { responseSchema: 'idx-menu-detail/v1', unexpected: true } },
+    { contractConfig: null }, { contractConfig: [] }, { contractConfig: 'idx-menu-detail/v1' }
+  ])('T008: rejects IDX near-miss configuration: %o', (overrides) => {
     expect(() => new ManagedExchangeActivationValidator().validateProvider(idx(overrides))).toThrow();
   });
 

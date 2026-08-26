@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 describe('Feature 006 additive enum and persistence contract — failing-first (T002)', () => {
   const schema = () => readFileSync(resolve(__dirname, '../../../../prisma/schema.prisma'), 'utf8');
 
-  it('T002 EXPECTED_RED: declares GET and provider_trusted while retaining every existing enum value', () => {
+  it('T002: declares GET and provider_trusted while retaining every existing enum value', () => {
     const value = schema();
     expect(value).toMatch(/enum ManagedHttpMethod\s*\{[^}]*\bPOST\b[^}]*\bGET\b[^}]*\}/s);
     expect(value).toMatch(/enum ManagedPermissionMode\s*\{[^}]*\ballow_empty\b[^}]*\brequired\b[^}]*\bprovider_trusted\b[^}]*\}/s);

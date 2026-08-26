@@ -127,7 +127,8 @@ describe('Delegated endpoint and HTTP transport (T017/T018/T019)', () => {
   it('has no production bypass, identity mapping, or forbidden authorities', () => {
     const endpointSource = readFileSync(resolve(__dirname, '../../src/managed-identity-exchange/providers/delegated-endpoint.policy.ts'), 'utf8');
     const transportSource = readFileSync(resolve(__dirname, '../../src/managed-identity-exchange/providers/delegated-http.transport.ts'), 'utf8');
-    expect(`${endpointSource}\n${transportSource}`).not.toMatch(/Customer|CustomerScope|IntegrationBinding|PageContext|IDX|ES512|UserType|IsAdmin|decodeJwt|canonicalize|issue\(/i);
+    expect(endpointSource).not.toMatch(/Customer|CustomerScope|IntegrationBinding|PageContext|ES512|UserType|IsAdmin|decodeJwt|canonicalize|issue\(/i);
+    expect(transportSource).not.toMatch(/Customer|CustomerScope|IntegrationBinding|PageContext|IDX|ES512|UserType|IsAdmin|decodeJwt|canonicalize|issue\(/i);
     expect(transportSource).not.toMatch(/ALLOW_PRIVATE|ALLOW_LOCALHOST|allowTestLoopback|retry/i);
   });
 });
