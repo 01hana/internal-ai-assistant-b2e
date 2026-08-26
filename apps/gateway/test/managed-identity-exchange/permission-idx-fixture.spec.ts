@@ -103,14 +103,16 @@ describe('Synthetic IDX permission normalizer fixture (T028)', () => {
     expect(fixture.project).not.toHaveBeenCalled();
   });
 
-  it('keeps the fixture synthetic and Phase 9 production permission code authority-free', () => {
+  it('keeps the fixture synthetic and Phase 10 production permission code authority-free', () => {
     const fixture = readFileSync(fixturePath, 'utf8');
     expect(fixture).not.toMatch(/UUID|SCM|menu|Customer|UserType|IsAdmin|nativeCredential|Authorization|PageContext|endpoint|secret|dynamic mapping|roles/i);
 
     const production = permissionSources(permissionDirectory).map((path) => readFileSync(path, 'utf8')).join('\n');
     expect(production).toMatch(/idx-menu-detail\/v1/);
     expect(production).not.toMatch(/SCM|UUID|UserType|IsAdmin|Customer|CustomerScope|IntegrationBinding|nativeCredential|Authorization|AccessToken|RefreshToken|raw.?JWT|PageContext|ManagedTokenIssuer|GatewaySigningKey/i);
-    expect(existsSync(productionIdxNormalizerPath)).toBe(false);
+    expect(existsSync(productionIdxNormalizerPath)).toBe(true);
+    const idxNormalizer = readFileSync(productionIdxNormalizerPath, 'utf8');
+    expect(idxNormalizer).not.toMatch(/UUID|UUID_Menu|MenuPermission|MenuNode|Patrilineal|Category|Sorting|Memo|UserType|IsAdmin|Permissions|Permission_Hash|Customer|CustomerScope|IntegrationBinding|nativeCredential|Authorization|AccessToken|RefreshToken|raw.?JWT|DelegatedHttpTransport|IdxDelegatedVerificationAdapter|VerifyNativeCredentialInput|PermissionSource|ManagedTokenIssuer|GatewaySigningKey|roles/i);
   });
 });
 

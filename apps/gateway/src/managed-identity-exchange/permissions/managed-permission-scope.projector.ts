@@ -15,7 +15,7 @@ export class ManagedPermissionScopeProjector {
       const scopes: string[] = [];
       for (const permission of permissions) {
         if (!record(permission) || !exact(permission, PERMISSION_KEYS)) throw new ManagedExchangeIdentityDeniedError();
-        const scope = `${segment(permission.subject)}:${segment(permission.action)}`;
+        const scope = `${subject(permission.subject)}:${segment(permission.action)}`;
         if (!seen.has(scope)) {
           seen.add(scope);
           scopes.push(scope);
@@ -28,14 +28,32 @@ export class ManagedPermissionScopeProjector {
   }
 }
 
+function subject(value: unknown): string {
+  if (typeof value !== 'string' || !value.includes(':')) return segment(value);
+  const parts = value.split(':');
+  if (parts.length !== 2 || parts[0] !== 'menu') throw new ManagedExchangeIdentityDeniedError();
+  return `menu:${canonicalSegment(parts[1])}`;
+}
+
+function canonicalSegment(value: unknown): string {
+  if (typeof value !== 'string' || value.length === 0 || value !== value.trim() || value.includes(':') || control(value)) {
+    throw new ManagedExchangeIdentityDeniedError();
+  }
+  return value;
+}
+
 function segment(value: unknown): string {
   if (typeof value !== 'string') throw new ManagedExchangeIdentityDeniedError();
   const normalized = value.trim();
-  if (!normalized || normalized.includes(':') || [...normalized].some((character) => {
+  if (!normalized || normalized.includes(':') || control(normalized)) throw new ManagedExchangeIdentityDeniedError();
+  return normalized;
+}
+
+function control(value: string): boolean {
+  return [...value].some((character) => {
     const code = character.codePointAt(0) ?? 0;
     return code <= 31 || code === 127;
-  })) throw new ManagedExchangeIdentityDeniedError();
-  return normalized;
+  });
 }
 
 function record(value: unknown): value is Record<string, unknown> {

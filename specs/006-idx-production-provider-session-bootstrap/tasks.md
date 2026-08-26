@@ -103,9 +103,9 @@
 **Dependencies**: Phase 9.  
 **Completion gate**: `IDX_PERMISSION_NORMALIZATION_READY` — scopes are exact, ordered, deduplicated, and free of opaque IDX/Customer/role identifiers.
 
-- [ ] T025 Add failing IDX normalizer cases in `apps/gateway/test/managed-identity-exchange/permission-normalization.spec.ts`. Tests: implicit read, each Y operation, all-N menu, duplicates, multiple MenuIDs, fixed ordering, invalid material, and generic projector output. Depends on: T024.
-- [ ] T026 Implement `apps/gateway/src/managed-identity-exchange/permissions/idx-menu-detail.permission-normalizer.ts`. Tests: sort MenuID then `read, insert, update, delete, print, import, export, copy, approval`; emit existing `NormalizedPermission` only and reject wrong kind. Depends on: T025.
-- [ ] T027 Verify exact `menu:<MenuID>:<action>` projection through `apps/gateway/src/managed-identity-exchange/permissions/managed-permission-scope.projector.ts` and `permission-normalization.spec.ts`. Tests: no IDX UUID, Customer ID, integration ID, UserType, or IsAdmin in scopes; do not add an IDX-specific projector. Depends on: T026.
+- [x] T025 Add failing IDX normalizer cases in `apps/gateway/test/managed-identity-exchange/permission-normalization.spec.ts`. Tests: implicit read, each Y operation, all-N menu, duplicates, multiple MenuIDs, fixed ordering, invalid material, and generic projector output. Depends on: T024.
+- [x] T026 Implement `apps/gateway/src/managed-identity-exchange/permissions/idx-menu-detail.permission-normalizer.ts`. Tests: sort MenuID then `read, insert, update, delete, print, import, export, copy, approval`; emit existing `NormalizedPermission` only and reject wrong kind. Depends on: T025.
+- [x] T027 Verify exact `menu:<MenuID>:<action>` projection through `apps/gateway/src/managed-identity-exchange/permissions/managed-permission-scope.projector.ts` and `permission-normalization.spec.ts`. Tests: no IDX UUID, Customer ID, integration ID, UserType, or IsAdmin in scopes; do not add an IDX-specific projector. Depends on: T026.
 
 ## Phase 11 — IDX Adapter and Normalizer Composition
 
