@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   createVerifiedExternalIdentity,
@@ -16,6 +16,7 @@ import { PermissionSourceAdapterRegistry } from '../../src/managed-identity-exch
 import { SyntheticIdxPermissionNormalizerFixture } from './fixtures/synthetic-idx-permission-normalizer.fixture';
 
 const permissionDirectory = resolve(__dirname, '../../src/managed-identity-exchange/permissions');
+const productionIdxNormalizerPath = resolve(permissionDirectory, 'idx-menu-detail.permission-normalizer.ts');
 const fixturePath = resolve(__dirname, './fixtures/synthetic-idx-permission-normalizer.fixture.ts');
 const projectionContract = Object.freeze({ scopeSchema: 'managed-normalized-scopes/v1' });
 
@@ -102,12 +103,14 @@ describe('Synthetic IDX permission normalizer fixture (T028)', () => {
     expect(fixture.project).not.toHaveBeenCalled();
   });
 
-  it('keeps the fixture synthetic and production permission code authority-free', () => {
+  it('keeps the fixture synthetic and Phase 9 production permission code authority-free', () => {
     const fixture = readFileSync(fixturePath, 'utf8');
     expect(fixture).not.toMatch(/UUID|SCM|menu|Customer|UserType|IsAdmin|nativeCredential|Authorization|PageContext|endpoint|secret|dynamic mapping|roles/i);
 
     const production = permissionSources(permissionDirectory).map((path) => readFileSync(path, 'utf8')).join('\n');
-    expect(production).not.toMatch(/IDX|SCM|UUID|UserType|IsAdmin|Customer|CustomerScope|IntegrationBinding|nativeCredential|Authorization|PageContext|ManagedTokenIssuer|GatewaySigningKey/i);
+    expect(production).toMatch(/idx-menu-detail\/v1/);
+    expect(production).not.toMatch(/SCM|UUID|UserType|IsAdmin|Customer|CustomerScope|IntegrationBinding|nativeCredential|Authorization|AccessToken|RefreshToken|raw.?JWT|PageContext|ManagedTokenIssuer|GatewaySigningKey/i);
+    expect(existsSync(productionIdxNormalizerPath)).toBe(false);
   });
 });
 

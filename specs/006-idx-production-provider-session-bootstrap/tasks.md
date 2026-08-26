@@ -93,9 +93,9 @@
 **Dependencies**: Phase 8.  
 **Completion gate**: `IDX_PROVIDER_TRUSTED_PIPELINE_READY` — only admitted IDX material reaches its normalizer; existing modes remain unchanged.
 
-- [ ] T022 Add failing provider-trusted activation and existing-mode regressions in `apps/gateway/test/managed-identity-exchange/permission-pipeline.spec.ts`. Tests: null source ID required; normalizer/projection required; missing/wrong material denied; `allow_empty`/`required` behavior unchanged. Depends on: T021.
-- [ ] T023 Extend permission-policy validation in `apps/gateway/src/managed-identity-exchange/persistence/managed-exchange-activation.validator.ts` for `provider_trusted`. Tests: make T022 activation cases pass; reject source-backed or arbitrary material configuration. Depends on: T022.
-- [ ] T024 Extend `apps/gateway/src/managed-identity-exchange/permissions/managed-permission.service.ts` with the direct provider-trusted branch. Tests: make T022 pipeline cases pass; never select/invoke a Permission Source, never forward native credential, and fail closed on absent/wrong material. Depends on: T023.
+- [x] T022 Add failing provider-trusted activation and existing-mode regressions in `apps/gateway/test/managed-identity-exchange/permission-pipeline.spec.ts`. Tests: null source ID required; normalizer/projection required; missing/wrong material denied; `allow_empty`/`required` behavior unchanged. Depends on: T021.
+- [x] T023 Extend permission-policy validation in `apps/gateway/src/managed-identity-exchange/persistence/managed-exchange-activation.validator.ts` for `provider_trusted`. Tests: make T022 activation cases pass; reject source-backed or arbitrary material configuration. Depends on: T022.
+- [x] T024 Extend `apps/gateway/src/managed-identity-exchange/permissions/managed-permission.service.ts` with the direct provider-trusted branch. Tests: make T022 pipeline cases pass; never select/invoke a Permission Source, never forward native credential, and fail closed on absent/wrong material. Depends on: T023.
 
 ## Phase 10 — IDX Permission Normalizer
 

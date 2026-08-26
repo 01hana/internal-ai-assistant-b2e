@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createVerifiedExternalIdentity, ManagedExchangeIdentityDeniedError, ManagedExchangeInfrastructureError, type NormalizedPermission, type ResolvePermissionInput, type TrustedPermissionMaterial, type VerifiedExternalIdentity } from '../../src/managed-identity-exchange/domain/managed-exchange.domain';
+import { ManagedExchangeActivationError, ManagedExchangeActivationValidator } from '../../src/managed-identity-exchange/persistence/managed-exchange-activation.validator';
 
 const servicePath = resolve(__dirname, '../../src/managed-identity-exchange/permissions/managed-permission.service.ts');
 
@@ -34,34 +35,141 @@ type FuturePipeline = Readonly<{
   }>): Promise<readonly string[]>;
 }>;
 
-describe('Managed permission pipeline semantics (T026 / T027)', () => {
-  it('T003 EXPECTED_RED: resolves IDX provider_trusted material without selecting a Permission Source', async () => {
+describe('Managed permission pipeline semantics (T022 / T024)', () => {
+  it('T022 accepts only the closed provider_trusted activation policy', () => {
+    const validator = new ManagedExchangeActivationValidator();
+    expect(() => validator.validatePermissionPolicy(providerTrustedPolicy(), false)).not.toThrow();
+  });
+
+  it.each([
+    ['non-null source id', { permissionSourceInstanceId: 'source-a' }, false],
+    ['active source', {}, true],
+    ['null normalizer', { normalizerType: null }, false],
+    ['blank normalizer', { normalizerType: '   ' }, false],
+    ['arbitrary normalizer', { normalizerType: 'arbitrary-normalizer/v1' }, false],
+    ['null projection version', { projectionContractVersion: null }, false],
+    ['wrong projection version', { projectionContractVersion: 'idx-permissions/v1' }, false],
+    ['null projection contract', { projectionContract: null }, false],
+    ['malformed projection contract', { projectionContract: {} }, false],
+    ['dynamic projection contract', { projectionContract: { scopeSchema: 'managed-normalized-scopes/v1', endpointOverride: 'https://runtime.example' } }, false],
+    ['invalid mode', { mode: 'invalid-mode' }, false]
+  ] as const)('T022 rejects provider_trusted activation with %s', (_caseName, overrides, hasActiveSource) => {
+    const validator = new ManagedExchangeActivationValidator();
+    expect(() => validator.validatePermissionPolicy({ ...providerTrustedPolicy(), ...overrides }, hasActiveSource)).toThrow(ManagedExchangeActivationError);
+  });
+
+  it.each([
+    ['allow_empty without source', policy({ mode: 'allow_empty', permissionSourceInstanceId: null, normalizerType: null, projectionContractVersion: null, projectionContract: null }), false],
+    ['allow_empty with source', policy({ mode: 'allow_empty' }), true],
+    ['required with source', policy({ mode: 'required' }), true]
+  ] as const)('T022 preserves accepted activation for %s', (_caseName, existingPolicy, hasActiveSource) => {
+    const validator = new ManagedExchangeActivationValidator();
+    expect(() => validator.validatePermissionPolicy(existingPolicy, hasActiveSource)).not.toThrow();
+  });
+
+  it('T022 preserves required activation denial without an active source', () => {
+    const validator = new ManagedExchangeActivationValidator();
+    expect(() => validator.validatePermissionPolicy(policy({ mode: 'required', permissionSourceInstanceId: null, normalizerType: null, projectionContractVersion: null, projectionContract: null }), false)).toThrow(ManagedExchangeActivationError);
+  });
+
+  it('T022 resolves IDX provider_trusted material without selecting a Permission Source', async () => {
     const fixture = createFixture({
-      policy: policy({ mode: 'provider_trusted', permissionSourceInstanceId: null, normalizerType: 'idx-menu-detail/v1', projectionContractVersion: 'managed-permissions/v1', projectionContract: Object.freeze({ scopeSchema: 'managed-normalized-scopes/v1' }) })
+      policy: providerTrustedPolicy()
     });
-    const admittedIdentity = createVerifiedExternalIdentity({
-      subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }],
-      trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [{ menuId: 'ORDERS', actions: ['read'] }] } as unknown as TrustedPermissionMaterial
-    });
+    const admittedIdentity = providerTrustedIdentity();
     const scopes = await pipeline(fixture).resolve({ ...input(fixture.policy), admittedIdentity });
     expect(scopes).toEqual(['orders:read']);
+    expect(Object.isFrozen(scopes)).toBe(true);
     expect(fixture.permissionSources.findEnabledActiveById).not.toHaveBeenCalled();
     expect(fixture.adapter.execute).not.toHaveBeenCalled();
     expect(fixture.normalizer!.normalize).toHaveBeenCalledTimes(1);
+    expect(fixture.normalizer!.normalize).toHaveBeenCalledWith(admittedIdentity.trustedPermissionMaterial);
+    expect(fixture.normalizer!.normalize.mock.calls[0]?.[0]).toBe(admittedIdentity.trustedPermissionMaterial);
+    expect(fixture.permissionNormalizers.resolve).toHaveBeenCalledTimes(1);
+    expect(fixture.permissionNormalizers.resolve).toHaveBeenCalledWith('idx-menu-detail/v1');
     expect(fixture.projector.project).toHaveBeenCalledTimes(1);
+    expect(fixture.projector.project).toHaveBeenCalledWith(
+      Object.freeze([{ subject: 'orders', action: 'read' }]),
+      'managed-permissions/v1',
+      { scopeSchema: 'managed-normalized-scopes/v1' }
+    );
   });
 
   it.each([
     undefined,
-    { kind: 'wrong-material/v1', values: ['orders:read'] }
-  ])('T003 EXPECTED_RED: fails closed for missing or wrong provider_trusted material', async (trustedPermissionMaterial) => {
+    { kind: 'managed-permission-material/v1', values: ['orders:read'] },
+    { kind: 'other-material/v1', values: ['orders:read'] }
+  ])('T022 fails closed for missing or wrong provider_trusted material', async (trustedPermissionMaterial) => {
     const fixture = createFixture({
-      policy: policy({ mode: 'provider_trusted', permissionSourceInstanceId: null, normalizerType: 'idx-menu-detail/v1', projectionContractVersion: 'managed-permissions/v1', projectionContract: Object.freeze({ scopeSchema: 'managed-normalized-scopes/v1' }) })
+      policy: providerTrustedPolicy()
     });
     const request = input(fixture.policy);
     const admittedIdentity = createVerifiedExternalIdentity({ subject: 'actor-a', anchors: [{ kind: 'idx_entry', value: 'entry-a' }], ...(trustedPermissionMaterial === undefined ? {} : { trustedPermissionMaterial: trustedPermissionMaterial as TrustedPermissionMaterial }) });
     await expect(pipeline(fixture).resolve({ ...request, admittedIdentity })).rejects.toBeInstanceOf(ManagedExchangeIdentityDeniedError);
+    expect(fixture.permissionSources.findEnabledActiveById).not.toHaveBeenCalled();
     expect(fixture.adapter.execute).not.toHaveBeenCalled();
+    expect(fixture.permissionNormalizers.resolve).not.toHaveBeenCalled();
+    expect(fixture.normalizer!.normalize).not.toHaveBeenCalled();
+    expect(fixture.projector.project).not.toHaveBeenCalled();
+  });
+
+  it('T022 treats empty IDX menus as authoritative frozen empty scopes', async () => {
+    const fixture = createFixture({ policy: providerTrustedPolicy(), normalized: [], scopes: [] });
+    const admittedIdentity = providerTrustedIdentity([]);
+    const scopes = await pipeline(fixture).resolve({ ...input(fixture.policy), admittedIdentity });
+    expect(scopes).toEqual([]);
+    expect(Object.isFrozen(scopes)).toBe(true);
+    expect(fixture.permissionSources.findEnabledActiveById).not.toHaveBeenCalled();
+    expect(fixture.adapter.execute).not.toHaveBeenCalled();
+    expect(fixture.normalizer!.normalize).toHaveBeenCalledWith(admittedIdentity.trustedPermissionMaterial);
+    expect(fixture.projector.project).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['non-null source id', { permissionSourceInstanceId: 'source-a' }],
+    ['null normalizer', { normalizerType: null }],
+    ['blank normalizer', { normalizerType: '   ' }],
+    ['arbitrary normalizer', { normalizerType: 'arbitrary-normalizer/v1' }],
+    ['null projection version', { projectionContractVersion: null }],
+    ['wrong projection version', { projectionContractVersion: 'idx-permissions/v1' }],
+    ['null projection contract', { projectionContract: null }],
+    ['malformed projection contract', { projectionContract: {} }],
+    ['dynamic projection contract', { projectionContract: { scopeSchema: 'managed-normalized-scopes/v1', endpointOverride: 'https://runtime.example' } }],
+    ['invalid mode', { mode: 'invalid-mode' }]
+  ] as const)('T022 rejects malformed provider_trusted runtime policy with %s before dependencies', async (_caseName, overrides) => {
+    const fixture = createFixture({ policy: { ...providerTrustedPolicy(), ...overrides } as Policy });
+    await expect(pipeline(fixture).resolve({ ...input(fixture.policy), admittedIdentity: providerTrustedIdentity() })).rejects.toBeInstanceOf(ManagedExchangeInfrastructureError);
+    expect(fixture.permissionSources.findEnabledActiveById).not.toHaveBeenCalled();
+    expect(fixture.adapter.execute).not.toHaveBeenCalled();
+    expect(fixture.permissionNormalizers.resolve).not.toHaveBeenCalled();
+    expect(fixture.normalizer!.normalize).not.toHaveBeenCalled();
+    expect(fixture.projector.project).not.toHaveBeenCalled();
+  });
+
+  it('T022 fails provider_trusted as infrastructure when the exact normalizer is unavailable', async () => {
+    const fixture = createFixture({ policy: providerTrustedPolicy(), normalizer: undefined });
+    await expect(pipeline(fixture).resolve({ ...input(fixture.policy), admittedIdentity: providerTrustedIdentity() })).rejects.toBeInstanceOf(ManagedExchangeInfrastructureError);
+    expectProviderTrustedNoSource(fixture);
+    expect(fixture.permissionNormalizers.resolve).toHaveBeenCalledWith('idx-menu-detail/v1');
+    expect(fixture.projector.project).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['normalizer denial', 'normalizer', new ManagedExchangeIdentityDeniedError(), ManagedExchangeIdentityDeniedError],
+    ['normalizer failure', 'normalizer', new Error('normalizer unavailable'), ManagedExchangeInfrastructureError],
+    ['projector denial', 'projector', new ManagedExchangeIdentityDeniedError(), ManagedExchangeIdentityDeniedError],
+    ['projector failure', 'projector', new Error('projector unavailable'), ManagedExchangeInfrastructureError]
+  ] as const)('T022 preserves provider_trusted failure semantics for %s', async (_caseName, stage, failure, expectedType) => {
+    const fixture = createFixture({
+      policy: providerTrustedPolicy(),
+      ...(stage === 'normalizer'
+        ? { normalizer: { normalize: jest.fn(() => { throw failure; }) } }
+        : { projector: { project: jest.fn(() => { throw failure; }) } })
+    });
+    await expect(pipeline(fixture).resolve({ ...input(fixture.policy), admittedIdentity: providerTrustedIdentity() })).rejects.toBeInstanceOf(expectedType);
+    expectProviderTrustedNoSource(fixture);
+    expect(fixture.normalizer!.normalize).toHaveBeenCalledTimes(1);
+    expect(fixture.projector.project).toHaveBeenCalledTimes(stage === 'projector' ? 1 : 0);
   });
 
   it('returns frozen empty scopes for allow_empty without a configured source', async () => {
@@ -202,7 +310,8 @@ describe('Managed permission pipeline semantics (T026 / T027)', () => {
     expect(fixture.projector.project).not.toHaveBeenCalled();
 
     const source = readFileSync(servicePath, 'utf8');
-    expect(source).not.toMatch(/Customer|CustomerScope|IntegrationBinding|PageContext|nativeCredential|Authorization|VerifyNativeCredentialInput|DelegatedHttpTransport|IDX|UUID|SCM|UserType|IsAdmin|ManagedTokenIssuer|GatewaySigningKey|retry|fallback|register\(|unregister\(|eval\(|new Function|JSONPath/i);
+    expect(source).toMatch(/idx-menu-detail\/v1/);
+    expect(source).not.toMatch(/Customer|CustomerScope|IntegrationBinding|PageContext|nativeCredential|Authorization|AccessToken|RefreshToken|raw.?JWT|MenuDetail|VerifyNativeCredentialInput|DelegatedHttpTransport|UUID|SCM|UserType|IsAdmin|ManagedTokenIssuer|GatewaySigningKey|retry|fallback|register\(|unregister\(|eval\(|new Function|JSONPath/i);
   });
 
   it('rejects a configured policy without a normalizer type', async () => {
@@ -298,6 +407,30 @@ function createFixture(overrides: Partial<Readonly<{ policy: Policy; source: Sou
 
 function policy(overrides: Partial<Policy> = {}): Policy {
   return { integrationConfigId: 'config-a', mode: 'allow_empty', permissionSourceInstanceId: 'source-a', normalizerType: 'synthetic-normalizer/v1', projectionContractVersion: 'managed-permissions/v1', projectionContract: Object.freeze({ scopeSchema: 'managed-normalized-scopes/v1' }), ...overrides };
+}
+
+function providerTrustedPolicy(overrides: Partial<Policy> = {}): Policy {
+  return policy({
+    mode: 'provider_trusted',
+    permissionSourceInstanceId: null,
+    normalizerType: 'idx-menu-detail/v1',
+    projectionContractVersion: 'managed-permissions/v1',
+    projectionContract: Object.freeze({ scopeSchema: 'managed-normalized-scopes/v1' }),
+    ...overrides
+  });
+}
+
+function providerTrustedIdentity(menus: readonly Readonly<{ menuId: string; actions: readonly ['read'] }>[] = [{ menuId: 'ORDERS', actions: ['read'] }]): VerifiedExternalIdentity {
+  return createVerifiedExternalIdentity({
+    subject: 'actor-a',
+    anchors: [{ kind: 'idx_entry', value: 'entry-a' }],
+    trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus }
+  });
+}
+
+function expectProviderTrustedNoSource(fixture: Fixture): void {
+  expect(fixture.permissionSources.findEnabledActiveById).not.toHaveBeenCalled();
+  expect(fixture.adapter.execute).not.toHaveBeenCalled();
 }
 
 function sourceRecord(): Source {

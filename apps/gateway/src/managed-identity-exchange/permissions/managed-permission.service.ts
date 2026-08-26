@@ -7,6 +7,7 @@ import {
   type TrustedPermissionMaterial,
   type VerifiedExternalIdentity
 } from '../domain/managed-exchange.domain';
+import { ProjectionContractValidator } from '../persistence/managed-contract-registries';
 import type { ManagedPermissionPolicyRecord, ManagedPermissionSourceInstanceRecord } from '../persistence/managed-exchange.repository';
 
 type PermissionPolicy = Pick<ManagedPermissionPolicyRecord,
@@ -31,9 +32,12 @@ export type ResolveManagedPermissionInput = Readonly<{
 }>;
 
 const MATERIAL_KEYS = ['kind', 'reference', 'values'] as const;
+const IDX_TRUSTED_NORMALIZER = 'idx-menu-detail/v1';
 
 /** Resolves only server-configured permission material into canonical scopes. */
 export class ManagedPermissionService {
+  private readonly projectionContracts = new ProjectionContractValidator();
+
   constructor(private readonly dependencies: PermissionDependencies) {}
 
   async resolve(input: ResolveManagedPermissionInput): Promise<readonly string[]> {
@@ -47,6 +51,7 @@ export class ManagedPermissionService {
 
   private async resolveTrusted(input: ResolveManagedPermissionInput): Promise<readonly string[]> {
     const policy = policyInput(input);
+    if (policy.mode === 'provider_trusted') return this.resolveProviderTrusted(input, policy);
     if (policy.permissionSourceInstanceId === null) {
       if (policy.mode !== 'allow_empty' || policy.normalizerType !== null || policy.projectionContractVersion !== null || policy.projectionContract !== null) {
         throw new ManagedExchangeInfrastructureError();
@@ -63,6 +68,21 @@ export class ManagedPermissionService {
 
     const material = materialShape(await this.dependencies.permissionAdapters.execute(sourceInput(input, source)));
     const normalizer = this.dependencies.permissionNormalizers.resolve(normalizerType);
+    if (!normalizer) throw new ManagedExchangeInfrastructureError();
+    const normalized = normalizer.normalize(material);
+    const projected = this.dependencies.projector.project(normalized, projectionContractVersion, projectionContract);
+    return scopes(projected);
+  }
+
+  private resolveProviderTrusted(input: ResolveManagedPermissionInput, policy: PermissionPolicy): readonly string[] {
+    if (policy.permissionSourceInstanceId !== null || policy.normalizerType !== IDX_TRUSTED_NORMALIZER) throw new ManagedExchangeInfrastructureError();
+    const projectionContractVersion = text(policy.projectionContractVersion);
+    const projectionContract = contract(policy.projectionContract);
+    this.projectionContracts.validate(projectionContractVersion, projectionContract);
+
+    const material = input.admittedIdentity.trustedPermissionMaterial;
+    if (!material || material.kind !== IDX_TRUSTED_NORMALIZER) throw new ManagedExchangeIdentityDeniedError();
+    const normalizer = this.dependencies.permissionNormalizers.resolve(IDX_TRUSTED_NORMALIZER);
     if (!normalizer) throw new ManagedExchangeInfrastructureError();
     const normalized = normalizer.normalize(material);
     const projected = this.dependencies.projector.project(normalized, projectionContractVersion, projectionContract);

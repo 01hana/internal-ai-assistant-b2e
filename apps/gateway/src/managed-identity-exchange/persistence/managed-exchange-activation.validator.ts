@@ -48,6 +48,12 @@ export class ManagedExchangeActivationValidator {
   }
 
   validatePermissionPolicy(input: Readonly<Record<string, unknown>>, hasActiveSource: boolean): void {
+    if (input.mode === 'provider_trusted') {
+      if (input.permissionSourceInstanceId !== null || hasActiveSource || input.normalizerType !== 'idx-menu-detail/v1') throw new ManagedExchangeActivationError();
+      if (!nonBlank(input.projectionContractVersion) || input.projectionContract === null || input.projectionContract === undefined) throw new ManagedExchangeActivationError();
+      this.projections.validate(required(input.projectionContractVersion), contract(input.projectionContract));
+      return;
+    }
     if (input.mode !== 'allow_empty' && input.mode !== 'required') throw new ManagedExchangeActivationError();
     if (!hasActiveSource) {
       if (input.mode === 'required') throw new ManagedExchangeActivationError();
