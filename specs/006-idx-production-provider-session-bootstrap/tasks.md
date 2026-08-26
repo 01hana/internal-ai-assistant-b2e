@@ -66,8 +66,8 @@
 **Dependencies**: Phase 5.  
 **Completion gate**: `IDX_MENUDETAIL_VALIDATION_READY` — accepted output is semantic-only and raw response data cannot escape the adapter boundary.
 
-- [ ] T016 Add failing MenuDetail schema cases in `apps/gateway/test/managed-identity-exchange/idx-menu-detail.validator.spec.ts`. Tests: valid response, `Code != 200`, missing/non-array Data, blank MenuID, invalid operation value, malformed/unknown structure, duplicates, all-N menu, and accepted non-authority fields if the final schema permits them. Depends on: T015.
-- [ ] T017 Implement strict semantic reduction in `apps/gateway/src/managed-identity-exchange/providers/idx-menu-detail.validator.ts`. Tests: make T016 pass; output only `menuId` plus normalized approved actions, never UUID, raw record, response metadata, native claims, or HTTP body. Depends on: T016.
+- [x] T016 Add failing MenuDetail schema cases in `apps/gateway/test/managed-identity-exchange/idx-menu-detail.validator.spec.ts`. Tests: valid response, `Code != 200`, missing/non-array Data, blank MenuID, invalid operation value, malformed/unknown structure, duplicates, all-N menu, and accepted non-authority fields if the final schema permits them. Depends on: T015.
+- [x] T017 Implement strict semantic reduction in `apps/gateway/src/managed-identity-exchange/providers/idx-menu-detail.validator.ts`. Tests: make T016 pass; output only `menuId` plus normalized approved actions, never UUID, raw record, response metadata, native claims, or HTTP body. Depends on: T016.
 
 ## Phase 7 — Post-Verification IDX Claim Parsing
 
