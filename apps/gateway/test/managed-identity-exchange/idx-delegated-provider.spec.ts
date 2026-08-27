@@ -94,7 +94,7 @@ describe('IDX post-acceptance identity mapping (T018)', () => {
   it.each([
     ['sub', undefined], ['UUID_User', undefined], ['UUID_Company', undefined], ['UUID_Entry', undefined],
     ['sub', 7], ['UUID_User', null], ['UUID_Company', {}], ['UUID_Entry', []],
-    ['sub', '   '], ['UUID_User', 'USER\u0000ID'], ['UUID_Company', ''], ['UUID_Entry', '\n'],
+    ['sub', '   '], ['UUID_User', 'USER\u0000ID'], ['UUID_Company', 'COMPANY\u001FID'], ['UUID_Entry', 'ENTRY\u007FID'], ['UUID_Company', ''], ['UUID_Entry', '\n'],
   ])('rejects accepted credentials with invalid required %s claim', async (field, value) => {
     const claims = { ...acceptedClaims(), [field]: value };
     if (value === undefined) delete claims[field as keyof typeof claims];

@@ -11,10 +11,13 @@ import {
 } from '../../src/managed-identity-exchange/domain/managed-exchange.domain';
 import { ManagedIdentityExchangeService } from '../../src/managed-identity-exchange/exchange.service';
 import { IntegrationAdmissionService } from '../../src/managed-identity-exchange/admission/integration-admission.service';
+import { ManagedCanonicalizationService } from '../../src/managed-identity-exchange/canonicalization/managed-canonicalization.service';
 import { projectManagedExchangeError } from '../../src/managed-identity-exchange/exchange-error.projector';
 import { IdxDelegatedVerificationAdapter } from '../../src/managed-identity-exchange/providers/idx-delegated-verification.adapter';
+import { IdxMenuDetailValidator } from '../../src/managed-identity-exchange/providers/idx-menu-detail.validator';
 import { DelegatedHttpTransport } from '../../src/managed-identity-exchange/providers/delegated-http.transport';
 import { ManagedPermissionService } from '../../src/managed-identity-exchange/permissions/managed-permission.service';
+import { IdxMenuDetailPermissionNormalizer } from '../../src/managed-identity-exchange/permissions/idx-menu-detail.permission-normalizer';
 import { PermissionSourceAdapterRegistry } from '../../src/managed-identity-exchange/permissions/permission-source-adapter.registry';
 import { PermissionNormalizerRegistry } from '../../src/managed-identity-exchange/permissions/permission-normalizer.registry';
 import { SyntheticV1PermissionNormalizer } from '../../src/managed-identity-exchange/permissions/synthetic-v1-permission.normalizer';
@@ -45,6 +48,11 @@ import { createDirectJwtFixture, type DirectJwtFixture } from '../upstream-auth/
 const describeRegistry = process.env.RUN_GATEWAY_REGISTRY_DB_TESTS === 'true' ? describe : describe.skip;
 const native = 'DO_NOT_LEAK_NATIVE';
 const sentinels = Object.freeze([native, 'DO_NOT_LEAK_PROVIDER_DIAGNOSTIC', 'DO_NOT_LEAK_PERMISSION', 'DO_NOT_LEAK_ANCHOR', 'DO_NOT_LEAK_CUSTOMER', 'DO_NOT_LEAK_KEY_REFERENCE', 'DO_NOT_LEAK_PRIVATE_KEY', 'DO_NOT_LEAK_MANAGED_TOKEN']);
+const idxSentinels = Object.freeze([
+  'DO_NOT_LEAK_IDX_NATIVE_TOKEN', 'DO_NOT_LEAK_AUTHORIZATION', 'DO_NOT_LEAK_REFRESH_TOKEN',
+  'DO_NOT_LEAK_RAW_CLAIM', 'DO_NOT_LEAK_PERMISSION_HASH', 'DO_NOT_LEAK_MENU_UUID',
+  'DO_NOT_LEAK_MENU_MEMO', 'DO_NOT_LEAK_HTTP_BODY', 'DO_NOT_LEAK_PROVIDER_DIAGNOSTIC'
+]);
 const managedIssuer = 'https://managed-security.example.test';
 const managedAudience = 'managed-security-audience';
 const managedJwksUri = 'https://managed-security.example.test/jwks';
@@ -197,6 +205,131 @@ describe('Feature 005 security and redaction matrix (T044)', () => {
   });
 });
 
+describe('Feature 006 IDX transient-material and redaction guards (T034)', () => {
+  it('reduces one accepted production-shaped response to semantic identity and provider-trusted scopes only', async () => {
+    const execute = jest.fn(async () => idxAcceptedResponse());
+    const validator = new IdxMenuDetailValidator();
+    const validate = jest.spyOn(validator, 'validate');
+    const identity = await new IdxDelegatedVerificationAdapter({ execute }, validator).verify(idxVerifyInput());
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(validate).toHaveBeenCalledTimes(1);
+    expect(identity).toEqual({
+      subject: 'idx-subject', organization: 'idx-company',
+      anchors: [{ kind: 'idx_entry', value: 'idx-entry' }],
+      trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [{ menuId: 'SCM_ORDERS', actions: ['read', 'insert', 'update', 'delete'] }] }
+    });
+    expect(Object.isFrozen(identity)).toBe(true);
+
+    const sourceLookup = jest.fn();
+    const sourceExecute = jest.fn();
+    const normalizer = new IdxMenuDetailPermissionNormalizer();
+    const normalize = jest.spyOn(normalizer, 'normalize');
+    const projector = new ManagedPermissionScopeProjector();
+    const project = jest.spyOn(projector, 'project');
+    const permissions = new ManagedPermissionService({
+      permissionSources: { findEnabledActiveById: sourceLookup },
+      permissionAdapters: { execute: sourceExecute },
+      permissionNormalizers: new PermissionNormalizerRegistry([normalizer]), projector
+    } as never);
+    const scopes = await permissions.resolve({
+      admittedIdentity: identity, integrationConfigId: 'config-idx', requestId: 'request-idx',
+      serverOwnedIntegrationContext: Object.freeze({ integrationId: 'integration-idx', hostApp: 'assistant' }),
+      policy: Object.freeze({ integrationConfigId: 'config-idx', mode: 'provider_trusted', permissionSourceInstanceId: null, normalizerType: 'idx-menu-detail/v1', projectionContractVersion: 'managed-permissions/v1', projectionContract: Object.freeze({ scopeSchema: 'managed-normalized-scopes/v1' }) })
+    });
+    expect(scopes).toEqual(['menu:SCM_ORDERS:read', 'menu:SCM_ORDERS:insert', 'menu:SCM_ORDERS:update', 'menu:SCM_ORDERS:delete']);
+    expect(normalize).toHaveBeenCalledWith(identity.trustedPermissionMaterial);
+    expect(project).toHaveBeenCalledTimes(1);
+    expect(sourceLookup).not.toHaveBeenCalled();
+    expect(sourceExecute).not.toHaveBeenCalled();
+
+    const canonical = await new ManagedCanonicalizationService({
+      findById: async () => ({ id: 'config-idx', integrationId: 'integration-idx', canonicalHostApp: 'assistant', organizationMode: 'verified', fixedOrganizationId: null, enabled: true, lifecycle: 'active' })
+    } as never).canonicalize({ identity, integrationConfigId: 'config-idx', permissionScopes: scopes });
+    expect(Object.keys(canonical).sort()).toEqual(['hostApp', 'integrationId', 'organizationId', 'permissionScopes', 'roles', 'subject']);
+    expect(canonical).toEqual({ integrationId: 'integration-idx', subject: 'idx-subject', organizationId: 'idx-company', hostApp: 'assistant', roles: [], permissionScopes: scopes });
+
+    const { privateKey } = await generateKeyPair('RS256');
+    const issued = await new ManagedUpstreamTokenIssuer({ findActive: async () => ({ issuer: managedIssuer, audience: managedAudience, kid: 'idx-kid', privateKey }) }).issue(canonical);
+    const jwtPayload = decodeJwtPayload(issued.accessToken);
+    expect(jwtPayload).toMatchObject({ integration_id: 'integration-idx', sub: 'idx-subject', org_id: 'idx-company', host_app: 'assistant', roles: [], permission_scopes: scopes });
+
+    const append = jest.fn(async (value) => value);
+    await new ManagedExchangeAuditWriter({ append } as never).append({ requestId: 'request-idx', outcome: 'success', reasonCode: 'managed_exchange_issued', integrationId: 'integration-idx', integrationConfigId: 'config-idx', providerType: 'idx_delegated', providerInstanceId: 'provider-idx', jti: issued.jti, kid: issued.kid });
+    expect(Object.keys(append.mock.calls[0][0]).sort()).toEqual(['integrationConfigId', 'integrationId', 'jti', 'kid', 'outcome', 'providerInstanceId', 'providerType', 'reasonCode', 'requestId']);
+    assertIdxRedacted({ identity, scopes, canonical, jwtPayload, audit: append.mock.calls });
+  });
+
+  it.each([
+    ['transport credential', 'transport', ManagedExchangeCredentialError],
+    ['transport identity denial', 'transport', ManagedExchangeIdentityDeniedError],
+    ['transport infrastructure', 'transport', ManagedExchangeInfrastructureError],
+    ['MenuDetail infrastructure', 'validator', ManagedExchangeInfrastructureError],
+    ['claim credential', 'parser', ManagedExchangeCredentialError],
+    ['claim identity denial', 'parser', ManagedExchangeIdentityDeniedError]
+  ] as const)('reconstructs a clean typed failure for %s', async (_label, seam, ErrorType) => {
+    const tainted = taintedIdxError(new ErrorType());
+    const transport = { execute: jest.fn(async () => {
+      if (seam === 'transport') throw tainted;
+      return idxAcceptedResponse();
+    }) };
+    const validator = { validate: jest.fn((body: unknown) => {
+      if (seam === 'validator') throw tainted;
+      return new IdxMenuDetailValidator().validate(body);
+    }) };
+    const parser = jest.fn(() => {
+      if (seam === 'parser') throw tainted;
+      return idxClaims();
+    });
+    const failure = await new IdxDelegatedVerificationAdapter(transport, validator, parser).verify(idxVerifyInput()).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(ErrorType);
+    expect(failure).not.toBe(tainted);
+    assertIdxRedacted(failure);
+    const projected = projectManagedExchangeError(failure as ManagedExchangeCredentialError | ManagedExchangeIdentityDeniedError | ManagedExchangeInfrastructureError);
+    const expected = ErrorType === ManagedExchangeCredentialError
+      ? [401, 'EXCHANGE_IDENTITY_INVALID'] as const
+      : ErrorType === ManagedExchangeIdentityDeniedError
+        ? [403, 'EXCHANGE_IDENTITY_DENIED'] as const
+        : [503, 'EXCHANGE_SERVICE_UNAVAILABLE'] as const;
+    expectExactPublicEnvelope(projected, expected[0], expected[1]);
+  });
+
+  it.each(['transport', 'validator', 'parser'] as const)('normalizes unexpected %s diagnostics to a clean infrastructure failure', async (seam) => {
+    const diagnostic = sentinelError(new Error(), idxSentinels[8]);
+    const transport = { execute: jest.fn(async () => {
+      if (seam === 'transport') throw diagnostic;
+      return idxAcceptedResponse();
+    }) };
+    const validator = { validate: jest.fn((body: unknown) => {
+      if (seam === 'validator') throw diagnostic;
+      return new IdxMenuDetailValidator().validate(body);
+    }) };
+    const parser = jest.fn(() => {
+      if (seam === 'parser') throw diagnostic;
+      return idxClaims();
+    });
+    const failure = await new IdxDelegatedVerificationAdapter(transport, validator, parser).verify(idxVerifyInput()).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(ManagedExchangeInfrastructureError);
+    assertIdxRedacted(failure);
+  });
+
+  it('keeps IDX runtime sources free of logging, secret telemetry, sensitive persistence, and Customer authority', () => {
+    const runtime = [
+      '../../src/managed-identity-exchange/providers/idx-delegated-verification.adapter.ts',
+      '../../src/managed-identity-exchange/providers/idx-menu-detail.validator.ts',
+      '../../src/managed-identity-exchange/providers/delegated-http.transport.ts',
+      '../../src/managed-identity-exchange/permissions/managed-permission.service.ts',
+      '../../src/managed-identity-exchange/permissions/idx-menu-detail.permission-normalizer.ts',
+      '../../src/managed-identity-exchange/exchange.service.ts'
+    ].map((file) => readFileSync(resolve(__dirname, file), 'utf8')).join('\n');
+    expect(runtime).not.toMatch(/console\.|\bLogger\b|logger\.|telemetry\.|metrics\.|recordSpan|addEvent\(/i);
+    expect(runtime).not.toMatch(/CustomerRepository|CustomerScope|findCustomer|resolveCustomer/);
+    const schema = readFileSync(resolve(__dirname, '../../../../prisma/schema.prisma'), 'utf8');
+    const managedModels = [...schema.matchAll(/model (Managed\w+) \{([\s\S]*?)\n\}/g)].map((match) => match[0]).join('\n');
+    expect(managedModels).not.toMatch(/nativeCredential|Authorization|accessToken|refreshToken|rawJwt|rawClaims|MenuDetail|responseBody|permissionMaterial|trustedPermissionMaterial/i);
+  });
+});
+
 describeRegistry('Feature 005 audit redaction (T044)', () => {
   let database: Awaited<ReturnType<typeof createGatewayRegistryDatabase>>;
   let prisma: ReturnType<typeof createGatewayPrismaClient>;
@@ -252,6 +385,58 @@ function assertSafeBoundary(value: Readonly<{ body: unknown; headers: Readonly<R
 function sentinelError<T extends Error>(error: T, marker = native): T {
   error.message = marker;
   return error;
+}
+
+function taintedIdxError<T extends Error>(error: T): T {
+  error.message = idxSentinels[8];
+  Object.assign(error, {
+    nativeCredential: idxSentinels[0], diagnostic: idxSentinels[8], responseBody: idxSentinels[7],
+    rawClaims: idxSentinels[3], MenuDetail: { UUID: idxSentinels[5], Memo: idxSentinels[6] }
+  });
+  return error;
+}
+
+function assertIdxRedacted(value: unknown): void {
+  const serialized = `${String(value)} ${JSON.stringify(value)} ${value instanceof Error ? value.stack ?? '' : ''}`;
+  for (const marker of idxSentinels) expect(serialized).not.toContain(marker);
+}
+
+function idxVerifyInput() {
+  return Object.freeze({
+    nativeCredential: idxToken(idxClaims()), requestId: 'request-idx',
+    providerInstancePolicy: Object.freeze({
+      id: 'provider-idx', providerType: 'idx_delegated', endpointUri: 'https://provider.example.test/menu-detail', httpMethod: 'GET',
+      credentialPlacement: 'authorization_bearer', timeoutMilliseconds: 1000, responseContractVersion: 'idx-menu-detail/v1',
+      declaredAnchorKinds: Object.freeze(['idx_entry']), providerContract: Object.freeze({ responseSchema: 'idx-menu-detail/v1', contentType: 'application/json' })
+    })
+  });
+}
+
+function idxClaims(): Record<string, unknown> {
+  return {
+    sub: 'idx-subject', UUID_User: 'idx-subject', UUID_Company: 'idx-company', UUID_Entry: 'idx-entry',
+    rawClaim: idxSentinels[3], Permissions: idxSentinels[0], Permission_Hash: idxSentinels[4],
+    Authorization: idxSentinels[1], RefreshToken: idxSentinels[2], customerId: 'forged-customer', roles: ['admin']
+  };
+}
+
+function idxToken(payload: Record<string, unknown>): string {
+  return `${Buffer.from(JSON.stringify({ alg: 'ES512' })).toString('base64url')}.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.signature-${idxSentinels[0]}`;
+}
+
+function idxMenuDetailBody() {
+  return {
+    Code: 200, ExecutionTime: '12ms', Message: idxSentinels[7], Version: '1.0.0',
+    Data: [{
+      UUID: idxSentinels[5], MenuID: 'SCM_ORDERS', Category: 'SCM', Patrilineal: null, Sorting: '120', Memo: idxSentinels[6],
+      MenuNode: [{ UUID: idxSentinels[5], UUID_Menu: idxSentinels[5], Language: 'zh-TW', MenuName: 'Orders', Icon: 'orders', ProgramCode: null, ProgramPath: '/orders', StartMethod: null, Memo: idxSentinels[6] }],
+      MenuPermission: { UUID: idxSentinels[5], UUID_Menu: idxSentinels[5], Insert: 'Y', Update: 'Y', Delete: 'Y', Print: 'N', Import: 'N', Export: 'N', Copy: 'N', Approval: 'N', Others: null, Memo: idxSentinels[6] }
+    }]
+  };
+}
+
+function idxAcceptedResponse() {
+  return Object.freeze({ status: 200 as const, contentType: 'application/json' as const, body: idxMenuDetailBody() });
 }
 
 function expectExactPublicEnvelope(projected: ReturnType<typeof projectManagedExchangeError>, statusCode: number, code: string): void {

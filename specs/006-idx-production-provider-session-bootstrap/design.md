@@ -222,16 +222,35 @@ The test harness must use the real Feature 004 verifier and existing route/Backe
 
 ### 5.3 Host/SDK Contract
 
-The external integration sequence is:
+The final external contract is:
 
-1. The Host authentication system obtains the current native IDX AccessToken after Entry selection and retains AccessToken/RefreshToken ownership.
-2. The client obtains it through the established opaque credential-provider callback.
-3. The client calls `POST /api/v1/identity/exchange` with native Bearer token and provisioned selector.
-4. The client calls `POST /api/v1/assistant/sessions` with the returned managed JWT, not the native IDX token.
-5. The session response supplies `sessionId`, which remains conversation identity only.
-6. When the managed JWT expires, the Host callback supplies the current native credential and the client repeats exchange. Existing Assistant session semantics govern continuation; re-exchange itself does not destroy a session.
+1. The Host authenticates the user through its existing IDX flow, selects or already owns the authorized Entry, and owns the current native IDX AccessToken and RefreshToken lifecycle.
+2. The client obtains the current native AccessToken through the established opaque Host credential-provider callback. The callback is conceptual: no SDK interface or method name is defined here.
+3. The client calls `POST /api/v1/identity/exchange` with `Authorization: Bearer <current native IDX AccessToken>` and body `{ "integrationSelector": "<provisioned selector>" }`.
+4. Feature 005 validates the server-owned selected configuration and delegates the exact native credential once to its registered IDX protected endpoint. On success it returns a short-lived managed RS256 JWT.
+5. The client stops using the native IDX AccessToken for Assistant authentication and calls existing `POST /api/v1/assistant/sessions` with `Authorization: Bearer <managed Feature 005 JWT>`.
+6. Server-side only, Feature 004 verifies the managed JWT, resolves Customer and allowed HostApp through `integration_id → IntegrationBinding`, and Gateway creates its own internal identity JWT for Backend.
+7. Backend performs the unchanged session operation and the client receives `sessionId`.
 
-No SDK source, native-token storage, RefreshToken handling, browser endpoint selection, or new session endpoint is implemented here.
+| Value | Owner and purpose | Allowed destination | Prohibited destination / use |
+| --- | --- | --- | --- |
+| Native IDX AccessToken | Host authentication system; exchange input only | `POST /api/v1/identity/exchange` | Assistant session route, Backend, Permission Source, and Feature 006 persistence |
+| Managed Feature 005 JWT | Feature 005 managed identity exchange; short-lived upstream credential for Feature 004 | Existing authenticated Assistant Gateway APIs, including `POST /api/v1/assistant/sessions` | Backend; Gateway converts it to an internal identity JWT first. It contains canonical authority only and no Customer ID. |
+| `sessionId` | Existing Assistant session system; conversation identifier | Existing authenticated session operations | Authentication, authorization, bearer credential, native-credential substitute, or managed-JWT substitute |
+
+A `sessionId` alone grants no access; existing session requests still require an accepted authentication credential. No IDX-specific session endpoint is introduced.
+
+When a managed JWT expires or a new managed credential is otherwise required, the client asks the opaque Host callback for the current native AccessToken and repeats exchange using the same provisioned selector. The server issues a new managed credential/JTI. Re-exchange itself does not create, destroy, or receive a `sessionId`; it renews authentication only. A new managed JWT may access an existing session only when the resolved identity and existing session authorization rules permit it. Phase 16 proved this continuity for the same accepted identity and scope; it does not override denials caused by identity, integration, Customer binding, HostApp, or session-authorization changes.
+
+The selector is server-owned configuration selection only. It is not identity, Entry, Customer, endpoint, or permission authority. The client supplies neither endpoint URI, Entry override, Customer ID, nor permission mapping. The selected Provider Instance owns endpoint URI, GET method, bearer placement, contract version, timeout, and security policy; the verified `idx_entry` must still satisfy the selected admission policy.
+
+Permissions are server-derived from the same accepted MenuDetail response and projected to `menu:<MenuID>:<action>` scopes. The client does not submit Assistant permissions or parse JWT `Permissions`, `Permission_Hash`, `UserType`, `IsAdmin`, or MenuDetail data to calculate roles/scopes. Customer is not supplied by the native credential, selector, `UUID_Company`, SDK, or Feature 005: Feature 004 alone resolves it through verified `integration_id → IntegrationBinding → customerId`.
+
+The server credential transition is native IDX token → Feature 005 managed JWT → Feature 004 verified identity → Gateway internal JWT → Backend. Backend receives only the Gateway internal JWT; the SDK has no awareness of that internal credential.
+
+#### Out of repository / future implementation
+
+The authoritative SDK source/package is not present in this repository. Feature 006 therefore defines this integration contract only: it does not implement callback plumbing, SDK source, native AccessToken or RefreshToken persistence, native token refresh, browser storage, automatic managed-JWT renewal/retry scheduling, endpoint selection, a session manager, or Customer-specific SDK behavior. The Host owns credential lifecycle and storage according to its existing authentication system; the Assistant server, Feature 005, Feature 004, and this SDK contract do not receive or manage RefreshToken.
 
 ## 6. Security, Persistence, and Migration Impact
 

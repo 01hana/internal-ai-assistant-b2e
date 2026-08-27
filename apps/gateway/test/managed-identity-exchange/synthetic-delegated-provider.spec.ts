@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   ManagedExchangeCredentialError,
+  ManagedExchangeIdentityDeniedError,
   ManagedExchangeInfrastructureError
 } from '../../src/managed-identity-exchange/domain/managed-exchange.domain';
 import { DELEGATED_HTTP_MAX_RESPONSE_BYTES } from '../../src/managed-identity-exchange/providers/delegated-http.transport';
@@ -73,7 +74,7 @@ describe('Synthetic delegated identity-provider fixture (T039)', () => {
 
   it.each([
     ['credential-401', ManagedExchangeCredentialError],
-    ['credential-403', ManagedExchangeCredentialError],
+    ['credential-403', ManagedExchangeIdentityDeniedError],
     ['five-hundred', ManagedExchangeInfrastructureError],
     ['malformed-json', ManagedExchangeInfrastructureError],
     ['invalid-mime', ManagedExchangeInfrastructureError],

@@ -26,6 +26,22 @@ import { createGatewayRegistryDatabase } from '../../../../test/support/gateway-
 import { createUs1TestAppWithState, parseSseResponse, type Us1TestState } from '../../../../test/support/us1-test-app.helper';
 import { INTERNAL_IDENTITY_TOKEN_VERIFIER, type InternalIdentityTokenVerifier } from '../../../../src/identity/identity-token.types';
 import { RemoteJwksInternalIdentityTokenVerifier } from '../../../../src/identity/internal-identity-token-verifier';
+import { ManagedIdentityExchangeService } from '../../src/managed-identity-exchange/exchange.service';
+import { ManagedUpstreamTokenIssuer } from '../../src/managed-identity-exchange/issuer/managed-upstream-token-issuer';
+import { ManagedCanonicalizationService } from '../../src/managed-identity-exchange/canonicalization/managed-canonicalization.service';
+import { IntegrationAdmissionService } from '../../src/managed-identity-exchange/admission/integration-admission.service';
+import { ManagedPermissionService } from '../../src/managed-identity-exchange/permissions/managed-permission.service';
+import { ManagedPermissionScopeProjector } from '../../src/managed-identity-exchange/permissions/managed-permission-scope.projector';
+import { PermissionNormalizerRegistry } from '../../src/managed-identity-exchange/permissions/permission-normalizer.registry';
+import { PermissionSourceAdapterRegistry } from '../../src/managed-identity-exchange/permissions/permission-source-adapter.registry';
+import { IdxMenuDetailPermissionNormalizer } from '../../src/managed-identity-exchange/permissions/idx-menu-detail.permission-normalizer';
+import { IdxDelegatedVerificationAdapter } from '../../src/managed-identity-exchange/providers/idx-delegated-verification.adapter';
+import { IdxMenuDetailValidator } from '../../src/managed-identity-exchange/providers/idx-menu-detail.validator';
+import { DelegatedHttpV1Adapter } from '../../src/managed-identity-exchange/providers/delegated-http-v1.adapter';
+import { IdentityProviderAdapterRegistry } from '../../src/managed-identity-exchange/providers/identity-provider-adapter.registry';
+import { ManagedExchangeInfrastructureError, type VerifyNativeCredentialInput } from '../../src/managed-identity-exchange/domain/managed-exchange.domain';
+import { ManagedIdentityProviderInstanceRepository, ManagedIntegrationAdmissionPolicyRepository, ManagedIntegrationExchangeConfigRepository, ManagedPermissionPolicyRepository, ManagedPermissionSourceInstanceRepository } from '../../src/managed-identity-exchange/persistence/managed-exchange.repository';
+import { createProductionIdxTwoIntegrationFixture } from '../managed-identity-exchange/fixtures/production-idx-two-integration.fixture';
 
 const describeRegistry = process.env.RUN_GATEWAY_REGISTRY_DB_TESTS === 'true' ? describe : describe.skip;
 const registryDatabaseUrl = process.env.DATABASE_URL;
@@ -37,6 +53,8 @@ describeRegistry('Feature 004 Gateway → Backend E2E (T058/T059)', () => {
   let exchange: TokenExchangeFixture;
   let internal: EphemeralRsaFixture;
   let internalJwks: Server;
+  let idxManaged: EphemeralRsaFixture;
+  let idxManagedJwks: Server;
   let backend: INestApplication;
   let gateway: INestApplication;
   let state: Us1TestState;
@@ -50,7 +68,9 @@ describeRegistry('Feature 004 Gateway → Backend E2E (T058/T059)', () => {
     direct = await createDirectJwtFixture();
     exchange = await createTokenExchangeFixture();
     internal = await createEphemeralRsaFixture({ kid: 'feature004-internal-kid' });
+    idxManaged = await createEphemeralRsaFixture({ kid: 'fixture-idx-managed-kid' });
     internalJwks = await startJwksServer(internal);
+    idxManagedJwks = await startJwksServer(idxManaged);
     const jwksUri = `http://127.0.0.1:${port(internalJwks)}/jwks`;
     ({ app: backend, state } = await createUs1TestAppWithState({
       internalIdentityVerifierMode: 'remote',
@@ -59,6 +79,7 @@ describeRegistry('Feature 004 Gateway → Backend E2E (T058/T059)', () => {
     expect(backend.get<InternalIdentityTokenVerifier>(INTERNAL_IDENTITY_TOKEN_VERIFIER)).toBeInstanceOf(RemoteJwksInternalIdentityTokenVerifier);
     await backend.listen(0, '127.0.0.1');
     await seedRegistry(prisma, direct, exchange);
+    await seedIdxSessionRegistry(prisma, `http://127.0.0.1:${port(idxManagedJwks)}/jwks`);
     outbound = [];
     gateway = await createGateway(prisma, internal, `http://127.0.0.1:${port(backend.getHttpServer())}`, outbound);
   });
@@ -67,6 +88,7 @@ describeRegistry('Feature 004 Gateway → Backend E2E (T058/T059)', () => {
     await gateway?.close();
     await backend?.close();
     await close(internalJwks);
+    await close(idxManagedJwks);
     await direct?.close();
     await exchange?.close();
     await prisma?.$disconnect();
@@ -118,6 +140,46 @@ describeRegistry('Feature 004 Gateway → Backend E2E (T058/T059)', () => {
 
     const bForeign = await get(bToken, a, 'b-foreign-read');
     expect(safeResponseShape(bForeign)).toEqual(safeResponseShape(missingRead));
+  });
+
+  it('runs native IDX exchange through managed Feature 004, Gateway internal identity, and the existing session route', async () => {
+    const fixture = createProductionIdxTwoIntegrationFixture().a;
+    const idx = createIdxExchangeRuntime(prisma, fixture, idxManaged);
+    const managedOne = (await idx.exchange('fixture-idx-session-create')).accessToken;
+    const sessionId = await create(managedOne, 'fixture-idx-session-create', {});
+    const session = state.sessions.find((value) => value.id === sessionId);
+
+    expect(session).toMatchObject({ customerId: 'fixture-session-customer-a', actorId: 'fixture-user-a', organizationId: 'fixture-company-a' });
+    expect(decodeJwt(managedOne)).toMatchObject({ integration_id: 'fixture-integration-idx-a', sub: 'fixture-user-a', org_id: 'fixture-company-a', host_app: 'fixture-assistant', roles: [], permission_scopes: ['menu:FIXTURE_ORDERS:read', 'menu:FIXTURE_ORDERS:update'] });
+    expect(JSON.stringify(decodeJwt(managedOne))).not.toMatch(/customer_id|UUID_|idx_entry|fixture-entry-a|trustedPermissionMaterial/i);
+    const internalToken = outbound.at(-1)?.authorization?.replace(/^Bearer /, '');
+    expect(internalToken).toBeTruthy();
+    expect(internalToken).not.toBe(managedOne);
+    expect(internalToken).not.toBe(fixture.credential);
+    expect(decodeJwt(internalToken!)).toMatchObject({ customer_id: 'fixture-session-customer-a', integration_id: 'fixture-integration-idx-a', sub: 'fixture-user-a', org_id: 'fixture-company-a', host_app: 'fixture-assistant', roles: [], permission_scopes: ['menu:FIXTURE_ORDERS:read', 'menu:FIXTURE_ORDERS:update'] });
+    expect(JSON.stringify([outbound.at(-1), state, session])).not.toMatch(/fixture-entry-a|UUID_User|UUID_Company|UUID_Entry|fixture-signature|fixture-permission-record/i);
+    expect(idx.transport).toHaveBeenCalledTimes(1);
+
+    const nativeResponse = await request(gateway.getHttpServer()).post('/api/v1/assistant/sessions').set('authorization', `Bearer ${fixture.credential}`).set('x-request-id', 'fixture-idx-native-rejected').send({ pageContext: {} });
+    expect(nativeResponse.status).not.toBe(201);
+  });
+
+  it('keeps an existing session usable after re-exchange and never treats sessionId as authentication', async () => {
+    const fixture = createProductionIdxTwoIntegrationFixture().a;
+    const idx = createIdxExchangeRuntime(prisma, fixture, idxManaged);
+    const first = (await idx.exchange('fixture-idx-session-first')).accessToken;
+    const sessionId = await create(first, 'fixture-idx-session-first');
+    const second = (await idx.exchange('fixture-idx-session-second')).accessToken;
+    expect(second).not.toBe(first);
+    expect(decodeJwt(second).jti).not.toBe(decodeJwt(first).jti);
+    const continued = await get(second, sessionId, 'fixture-idx-session-reexchange-read');
+    expect(continued.status).toBe(200);
+    const unauthenticated = await request(gateway.getHttpServer()).get(`/api/v1/assistant/sessions/${sessionId}`).set('x-request-id', 'fixture-idx-session-no-auth');
+    expect(unauthenticated.status).not.toBe(200);
+    const foreign = await exchange.exchange(exchange.issueTrustedNativeCredential({ principal: 'fixture-user-b', organization: 'fixture-company-b', roles: [], permissionScopes: [] }));
+    const foreignRead = await get(foreign, sessionId, 'fixture-idx-session-foreign');
+    expect(foreignRead.status).not.toBe(200);
+    expect(idx.transport).toHaveBeenCalledTimes(2);
   });
 
   async function exerciseAllRoutes(token: string, label: 'a' | 'b', customerId: string) {
@@ -176,6 +238,43 @@ async function seedRegistry(prisma: ReturnType<typeof createGatewayPrismaClient>
   await prisma.customer.createMany({ data: [{ id: 'customer-a' }, { id: 'customer-b' }] });
   await prisma.integrationBinding.createMany({ data: [{ integrationId: 'integration-a', customerId: 'customer-a', allowedHostApp: 'admin', enabled: true }, { integrationId: 'integration-b', customerId: 'customer-b', allowedHostApp: 'admin', enabled: true }] });
   await prisma.registeredUpstreamTrustProfile.createMany({ data: [profile('profile-a', 'integration-a', direct), profile('profile-b', 'integration-b', exchange)] });
+}
+
+async function seedIdxSessionRegistry(prisma: ReturnType<typeof createGatewayPrismaClient>, jwksUri: string) {
+  const fixture = createProductionIdxTwoIntegrationFixture().a;
+  await prisma.customer.create({ data: { id: 'fixture-session-customer-a' } });
+  await prisma.integrationBinding.create({ data: { integrationId: fixture.config.integrationId, customerId: 'fixture-session-customer-a', allowedHostApp: 'fixture-assistant', enabled: true } });
+  await prisma.managedIdentityProviderInstance.create({ data: fixture.provider as never });
+  await prisma.managedIntegrationExchangeConfig.create({ data: fixture.config as never });
+  await prisma.managedIntegrationAdmissionPolicy.create({ data: fixture.admission as never });
+  await prisma.managedPermissionPolicy.create({ data: fixture.permission as never });
+  await prisma.registeredUpstreamTrustProfile.create({ data: {
+    id: 'fixture-idx-managed-profile-a', integrationId: fixture.config.integrationId, expectedIssuer: 'https://fixture-managed-idx.example.test',
+    expectedAudience: 'fixture-managed-idx', jwksUri, algorithm: 'RS256', enabled: true, lifecycle: 'active', version: 1, replacesProfileId: null
+  } });
+}
+
+function createIdxExchangeRuntime(prisma: ReturnType<typeof createGatewayPrismaClient>, side: ReturnType<typeof createProductionIdxTwoIntegrationFixture>['a'], signing: EphemeralRsaFixture) {
+  const transport = jest.fn(async (input: VerifyNativeCredentialInput) => {
+    if (input.providerInstancePolicy.endpointUri !== side.provider.endpointUri) throw new ManagedExchangeInfrastructureError();
+    return Object.freeze({ status: 200 as const, contentType: 'application/json' as const, body: side.menuDetail });
+  });
+  const configs = new ManagedIntegrationExchangeConfigRepository(prisma);
+  const permissionSources = new ManagedPermissionSourceInstanceRepository(prisma);
+  const service = new ManagedIdentityExchangeService({
+    configs, providers: new ManagedIdentityProviderInstanceRepository(prisma), readiness: { assertReady: async () => undefined },
+    providerAdapters: new IdentityProviderAdapterRegistry(
+      new DelegatedHttpV1Adapter({ execute: async () => { throw new ManagedExchangeInfrastructureError(); } }),
+      new IdxDelegatedVerificationAdapter({ execute: transport }, new IdxMenuDetailValidator())
+    ),
+    admission: new IntegrationAdmissionService(new ManagedIntegrationAdmissionPolicyRepository(prisma)),
+    permissionPolicies: new ManagedPermissionPolicyRepository(prisma),
+    permissions: new ManagedPermissionService({ permissionSources, permissionAdapters: new PermissionSourceAdapterRegistry([]), permissionNormalizers: new PermissionNormalizerRegistry([new IdxMenuDetailPermissionNormalizer()]), projector: new ManagedPermissionScopeProjector() }),
+    canonicalizer: new ManagedCanonicalizationService(configs),
+    issuer: new ManagedUpstreamTokenIssuer({ findActive: async () => Object.freeze({ issuer: 'https://fixture-managed-idx.example.test', audience: 'fixture-managed-idx', kid: signing.kid, privateKey: signing.privateKey }) }),
+    audit: { append: async () => undefined }
+  });
+  return Object.freeze({ transport, exchange: (requestId: string) => service.exchange({ integrationSelector: side.config.publicSelector, nativeCredential: side.credential, requestId }) });
 }
 
 function profile(id: string, integrationId: string, fixture: Pick<DirectJwtFixture | TokenExchangeFixture, 'issuer' | 'audience' | 'jwksUri'>): TrustProfileRecord {

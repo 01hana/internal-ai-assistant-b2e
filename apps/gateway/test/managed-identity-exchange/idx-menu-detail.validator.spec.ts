@@ -63,7 +63,7 @@ describe('IDX MenuDetail semantic validator (T016)', () => {
   ])('rejects malformed or application-failure top-level response %o', (invalid) => expectInfrastructureError(invalid));
 
   it.each([
-    menu({ MenuID: undefined }), menu({ MenuID: '' }), menu({ MenuID: '   ' }), menu({ MenuID: 7 }), menu({ MenuID: 'ORDER\u0000S' }),
+    menu({ MenuID: undefined }), menu({ MenuID: '' }), menu({ MenuID: '   ' }), menu({ MenuID: 7 }), menu({ MenuID: 'ORDER\u0000S' }), menu({ MenuID: 'ORDER\u001FS' }), menu({ MenuID: 'ORDER\u007FS' }),
     menu({ UUID: null }), menu({ Category: null }), menu({ Patrilineal: 7 }), menu({ Patrilineal: true }), menu({ Patrilineal: [] }), menu({ Patrilineal: {} }), menu({ Sorting: 120 }), menu({ Memo: null }), menu({ MenuNode: {} }), { ...menu(), Unknown: true },
   ])('rejects malformed or unknown registered menu records %o', (invalid) => expectInfrastructureError(response([invalid])));
 

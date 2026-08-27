@@ -3,11 +3,17 @@ import { resolve } from 'node:path';
 import { createEphemeralRsaFixture } from './ephemeral-rsa.fixture';
 
 const providerPath = resolve(__dirname, '../../src/signing/signing-key-provider.ts');
+const forbiddenRawPrivateKeyIdentifiers = /\b(?:GATEWAY_PRIVATE_KEY(?:_PEM)?|PRIVATE_JWK|JWT_SIGNING_SECRET)\b/;
 
 describe('SigningKeyProvider contract (T045)', () => {
   it('does not introduce raw private-key environment variables', () => {
     const gatewaySource = readTree(resolve(__dirname, '../../src'));
-    expect(gatewaySource).not.toMatch(/GATEWAY_PRIVATE_KEY|GATEWAY_PRIVATE_KEY_PEM|PRIVATE_JWK|JWT_SIGNING_SECRET/);
+    expect('process.env.GATEWAY_PRIVATE_KEY').toMatch(forbiddenRawPrivateKeyIdentifiers);
+    expect('process.env.GATEWAY_PRIVATE_KEY_PEM').toMatch(forbiddenRawPrivateKeyIdentifiers);
+    expect('process.env.PRIVATE_JWK').toMatch(forbiddenRawPrivateKeyIdentifiers);
+    expect('process.env.JWT_SIGNING_SECRET').toMatch(forbiddenRawPrivateKeyIdentifiers);
+    expect('PRIVATE_JWK_MEMBERS').not.toMatch(forbiddenRawPrivateKeyIdentifiers);
+    expect(gatewaySource).not.toMatch(forbiddenRawPrivateKeyIdentifiers);
     expect(gatewaySource).toMatch(/GATEWAY_SIGNING_KEY_REFERENCE/);
   });
 

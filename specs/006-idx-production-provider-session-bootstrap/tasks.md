@@ -140,8 +140,8 @@
 **Dependencies**: Phase 13.  
 **Completion gate**: `IDX_REDACTION_READY` — raw IDX security material cannot survive provider processing.
 
-- [ ] T034 Add IDX redaction/source guards in `apps/gateway/test/managed-identity-exchange/feature005-security.spec.ts` and `exchange-audit-module.spec.ts`. Tests: prohibit raw AccessToken, Authorization, RefreshToken, native claims, MenuDetail payload, response body in logs/audit/telemetry/errors/persistence/snapshots; do not add logging. Depends on: T033.
-- [ ] T035 Harden only necessary IDX adapter/audit boundaries in `apps/gateway/src/managed-identity-exchange/providers/idx-delegated-verification.adapter.ts` and `persistence/managed-exchange-audit.writer.ts` to satisfy T034. Tests: existing generic audit redaction remains green. Depends on: T034.
+- [x] T034 Add IDX redaction/source guards in `apps/gateway/test/managed-identity-exchange/feature005-security.spec.ts` and `exchange-audit-module.spec.ts`. Tests: prohibit raw AccessToken, Authorization, RefreshToken, native claims, MenuDetail payload, response body in logs/audit/telemetry/errors/persistence/snapshots; do not add logging. Depends on: T033.
+- [x] T035 Harden only necessary IDX adapter/audit boundaries in `apps/gateway/src/managed-identity-exchange/providers/idx-delegated-verification.adapter.ts` and `persistence/managed-exchange-audit.writer.ts` to satisfy T034. Tests: existing generic audit redaction remains green. Depends on: T034.
 
 ## Phase 15 — Two-Integration Reuse Evidence
 
@@ -149,8 +149,8 @@
 **Dependencies**: Phase 14.  
 **Completion gate**: `IDX_REUSE_READY` — two integrations share capability but remain endpoint/selector/Entry isolated.
 
-- [ ] T036 Add two independently provisioned IDX integration fixture coverage in `apps/gateway/test/managed-identity-exchange/feature004-compatibility.spec.ts`. Tests: same adapter capability, distinct selectors/Entry anchors/configuration, Entry A denial for B, and no Customer-specific source branch. Depends on: T035.
-- [ ] T037 Extend production-shaped IDX test fixtures in `apps/gateway/test/managed-identity-exchange/fixtures/` only as needed for T036. Tests: fixture contains no real Customer domain, credential, Entry, or production secret. Depends on: T036.
+- [x] T036 Add two independently provisioned IDX integration fixture coverage in `apps/gateway/test/managed-identity-exchange/feature004-compatibility.spec.ts`. Tests: same adapter capability, distinct selectors/Entry anchors/configuration, Entry A denial for B, and no Customer-specific source branch. Depends on: T035.
+- [x] T037 Extend production-shaped IDX test fixtures in `apps/gateway/test/managed-identity-exchange/fixtures/` only as needed for T036. Tests: fixture contains no real Customer domain, credential, Entry, or production secret. Depends on: T036.
 
 ## Phase 16 — Feature 004 Compatibility and Session Bootstrap
 
@@ -158,9 +158,9 @@
 **Dependencies**: Phase 15.  
 **Completion gate**: `IDX_SESSION_HANDOFF_READY` — managed IDX JWT, never native IDX token, creates a session through unchanged Feature 004.
 
-- [ ] T038 Add failing managed IDX JWT integration coverage in `apps/gateway/test/managed-identity-exchange/feature004-compatibility.spec.ts` and `apps/gateway/test/integration/feature004-gateway-backend.e2e.spec.ts`. Tests: real verifier, exactly-one profile, IntegrationBinding Customer/HostApp resolution, Gateway internal identity, existing create-session route, and `sessionId`. Depends on: T037.
-- [ ] T039 Complete IDX exchange composition in `apps/gateway/src/managed-identity-exchange/exchange.service.ts` only as required for T038. Tests: preserve direct Feature 004 and non-IDX Feature 005 behavior; no IDX session endpoint or Feature 004 modification. Depends on: T038.
-- [ ] T040 Add re-exchange/session-continuity evidence in `apps/gateway/test/integration/feature004-gateway-backend.e2e.spec.ts` where existing session semantics permit it. Tests: a new managed credential does not itself destroy an existing conversation; sessionId is never authentication. Depends on: T039.
+- [x] T038 Add failing managed IDX JWT integration coverage in `apps/gateway/test/managed-identity-exchange/feature004-compatibility.spec.ts` and `apps/gateway/test/integration/feature004-gateway-backend.e2e.spec.ts`. Tests: real verifier, exactly-one profile, IntegrationBinding Customer/HostApp resolution, Gateway internal identity, existing create-session route, and `sessionId`. Depends on: T037.
+- [x] T039 Complete IDX exchange composition in `apps/gateway/src/managed-identity-exchange/exchange.service.ts` only as required for T038. Tests: preserve direct Feature 004 and non-IDX Feature 005 behavior; no IDX session endpoint or Feature 004 modification. Depends on: T038.
+- [x] T040 Add re-exchange/session-continuity evidence in `apps/gateway/test/integration/feature004-gateway-backend.e2e.spec.ts` where existing session semantics permit it. Tests: a new managed credential does not itself destroy an existing conversation; sessionId is never authentication. Depends on: T039.
 
 ## Phase 17 — Host/SDK Integration Contract Documentation
 
@@ -168,7 +168,7 @@
 **Dependencies**: Phase 16.  
 **Completion gate**: `IDX_HOST_CONTRACT_DOCUMENTED` — the native-to-managed-to-session sequence is clear without fabricated SDK work.
 
-- [ ] T041 Update the Feature 006 Host/SDK section in `specs/006-idx-production-provider-session-bootstrap/design.md` and `plan.md` with the final callback → exchange → managed JWT → session sequence and re-exchange behavior. Tests: document that sessionId is not authentication, Host owns AccessToken/RefreshToken, and SDK implementation/persistence is out of scope. Depends on: T040.
+- [x] T041 Update the Feature 006 Host/SDK section in `specs/006-idx-production-provider-session-bootstrap/design.md` and `plan.md` with the final callback → exchange → managed JWT → session sequence and re-exchange behavior. Tests: document that sessionId is not authentication, Host owns AccessToken/RefreshToken, and SDK implementation/persistence is out of scope. Depends on: T040.
 
 ## Phase 18 — Full Regression and Final Verification
 
@@ -176,9 +176,9 @@
 **Dependencies**: Phase 17.  
 **Completion gate**: `IDX_PROVIDER_CAPABILITY_READY` — all required focused, DB-backed, compatibility, security, and tooling evidence passes with classified skips only.
 
-- [ ] T042 Run and record Feature 006 focused provider, transport, validator, adapter, material, permission, admission, readiness, redaction, reuse, and session suites in `specs/006-idx-production-provider-session-bootstrap/verification.md`. Tests: no live IDX dependency; no required acceptance suite silently skipped. Depends on: T041.
-- [ ] T043 Run and record DB-backed migration/readiness, full Feature 005 managed-exchange/non-IDX regression, Feature 004 direct-path/compatibility, and root regression in `specs/006-idx-production-provider-session-bootstrap/verification.md`. Tests: use `RUN_GATEWAY_REGISTRY_DB_TESTS=true` and explicitly classify every skip. Depends on: T042.
-- [ ] T044 Run and record `npx prisma validate`, `npm run prisma:generate`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run build:gateway`, `npm --prefix apps/gateway run test:unit`, source/redaction guards, and `git diff --check` in `specs/006-idx-production-provider-session-bootstrap/verification.md`. Tests: block readiness on any critical failure or unclassified required skip; distinguish IDX provider capability from Customer deployment readiness. Depends on: T043.
+- [x] T042 Run and record Feature 006 focused provider, transport, validator, adapter, material, permission, admission, readiness, redaction, reuse, and session suites in `specs/006-idx-production-provider-session-bootstrap/verification.md`. Tests: no live IDX dependency; no required acceptance suite silently skipped. Depends on: T041.
+- [x] T043 Run and record DB-backed migration/readiness, full Feature 005 managed-exchange/non-IDX regression, Feature 004 direct-path/compatibility, and root regression in `specs/006-idx-production-provider-session-bootstrap/verification.md`. Tests: use `RUN_GATEWAY_REGISTRY_DB_TESTS=true` and explicitly classify every skip. Depends on: T042.
+- [x] T044 Run and record `npx prisma validate`, `npm run prisma:generate`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run build:gateway`, `npm --prefix apps/gateway run test:unit`, source/redaction guards, and `git diff --check` in `specs/006-idx-production-provider-session-bootstrap/verification.md`. Tests: block readiness on any critical failure or unclassified required skip; distinguish IDX provider capability from Customer deployment readiness. Depends on: T043.
 
 ## Dependencies and Parallel Work
 

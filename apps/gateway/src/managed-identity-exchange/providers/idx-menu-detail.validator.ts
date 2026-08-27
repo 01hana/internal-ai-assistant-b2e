@@ -57,8 +57,15 @@ function isNullableString(value: unknown): value is string | null { return value
 function safeMenuId(value: unknown): string {
   if (!isString(value)) throw unavailable();
   const menuId = value.trim();
-  if (!menuId || /[\u0000-\u001F\u007F]/.test(menuId)) throw unavailable();
+  if (!menuId || hasAsciiControl(menuId)) throw unavailable();
   return menuId;
+}
+
+function hasAsciiControl(value: string): boolean {
+  return [...value].some((character) => {
+    const code = character.codePointAt(0);
+    return code !== undefined && (code <= 31 || code === 127);
+  });
 }
 
 function unavailable(): ManagedExchangeInfrastructureError { return new ManagedExchangeInfrastructureError(); }

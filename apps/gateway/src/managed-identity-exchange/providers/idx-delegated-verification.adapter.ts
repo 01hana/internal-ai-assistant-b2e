@@ -44,7 +44,9 @@ export class IdxDelegatedVerificationAdapter implements IdentityProviderAdapter 
       if (subject !== user) throw new ManagedExchangeCredentialError();
       return createVerifiedExternalIdentity({ subject, organization, anchors: [{ kind: 'idx_entry', value: entry }], trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus } });
     } catch (error) {
-      if (error instanceof ManagedExchangeCredentialError || error instanceof ManagedExchangeIdentityDeniedError || error instanceof ManagedExchangeInfrastructureError) throw error;
+      if (error instanceof ManagedExchangeCredentialError) throw new ManagedExchangeCredentialError();
+      if (error instanceof ManagedExchangeIdentityDeniedError) throw new ManagedExchangeIdentityDeniedError();
+      if (error instanceof ManagedExchangeInfrastructureError) throw new ManagedExchangeInfrastructureError();
       throw new ManagedExchangeInfrastructureError();
     }
   }
@@ -75,8 +77,15 @@ function decodeBase64Url(segment: string): string {
 }
 
 function identifier(value: unknown): string {
-  if (typeof value !== 'string' || !value.trim() || /[\u0000-\u001F\u007F]/.test(value)) throw new ManagedExchangeCredentialError();
+  if (typeof value !== 'string' || !value.trim() || hasAsciiControl(value)) throw new ManagedExchangeCredentialError();
   return value;
+}
+
+function hasAsciiControl(value: string): boolean {
+  return [...value].some((character) => {
+    const code = character.codePointAt(0);
+    return code !== undefined && (code <= 31 || code === 127);
+  });
 }
 
 function plainRecord(value: unknown): value is Record<string, unknown> {

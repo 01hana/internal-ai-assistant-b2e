@@ -14,13 +14,15 @@ import { ManagedJwksService } from '../../src/managed-identity-exchange/issuer/m
 import { ManagedIdentityExchangeService } from '../../src/managed-identity-exchange/exchange.service';
 import { IntegrationAdmissionService } from '../../src/managed-identity-exchange/admission/integration-admission.service';
 import { ManagedCanonicalizationService } from '../../src/managed-identity-exchange/canonicalization/managed-canonicalization.service';
-import { createVerifiedExternalIdentity, ManagedExchangeCredentialError, type IdentityProviderAdapter, type VerifyNativeCredentialInput } from '../../src/managed-identity-exchange/domain/managed-exchange.domain';
+import { createVerifiedExternalIdentity, ManagedExchangeCredentialError, ManagedExchangeInfrastructureError, type IdentityProviderAdapter, type VerifyNativeCredentialInput } from '../../src/managed-identity-exchange/domain/managed-exchange.domain';
+import { IdxMenuDetailPermissionNormalizer } from '../../src/managed-identity-exchange/permissions/idx-menu-detail.permission-normalizer';
 import { PermissionNormalizerRegistry } from '../../src/managed-identity-exchange/permissions/permission-normalizer.registry';
 import { ManagedPermissionScopeProjector } from '../../src/managed-identity-exchange/permissions/managed-permission-scope.projector';
 import { ManagedPermissionService } from '../../src/managed-identity-exchange/permissions/managed-permission.service';
 import { PermissionSourceAdapterRegistry } from '../../src/managed-identity-exchange/permissions/permission-source-adapter.registry';
 import { IdentityProviderAdapterRegistry } from '../../src/managed-identity-exchange/providers/identity-provider-adapter.registry';
 import { IdxDelegatedVerificationAdapter } from '../../src/managed-identity-exchange/providers/idx-delegated-verification.adapter';
+import { IdxMenuDetailValidator } from '../../src/managed-identity-exchange/providers/idx-menu-detail.validator';
 import { DelegatedHttpV1Adapter } from '../../src/managed-identity-exchange/providers/delegated-http-v1.adapter';
 import {
   ManagedIdentityProviderInstanceRepository,
@@ -211,6 +213,193 @@ describeRegistry('Managed JWT to unchanged Feature 004 compatibility (T041)', ()
   });
 });
 
+type IdxReuseSide = Readonly<{
+  name: 'a' | 'b'; provider: Readonly<Record<string, unknown>>; config: Readonly<Record<string, unknown>>;
+  admission: Readonly<Record<string, unknown>>; permission: Readonly<Record<string, unknown>>;
+  credential: string; claims: Readonly<Record<string, unknown>>; menuDetail: Readonly<Record<string, unknown>>;
+  expectedScopes: readonly string[];
+}>;
+type IdxReuseFixture = Readonly<{ a: IdxReuseSide; b: IdxReuseSide }>;
+
+describeRegistry('Feature 006 two-integration IDX capability reuse (T036-T037)', () => {
+  let database: Awaited<ReturnType<typeof createGatewayRegistryDatabase>>;
+  let prisma: ReturnType<typeof createGatewayPrismaClient>;
+  let fixture: IdxReuseFixture;
+
+  beforeEach(async () => {
+    database = await createGatewayRegistryDatabase('feature006-idx-reuse');
+    prisma = createGatewayPrismaClient(database.databaseUrl);
+    fixture = loadIdxReuseFixture();
+    await seedIdxReuseControlPlane(prisma, fixture);
+  });
+  afterEach(async () => { await prisma?.$disconnect(); await database?.dispose(); });
+
+  it('persists two independent IDX provider/config/admission/permission chains', async () => {
+    const providers = await prisma.managedIdentityProviderInstance.findMany({ orderBy: { id: 'asc' } });
+    const configs = await prisma.managedIntegrationExchangeConfig.findMany({ orderBy: { id: 'asc' } });
+    const admissions = await prisma.managedIntegrationAdmissionPolicy.findMany({ orderBy: { id: 'asc' } });
+    const permissions = await prisma.managedPermissionPolicy.findMany({ orderBy: { id: 'asc' } });
+
+    expect(providers).toHaveLength(2);
+    expect(providers[0]).toMatchObject(fixture.a.provider);
+    expect(providers[1]).toMatchObject(fixture.b.provider);
+    expect(providers[0].id).not.toBe(providers[1].id);
+    expect(providers[0].endpointUri).not.toBe(providers[1].endpointUri);
+    expect(providers.map((provider) => provider.providerType)).toEqual(['idx_delegated', 'idx_delegated']);
+    expect(configs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: fixture.a.config.id, publicSelector: fixture.a.config.publicSelector, providerInstanceId: fixture.a.provider.id }),
+      expect.objectContaining({ id: fixture.b.config.id, publicSelector: fixture.b.config.publicSelector, providerInstanceId: fixture.b.provider.id })
+    ]));
+    expect(admissions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ integrationConfigId: fixture.a.config.id, anchorRequirements: fixture.a.admission.anchorRequirements }),
+      expect.objectContaining({ integrationConfigId: fixture.b.config.id, anchorRequirements: fixture.b.admission.anchorRequirements })
+    ]));
+    expect(permissions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ integrationConfigId: fixture.a.config.id, mode: 'provider_trusted', permissionSourceInstanceId: null }),
+      expect.objectContaining({ integrationConfigId: fixture.b.config.id, mode: 'provider_trusted', permissionSourceInstanceId: null })
+    ]));
+    expect(await prisma.managedPermissionSourceInstance.count()).toBe(0);
+  });
+
+  it('uses the same real IDX adapter capability while keeping A and B endpoints, identities, and permissions isolated', async () => {
+    const runtime = await createIdxReuseRuntime(prisma, fixture);
+    const exchangedA = await runtime.exchange(fixture.a);
+    const exchangedB = await runtime.exchange(fixture.b);
+    const decodedA = decode(exchangedA.accessToken);
+    const decodedB = decode(exchangedB.accessToken);
+
+    expect(decodedA).toMatchObject({ integration_id: fixture.a.config.integrationId, sub: fixture.a.claims.sub, org_id: fixture.a.claims.UUID_Company, roles: [], permission_scopes: fixture.a.expectedScopes });
+    expect(decodedB).toMatchObject({ integration_id: fixture.b.config.integrationId, sub: fixture.b.claims.sub, org_id: fixture.b.claims.UUID_Company, roles: [], permission_scopes: fixture.b.expectedScopes });
+    expect(JSON.stringify(decodedA)).not.toContain('FIXTURE_INVENTORY');
+    expect(JSON.stringify(decodedB)).not.toContain('FIXTURE_ORDERS');
+    expect(JSON.stringify([decodedA, decodedB])).not.toMatch(/customer_id|customerId/i);
+
+    expect(runtime.transport).toHaveBeenNthCalledWith(1, expect.objectContaining({ nativeCredential: fixture.a.credential, providerInstancePolicy: expect.objectContaining({ id: fixture.a.provider.id, endpointUri: fixture.a.provider.endpointUri }) }));
+    expect(runtime.transport).toHaveBeenNthCalledWith(2, expect.objectContaining({ nativeCredential: fixture.b.credential, providerInstancePolicy: expect.objectContaining({ id: fixture.b.provider.id, endpointUri: fixture.b.provider.endpointUri }) }));
+    expect(runtime.readiness).toHaveBeenNthCalledWith(1, fixture.a.config.integrationId);
+    expect(runtime.readiness).toHaveBeenNthCalledWith(2, fixture.b.config.integrationId);
+    expect(runtime.registryResolve).toHaveBeenNthCalledWith(1, 'idx_delegated');
+    expect(runtime.registryResolve).toHaveBeenNthCalledWith(2, 'idx_delegated');
+    expect(runtime.registryResolve.mock.results.map((result) => result.value)).toEqual([runtime.idxAdapter, runtime.idxAdapter]);
+
+    const identities = runtime.admit.mock.calls.map(([input]) => input.identity);
+    expect(identities[0]).toEqual({ subject: fixture.a.claims.sub, organization: fixture.a.claims.UUID_Company, anchors: [{ kind: 'idx_entry', value: fixture.a.claims.UUID_Entry }], trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [{ menuId: 'FIXTURE_ORDERS', actions: ['read', 'update'] }] } });
+    expect(identities[1]).toEqual({ subject: fixture.b.claims.sub, organization: fixture.b.claims.UUID_Company, anchors: [{ kind: 'idx_entry', value: fixture.b.claims.UUID_Entry }], trustedPermissionMaterial: { kind: 'idx-menu-detail/v1', menus: [{ menuId: 'FIXTURE_INVENTORY', actions: ['read', 'export'] }] } });
+    expect(runtime.permissionSourceLookup).not.toHaveBeenCalled();
+    expect(runtime.permissionSourceExecute).not.toHaveBeenCalled();
+    expect(runtime.issue).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['A credential through selector B', 'a', 'b'],
+    ['B credential through selector A', 'b', 'a']
+  ] as const)('denies %s after the selected endpoint accepts the unchanged credential', async (_label, credentialSide, selectorSide) => {
+    const runtime = await createIdxReuseRuntime(prisma, fixture);
+    const credential = fixture[credentialSide];
+    const selected = fixture[selectorSide];
+    await expect(runtime.service.exchange({ integrationSelector: selected.config.publicSelector as string, nativeCredential: credential.credential, requestId: `request-replay-${credentialSide}-${selectorSide}` })).rejects.toBeInstanceOf(ManagedExchangeCredentialError);
+    expect(runtime.transport).toHaveBeenCalledTimes(1);
+    expect(runtime.transport).toHaveBeenCalledWith(expect.objectContaining({ nativeCredential: credential.credential, providerInstancePolicy: expect.objectContaining({ id: selected.provider.id, endpointUri: selected.provider.endpointUri }) }));
+    expect(runtime.admit).toHaveBeenCalledWith(expect.objectContaining({ identity: expect.objectContaining({ subject: credential.claims.sub, organization: credential.claims.UUID_Company, anchors: [{ kind: 'idx_entry', value: credential.claims.UUID_Entry }] }), integrationConfigId: selected.config.id }));
+    expect(runtime.permissions).not.toHaveBeenCalled();
+    expect(runtime.canonicalize).not.toHaveBeenCalled();
+    expect(runtime.issue).not.toHaveBeenCalled();
+  });
+
+  it('keeps fixtures synthetic and production authority sources free of fixture or Customer branches', () => {
+    const fixtureSource = readFileSync(resolve(__dirname, 'fixtures/production-idx-two-integration.fixture.ts'), 'utf8');
+    expect(fixtureSource).not.toMatch(/password|username|RefreshToken|AccessToken|Bearer\s+[A-Za-z0-9._-]+|\.com\b|\.net\b|\.org\b/i);
+    expect(JSON.stringify(fixture)).not.toMatch(/customerId|customer_id|RefreshToken|password|username/i);
+    for (const side of [fixture.a, fixture.b]) {
+      expect(new URL(side.provider.endpointUri as string).hostname).toMatch(/\.example\.test$/);
+      expect([side.provider.id, side.config.id, side.config.integrationId, side.config.publicSelector, side.claims.sub, side.claims.UUID_Company, side.claims.UUID_Entry].every((value) => typeof value === 'string' && value.startsWith('fixture-'))).toBe(true);
+    }
+    const production = [
+      '../../src/managed-identity-exchange/exchange.service.ts', '../../src/managed-identity-exchange/providers/idx-delegated-verification.adapter.ts',
+      '../../src/managed-identity-exchange/providers/identity-provider-adapter.registry.ts', '../../src/managed-identity-exchange/admission/integration-admission.service.ts',
+      '../../src/managed-identity-exchange/permissions/managed-permission.service.ts', '../../src/managed-identity-exchange/permissions/idx-menu-detail.permission-normalizer.ts',
+      '../../src/managed-identity-exchange/canonicalization/managed-canonicalization.service.ts'
+    ].map((file) => readFileSync(resolve(__dirname, file), 'utf8')).join('\n');
+    expect(production).not.toMatch(/fixture-provider-idx-|fixture-integration-idx-|fixture-selector-|fixture-entry-|idx-[ab]\.example\.test/i);
+    expect(production).not.toMatch(/(?:if|switch)\s*\([^)]*(?:customerId|customer)|(?:integrationId|customerId)\s*={2,3}\s*['"][^'"]+/i);
+  });
+});
+
+describeRegistry('Feature 006 IDX managed JWT through unchanged Feature 004 (T038-T039)', () => {
+  let database: Awaited<ReturnType<typeof createGatewayRegistryDatabase>>;
+  let prisma: ReturnType<typeof createGatewayPrismaClient>;
+  let fixture: IdxReuseFixture;
+
+  beforeEach(async () => {
+    database = await createGatewayRegistryDatabase('idx-feature004-session-bootstrap');
+    prisma = createGatewayPrismaClient(database.databaseUrl);
+    fixture = loadIdxReuseFixture();
+    await seedIdxFeature004ControlPlane(prisma, fixture.a);
+  });
+  afterEach(async () => { await prisma?.$disconnect(); await database?.dispose(); });
+
+  it('exchanges the native IDX credential, verifies its managed RS256 JWT, and resolves binding-owned Customer authority', async () => {
+    const runtime = await createIdxFeature004Runtime(prisma, fixture.a, [profile('fixture-idx-profile-a', fixture.a.config.integrationId as string)]);
+    const exchanged = await runtime.exchange('fixture-idx-feature004-success');
+    const managed = decode(exchanged.accessToken);
+    const verified = await runtime.verifier.verify({ authorization: `Bearer ${exchanged.accessToken}`, requestId: 'fixture-idx-feature004-success' });
+    const resolved = await runtime.resolver.resolve({ identity: verified, requestId: 'fixture-idx-feature004-success' });
+
+    expect(managed).toMatchObject({ integration_id: fixture.a.config.integrationId, sub: fixture.a.claims.sub, org_id: fixture.a.claims.UUID_Company, host_app: 'fixture-assistant', roles: [], permission_scopes: fixture.a.expectedScopes });
+    expect(managed).not.toHaveProperty('customer_id');
+    expect(JSON.stringify(managed)).not.toMatch(/UUID_|idx_entry|trustedPermissionMaterial|fixture-entry-a|customer/i);
+    expect(verified).toMatchObject({ integrationId: fixture.a.config.integrationId, subject: fixture.a.claims.sub, organizationId: fixture.a.claims.UUID_Company, hostApp: 'fixture-assistant', roles: [], permissionScopes: fixture.a.expectedScopes });
+    expect(Object.isFrozen(verified)).toBe(true);
+    expect(Object.isFrozen(verified.roles)).toBe(true);
+    expect(Object.isFrozen(verified.permissionScopes)).toBe(true);
+    expect(resolved).toMatchObject({ customerId: 'fixture-session-customer-a', integrationId: fixture.a.config.integrationId, subject: fixture.a.claims.sub, organizationId: fixture.a.claims.UUID_Company, hostApp: 'fixture-assistant', roles: [], permissionScopes: fixture.a.expectedScopes });
+    expect(runtime.transport).toHaveBeenCalledTimes(1);
+    expect(runtime.permissionSourceLookup).not.toHaveBeenCalled();
+    expect(runtime.permissionSourceExecute).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['zero compatible profiles', []],
+    ['two compatible profiles', [profile('fixture-idx-profile-a', 'fixture-integration-idx-a'), profile('fixture-idx-profile-a-duplicate', 'fixture-integration-idx-a', {}, 2)]]
+  ])('fails closed with %s before binding resolution', async (_label, profiles) => {
+    const runtime = await createIdxFeature004Runtime(prisma, fixture.a, profiles);
+    const exchanged = await runtime.exchange('fixture-idx-feature004-profile-negative');
+    await expect(runtime.verifier.verify({ authorization: `Bearer ${exchanged.accessToken}`, requestId: 'fixture-idx-feature004-profile-negative' })).rejects.toBeInstanceOf(UpstreamAuthenticationError);
+    expect(runtime.bindingLookup).not.toHaveBeenCalled();
+  });
+
+  it('allows an unrelated compatible profile to coexist while retaining the selected IDX integration decision', async () => {
+    await prisma.customer.create({ data: { id: 'fixture-unrelated-customer' } });
+    await prisma.integrationBinding.create({ data: {
+      integrationId: 'fixture-unrelated-integration', customerId: 'fixture-unrelated-customer',
+      allowedHostApp: 'fixture-assistant', enabled: true
+    } });
+    const runtime = await createIdxFeature004Runtime(prisma, fixture.a, [
+      profile('fixture-idx-profile-a', fixture.a.config.integrationId as string),
+      profile('fixture-idx-profile-unrelated', 'fixture-unrelated-integration')
+    ]);
+    const exchanged = await runtime.exchange('fixture-idx-feature004-unrelated');
+    await expect(runtime.resolver.resolve({ identity: await runtime.verifier.verify({ authorization: `Bearer ${exchanged.accessToken}`, requestId: 'fixture-idx-feature004-unrelated' }), requestId: 'fixture-idx-feature004-unrelated' })).resolves.toMatchObject({ customerId: 'fixture-session-customer-a', integrationId: fixture.a.config.integrationId });
+  });
+
+  it('keeps HostApp and enabled binding authority unchanged, and never accepts the native IDX credential as Feature 004 input', async () => {
+    const runtime = await createIdxFeature004Runtime(prisma, fixture.a, [profile('fixture-idx-profile-a', fixture.a.config.integrationId as string)]);
+    const exchanged = await runtime.exchange('fixture-idx-feature004-binding');
+    const verified = await runtime.verifier.verify({ authorization: `Bearer ${exchanged.accessToken}`, requestId: 'fixture-idx-feature004-binding' });
+    await expect(runtime.verifier.verify({ authorization: `Bearer ${fixture.a.credential}`, requestId: 'fixture-idx-native-rejected' })).rejects.toBeInstanceOf(UpstreamAuthenticationError);
+    await prisma.integrationBinding.update({ where: { integrationId: fixture.a.config.integrationId as string }, data: { allowedHostApp: 'wrong-host' } });
+    await expect(runtime.resolver.resolve({ identity: verified, requestId: 'fixture-idx-host-mismatch' })).rejects.toMatchObject({ status: 403, code: 'IDENTITY_ISSUANCE_DENIED' });
+    await prisma.integrationBinding.update({ where: { integrationId: fixture.a.config.integrationId as string }, data: { allowedHostApp: 'fixture-assistant', enabled: false } });
+    await expect(runtime.resolver.resolve({ identity: verified, requestId: 'fixture-idx-binding-disabled' })).rejects.toMatchObject({ status: 403, code: 'IDENTITY_ISSUANCE_DENIED' });
+  });
+
+  it('keeps managed exchange limited to its established authority boundary', () => {
+    const source = readFileSync(resolve(__dirname, '../../src/managed-identity-exchange/exchange.service.ts'), 'utf8');
+    expect(source).toMatch(/ManagedExchangeInput = Readonly<\{ integrationSelector: string; nativeCredential: string; requestId: string \}>/);
+    expect(source).not.toMatch(/sessionId|GatewayBackendClient|Feature 004|IntegrationBinding|customerId|customer_id/i);
+  });
+});
+
 async function createCompatibilityRuntime(prisma: ReturnType<typeof createGatewayPrismaClient>, profiles: readonly ReturnType<typeof profile>[]) {
   const { privateKey, publicKey } = await generateKeyPair('RS256');
   const publicJwk = { ...(await exportJWK(publicKey)), kid: 'managed-kid', alg: 'RS256', use: 'sig' } as JWK;
@@ -331,5 +520,125 @@ async function createIsolationRuntime(prisma: ReturnType<typeof createGatewayPri
     service, adapter, readiness, issue, verifier, resolver, candidateResolver, profileVerify, bindingLookup,
     exchange: (integrationSelector: string, nativeCredential: string, requestId: string) => service.exchange({ integrationSelector, nativeCredential, requestId }),
     resolve: async (token: string, requestId: string) => resolver.resolve({ identity: await verifier.verify({ authorization: `Bearer ${token}`, requestId }), requestId })
+  });
+}
+
+function loadIdxReuseFixture(): IdxReuseFixture {
+  const target = require('./fixtures/production-idx-two-integration.fixture') as { createProductionIdxTwoIntegrationFixture(): IdxReuseFixture };
+  return target.createProductionIdxTwoIntegrationFixture();
+}
+
+async function seedIdxReuseControlPlane(prisma: ReturnType<typeof createGatewayPrismaClient>, fixture: IdxReuseFixture): Promise<void> {
+  await prisma.customer.create({ data: { id: 'fixture-phase15-db-prerequisite' } });
+  await prisma.integrationBinding.createMany({ data: [fixture.a, fixture.b].map((side) => ({
+    integrationId: side.config.integrationId as string, customerId: 'fixture-phase15-db-prerequisite',
+    allowedHostApp: side.config.canonicalHostApp as string, enabled: true
+  })) });
+  for (const side of [fixture.a, fixture.b]) {
+    await prisma.managedIdentityProviderInstance.create({ data: side.provider as never });
+    await prisma.managedIntegrationExchangeConfig.create({ data: side.config as never });
+    await prisma.managedIntegrationAdmissionPolicy.create({ data: side.admission as never });
+    await prisma.managedPermissionPolicy.create({ data: side.permission as never });
+  }
+}
+
+async function createIdxReuseRuntime(prisma: ReturnType<typeof createGatewayPrismaClient>, fixture: IdxReuseFixture) {
+  const { privateKey } = await generateKeyPair('RS256');
+  const responseByEndpoint = new Map([
+    [fixture.a.provider.endpointUri, fixture.a.menuDetail],
+    [fixture.b.provider.endpointUri, fixture.b.menuDetail]
+  ]);
+  const transport = jest.fn(async (input: VerifyNativeCredentialInput) => {
+    const body = responseByEndpoint.get(input.providerInstancePolicy.endpointUri);
+    if (!body) throw new ManagedExchangeInfrastructureError();
+    return Object.freeze({ status: 200 as const, contentType: 'application/json' as const, body });
+  });
+  const idxAdapter = new IdxDelegatedVerificationAdapter({ execute: transport }, new IdxMenuDetailValidator());
+  const delegated = new DelegatedHttpV1Adapter({ execute: async () => { throw new ManagedExchangeInfrastructureError(); } });
+  const providerAdapters = new IdentityProviderAdapterRegistry(delegated, idxAdapter);
+  const registryResolve = jest.spyOn(providerAdapters, 'resolve');
+  const configs = new ManagedIntegrationExchangeConfigRepository(prisma);
+  const providers = new ManagedIdentityProviderInstanceRepository(prisma);
+  const admissionService = new IntegrationAdmissionService(new ManagedIntegrationAdmissionPolicyRepository(prisma));
+  const admit = jest.spyOn(admissionService, 'admit');
+  const permissionSources = new ManagedPermissionSourceInstanceRepository(prisma);
+  const permissionSourceLookup = jest.spyOn(permissionSources, 'findEnabledActiveById');
+  const permissionAdapters = new PermissionSourceAdapterRegistry([]);
+  const permissionSourceExecute = jest.spyOn(permissionAdapters, 'execute');
+  const permissionService = new ManagedPermissionService({
+    permissionSources, permissionAdapters,
+    permissionNormalizers: new PermissionNormalizerRegistry([new IdxMenuDetailPermissionNormalizer()]),
+    projector: new ManagedPermissionScopeProjector()
+  });
+  const permissions = jest.spyOn(permissionService, 'resolve');
+  const canonicalizer = new ManagedCanonicalizationService(configs);
+  const canonicalize = jest.spyOn(canonicalizer, 'canonicalize');
+  const tokenIssuer = new ManagedUpstreamTokenIssuer({ findActive: async () => Object.freeze({ issuer, audience, kid: 'fixture-managed-kid', privateKey }) });
+  const issue = jest.spyOn(tokenIssuer, 'issue');
+  const readiness = jest.fn(async (_integrationId: string) => undefined);
+  const service = new ManagedIdentityExchangeService({
+    configs, providers, readiness: { assertReady: readiness }, providerAdapters, admission: admissionService,
+    permissionPolicies: new ManagedPermissionPolicyRepository(prisma), permissions: permissionService,
+    canonicalizer, issuer: tokenIssuer, audit: { append: async () => undefined }
+  });
+  return Object.freeze({
+    service, idxAdapter, transport, registryResolve, readiness, admit, permissions, canonicalize, issue,
+    permissionSourceLookup, permissionSourceExecute,
+    exchange: (side: IdxReuseSide) => service.exchange({ integrationSelector: side.config.publicSelector as string, nativeCredential: side.credential, requestId: `request-idx-${side.name}` })
+  });
+}
+
+async function seedIdxFeature004ControlPlane(prisma: ReturnType<typeof createGatewayPrismaClient>, side: IdxReuseSide): Promise<void> {
+  await prisma.customer.create({ data: { id: 'fixture-session-customer-a' } });
+  await prisma.integrationBinding.create({ data: {
+    integrationId: side.config.integrationId as string, customerId: 'fixture-session-customer-a',
+    allowedHostApp: 'fixture-assistant', enabled: true
+  } });
+  await prisma.managedIdentityProviderInstance.create({ data: side.provider as never });
+  await prisma.managedIntegrationExchangeConfig.create({ data: side.config as never });
+  await prisma.managedIntegrationAdmissionPolicy.create({ data: side.admission as never });
+  await prisma.managedPermissionPolicy.create({ data: side.permission as never });
+}
+
+async function createIdxFeature004Runtime(prisma: ReturnType<typeof createGatewayPrismaClient>, side: IdxReuseSide, profiles: readonly ReturnType<typeof profile>[]) {
+  const { privateKey, publicKey } = await generateKeyPair('RS256');
+  const publicJwk = { ...(await exportJWK(publicKey)), kid: 'managed-kid', alg: 'RS256', use: 'sig' } as JWK;
+  await prisma.registeredUpstreamTrustProfile.createMany({ data: [...profiles] as never });
+  const managedJwks = new ManagedJwksService({
+    issuers: { findEnabledActive: async () => [{ id: 'fixture-idx-managed-issuer', issuer, expectedAudience: audience, enabled: true, lifecycle: 'active' }] as never },
+    signingKeys: { findJwksVisibleByIssuerId: async () => [{ issuerId: 'fixture-idx-managed-issuer', kid: 'managed-kid', publicJwk, status: 'active' }] as never }
+  });
+  const profilesRepository = new TrustProfileRepository(prisma);
+  const candidateResolver = new CandidateTrustProfileResolver(new TrustProfileCache({ repository: profilesRepository, ttlMilliseconds: 0 }));
+  const verifier = new MultiProfileUpstreamTokenVerifier({
+    parser: new RoutingMetadataParser(), candidateResolver,
+    profileVerifier: new ProfileScopedVerifier({ transport: { fetch: async () => await managedJwks.getDocument() as never } }),
+    telemetry: new UpstreamAuthTelemetry(new GatewayIdentityAuditWriter(prisma)), clockToleranceSeconds: 0
+  });
+  const bindings = new IntegrationBindingRepository(prisma);
+  const bindingLookup = jest.spyOn(bindings, 'findByIntegrationId');
+  const resolver = new CanonicalIdentityResolver(bindings, new GatewayIdentityAuditWriter(prisma));
+  const transport = jest.fn(async (input: VerifyNativeCredentialInput) => {
+    if (input.providerInstancePolicy.endpointUri !== side.provider.endpointUri) throw new ManagedExchangeInfrastructureError();
+    return Object.freeze({ status: 200 as const, contentType: 'application/json' as const, body: side.menuDetail });
+  });
+  const idxAdapter = new IdxDelegatedVerificationAdapter({ execute: transport }, new IdxMenuDetailValidator());
+  const permissionSources = new ManagedPermissionSourceInstanceRepository(prisma);
+  const permissionSourceLookup = jest.spyOn(permissionSources, 'findEnabledActiveById');
+  const permissionAdapters = new PermissionSourceAdapterRegistry([]);
+  const permissionSourceExecute = jest.spyOn(permissionAdapters, 'execute');
+  const configs = new ManagedIntegrationExchangeConfigRepository(prisma);
+  const tokenIssuer = new ManagedUpstreamTokenIssuer({ findActive: async () => Object.freeze({ issuer, audience, kid: 'managed-kid', privateKey }) });
+  const service = new ManagedIdentityExchangeService({
+    configs, providers: new ManagedIdentityProviderInstanceRepository(prisma), readiness: { assertReady: async () => undefined },
+    providerAdapters: new IdentityProviderAdapterRegistry(new DelegatedHttpV1Adapter({ execute: async () => { throw new ManagedExchangeInfrastructureError(); } }), idxAdapter),
+    admission: new IntegrationAdmissionService(new ManagedIntegrationAdmissionPolicyRepository(prisma)),
+    permissionPolicies: new ManagedPermissionPolicyRepository(prisma),
+    permissions: new ManagedPermissionService({ permissionSources, permissionAdapters, permissionNormalizers: new PermissionNormalizerRegistry([new IdxMenuDetailPermissionNormalizer()]), projector: new ManagedPermissionScopeProjector() }),
+    canonicalizer: new ManagedCanonicalizationService(configs), issuer: tokenIssuer, audit: { append: async () => undefined }
+  });
+  return Object.freeze({
+    service, verifier, resolver, bindingLookup, transport, permissionSourceLookup, permissionSourceExecute,
+    exchange: (requestId: string) => service.exchange({ integrationSelector: side.config.publicSelector as string, nativeCredential: side.credential, requestId })
   });
 }

@@ -32,6 +32,10 @@ const describeRegistry = process.env.RUN_GATEWAY_REGISTRY_DB_TESTS === 'true' ? 
 const writerPath = resolve(__dirname, '../../src/managed-identity-exchange/persistence/managed-exchange-audit.writer.ts');
 const modulePath = resolve(__dirname, '../../src/managed-identity-exchange/managed-identity-exchange.module.ts');
 const sentinel = 'DO_NOT_LEAK_DB_DIAGNOSTIC';
+const idxAuditSentinels = Object.freeze([
+  'DO_NOT_LEAK_IDX_NATIVE_TOKEN', 'DO_NOT_LEAK_AUTHORIZATION', 'DO_NOT_LEAK_REFRESH_TOKEN',
+  'DO_NOT_LEAK_RAW_CLAIM', 'DO_NOT_LEAK_MENUDETAIL', 'DO_NOT_LEAK_HTTP_BODY'
+]);
 const runtimeSentinels = Object.freeze([
   'DO_NOT_LEAK_NATIVE_CREDENTIAL',
   'DO_NOT_LEAK_PROVIDER_RESPONSE',
@@ -71,6 +75,18 @@ describe('Managed exchange audit writer and production composition (T038)', () =
     const append = jest.fn();
     await expect(new ManagedExchangeAuditWriter({ append } as never).append(input as never)).rejects.toBeInstanceOf(ManagedExchangeInfrastructureError);
     expect(append).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'nativeCredential', 'Authorization', 'accessToken', 'RefreshToken', 'rawJwt', 'rawClaims',
+    'MenuDetail', 'responseBody', 'permissionMaterial', 'trustedPermissionMaterial', 'anchors'
+  ])('rejects IDX secret-bearing audit field %s before repository access', async (field) => {
+    const append = jest.fn();
+    const input = { requestId: 'request-idx', outcome: 'success', reasonCode: 'managed_exchange_issued', [field]: idxAuditSentinels[0] };
+    const failure = await new ManagedExchangeAuditWriter({ append } as never).append(input as never).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(ManagedExchangeInfrastructureError);
+    expect(append).not.toHaveBeenCalled();
+    expect(`${String(failure)} ${JSON.stringify(failure)}`).not.toContain(idxAuditSentinels[0]);
   });
 
   it('redacts repository diagnostics and retains no sensitive persistence vocabulary', async () => {
@@ -122,6 +138,16 @@ describeRegistry('Managed exchange audit database persistence (T038)', () => {
     const row = await prisma.managedExchangeAuditEvent.findFirstOrThrow({ where: { requestId: 'request-a' } });
     expect(row).toMatchObject({ requestId: 'request-a', outcome: 'success', reasonCode: 'managed_exchange_issued', integrationId: 'integration-a', integrationConfigId: 'config-a', providerType: 'delegated_http', providerInstanceId: 'provider-a', jti: 'jti-a', kid: 'kid-a' });
     expect(JSON.stringify(row)).not.toMatch(/nativeCredential|authorization|accessToken|privateKey|customerId/i);
+  });
+
+  it('persists only safe IDX provider metadata through the existing audit schema', async () => {
+    const writer = new ManagedExchangeAuditWriter(new ManagedExchangeAuditRepository(prisma));
+    await writer.append({ requestId: 'request-idx', outcome: 'success', reasonCode: 'managed_exchange_issued', integrationId: 'integration-idx', integrationConfigId: 'config-idx', providerType: 'idx_delegated', providerInstanceId: 'provider-idx', jti: 'jti-idx', kid: 'kid-idx' });
+    const row = await prisma.managedExchangeAuditEvent.findFirstOrThrow({ where: { requestId: 'request-idx' } });
+    expect(row).toMatchObject({ requestId: 'request-idx', outcome: 'success', reasonCode: 'managed_exchange_issued', integrationId: 'integration-idx', integrationConfigId: 'config-idx', providerType: 'idx_delegated', providerInstanceId: 'provider-idx', jti: 'jti-idx', kid: 'kid-idx' });
+    const serialized = JSON.stringify(row);
+    for (const marker of idxAuditSentinels) expect(serialized).not.toContain(marker);
+    expect(serialized).not.toMatch(/nativeCredential|Authorization|accessToken|RefreshToken|rawJwt|rawClaims|MenuDetail|responseBody|permissionMaterial|trustedPermissionMaterial|anchors/i);
   });
 
   it('carries a supplied request ID through the production HTTP, service, writer, and database boundaries', async () => {
