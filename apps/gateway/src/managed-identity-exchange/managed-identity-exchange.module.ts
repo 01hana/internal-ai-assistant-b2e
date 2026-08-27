@@ -14,6 +14,7 @@ import { ManagedSigningKeyRuntimeProvider } from './issuer/managed-signing-key.p
 import { ManagedUpstreamTokenIssuer } from './issuer/managed-upstream-token-issuer';
 import { ManagedPermissionScopeProjector } from './permissions/managed-permission-scope.projector';
 import { ManagedPermissionService } from './permissions/managed-permission.service';
+import { IdxMenuDetailPermissionNormalizer } from './permissions/idx-menu-detail.permission-normalizer';
 import { PermissionNormalizerRegistry } from './permissions/permission-normalizer.registry';
 import { PermissionSourceAdapterRegistry } from './permissions/permission-source-adapter.registry';
 import { SyntheticV1PermissionNormalizer } from './permissions/synthetic-v1-permission.normalizer';
@@ -30,6 +31,7 @@ import { DelegatedHttpTransport } from './providers/delegated-http.transport';
 import { DelegatedHttpV1Adapter } from './providers/delegated-http-v1.adapter';
 import { IdentityProviderAdapterRegistry } from './providers/identity-provider-adapter.registry';
 import { IdxDelegatedVerificationAdapter } from './providers/idx-delegated-verification.adapter';
+import { IdxMenuDetailValidator } from './providers/idx-menu-detail.validator';
 
 @Module({
   imports: [GatewaySigningKeyPersistenceModule],
@@ -61,7 +63,12 @@ import { IdxDelegatedVerificationAdapter } from './providers/idx-delegated-verif
       inject: [DelegatedHttpTransport],
       useFactory: (transport: DelegatedHttpTransport) => new DelegatedHttpV1Adapter(transport)
     },
-    IdxDelegatedVerificationAdapter,
+    IdxMenuDetailValidator,
+    {
+      provide: IdxDelegatedVerificationAdapter,
+      inject: [DelegatedHttpTransport, IdxMenuDetailValidator],
+      useFactory: (transport: DelegatedHttpTransport, validator: IdxMenuDetailValidator) => new IdxDelegatedVerificationAdapter(transport, validator)
+    },
     {
       provide: IdentityProviderAdapterRegistry,
       inject: [DelegatedHttpV1Adapter, IdxDelegatedVerificationAdapter],
@@ -72,10 +79,11 @@ import { IdxDelegatedVerificationAdapter } from './providers/idx-delegated-verif
       useFactory: () => new PermissionSourceAdapterRegistry([])
     },
     SyntheticV1PermissionNormalizer,
+    IdxMenuDetailPermissionNormalizer,
     {
       provide: PermissionNormalizerRegistry,
-      inject: [SyntheticV1PermissionNormalizer],
-      useFactory: (normalizer: SyntheticV1PermissionNormalizer) => new PermissionNormalizerRegistry([normalizer])
+      inject: [SyntheticV1PermissionNormalizer, IdxMenuDetailPermissionNormalizer],
+      useFactory: (synthetic: SyntheticV1PermissionNormalizer, idx: IdxMenuDetailPermissionNormalizer) => new PermissionNormalizerRegistry([synthetic, idx])
     },
     ManagedPermissionScopeProjector,
     {

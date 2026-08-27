@@ -8,6 +8,9 @@ import { ProvisionManagedUpstreamIssuerCommand } from '../../src/commands/provis
 import { ProvisionManagedUpstreamSigningKeyCommand } from '../../src/commands/provision-managed-upstream-signing-key';
 import { GatewaySigningAuthorityReader } from '../../src/managed-identity-exchange/persistence/gateway-signing-authority.reader';
 import { createManagedExchangeReadinessValidator } from '../../src/managed-identity-exchange/persistence/managed-exchange-readiness.composition';
+import { IdxMenuDetailPermissionNormalizer } from '../../src/managed-identity-exchange/permissions/idx-menu-detail.permission-normalizer';
+import { PermissionNormalizerRegistry } from '../../src/managed-identity-exchange/permissions/permission-normalizer.registry';
+import { SyntheticV1PermissionNormalizer } from '../../src/managed-identity-exchange/permissions/synthetic-v1-permission.normalizer';
 import { ManagedIntegrationExchangeConfigActivationValidator } from '../../src/managed-identity-exchange/persistence/managed-integration-exchange-config-activation.validator';
 import { ManagedExchangeLifecycleRepository, ManagedIdentityProviderInstanceRepository, ManagedIntegrationAdmissionPolicyRepository, ManagedIntegrationExchangeConfigRepository, ManagedPermissionPolicyRepository, ManagedPermissionSourceInstanceRepository, ManagedUpstreamIssuerRepository, ManagedUpstreamSigningKeyRepository } from '../../src/managed-identity-exchange/persistence/managed-exchange.repository';
 import { GatewaySigningKeyRepository } from '../../src/signing/gateway-signing-key.repository';
@@ -18,6 +21,7 @@ import { createGatewayRegistryDatabase } from '../../../../test/support/gateway-
 
 const describeRegistry = process.env.RUN_GATEWAY_REGISTRY_DB_TESTS === 'true' ? describe : describe.skip;
 const providerInput = (overrides: Record<string, unknown> = {}) => ({ providerType: 'delegated_http', endpointUri: 'https://provider.example.test/verify', httpMethod: 'POST', credentialPlacement: 'authorization_bearer', timeoutMilliseconds: 1000, responseContractVersion: 'delegated-http/v1', declaredAnchorKinds: ['org'], contractConfig: { anchorSchema: 'managed-verified-anchors/v1', responseSchema: 'managed-verified-identity/v1' }, ...overrides });
+const idxProviderInput = () => ({ providerType: 'idx_delegated', endpointUri: 'https://idx.example.test/menu-detail', httpMethod: 'GET', credentialPlacement: 'authorization_bearer', timeoutMilliseconds: 1000, responseContractVersion: 'idx-menu-detail/v1', declaredAnchorKinds: ['idx_entry'], contractConfig: { responseSchema: 'idx-menu-detail/v1', contentType: 'application/json' } });
 const sourceInput = (overrides: Record<string, unknown> = {}) => ({ sourceType: 'synthetic', endpointUri: null, providerInstanceId: null, serviceCredentialReference: null, adapterContractReference: 'synthetic/v1', contractConfig: { materialSchema: 'managed-permission-material/v1' }, ...overrides });
 const issuerInput = (overrides: Record<string, unknown> = {}) => ({ issuer: 'https://managed.example.test', expectedAudience: 'managed-audience', publicJwksUri: 'https://managed.example.test/jwks.json', ...overrides });
 const keyInput = (issuerId: string, overrides: Record<string, unknown> = {}) => ({ issuerId, kid: 'managed-kid', keyReference: 'managed-ref', publicJwk: { kty: 'RSA', n: 'managed-n', e: 'AQAB' }, ...overrides });
@@ -147,6 +151,21 @@ describeRegistry('Feature 005 Phase 2B DB acceptance', () => {
     await h.source.disable({ id: String(source.id), requestId: 'source-disable' });
     await expect(h.readiness.assertReady('integration-a')).rejects.toThrow();
   });
+
+  it('proves fully provisioned IDX readiness through production DB composition without normalizer execution', async () => {
+    const h = harness(prisma);
+    const normalize = jest.spyOn(h.idxNormalizer, 'normalize');
+    const provider = await h.provider.create({ ...idxProviderInput(), requestId: 'idx-provider' });
+    const config = await createConfig(h, provider.id);
+    await h.admission.create({ integrationConfigId: String(config.id), anchorRequirements: [{ kind: 'idx_entry', allowedValues: ['entry-a'] }], requestId: 'idx-admission' });
+    await h.policy.create({ integrationConfigId: String(config.id), mode: 'provider_trusted', permissionSourceInstanceId: null, normalizerType: 'idx-menu-detail/v1', projectionContractVersion: 'managed-permissions/v1', projectionContract: { scopeSchema: 'managed-normalized-scopes/v1' }, requestId: 'idx-permission' });
+    const issuer = await h.issuer.create({ ...issuerInput(), requestId: 'idx-issuer' });
+    await activateKey(h, issuer.id);
+    await prisma.registeredUpstreamTrustProfile.create({ data: { integrationId: 'integration-a', expectedIssuer: String(issuer.issuer), expectedAudience: String(issuer.expectedAudience), jwksUri: String(issuer.publicJwksUri), algorithm: 'RS256', enabled: true, lifecycle: 'active', version: 1, replacesProfileId: null } });
+
+    await expect(h.readiness.assertReady('integration-a')).resolves.toBeUndefined();
+    expect(normalize).not.toHaveBeenCalled();
+  });
 });
 
 async function createConfig(h: ReturnType<typeof harness>, providerInstanceId: unknown, integrationId = 'integration-a') {
@@ -170,11 +189,12 @@ function harness(prisma: ReturnType<typeof createGatewayPrismaClient>, options: 
   const admission = new ProvisionManagedAdmissionPolicyCommand({ repository: lifecycle, audit, invalidation });
   const source = new ProvisionManagedPermissionSourceCommand({ repository: lifecycle, audit, invalidation });
   const adapters = { resolve: (type: string) => type === 'synthetic' ? { sourceType: 'synthetic', resolve: async () => ({ kind: 'synthetic' }) } : undefined };
-  const normalizers = { resolve: (type: string) => type === 'synthetic-normalizer/v1' ? { normalizerType: type, normalize: () => [] } : undefined };
+  const idxNormalizer = new IdxMenuDetailPermissionNormalizer();
+  const normalizers = new PermissionNormalizerRegistry([new SyntheticV1PermissionNormalizer(), idxNormalizer]);
   const policy = new ProvisionManagedPermissionPolicyCommand({ repository: lifecycle, audit, invalidation, permissionSources: new ManagedPermissionSourceInstanceRepository(prisma), permissionAdapters: adapters, permissionNormalizers: normalizers });
   const authority = new GatewaySigningAuthorityReader({ config: { config: { internalIssuer: 'https://gateway.example.test' } } as never, signingKeys: new GatewaySigningKeyRepository(prisma) });
   const issuer = new ProvisionManagedUpstreamIssuerCommand({ repository: lifecycle, audit, invalidation, gatewaySigningAuthority: authority });
   const key = new ProvisionManagedUpstreamSigningKeyCommand({ repository: lifecycle, audit, invalidation, gatewaySigningAuthority: authority });
   const readiness = createManagedExchangeReadinessValidator({ bindings: new IntegrationBindingRepository(prisma), configs: new ManagedIntegrationExchangeConfigRepository(prisma), providers: providerRepository, admissions: new ManagedIntegrationAdmissionPolicyRepository(prisma), permissionPolicies: new ManagedPermissionPolicyRepository(prisma), permissionSources: new ManagedPermissionSourceInstanceRepository(prisma), issuers: new ManagedUpstreamIssuerRepository(prisma), signingKeys: new ManagedUpstreamSigningKeyRepository(prisma), trustProfiles: new TrustProfileRepository(prisma), permissionAdapters: adapters, permissionNormalizers: normalizers });
-  return { provider, config, admission, source, policy, issuer, key, readiness };
+  return { provider, config, admission, source, policy, issuer, key, readiness, idxNormalizer };
 }

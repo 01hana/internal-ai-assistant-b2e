@@ -15,8 +15,8 @@ const idxProvider = (overrides: Record<string, unknown> = {}) => ({
   declaredAnchorKinds: ['idx_entry'], contractConfig: { responseSchema: 'idx-menu-detail/v1', contentType: 'application/json' }, ...overrides
 });
 
-describe('Disabled IDX adapter shell (T021)', () => {
-  it('is a known provider that always fails closed without credential disclosure', async () => {
+describe('Manually unconfigured IDX adapter fail-closed regression (T021 / T028)', () => {
+  it('fails closed without production dependencies or credential disclosure', async () => {
     const shell = new IdxDelegatedVerificationAdapter();
     expect(shell.providerType).toBe('idx_delegated');
     const failure = await shell.verify({ nativeCredential, providerInstancePolicy: idxProvider() as never, requestId: 'idx-a' }).catch((error: unknown) => error);
@@ -25,7 +25,7 @@ describe('Disabled IDX adapter shell (T021)', () => {
     expect(JSON.stringify(failure)).not.toContain(nativeCredential);
   });
 
-  it('resolves the disabled shell, keeps delegated resolution exact, and leaves unknown types undefined', () => {
+  it('resolves the manual adapter, keeps delegated resolution exact, and leaves unknown types undefined', () => {
     const delegated = new DelegatedHttpV1Adapter({ execute: jest.fn() } as never);
     const idx = new IdxDelegatedVerificationAdapter();
     const registry = new IdentityProviderAdapterRegistry(delegated, idx);
@@ -34,7 +34,7 @@ describe('Disabled IDX adapter shell (T021)', () => {
     expect(registry.resolve('unknown')).toBeUndefined();
   });
 
-  it('registers the fixed provider contract while the adapter and readiness remain disabled', async () => {
+  it('registers the fixed provider contract while manual construction and incomplete readiness fail closed', async () => {
     const contracts = new ProviderContractValidatorRegistry();
     expect(contracts.isActiveEligible('idx_delegated', 'idx-menu-detail/v1')).toBe(true);
     expect(() => contracts.validate('idx_delegated', 'idx-menu-detail/v1', idxProvider().contractConfig)).not.toThrow();
@@ -58,7 +58,7 @@ describe('Disabled IDX adapter shell (T021)', () => {
     expect(source).not.toMatch(/\['delegated_http', 'idx_delegated'\]|delegated_http.*idx_delegated/i);
   });
 
-  it('keeps the uncomposed adapter free of local crypto, Customer, permission, and signing authority', () => {
+  it('keeps the provider-local adapter free of local crypto, Customer, permission, and signing authority', () => {
     const source = readFileSync(resolve(__dirname, '../../src/managed-identity-exchange/providers/idx-delegated-verification.adapter.ts'), 'utf8');
     expect(source).not.toMatch(/fetch\(|httpsRequest|ES512|jose|JWKS|kid|publicKey|decodeJwt|jwtVerify|crypto\.verify|CustomerScope|IntegrationBinding|ManagedTokenIssuer|PermissionSource|RefreshToken|GatewaySigningKey|customerId|integrationId|host_app|roles|scope|ALLOW_IDX|SYNTHETIC|NODE_ENV/i);
   });

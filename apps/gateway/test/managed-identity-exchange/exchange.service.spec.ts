@@ -7,6 +7,7 @@ import {
   ManagedExchangeIssuanceError,
   createVerifiedExternalIdentity
 } from '../../src/managed-identity-exchange/domain/managed-exchange.domain';
+import { IntegrationAdmissionService } from '../../src/managed-identity-exchange/admission/integration-admission.service';
 import { ManagedIdentityExchangeService } from '../../src/managed-identity-exchange/exchange.service';
 
 const servicePath = resolve(__dirname, '../../src/managed-identity-exchange/exchange.service.ts');
@@ -78,6 +79,27 @@ describe('Managed identity exchange ordered service contract (T034)', () => {
     expect(fixture.calls.admit).toHaveBeenCalledWith({ identity: hostileIdentity, integrationConfigId: 'config-a' });
     expect(firstArgument(fixture.calls.permissions).serverOwnedIntegrationContext).toEqual({ integrationId: 'integration-a', hostApp: 'admin' });
     expect(fixture.calls.canonicalize).toHaveBeenCalledWith(expect.objectContaining({ integrationConfigId: 'config-a' }));
+  });
+
+  it('stops permission, canonicalization, and issuance when selector B receives verified IDX Entry A', async () => {
+    const fixture = fixtureFor();
+    const entryAIdentity = createVerifiedExternalIdentity({ subject: 'idx-user-a', organization: 'company-shared', anchors: [{ kind: 'idx_entry', value: 'entry-a' }] });
+    fixture.calls.config.mockResolvedValueOnce({ id: 'config-idx-b', integrationId: 'integration-idx-b', providerInstanceId: 'provider-a', canonicalHostApp: 'admin' });
+    fixture.calls.verify.mockResolvedValueOnce(entryAIdentity);
+    const findEnabledActiveByConfigId = jest.fn(async () => [{
+      id: 'policy-idx-b', integrationConfigId: 'config-idx-b', enabled: true, lifecycle: 'active', version: 1, replacesPolicyId: null,
+      anchorRequirements: [{ kind: 'idx_entry', allowedValues: ['entry-b'] }]
+    }]);
+    const admission = new IntegrationAdmissionService({ findEnabledActiveByConfigId } as never);
+    const dependencies = { ...fixture.dependencies, admission };
+
+    await expect(new ManagedIdentityExchangeService(dependencies as never).exchange({ ...input, integrationSelector: 'selector-b' })).rejects.toBeInstanceOf(ManagedExchangeCredentialError);
+    expect(fixture.calls.config).toHaveBeenCalledWith('selector-b');
+    expect(findEnabledActiveByConfigId).toHaveBeenCalledWith('config-idx-b');
+    expect(fixture.calls.policy).not.toHaveBeenCalled();
+    expect(fixture.calls.permissions).not.toHaveBeenCalled();
+    expect(fixture.calls.canonicalize).not.toHaveBeenCalled();
+    expect(fixture.calls.issue).not.toHaveBeenCalled();
   });
 
   it.each([

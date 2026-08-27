@@ -113,8 +113,8 @@
 **Dependencies**: Phase 10.  
 **Completion gate**: `IDX_COMPOSITION_READY` — valid IDX config resolves its real adapter/normalizer; non-IDX selection remains unchanged.
 
-- [ ] T028 Add failing composition/registry tests in `apps/gateway/test/managed-identity-exchange/phase2a-composition.spec.ts` for IDX adapter/normalizer registration and non-IDX resolution regression. Depends on: T027.
-- [ ] T029 Register the IDX adapter dependencies and normalizer in `apps/gateway/src/managed-identity-exchange/managed-identity-exchange.module.ts` and preserve fixed selection in `providers/identity-provider-adapter.registry.ts`. Tests: make T028 pass; no hardcoded endpoint, Entry, selector, Customer, or SCM branch. Depends on: T028.
+- [x] T028 Add failing composition/registry tests in `apps/gateway/test/managed-identity-exchange/phase2a-composition.spec.ts` for IDX adapter/normalizer registration and non-IDX resolution regression. Depends on: T027.
+- [x] T029 Register the IDX adapter dependencies and normalizer in `apps/gateway/src/managed-identity-exchange/managed-identity-exchange.module.ts` and preserve fixed selection in `providers/identity-provider-adapter.registry.ts`. Tests: make T028 pass; no hardcoded endpoint, Entry, selector, Customer, or SCM branch. Depends on: T028.
 
 ## Phase 12 — IDX Entry Admission
 
@@ -122,8 +122,8 @@
 **Dependencies**: Phase 11.  
 **Completion gate**: `IDX_ENTRY_ADMISSION_READY` — Entry A passes selector A and fails selector B before canonicalization/issuance.
 
-- [ ] T030 Add IDX Entry A→B replay cases to `apps/gateway/test/managed-identity-exchange/integration-admission.spec.ts`. Tests: selector alone is non-authoritative; UUID_Company cannot substitute for `idx_entry`; Feature 006 performs no Customer resolution. Depends on: T029.
-- [ ] T031 Validate existing `apps/gateway/src/managed-identity-exchange/admission/integration-admission.service.ts` requires no IDX-specific branch and make T030 pass through adapter-produced anchors. Tests: exact verified-anchor behavior remains generic. Depends on: T030.
+- [x] T030 Add IDX Entry A→B replay cases to `apps/gateway/test/managed-identity-exchange/integration-admission.spec.ts`. Tests: selector alone is non-authoritative; UUID_Company cannot substitute for `idx_entry`; Feature 006 performs no Customer resolution. Depends on: T029.
+- [x] T031 Validate existing `apps/gateway/src/managed-identity-exchange/admission/integration-admission.service.ts` requires no IDX-specific branch and make T030 pass through adapter-produced anchors. Tests: exact verified-anchor behavior remains generic. Depends on: T030.
 
 ## Phase 13 — IDX Readiness Extension
 
@@ -131,8 +131,8 @@
 **Dependencies**: Phase 12.  
 **Completion gate**: `IDX_READINESS_READY` — every missing, disabled, duplicate, or incompatible prerequisite fails closed; provider readiness is distinct from Customer deployment readiness.
 
-- [ ] T032 Expand failing readiness matrix in `apps/gateway/test/managed-identity-exchange/readiness.spec.ts` for all 13 IDX prerequisites, duplicates, disabled records, incompatible Feature 004 profile, and no-external-call assertion. Depends on: T031.
-- [ ] T033 Extend `apps/gateway/src/managed-identity-exchange/persistence/managed-exchange-readiness.validator.ts` and `managed-exchange-readiness.composition.ts` for active IDX contract, `idx_entry`, provider-trusted policy, registered normalizer/projection, issuer/key, and Feature 004 profile. Tests: make T032 pass; keep readiness read-only and no Customer deployment inference. Depends on: T032.
+- [x] T032 Expand failing readiness matrix in `apps/gateway/test/managed-identity-exchange/readiness.spec.ts` for all 13 IDX prerequisites, duplicates, disabled records, incompatible Feature 004 profile, and no-external-call assertion. Depends on: T031.
+- [x] T033 Extend `apps/gateway/src/managed-identity-exchange/persistence/managed-exchange-readiness.validator.ts` and `managed-exchange-readiness.composition.ts` for active IDX contract, `idx_entry`, provider-trusted policy, registered normalizer/projection, issuer/key, and Feature 004 profile. Tests: make T032 pass; keep readiness read-only and no Customer deployment inference. Depends on: T032.
 
 ## Phase 14 — Audit, Logging, and Secret-Leak Guards
 
