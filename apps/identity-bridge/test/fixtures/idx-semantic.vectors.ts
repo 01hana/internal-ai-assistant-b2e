@@ -1,0 +1,7 @@
+export const actions = Object.freeze(['read', 'insert', 'update', 'delete', 'print', 'import', 'export', 'copy', 'approval'] as const);
+export const nativeClaims = Object.freeze({ sub: 'user-a', UUID_User: 'user-a', UUID_Company: 'company-a', UUID_Entry: 'entry' });
+export function token(claims: Record<string, unknown> = nativeClaims): string { return `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`; }
+export function response(Data: unknown = [menu()]): Record<string, unknown> { return { Code: 200, ExecutionTime: '1ms', Message: '', Version: '1', Data }; }
+export function menu(overrides: Record<string, unknown> = {}): Record<string, unknown> { return { UUID: 'menu', MenuID: ' ORDERS ', Category: 'Orders', Patrilineal: null, Sorting: '1', Memo: 'memo', MenuNode: [node()], MenuPermission: permission(), ...overrides }; }
+export function node(overrides: Record<string, unknown> = {}): Record<string, unknown> { return { UUID: 'node', UUID_Menu: 'menu', Language: 'en', MenuName: 'Orders', Icon: 'icon', ProgramCode: null, ProgramPath: '/orders', StartMethod: null, Memo: 'memo', ...overrides }; }
+export function permission(overrides: Record<string, unknown> = {}): Record<string, unknown> { return { UUID: 'permission', UUID_Menu: 'menu', Insert: 'N', Update: 'N', Delete: 'N', Print: 'N', Import: 'N', Export: 'N', Copy: 'N', Approval: 'N', Others: null, Memo: 'memo', ...overrides }; }
