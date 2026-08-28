@@ -17,13 +17,15 @@
 
 ## Phase 2 — Configuration and readiness framework
 
-- [ ] T008 [TEST] Create RED required/blank/config-shape tests in `apps/identity-bridge/test/config/configuration.spec.ts`; deps: T007; cover endpoint, Entry, integration, HostApp, issuer/audience, signing-key shape; validate focused Jest; done when red.
-- [ ] T009 [TEST] Create RED network/CORS/bounds tests in `apps/identity-bridge/test/config/network-policy.spec.ts`; deps: T007; cover HTTPS/public JWKS URI, modes/CIDRs, timeout 1..5000, size 1..262144, exact origins/no wildcard; validate focused Jest; done when red.
-- [ ] T010 [TEST] Create RED deferred-dependency readiness tests in `apps/identity-bridge/test/health/readiness.spec.ts`; deps: T007; prove later signing/JWKS capabilities keep ready false; validate focused Jest; done when red.
-- [ ] T011 [IMPL] Implement typed parser/validator in `apps/identity-bridge/src/config/bridge-config.service.ts`; deps: T008,T009; validate shape only, no private-key load/JWT/JWKS; validate config suites; done when T008-T009 pass.
-- [ ] T012 [IMPL] Implement destination/network config model in `apps/identity-bridge/src/config/destination-policy.config.ts`; deps: T009,T011; enforce modes, CIDRs, bounds, origins; validate network suite; done when T009 passes.
-- [ ] T013 [IMPL] Implement readiness dependency registry and configuration-only checks in `apps/identity-bridge/src/health/readiness.service.ts`; deps: T010-T012; do not derive keys or generate JWKS; validate readiness suite; done when T010 passes.
-- [ ] T014 [DOC/EVIDENCE] Record config-only checkpoint in `specs/007-customer-identity-bridge/tasks.md`; deps: T011-T013; rerun Phase 1/2 suites; done when `BRIDGE_LOCAL_CONFIGURATION_READY` is evidenced without signing/JWKS scope leak.
+- [X] T008 [TEST] Create RED required/blank/config-shape tests in `apps/identity-bridge/test/config/configuration.spec.ts`; deps: T007; cover endpoint, Entry, integration, HostApp, issuer/audience, signing-key shape; validate focused Jest; done when red.
+- [X] T009 [TEST] Create RED network/CORS/bounds tests in `apps/identity-bridge/test/config/network-policy.spec.ts`; deps: T007; cover HTTPS/public JWKS URI, modes/CIDRs, timeout 1..5000, size 1..262144, exact origins/no wildcard; validate focused Jest; done when red.
+- [X] T010 [TEST] Create RED deferred-dependency readiness tests in `apps/identity-bridge/test/health/readiness.spec.ts`; deps: T007; prove later signing/JWKS capabilities keep ready false; validate focused Jest; done when red.
+- [X] T011 [IMPL] Implement typed parser/validator in `apps/identity-bridge/src/config/bridge-config.service.ts`; deps: T008,T009; validate shape only, no private-key load/JWT/JWKS; validate config suites; done when T008-T009 pass.
+- [X] T012 [IMPL] Implement destination/network config model in `apps/identity-bridge/src/config/destination-policy.config.ts`; deps: T009,T011; enforce modes, CIDRs, bounds, origins; validate network suite; done when T009 passes.
+- [X] T013 [IMPL] Implement readiness dependency registry and configuration-only checks in `apps/identity-bridge/src/health/readiness.service.ts`; deps: T010-T012; do not derive keys or generate JWKS; validate readiness suite; done when T010 passes.
+- [X] T014 [DOC/EVIDENCE] Record config-only checkpoint in `specs/007-customer-identity-bridge/tasks.md`; deps: T011-T013; rerun Phase 1/2 suites; done when `BRIDGE_LOCAL_CONFIGURATION_READY` is evidenced without signing/JWKS scope leak.
+
+**Phase 2 evidence**: T008–T010 RED contracts failed only because the Phase 2 configuration/readiness modules were absent. T011–T013 then passed the full Bridge suite, independent build, and `git diff --check`. The Phase 2 correction added internal registry progression coverage (23 tests total): valid configuration remains not ready until all five declared runtime dependencies are registered; production registers none and public `/ready` stays safe and not ready. JWKS URI validation normalizes trailing dots and IPv6 brackets without DNS or HTTP activity, and V1 key references accept only `file:` URI syntax without opening files. Configuration validity remains distinct from `BRIDGE_LOCAL_READY`; no later runtime dependency is implemented or marked ready.
 
 ## Phase 3 — Customer-local IDX transport
 
