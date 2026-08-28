@@ -29,15 +29,17 @@
 
 ## Phase 3 — Customer-local IDX transport
 
-- [ ] T015 [TEST] [US1] Create RED fixed endpoint/GET/one-bearer tests in `apps/identity-bridge/test/idx/transport-contract.spec.ts`; deps: T014; validate focused Jest; done when red.
-- [ ] T016 [TEST] [US1] Create RED public-only/allowlisted CIDR tests in `apps/identity-bridge/test/idx/destination-policy.spec.ts`; deps: T014; include URI credential/fragment denial; validate focused Jest; done when red.
-- [ ] T017 [TEST] [US1] Create RED resolution/rebinding tests in `apps/identity-bridge/test/idx/resolution-policy.spec.ts`; deps: T014; assert rejection before bearer forward; validate focused Jest; done when red.
-- [ ] T018 [TEST] [US1] Create RED redirect/retry/JSON/size/timeout/error tests in `apps/identity-bridge/test/idx/transport.spec.ts`; deps: T014; validate focused Jest; done when red.
-- [ ] T019 [IMPL] [US1] Implement endpoint/address/CIDR policy in `apps/identity-bridge/src/idx/transport/destination-policy.ts`; deps: T015-T017; no central transport import; validate policy suites; done when T015-T017 pass.
-- [ ] T020 [IMPL] [US1] Implement resolver and connection-time validation in `apps/identity-bridge/src/idx/transport/address-validator.ts`; deps: T017,T019; resist rebinding; validate resolution suite; done when T017 passes.
-- [ ] T021 [IMPL] [US1] Implement bounded one-shot GET client in `apps/identity-bridge/src/idx/transport/menu-detail.transport.ts`; deps: T018-T020; HTTPS/JSON/5s/256KiB/no redirect/no retry; validate transport suite; done when T015,T018 pass.
-- [ ] T022 [SECURITY] [US1] Add native-token capture/redaction guard in `apps/identity-bridge/test/idx/transport-redaction.spec.ts`; deps: T021; inspect errors/log captures for no bearer leak; validate focused Jest; done when rejected requests expose none.
-- [ ] T023 [DOC/EVIDENCE] Record transport checkpoint in `specs/007-customer-identity-bridge/tasks.md`; deps: T021,T022; run Phase 1-3 suites; done when `CUSTOMER_LOCAL_IDX_TRANSPORT_READY` is evidenced.
+- [X] T015 [TEST] [US1] Create RED fixed endpoint/GET/one-bearer tests in `apps/identity-bridge/test/idx/transport-contract.spec.ts`; deps: T014; validate focused Jest; done when red.
+- [X] T016 [TEST] [US1] Create RED public-only/allowlisted CIDR tests in `apps/identity-bridge/test/idx/destination-policy.spec.ts`; deps: T014; include URI credential/fragment denial; validate focused Jest; done when red.
+- [X] T017 [TEST] [US1] Create RED resolution/rebinding tests in `apps/identity-bridge/test/idx/resolution-policy.spec.ts`; deps: T014; assert rejection before bearer forward; validate focused Jest; done when red.
+- [X] T018 [TEST] [US1] Create RED redirect/retry/JSON/size/timeout/error tests in `apps/identity-bridge/test/idx/transport.spec.ts`; deps: T014; validate focused Jest; done when red.
+- [X] T019 [IMPL] [US1] Implement endpoint/address/CIDR policy in `apps/identity-bridge/src/idx/transport/destination-policy.ts`; deps: T015-T017; no central transport import; validate policy suites; done when T015-T017 pass.
+- [X] T020 [IMPL] [US1] Implement resolver and connection-time validation in `apps/identity-bridge/src/idx/transport/address-validator.ts`; deps: T017,T019; resist rebinding; validate resolution suite; done when T017 passes.
+- [X] T021 [IMPL] [US1] Implement bounded one-shot GET client in `apps/identity-bridge/src/idx/transport/menu-detail.transport.ts`; deps: T018-T020; HTTPS/JSON/5s/256KiB/no redirect/no retry; validate transport suite; done when T015,T018 pass.
+- [X] T022 [SECURITY] [US1] Add native-token capture/redaction guard in `apps/identity-bridge/test/idx/transport-redaction.spec.ts`; deps: T021; inspect errors/log captures for no bearer leak; validate focused Jest; done when rejected requests expose none.
+- [X] T023 [DOC/EVIDENCE] Record transport checkpoint in `specs/007-customer-identity-bridge/tasks.md`; deps: T021,T022; run Phase 1-3 suites; done when `CUSTOMER_LOCAL_IDX_TRANSPORT_READY` is evidenced.
+
+**Phase 3 evidence**: T015–T018 RED contracts failed only because the Phase 3 transport modules were absent. T019–T022 then passed the full Bridge suite, independent build, and `git diff --check`. The Phase 3 correction adds deterministic production pinned-lookup coverage (46 tests total): Node `all=true`, single-result, and IPv4/IPv6 family-selection callback forms return only connection-time validated addresses and make no DNS call. The Bridge-local transport uses only its configured IDX endpoint; validates all initial and connection-time resolved addresses against public-only or explicit Customer-private CIDR policy; sends one HTTPS GET with the exact native bearer; bounds the complete operation and JSON body; neither retries nor follows redirects; and returns opaque parsed JSON only. Public, loopback, and special addresses remain denied in `allowlisted_networks` even when a CIDR is misconfigured to include them. Native-token and raw-response sentinels are absent from safe transport failures. `CUSTOMER_LOCAL_IDX_TRANSPORT_READY=YES`; `BRIDGE_LOCAL_READY=NO`.
 
 ## Phase 4 — IDX semantic conformance
 
