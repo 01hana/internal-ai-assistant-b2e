@@ -5,13 +5,15 @@
 
 ## Phase 1 — Bridge application skeleton
 
-- [ ] T001 [TEST] Create independent-package RED tests in `apps/identity-bridge/test/package-contract.spec.ts`; deps: none; assert no Gateway runtime/DB import; validate `npm --prefix apps/identity-bridge test`; done when tests fail only for absent Bridge.
-- [ ] T002 [TEST] Create bootstrap/root-module RED tests in `apps/identity-bridge/test/bootstrap.spec.ts`; deps: T001; assert standalone Nest composition; validate focused Jest; done when contract is red.
-- [ ] T003 [TEST] Create health/readiness-controller RED tests in `apps/identity-bridge/test/health.spec.ts`; deps: T001; assert `GET /health` and initial local `GET /ready`; validate focused Jest; done when red.
-- [ ] T004 [IMPL] Create `apps/identity-bridge/package.json`, `nest-cli.json`, `tsconfig.json`, `tsconfig.test.json`, and Jest config; deps: T001; add independent build/test scripts only; validate `npm --prefix apps/identity-bridge run build`; done when T001 passes.
-- [ ] T005 [IMPL] Create `apps/identity-bridge/src/main.ts`, `bridge.module.ts`, and `src/config/configuration.module.ts`; deps: T002,T004; bootstrap independently without Gateway env/signing/DB; validate bootstrap test; done when T002 passes.
-- [ ] T006 [IMPL] Create `apps/identity-bridge/src/health/health.module.ts`, controllers, and readiness shell; deps: T003,T005; no IDX call or signing/JWKS capability; validate health test; done when T003 passes.
-- [ ] T007 [DOC/EVIDENCE] Record Phase 1 evidence in `specs/007-customer-identity-bridge/tasks.md`; deps: T004-T006; run Bridge test/build and classify skips; done when `IDENTITY_BRIDGE_APP_SKELETON_READY` is evidenced.
+- [X] T001 [TEST] Create independent-package RED tests in `apps/identity-bridge/test/package-contract.spec.ts`; deps: none; assert no Gateway runtime/DB import; validate `npm --prefix apps/identity-bridge test`; done when tests fail only for absent Bridge.
+- [X] T002 [TEST] Create bootstrap/root-module RED tests in `apps/identity-bridge/test/bootstrap.spec.ts`; deps: T001; assert standalone Nest composition; validate focused Jest; done when contract is red.
+- [X] T003 [TEST] Create health/readiness-controller RED tests in `apps/identity-bridge/test/health.spec.ts`; deps: T001; assert `GET /health` and initial local `GET /ready`; validate focused Jest; done when red.
+- [X] T004 [IMPL] Create `apps/identity-bridge/package.json`, `nest-cli.json`, `tsconfig.json`, `tsconfig.test.json`, and Jest config; deps: T001; add independent build/test scripts only; validate `npm --prefix apps/identity-bridge run build`; done when T001 passes.
+- [X] T005 [IMPL] Create `apps/identity-bridge/src/main.ts`, `bridge.module.ts`, and `src/config/configuration.module.ts`; deps: T002,T004; bootstrap independently without Gateway env/signing/DB; validate bootstrap test; done when T002 passes.
+- [X] T006 [IMPL] Create `apps/identity-bridge/src/health/health.module.ts`, controllers, and readiness shell; deps: T003,T005; no IDX call or signing/JWKS capability; validate health test; done when T003 passes.
+- [X] T007 [DOC/EVIDENCE] Record Phase 1 evidence in `specs/007-customer-identity-bridge/tasks.md`; deps: T004-T006; run Bridge test/build and classify skips; done when `IDENTITY_BRIDGE_APP_SKELETON_READY` is evidenced.
+
+**Phase 1 evidence**: T001–T003 RED contracts were run with the repository Jest binary before package/runtime creation and failed only because the Bridge package and Phase 1 source files were absent. T004–T006 then passed all three Bridge suites (5 tests), `npm --prefix apps/identity-bridge run build`, and `git diff --check`. No guarded test was skipped.
 
 ## Phase 2 — Configuration and readiness framework
 
