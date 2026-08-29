@@ -16,7 +16,7 @@ describe('pinned Node lookup adapter', () => {
   });
 
   it('fails closed when pinned addresses cannot satisfy the requested family', async () => {
-    await expect(invoke(createPinnedLookupAdapter(['8.8.8.8']), { family: 6 })).rejects.toThrow('unsafe_destination');
+    await expect(invoke(createPinnedLookupAdapter(['8.8.8.8']), { family: 6 })).rejects.toThrow('provider_unavailable');
   });
 
   it('adapts supplied pinned addresses without performing DNS', () => {

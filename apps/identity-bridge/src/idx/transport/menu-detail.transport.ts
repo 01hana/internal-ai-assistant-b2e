@@ -51,7 +51,9 @@ export class MenuDetailTransport {
           return connectionAddresses;
         }, signal
       }));
-      if (response.statusCode !== 200) throw new IdxTransportError('redirect_or_status');
+      if (response.statusCode === 401) throw new IdxTransportError('credential_rejected');
+      if (response.statusCode === 403) throw new IdxTransportError('identity_denied');
+      if (response.statusCode !== 200) throw new IdxTransportError('provider_unavailable');
       if (!jsonContentType(response.headers['content-type'])) throw new IdxTransportError('content_type');
       const bytes = await boundedBody(response.body, maxResponseBytes, signal);
       try { return Object.freeze({ body: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) }); }

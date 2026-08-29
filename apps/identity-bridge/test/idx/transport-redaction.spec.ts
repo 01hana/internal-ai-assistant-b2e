@@ -1,4 +1,5 @@
 import { MenuDetailTransport } from '../../src/idx/transport/menu-detail.transport';
+import { IdxTransportError } from '../../src/idx/transport/transport.error';
 import { config, nativeToken, response } from './fixtures';
 
 describe('MenuDetail transport redaction', () => {
@@ -25,5 +26,20 @@ describe('MenuDetail transport redaction', () => {
     expect(JSON.stringify(error)).not.toContain(nativeToken);
     expect(`${error}`).not.toContain(nativeToken);
     expect(`${error}`).not.toContain('response-body-sentinel');
+  });
+
+  it.each([
+    [401, 'credential_rejected', 'server-unavailable-body-sentinel'],
+    [403, 'identity_denied', 'invalid-token-body-sentinel'],
+    [500, 'provider_unavailable', 'unauthorized-body-sentinel']
+  ])('exposes only safe category %s for HTTP %s', async (statusCode, category, body) => {
+    const endpoint = 'https://idx.customer.test/menu-detail';
+    const resolvedAddress = '8.8.8.8';
+    const transport = new MenuDetailTransport(config(), { resolve: async () => [resolvedAddress], request: async () => response(body, { statusCode }) });
+    const error = await transport.execute(nativeToken).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(IdxTransportError);
+    expect(error).toMatchObject({ category });
+    const serialized = `${String(error)}${JSON.stringify(error)}`;
+    for (const forbidden of [nativeToken, `Bearer ${nativeToken}`, body, endpoint, resolvedAddress, String(statusCode)]) expect(serialized).not.toContain(forbidden);
   });
 });

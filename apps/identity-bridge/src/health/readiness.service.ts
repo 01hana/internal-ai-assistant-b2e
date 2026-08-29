@@ -27,5 +27,14 @@ export class BridgeReadinessService {
     const configurationValid = this.config.isValid;
     return Object.freeze({ configurationValid, ready: configurationValid && missing.length === 0, missing });
   }
-  getPublicReadiness() { return Object.freeze({ status: 'not_ready' as const, service: 'identity-bridge' as const, timestamp: new Date().toISOString(), runtimeDependencies: 'not_evaluated' as const, productionReady: false as const }); }
+  getPublicReadiness() {
+    const ready = this.snapshot().ready;
+    return Object.freeze({
+      status: ready ? 'ready' as const : 'not_ready' as const,
+      service: 'identity-bridge' as const,
+      timestamp: new Date().toISOString(),
+      runtimeDependencies: ready ? 'available' as const : 'not_evaluated' as const,
+      productionReady: ready
+    });
+  }
 }
