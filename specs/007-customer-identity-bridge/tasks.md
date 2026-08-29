@@ -70,13 +70,15 @@
 
 ## Phase 6 — JWKS publication and key lifecycle
 
-- [ ] T041 [TEST] [US4] Create RED JWKS-public-shape tests in `apps/identity-bridge/test/jwks/jwks.service.spec.ts`; deps: T040; only public fields, sorted published/active/retiring; validate focused Jest; done when red.
-- [ ] T042 [TEST] [US4] Create RED lifecycle/rotation tests in `apps/identity-bridge/test/jwks/key-lifecycle.spec.ts`; deps: T040; states, duplicate kid, publish-before-active, retiring; validate focused Jest; done when red.
-- [ ] T043 [TEST] [US4] Create RED retirement-window tests in `apps/identity-bridge/test/jwks/retirement-policy.spec.ts`; deps: T040; 1499 deny/1500 eligible/recalculation; validate focused Jest; done when red.
-- [ ] T044 [IMPL] [US4] Implement lifecycle resolver/validator in `apps/identity-bridge/src/jwks/key-lifecycle.service.ts`; deps: T042,T043; no central DB; validate lifecycle suites; done when T042-T043 pass.
-- [ ] T045 [IMPL] [US4] Implement public JWKS service/controller in `apps/identity-bridge/src/jwks`; deps: T041,T044; expose only public JWKs; validate JWKS suite; done when T041 passes.
-- [ ] T046 [SECURITY] [US4] Add JWKS/private-member and unknown/retired-key regression in `apps/identity-bridge/test/jwks/jwks-security.spec.ts`; deps: T045; fail closed; validate focused Jest; done when clean.
-- [ ] T047 [DOC/EVIDENCE] Record JWKS checkpoint in `specs/007-customer-identity-bridge/tasks.md`; deps: T045,T046; run Phase 5-6 suites; done when `BRIDGE_JWKS_RUNTIME_READY` is evidenced.
+- [X] T041 [TEST] [US4] Create RED JWKS-public-shape tests in `apps/identity-bridge/test/jwks/jwks.service.spec.ts`; deps: T040; only public fields, sorted published/active/retiring; validate focused Jest; done when red.
+- [X] T042 [TEST] [US4] Create RED lifecycle/rotation tests in `apps/identity-bridge/test/jwks/key-lifecycle.spec.ts`; deps: T040; states, duplicate kid, publish-before-active, retiring; validate focused Jest; done when red.
+- [X] T043 [TEST] [US4] Create RED retirement-window tests in `apps/identity-bridge/test/jwks/retirement-policy.spec.ts`; deps: T040; 1499 deny/1500 eligible/recalculation; validate focused Jest; done when red.
+- [X] T044 [IMPL] [US4] Implement lifecycle resolver/validator in `apps/identity-bridge/src/jwks/key-lifecycle.service.ts`; deps: T042,T043; no central DB; validate lifecycle suites; done when T042-T043 pass.
+- [X] T045 [IMPL] [US4] Implement public JWKS service/controller in `apps/identity-bridge/src/jwks`; deps: T041,T044; expose only public JWKs; validate JWKS suite; done when T041 passes.
+- [X] T046 [SECURITY] [US4] Add JWKS/private-member and unknown/retired-key regression in `apps/identity-bridge/test/jwks/jwks-security.spec.ts`; deps: T045; fail closed; validate focused Jest; done when clean.
+- [X] T047 [DOC/EVIDENCE] Record JWKS checkpoint in `specs/007-customer-identity-bridge/tasks.md`; deps: T045,T046; run Phase 5-6 suites; done when `BRIDGE_JWKS_RUNTIME_READY` is evidenced.
+
+**Phase 6 evidence**: T041–T043 RED suites failed only because the Bridge-local lifecycle and JWKS surfaces were absent. T044–T046 now validate exact immutable public RSA/RS256 JWK projection for published, active, and retiring keys; ordinal `kid` sorting; one active key; publish-before-active with the former active key retiring; active private/public consistency through the existing Phase 5 resolver; unknown/removed-key absence; generic failure redaction; and GET-only public routing. The pure retirement policy calculates `max(1500, token lifetime + clock tolerance + JWKS cache age + unknown-kid cooldown + propagation margin)`, denies 1499 seconds, permits 1500 seconds, and recalculates increased bounds. All 25 Bridge suites and 180 tests, the independent build, and `git diff --check` pass. No lifecycle database, automatic rotation, key-admin API, central retrieval, Feature 004 change, or exchange endpoint is introduced. `BRIDGE_JWKS_RUNTIME_READY=YES`; `BRIDGE_LOCAL_READY=NO`.
 
 ## Phase 7 — Exchange, redaction, and local readiness
 

@@ -5,6 +5,6 @@ import { BridgeHealthService } from './bridge-health.service';
 import { BridgeReadinessRegistry, BridgeReadinessService } from './readiness.service';
 
 @Module({
-  imports: [ConfigurationModule], controllers: [BridgeHealthController], providers: [BridgeHealthService, BridgeReadinessRegistry, BridgeReadinessService]
+  imports: [ConfigurationModule], controllers: [BridgeHealthController], providers: [BridgeHealthService, BridgeReadinessRegistry, BridgeReadinessService], exports: [BridgeReadinessRegistry, BridgeReadinessService]
 })
 export class BridgeHealthModule {}
