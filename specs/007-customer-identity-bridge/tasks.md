@@ -57,14 +57,16 @@
 
 ## Phase 5 — Canonical JWT issuance
 
-- [ ] T033 [TEST] [US4] Create RED key-loader tests in `apps/identity-bridge/test/signing/signing-key-provider.spec.ts`; deps: T032; file PKCS#8, missing/malformed/public-only/non-RSA; validate focused Jest; done when red.
-- [ ] T034 [TEST] [US4] Create RED active-key/public-derivation tests in `apps/identity-bridge/test/signing/active-key.spec.ts`; deps: T032; exact active and public consistency; validate focused Jest; done when red.
-- [ ] T035 [TEST] [US4] Create RED canonical token contract tests in `apps/identity-bridge/test/signing/canonical-issuer.spec.ts`; deps: T032; header/claims/negative claims/TTL; validate focused Jest; done when red.
-- [ ] T036 [IMPL] [US4] Implement file-backed provider in `apps/identity-bridge/src/signing/signing-key.provider.ts`; deps: T033; Customer-local reference only; validate loader suite; done when T033 passes.
-- [ ] T037 [IMPL] [US4] Implement active resolver/public derivation in `apps/identity-bridge/src/signing/active-key.resolver.ts`; deps: T034,T036; one active derived-match key; validate active-key suite; done when T034 passes.
-- [ ] T038 [IMPL] [US4] Implement issuer in `apps/identity-bridge/src/signing/canonical-token.issuer.ts`; deps: T035,T037; RS256/300s/configured authority only; validate issuer suite; done when T035 passes.
-- [ ] T039 [SECURITY] [US4] Add key/token leak guards in `apps/identity-bridge/test/signing/signing-redaction.spec.ts`; deps: T036-T038; no private material/reference or forbidden claims; validate focused Jest; done when clean.
-- [ ] T040 [DOC/EVIDENCE] Record signing checkpoint in `specs/007-customer-identity-bridge/tasks.md`; deps: T038,T039; run signing and prior suites; done when `BRIDGE_CANONICAL_JWT_READY` is evidenced.
+- [X] T033 [TEST] [US4] Create RED key-loader tests in `apps/identity-bridge/test/signing/signing-key-provider.spec.ts`; deps: T032; file PKCS#8, missing/malformed/public-only/non-RSA; validate focused Jest; done when red.
+- [X] T034 [TEST] [US4] Create RED active-key/public-derivation tests in `apps/identity-bridge/test/signing/active-key.spec.ts`; deps: T032; exact active and public consistency; validate focused Jest; done when red.
+- [X] T035 [TEST] [US4] Create RED canonical token contract tests in `apps/identity-bridge/test/signing/canonical-issuer.spec.ts`; deps: T032; header/claims/negative claims/TTL; validate focused Jest; done when red.
+- [X] T036 [IMPL] [US4] Implement file-backed provider in `apps/identity-bridge/src/signing/signing-key.provider.ts`; deps: T033; Customer-local reference only; validate loader suite; done when T033 passes.
+- [X] T037 [IMPL] [US4] Implement active resolver/public derivation in `apps/identity-bridge/src/signing/active-key.resolver.ts`; deps: T034,T036; one active derived-match key; validate active-key suite; done when T034 passes.
+- [X] T038 [IMPL] [US4] Implement issuer in `apps/identity-bridge/src/signing/canonical-token.issuer.ts`; deps: T035,T037; RS256/300s/configured authority only; validate issuer suite; done when T035 passes.
+- [X] T039 [SECURITY] [US4] Add key/token leak guards in `apps/identity-bridge/test/signing/signing-redaction.spec.ts`; deps: T036-T038; no private material/reference or forbidden claims; validate focused Jest; done when clean.
+- [X] T040 [DOC/EVIDENCE] Record signing checkpoint in `specs/007-customer-identity-bridge/tasks.md`; deps: T038,T039; run signing and prior suites; done when `BRIDGE_CANONICAL_JWT_READY` is evidenced.
+
+**Phase 5 evidence**: T033–T035 RED contracts initially failed because the Bridge-local signing modules were absent. The first behavioral evidence correction then discovered permissive RSA PKCS#1 container acceptance; exact unencrypted PKCS#8 PEM-envelope validation corrected it. The next regression discovered that `importPKCS8(..., "RS256")` accepted EC PKCS#8 material; an authoritative parsed-key check now requires an actual RSA private key before import. After both corrections, all 20 Bridge suites and 147 tests, the independent build, and `git diff --check` pass. T036–T039 prove local file-only RSA PKCS#8 loading, generic failure redaction, exactly one active key, exact derived/configured public-JWK consistency including mismatch denial, public-key verification of the exact 300-second RS256 canonical contract, unique valid UUID JTIs, integer time, deployment-owned authority, empty roles, forbidden-claim absence, and no central signing/JWKS/exchange responsibility. `BRIDGE_CANONICAL_JWT_READY=YES`; `BRIDGE_LOCAL_READY=NO`.
 
 ## Phase 6 — JWKS publication and key lifecycle
 
