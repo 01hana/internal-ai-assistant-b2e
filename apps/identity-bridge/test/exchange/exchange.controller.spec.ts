@@ -24,7 +24,7 @@ describe('Identity Bridge exchange controller', () => {
   });
 
   it.each([
-    ...['integrationSelector', 'customerId', 'integration_id', 'host_app', 'issuer', 'audience', 'roles', 'permissionScopes', 'UUID_Entry', 'provider', 'endpoint', 'MenuDetail', 'claims', 'refreshToken']
+    ...['entryId', 'UUID_Entry', 'selectedEntry', 'integrationSelector', 'customerId', 'integration_id', 'host_app', 'issuer', 'audience', 'roles', 'permissionScopes', 'provider', 'endpoint', 'MenuDetail', 'claims', 'refreshToken']
       .map((field) => [`authority body ${field}`, 'Bearer native-token', { [field]: 'browser-choice' }]),
     ['non-object body', 'Bearer native-token', 'body'],
     ['wrong scheme', 'Basic native-token', {}],

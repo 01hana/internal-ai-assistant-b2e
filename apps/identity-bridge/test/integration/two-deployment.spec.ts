@@ -87,11 +87,23 @@ describe('Feature 007 two-deployment isolation', () => {
     expect(jwksB.keys.some((key) => key.kid === fixtureA.kid || key.n === fixtureA.signing.record.publicJwk.n)).toBe(false);
   });
 
-  it('denies cross-Entry identities after MenuDetail acceptance without issuing a JWT', async () => {
+  it('accepts both local Entries and denies every cross-deployment Entry after MenuDetail acceptance without issuing', async () => {
     const issueA = jest.spyOn(contextA.issuer, 'issue');
     const issueB = jest.spyOn(contextB.issuer, 'issue');
-    await expect(contextB.exchange.exchange(fixtureA.nativeToken)).rejects.toBeInstanceOf(ExchangeIdentityDeniedError);
-    await expect(contextA.exchange.exchange(fixtureB.nativeToken)).rejects.toBeInstanceOf(ExchangeIdentityDeniedError);
+    for (const nativeToken of fixtureA.nativeTokens) {
+      const result = await contextA.exchange.exchange(nativeToken);
+      expect(decodeJwt(result.accessToken)).not.toHaveProperty('UUID_Entry');
+      expect(decodeJwt(result.accessToken)).not.toHaveProperty('entry');
+    }
+    for (const nativeToken of fixtureB.nativeTokens) {
+      const result = await contextB.exchange.exchange(nativeToken);
+      expect(decodeJwt(result.accessToken)).not.toHaveProperty('UUID_Entry');
+      expect(decodeJwt(result.accessToken)).not.toHaveProperty('entry');
+    }
+    issueA.mockClear();
+    issueB.mockClear();
+    for (const nativeToken of fixtureA.nativeTokens) await expect(contextB.exchange.exchange(nativeToken)).rejects.toBeInstanceOf(ExchangeIdentityDeniedError);
+    for (const nativeToken of fixtureB.nativeTokens) await expect(contextA.exchange.exchange(nativeToken)).rejects.toBeInstanceOf(ExchangeIdentityDeniedError);
     expect(issueA).not.toHaveBeenCalled();
     expect(issueB).not.toHaveBeenCalled();
   });
@@ -101,11 +113,13 @@ describe('Feature 007 two-deployment isolation', () => {
     expect(Object.isFrozen(fixtureB)).toBe(true);
     expect(contextA.config.configuration).not.toBe(contextB.config.configuration);
     contextA.environmentInput.BRIDGE_INTEGRATION_ID = 'replacement-a';
-    contextA.environmentInput.BRIDGE_IDX_ALLOWED_ENTRY = 'replacement-entry-a';
+    contextA.environmentInput.BRIDGE_IDX_ALLOWED_ENTRIES = '["replacement-entry-a"]';
     expect(contextA.config.configuration.integrationId).toBe(fixtureA.integrationId);
-    expect(contextA.config.configuration.allowedEntry).toBe(fixtureA.entry);
+    expect(contextA.config.configuration.allowedEntries).toEqual(fixtureA.allowedEntries);
+    expect(Object.isFrozen(contextA.config.configuration.allowedEntries)).toBe(true);
     expect(contextB.config.configuration.integrationId).toBe(fixtureB.integrationId);
-    expect(contextB.config.configuration.allowedEntry).toBe(fixtureB.entry);
+    expect(contextB.config.configuration.allowedEntries).toEqual(fixtureB.allowedEntries);
+    expect(Object.isFrozen(contextB.config.configuration.allowedEntries)).toBe(true);
 
     expect(contextA.readiness.getPublicReadiness()).toMatchObject({ status: 'ready', productionReady: true });
     expect(contextB.readiness.getPublicReadiness()).toMatchObject({ status: 'ready', productionReady: true });

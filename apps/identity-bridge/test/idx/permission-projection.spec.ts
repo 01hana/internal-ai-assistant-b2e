@@ -4,7 +4,7 @@ import { ScopeProjector } from '../../src/idx/scope-projector';
 import { BridgeConfigService } from '../../src/config/bridge-config.service';
 import { IdentityAdmissionService } from '../../src/idx/identity-admission.service';
 import { menu, nativeClaims, permission, response, token } from '../fixtures/idx-semantic.vectors';
-const config = new BridgeConfigService({ BRIDGE_IDX_MENUDETAIL_URI: 'https://idx.test/x', BRIDGE_IDX_ALLOWED_ENTRY: 'entry', BRIDGE_INTEGRATION_ID: 'i', BRIDGE_HOST_APP: 'h', BRIDGE_ISSUER: 'issuer', BRIDGE_AUDIENCE: 'aud', BRIDGE_JWKS_PUBLIC_URI: 'https://bridge.test/jwks', BRIDGE_SIGNING_KEYS: '[{"kid":"k","status":"published","publicJwk":{}}]', IDX_DESTINATION_MODE: 'public_only', BRIDGE_TIMEOUT_MS: '1', BRIDGE_MAX_RESPONSE_BYTES: '1' });
+const config = new BridgeConfigService({ BRIDGE_IDX_MENUDETAIL_URI: 'https://idx.test/x', BRIDGE_IDX_ALLOWED_ENTRIES: '["entry"]', BRIDGE_INTEGRATION_ID: 'i', BRIDGE_HOST_APP: 'h', BRIDGE_ISSUER: 'issuer', BRIDGE_AUDIENCE: 'aud', BRIDGE_JWKS_PUBLIC_URI: 'https://bridge.test/jwks', BRIDGE_SIGNING_KEYS: '[{"kid":"k","status":"published","publicJwk":{}}]', IDX_DESTINATION_MODE: 'public_only', BRIDGE_TIMEOUT_MS: '1', BRIDGE_MAX_RESPONSE_BYTES: '1' });
 describe('MenuDetail-only permission projection', () => {
   it('deduplicates and deterministically orders MenuDetail actions', () => {
     const menus = new IdxMenuDetailValidator().validate(response([menu({ MenuID: 'Z', MenuPermission: permission({ Delete: 'Y' }) }), menu({ MenuID: 'A', MenuPermission: permission({ Update: 'Y' }) }), menu({ MenuID: 'A', MenuPermission: permission({ Insert: 'Y' }) })]));

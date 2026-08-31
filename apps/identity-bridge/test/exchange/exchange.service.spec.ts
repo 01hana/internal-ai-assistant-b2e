@@ -44,7 +44,10 @@ describe('Identity Bridge exchange service', () => {
     });
     expect(result).toMatchObject({ accessToken: expect.any(String), tokenType: 'Bearer', expiresIn: 300 });
     expect(Object.keys(result).sort()).toEqual(['accessToken', 'expiresIn', 'tokenType']);
-    expect(decodeJwt(result.accessToken)).toMatchObject({ roles: [], permission_scopes: ['menu:A:read', 'menu:B:read', 'menu:B:insert'] });
+    const payload = decodeJwt(result.accessToken);
+    expect(payload).toMatchObject({ roles: [], permission_scopes: ['menu:A:read', 'menu:B:read', 'menu:B:insert'] });
+    expect(payload).not.toHaveProperty('UUID_Entry');
+    expect(payload).not.toHaveProperty('entry');
   });
 
   it('rejects malformed MenuDetail as unavailable before parsing even valid-looking native claims', async () => {

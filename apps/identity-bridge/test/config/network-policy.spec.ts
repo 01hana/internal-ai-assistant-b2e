@@ -1,6 +1,6 @@
 import { parseBridgeConfiguration } from '../../src/config/bridge-config.service';
 
-const base = (): Record<string, unknown> => ({ BRIDGE_IDX_MENUDETAIL_URI: 'https://10.0.0.5/menu', BRIDGE_IDX_ALLOWED_ENTRY: 'entry', BRIDGE_INTEGRATION_ID: 'integration', BRIDGE_HOST_APP: 'host', BRIDGE_ISSUER: 'issuer', BRIDGE_AUDIENCE: 'aud', BRIDGE_JWKS_PUBLIC_URI: 'https://bridge.example.test/jwks', BRIDGE_SIGNING_KEYS: '[{"kid":"k","status":"published","publicJwk":{}}]', IDX_DESTINATION_MODE: 'public_only', BRIDGE_TIMEOUT_MS: '1', BRIDGE_MAX_RESPONSE_BYTES: '1' });
+const base = (): Record<string, unknown> => ({ BRIDGE_IDX_MENUDETAIL_URI: 'https://10.0.0.5/menu', BRIDGE_IDX_ALLOWED_ENTRIES: '["entry"]', BRIDGE_INTEGRATION_ID: 'integration', BRIDGE_HOST_APP: 'host', BRIDGE_ISSUER: 'issuer', BRIDGE_AUDIENCE: 'aud', BRIDGE_JWKS_PUBLIC_URI: 'https://bridge.example.test/jwks', BRIDGE_SIGNING_KEYS: '[{"kid":"k","status":"published","publicJwk":{}}]', IDX_DESTINATION_MODE: 'public_only', BRIDGE_TIMEOUT_MS: '1', BRIDGE_MAX_RESPONSE_BYTES: '1' });
 describe('Bridge network configuration contract', () => {
   it('enforces HTTPS URL and public JWKS topology syntax only', () => {
     expect(parseBridgeConfiguration(base()).ok).toBe(true);

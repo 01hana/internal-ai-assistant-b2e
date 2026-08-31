@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BridgeConfigService } from '../../src/config/bridge-config.service'; import { IdentityAdmissionService } from '../../src/idx/identity-admission.service'; import { IdxMenuDetailValidator } from '../../src/idx/menu-detail.validator'; import { menu, nativeClaims, permission, response, token } from '../fixtures/idx-semantic.vectors';
-const config = new BridgeConfigService({ BRIDGE_IDX_MENUDETAIL_URI: 'https://idx.test/x', BRIDGE_IDX_ALLOWED_ENTRY: 'entry', BRIDGE_INTEGRATION_ID: 'i', BRIDGE_HOST_APP: 'h', BRIDGE_ISSUER: 'issuer', BRIDGE_AUDIENCE: 'aud', BRIDGE_JWKS_PUBLIC_URI: 'https://bridge.test/jwks', BRIDGE_SIGNING_KEYS: '[{"kid":"k","status":"published","publicJwk":{}}]', IDX_DESTINATION_MODE: 'public_only', BRIDGE_TIMEOUT_MS: '1', BRIDGE_MAX_RESPONSE_BYTES: '1' });
+const config = new BridgeConfigService({ BRIDGE_IDX_MENUDETAIL_URI: 'https://idx.test/x', BRIDGE_IDX_ALLOWED_ENTRIES: '["entry"]', BRIDGE_INTEGRATION_ID: 'i', BRIDGE_HOST_APP: 'h', BRIDGE_ISSUER: 'issuer', BRIDGE_AUDIENCE: 'aud', BRIDGE_JWKS_PUBLIC_URI: 'https://bridge.test/jwks', BRIDGE_SIGNING_KEYS: '[{"kid":"k","status":"published","publicJwk":{}}]', IDX_DESTINATION_MODE: 'public_only', BRIDGE_TIMEOUT_MS: '1', BRIDGE_MAX_RESPONSE_BYTES: '1' });
 describe('IDX semantic security boundary', () => {
   it('contains no local signature, central authority, signing, or exchange implementation', () => {
     const root = join(__dirname, '../../src/idx'); const source = ['menu-detail.validator.ts', 'native-claim-parser.ts', 'identity-admission.service.ts', 'permission-normalizer.ts', 'scope-projector.ts'].map((file) => readFileSync(join(root, file), 'utf8')).join('\n');
     expect(source).not.toMatch(/ES512|JWKS|verify\(|jose|sign\(|Gateway|CustomerScope|IntegrationBinding|roles|POST\s*\(|exchange/i);
+    expect(source).not.toMatch(/\/APIs\/Auth\/APIs\/Auth\/Authentication|EntryDiscovery|discoverEntr(?:y|ies)|selectEntry/i);
   });
   it.each([{ ...response([]), Code: 500 }, { ...response([]), Data: [{}] }])('never permits native identity when MenuDetail is unaccepted', (raw) => {
     const validator = new IdxMenuDetailValidator(); expect(() => validator.validate(raw)).toThrow('idx_semantic_invalid'); expect(() => new IdentityAdmissionService(config).admit(undefined as never, token(nativeClaims))).toThrow('idx_semantic_invalid');

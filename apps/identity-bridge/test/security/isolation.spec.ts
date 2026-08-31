@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { BridgeReadinessRegistry } from '../../src/health/readiness.service';
 
@@ -16,16 +16,15 @@ describe('Feature 007 multi-deployment architecture guard', () => {
   });
 
   it('contains no source-coded deployment branch or synthetic deployment identifier', () => {
-    expect(sources).not.toMatch(/\bif\s*\([^)]*(?:customer|integrationId|hostApp|allowedEntry|idxMenuDetailUri|issuer|audience)[^)]*===\s*['"][^'"]+['"]/i);
-    expect(sources).not.toMatch(/\bswitch\s*\([^)]*(?:customer|integrationId|hostApp|allowedEntry|idxMenuDetailUri|issuer|audience)[^)]*\)/i);
+    expect(sources).not.toMatch(/\bif\s*\([^)]*(?:customer|integrationId|hostApp|allowedEntries|idxMenuDetailUri|issuer|audience)[^)]*===\s*['"][^'"]+['"]/i);
+    expect(sources).not.toMatch(/\bswitch\s*\([^)]*(?:customer|integrationId|hostApp|allowedEntries|idxMenuDetailUri|issuer|audience)[^)]*\)/i);
     expect(sources).not.toMatch(/idx-[ab]\.example\.test|entry-[ab]|integration-[ab]|host-[ab]|issuer-[ab]\.example\.test|audience-[ab]|kid-[ab]|company-[ab]|user-[ab]/i);
   });
 
-  it('keeps Phase 8 outside runtime readiness and Phase 9 absent', () => {
+  it('keeps Phase 8 and Phase 9 compatibility outside production runtime readiness', () => {
     expect(new BridgeReadinessRegistry().snapshot()).toEqual({ idxTransport: false, idxSemantics: false, signing: false, jwks: false, exchange: false });
     expect(sources).not.toMatch(/multiDeploymentIsolation|deploymentIsolationReady/i);
-    expect(existsSync(join(bridgeRoot, '../gateway/test/identity-bridge/bridge-jwks.fixture.ts'))).toBe(false);
-    expect(existsSync(join(bridgeRoot, '../gateway/test/identity-bridge/feature007-compatibility.spec.ts'))).toBe(false);
+    expect(sources).not.toMatch(/BRIDGE_FEATURE004_COMPATIBILITY_READY|feature007Compatibility/i);
   });
 });
 

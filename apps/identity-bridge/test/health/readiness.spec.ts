@@ -10,12 +10,17 @@ import { MenuDetailTransport } from '../../src/idx/transport/menu-detail.transpo
 import { Test } from '@nestjs/testing';
 import { BRIDGE_ENVIRONMENT } from '../../src/config/bridge-config.service';
 import { bridgeEnvironment, rsaSigningFixture } from '../signing/signing-fixtures';
-const valid = () => ({ BRIDGE_IDX_MENUDETAIL_URI: 'https://idx.test/menu', BRIDGE_IDX_ALLOWED_ENTRY: 'entry', BRIDGE_INTEGRATION_ID: 'integration', BRIDGE_HOST_APP: 'host', BRIDGE_ISSUER: 'issuer', BRIDGE_AUDIENCE: 'aud', BRIDGE_JWKS_PUBLIC_URI: 'https://bridge.example.test/jwks', BRIDGE_SIGNING_KEYS: '[{"kid":"key","status":"published","publicJwk":{}}]', IDX_DESTINATION_MODE: 'public_only', BRIDGE_TIMEOUT_MS: '1', BRIDGE_MAX_RESPONSE_BYTES: '1' });
+const valid = () => ({ BRIDGE_IDX_MENUDETAIL_URI: 'https://idx.test/menu', BRIDGE_IDX_ALLOWED_ENTRIES: '["entry-a","entry-b"]', BRIDGE_INTEGRATION_ID: 'integration', BRIDGE_HOST_APP: 'host', BRIDGE_ISSUER: 'issuer', BRIDGE_AUDIENCE: 'aud', BRIDGE_JWKS_PUBLIC_URI: 'https://bridge.example.test/jwks', BRIDGE_SIGNING_KEYS: '[{"kid":"key","status":"published","publicJwk":{}}]', IDX_DESTINATION_MODE: 'public_only', BRIDGE_TIMEOUT_MS: '1', BRIDGE_MAX_RESPONSE_BYTES: '1' });
 describe('Bridge deferred readiness contract', () => {
   it('keeps invalid configuration not ready', () => {
     const readiness = new BridgeReadinessService(new BridgeConfigService({}), new BridgeReadinessRegistry());
     expect(readiness.snapshot()).toMatchObject({ configurationValid: false, ready: false, missing: expect.arrayContaining(['idxTransport', 'idxSemantics', 'signing', 'jwks', 'exchange']) });
     expect(JSON.stringify(readiness.getPublicReadiness())).not.toMatch(/idx|signing|jwks|configuration|secret|key/i);
+  });
+  it.each(['[]', '["entry-a","entry-a"]', '["entry-a",7]'])('keeps malformed allowed-entry configuration not ready', (allowedEntries) => {
+    const readiness = new BridgeReadinessService(new BridgeConfigService({ ...valid(), BRIDGE_IDX_ALLOWED_ENTRIES: allowedEntries }), new BridgeReadinessRegistry());
+    expect(readiness.snapshot()).toMatchObject({ configurationValid: false, ready: false });
+    expect(readiness.getPublicReadiness()).toMatchObject({ status: 'not_ready', productionReady: false });
   });
   it('computes internal readiness only after every declared dependency progresses', () => {
     const registry = new BridgeReadinessRegistry(); const readiness = new BridgeReadinessService(new BridgeConfigService(valid()), registry);

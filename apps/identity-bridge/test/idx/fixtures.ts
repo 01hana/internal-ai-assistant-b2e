@@ -6,7 +6,7 @@ export const nativeToken = 'native-token-sentinel-do-not-leak';
 export function config(overrides: Record<string, unknown> = {}): BridgeConfigService {
   return new BridgeConfigService({
     BRIDGE_IDX_MENUDETAIL_URI: 'https://idx.customer.test/menu-detail',
-    BRIDGE_IDX_ALLOWED_ENTRY: 'entry', BRIDGE_INTEGRATION_ID: 'integration', BRIDGE_HOST_APP: 'host',
+    BRIDGE_IDX_ALLOWED_ENTRIES: '["entry"]', BRIDGE_INTEGRATION_ID: 'integration', BRIDGE_HOST_APP: 'host',
     BRIDGE_ISSUER: 'issuer', BRIDGE_AUDIENCE: 'aud', BRIDGE_JWKS_PUBLIC_URI: 'https://bridge.example.test/jwks',
     BRIDGE_SIGNING_KEYS: '[{"kid":"key","status":"published","publicJwk":{}}]',
     IDX_DESTINATION_MODE: 'public_only', BRIDGE_TIMEOUT_MS: '50', BRIDGE_MAX_RESPONSE_BYTES: '64',

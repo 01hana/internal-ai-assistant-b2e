@@ -2,7 +2,7 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import { BridgeConfigurationError, type DestinationPolicy, httpsUri, parseDestinationPolicy, required } from './destination-policy.config';
 
 export type SigningKeyConfig = Readonly<{ kid: string; status: 'published' | 'active' | 'retiring'; publicJwk: Readonly<Record<string, unknown>>; keyReference?: string }>;
-export type BridgeConfiguration = Readonly<{ idxMenuDetailUri: string; allowedEntry: string; integrationId: string; hostApp: string; issuer: string; audience: string; signingKeys: readonly SigningKeyConfig[]; destination: DestinationPolicy; timeoutMilliseconds: number; maxResponseBytes: number; allowedOrigins: readonly string[] }>;
+export type BridgeConfiguration = Readonly<{ idxMenuDetailUri: string; allowedEntries: readonly string[]; integrationId: string; hostApp: string; issuer: string; audience: string; signingKeys: readonly SigningKeyConfig[]; destination: DestinationPolicy; timeoutMilliseconds: number; maxResponseBytes: number; allowedOrigins: readonly string[] }>;
 export type ConfigurationResult = Readonly<{ ok: true; config: BridgeConfiguration } | { ok: false; category: string }>;
 export const BRIDGE_ENVIRONMENT = Symbol('BRIDGE_ENVIRONMENT');
 
@@ -18,13 +18,27 @@ export class BridgeConfigService {
 export function parseBridgeConfiguration(input: Record<string, unknown>): ConfigurationResult {
   try {
     for (const name of ['BRIDGE_PRIVATE_KEY', 'BRIDGE_PRIVATE_KEY_PEM', 'JWT_SIGNING_SECRET']) if (input[name] !== undefined) throw new BridgeConfigurationError('private_key_material');
+    if (input.BRIDGE_IDX_ALLOWED_ENTRY !== undefined) throw new BridgeConfigurationError('allowed_entries');
     const config: BridgeConfiguration = Object.freeze({
-      idxMenuDetailUri: httpsUri(input.BRIDGE_IDX_MENUDETAIL_URI, 'idx_endpoint'), allowedEntry: required(input.BRIDGE_IDX_ALLOWED_ENTRY),
+      idxMenuDetailUri: httpsUri(input.BRIDGE_IDX_MENUDETAIL_URI, 'idx_endpoint'), allowedEntries: allowedEntries(input.BRIDGE_IDX_ALLOWED_ENTRIES),
       integrationId: required(input.BRIDGE_INTEGRATION_ID), hostApp: required(input.BRIDGE_HOST_APP), issuer: required(input.BRIDGE_ISSUER), audience: required(input.BRIDGE_AUDIENCE),
       signingKeys: signingKeys(input.BRIDGE_SIGNING_KEYS), destination: parseDestinationPolicy(input), timeoutMilliseconds: integer(input.BRIDGE_TIMEOUT_MS, 1, 5000, 'timeout'), maxResponseBytes: integer(input.BRIDGE_MAX_RESPONSE_BYTES, 1, 262144, 'response_size'), allowedOrigins: origins(input.BRIDGE_ALLOWED_ORIGINS)
     });
     return { ok: true, config };
   } catch (error) { return { ok: false, category: error instanceof BridgeConfigurationError ? error.category : 'invalid' }; }
+}
+function allowedEntries(value: unknown): readonly string[] {
+  if (typeof value !== 'string') throw new BridgeConfigurationError('allowed_entries');
+  let parsed: unknown;
+  try { parsed = JSON.parse(value); } catch { throw new BridgeConfigurationError('allowed_entries'); }
+  if (!Array.isArray(parsed) || parsed.length === 0) throw new BridgeConfigurationError('allowed_entries');
+  const seen = new Set<string>();
+  const entries = parsed.map((entry) => {
+    if (typeof entry !== 'string' || !entry.trim() || entry !== entry.trim() || /[\u0000-\u001f\u007f]/.test(entry) || seen.has(entry)) throw new BridgeConfigurationError('allowed_entries');
+    seen.add(entry);
+    return entry;
+  });
+  return Object.freeze(entries);
 }
 function integer(value: unknown, min: number, max: number, category: string): number { const parsed = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN; if (!Number.isInteger(parsed) || parsed < min || parsed > max) throw new BridgeConfigurationError(category); return parsed; }
 function signingKeys(value: unknown): readonly SigningKeyConfig[] {

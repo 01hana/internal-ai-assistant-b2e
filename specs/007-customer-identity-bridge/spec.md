@@ -11,7 +11,8 @@ Feature 007 supplies the Customer-controlled trusted server boundary established
 
 ```text
 Customer Nuxt SPA
-  -> current native IDX AccessToken
+  -> existing Customer authentication and Entry selection
+  -> current native IDX AccessToken for the selected Entry
   -> Customer-local Identity Bridge
   -> configured protected IDX MenuDetail endpoint
   -> accepted IDX identity, admission, and permission projection
@@ -21,6 +22,8 @@ Customer Nuxt SPA
   -> Gateway internal JWT -> Backend CustomerScope
   -> existing POST /api/v1/assistant/sessions -> sessionId -> chat window
 ```
+
+Customer Auth owns authentication, authorized-Entry discovery, Entry selection, and Entry state. Identity Bridge begins only after that flow and receives the already-current native AccessToken; it neither calls Authentication or Entry-discovery endpoints nor accepts browser Entry authority.
 
 The following restriction applies only to IDX-derived identity, authorization, credential, and signing material. The canonical upstream JWT may cross from the Customer environment to central Assistant services. Native IDX AccessToken, RefreshToken, raw native claims, raw MenuDetail responses, and Customer-local private signing material must remain in the Customer environment. Normal non-identity Assistant application request and response traffic remains governed by existing product contracts and is outside this identity-material egress restriction; this feature establishes no new chat or business-payload authority.
 
@@ -34,7 +37,7 @@ Feature 007 defines one reusable bridge for configuration-driven Customer deploy
 | `sub` | Accepted IDX identity | Browser-supplied identity |
 | `UUID_User` | Consistency check; it must equal `sub` | A separate actor identity |
 | `org_id` | One accepted, authoritative `UUID_Company` value | First array item, Entry inference, browser active-company selection |
-| `UUID_Entry` | Exact configured admission anchor | Customer resolution or HostApp authority |
+| `UUID_Entry` | Exact membership in the deployment-controlled allowed-entry set | Browser selection, Customer resolution, organization, or HostApp authority |
 | Permission scopes | Successful MenuDetail result | `UserType`, `IsAdmin`, `Permissions`, `Permission_Hash`, browser input |
 | `integration_id`, `host_app` | Bridge deployment configuration | SPA, SDK, IDX native claims |
 | Customer and final HostApp admission | Existing Feature 004 `IntegrationBinding` | Bridge credential, Entry, organization, selector |
@@ -71,7 +74,7 @@ An IDX credential becomes a canonical identity only after the configured protect
 
 1. **Given** MenuDetail accepts the exact bearer and returns a valid successful response, **When** identity is projected, **Then** a nonblank `sub`, matching `UUID_User`, one authoritative `UUID_Company`, and nonblank `UUID_Entry` are required.
 2. **Given** MenuDetail has not accepted the credential, **When** a decodable native JWT is supplied, **Then** no identity or permission authority is established.
-3. **Given** the accepted Entry does not exactly match the configured admission value, **When** exchange is requested, **Then** no canonical JWT is issued.
+3. **Given** the accepted Entry is not an exact case-sensitive member of the configured allowed-entry set, **When** exchange is requested, **Then** no canonical JWT is issued.
 4. **Given** a valid MenuDetail record, **When** scopes are projected, **Then** it yields implicit `menu:<MenuID>:read` and only enabled actions in the fixed order: `insert`, `update`, `delete`, `print`, `import`, `export`, `copy`, and `approval`.
 
 ---
@@ -130,11 +133,11 @@ An operator can configure another Customer deployment without a Customer-specifi
 
 **Why this priority**: The first staging integration must establish a reusable product boundary.
 
-**Independent Test**: Compare two deployment configurations with different endpoint, Entry, integration, HostApp, issuer, audience, and signing-key references; verify no source change is needed.
+**Independent Test**: Compare two deployment configurations with different endpoint, allowed-entry set, integration, HostApp, issuer, audience, and signing-key references; verify no source change is needed.
 
 **Acceptance Scenarios**:
 
-1. **Given** a new Customer deployment configuration, **When** it is provisioned, **Then** its endpoint, Entry admission, canonical values, signing reference, and public verification material are deployment-controlled.
+1. **Given** a new Customer deployment configuration, **When** it is provisioned, **Then** its endpoint, allowed-entry set, canonical values, signing reference, and public verification material are deployment-controlled.
 2. **Given** two Bridge deployments, **When** each exchanges a credential, **Then** neither can use the other's configuration or create Customer authority through source branching.
 
 ### Edge Cases
@@ -156,7 +159,7 @@ An operator can configure another Customer deployment without a Customer-specifi
 - **FR-004**: The Bridge MUST establish IDX credential validity only after the configured protected MenuDetail endpoint accepts the exact bearer and yields a strict successful response. Native JWT decoding alone MUST establish no authority.
 - **FR-005**: The Bridge MUST require nonblank `sub`, `UUID_User`, `UUID_Company`, and `UUID_Entry` after accepted verification; `UUID_User` MUST equal `sub`.
 - **FR-006**: The Bridge MUST accept `UUID_Company` only when accepted IDX behavior provides one authoritative deterministic organization value. Multi-value or ambiguous organization input MUST fail closed until a documented pre-UAT rule is approved.
-- **FR-007**: The Bridge MUST use `UUID_Entry` only for exact configured admission. It MUST NOT use Entry to determine Customer, organization, or HostApp authority.
+- **FR-007**: The Bridge MUST require `UUID_Entry` to be an exact case-sensitive member of the nonempty, deployment-controlled allowed-entry set. It MUST reject malformed, blank, non-string, or duplicate configured values and MUST NOT use Entry to determine Customer, organization, integration, HostApp, issuer, audience, roles, or permission scopes.
 - **FR-008**: The successful MenuDetail response MUST be the sole V1 permission authority. Each accepted menu MUST imply `read`; enabled `Insert`, `Update`, `Delete`, `Print`, `Import`, `Export`, `Copy`, and `Approval` values MUST yield the corresponding canonical action in the fixed order.
 - **FR-009**: Canonical scopes MUST be exactly `menu:<MenuID>:<action>`, deduplicated and deterministic. `UserType`, `IsAdmin`, `Permissions`, and `Permission_Hash` MUST NOT establish roles or scopes.
 - **FR-010**: The Bridge MUST issue only the existing Feature 004 canonical upstream identity semantics: deployment-owned `integration_id` and `host_app`; accepted `sub` and `org_id`; `roles: []`; and approved MenuDetail-derived `permission_scopes`.
@@ -164,7 +167,7 @@ An operator can configure another Customer deployment without a Customer-specifi
 - **FR-012**: Bridge-issued credentials MUST use short-lived RS256 asymmetric signing, nonblank `kid`, configured issuer, exact audience, and Customer-local private signing material. Private material MUST not be browser-held, persisted in an application database, returned, logged, audited, or telemetered.
 - **FR-013**: The Bridge MUST publish public verification material and support publish-before-use, active, retirement, and fail-closed unknown/retired-key behavior without sharing central Gateway internal signing authority.
 - **FR-014**: The Bridge MUST expose only a minimal exchange, public verification-key, and operational-health surface. A successful exchange MUST return the short-lived canonical upstream JWT and MAY additionally return only minimal safe token-lifecycle metadata required by the eventual client contract; exact JSON field names remain a design decision. It MUST NOT return native IDX AccessToken, RefreshToken, raw IDX claims, raw MenuDetail, signing material, or Customer authority.
-- **FR-015**: Customer-specific endpoint, Entry admission, `integration_id`, `host_app`, issuer, audience, signing-key reference, verification source, and safe transport settings MUST be deployment-controlled. No Customer domain, identifier, credential, secret, or menu may be source-coded.
+- **FR-015**: Customer-specific endpoint, allowed-entry set, `integration_id`, `host_app`, issuer, audience, signing-key reference, verification source, and safe transport settings MUST be deployment-controlled. No Customer domain, identifier, credential, secret, or menu may be source-coded.
 - **FR-016**: The Customer SPA integration MUST obtain its current native AccessToken through the existing frontend-auth layer, send it only to the Customer-local Bridge, use only the returned canonical JWT with the existing central Assistant session route, and open chat with the returned `sessionId`.
 - **FR-017**: Feature 007 MUST use existing central Feature 004 TrustProfile, IntegrationBinding, internal JWT, and Backend CustomerScope behavior without changing their authority semantics, verification behavior, or session route.
 - **FR-018**: A later design MUST assess the smallest safe reuse of pure Feature 006 IDX validation, claim consistency, permission normalization, and scope projection logic. It MUST NOT duplicate the central managed-exchange module or require a broad Feature 006 refactor.
@@ -180,7 +183,7 @@ An operator can configure another Customer deployment without a Customer-specifi
 
 ### Explicit Non-Goals
 
-- IDX login/logout, IDX Auth Backend changes, IDX infrastructure changes, or RefreshToken lifecycle changes.
+- IDX login/logout, Authentication calls, authorized-Entry discovery/selection/state, IDX Auth Backend changes, IDX infrastructure changes, or RefreshToken lifecycle changes.
 - Customer application, SCM, or business Backend changes; Customer account storage; business connectors; RAG; agent behavior; or business tools.
 - Generic IAM, identity-broker, OAuth/OIDC provider, or Customer lifecycle/admin/billing platform.
 - Browser/SDK private-key handling, browser JWT signing, Customer-specific central Gateway handlers, or new IDX-specific central session endpoints.
@@ -189,7 +192,7 @@ An operator can configure another Customer deployment without a Customer-specifi
 ### Key Entities
 
 - **Customer-side Identity Bridge**: The Assistant-owned runtime deployed in a Customer environment that verifies the current IDX AccessToken and issues only a canonical upstream JWT.
-- **Bridge Deployment Configuration**: Customer-specific operational values such as protected endpoint, admission Entry, canonical integration/HostApp, signing reference, issuer, audience, and public verification source.
+- **Bridge Deployment Configuration**: Customer-specific operational values such as protected endpoint, nonempty allowed-entry set, canonical integration/HostApp, signing reference, issuer, audience, and public verification source.
 - **Accepted IDX Identity**: The reduced identity produced after successful MenuDetail verification: accepted `sub`, organization, and `idx_entry` admission anchor.
 - **Canonical Upstream Credential**: The short-lived Bridge-signed Feature 004-compatible JWT containing six canonical identity semantics and no Customer authority.
 - **Bridge Signing Domain**: The Customer-local asymmetric signing and public verification-key lifecycle, distinct from central Gateway internal signing.

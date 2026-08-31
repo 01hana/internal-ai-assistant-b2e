@@ -64,7 +64,7 @@ If a Customer deployment cannot supply a Feature-004-compatible central-reachabl
 | `GET /health` | Liveness | Public | None |
 | `GET /ready` | Local configuration/key/endpoint-policy readiness | Public | None |
 
-`POST /identity/exchange` accepts an empty JSON object or no body. Any body field is rejected. It never accepts Customer, `integration_id`, `host_app`, `org_id`, roles, permission scopes, Entry override, IDX endpoint, issuer, audience, or signing configuration from the browser.
+`POST /identity/exchange` accepts an empty JSON object or no body. Any body field is rejected. It never accepts Customer, `integration_id`, `host_app`, `org_id`, roles, permission scopes, `entryId`, `UUID_Entry`, `selectedEntry`, IDX endpoint, issuer, audience, or signing configuration from the browser.
 
 Successful response shape:
 
@@ -82,7 +82,7 @@ The canonical upstream JWT is intentionally returned only to the Customer SPA an
 | --- | --- | --- |
 | Missing/malformed bearer or non-empty/unknown body | 400 | `IDENTITY_EXCHANGE_REQUEST_INVALID` |
 | IDX rejects credential or accepted claims are invalid | 401 | `IDENTITY_EXCHANGE_IDENTITY_INVALID` |
-| Exact Entry admission fails | 403 | `IDENTITY_EXCHANGE_IDENTITY_DENIED` |
+| Exact allowed-entry membership fails | 403 | `IDENTITY_EXCHANGE_IDENTITY_DENIED` |
 | IDX unavailable, unsafe destination, timeout, malformed response, key/configuration failure | 503 | `IDENTITY_EXCHANGE_UNAVAILABLE` |
 
 Errors contain only `statusCode`, `code`, a generic message, and normalized request correlation. They do not contain the native token, canonical JWT, headers, claims, MenuDetail body/status, endpoint details, key details, or Customer data.
@@ -103,17 +103,19 @@ The narrow Customer SPA Assistant integration/composable obtains the current IDX
 
 The Bridge preserves Feature 006 semantics in this exact order:
 
+Customer Auth completes authentication, authorized-Entry discovery, Entry selection, and current-token acquisition before this sequence begins. The Bridge calls neither `/APIs/Auth/APIs/Auth/Authentication` nor an Entry-discovery endpoint and maintains no selected-Entry state.
+
 1. Validate Bridge deployment configuration and fixed IDX endpoint policy.
 2. Send the exact current native bearer once to the configured protected MenuDetail endpoint.
 3. Require HTTPS response success, JSON content, application `Code == 200`, and strict MenuDetail schema validation.
 4. Only then structurally parse the same native JWT payload; no local IDX signature, ES512, JWKS, key-selection, or time-claim verification is performed.
 5. Require nonblank `sub`, `UUID_User`, `UUID_Company`, and `UUID_Entry`; require `sub === UUID_User`.
-6. Require one authoritative `UUID_Company` value, exact configured `UUID_Entry` admission, and validated semantic menu material.
+6. Require one authoritative `UUID_Company` value, exact case-sensitive `UUID_Entry` membership in the deployment-controlled allowed-entry set, and validated semantic menu material.
 7. Project canonical scopes and issue the Bridge JWT.
 
 `UUID_Company` provided as an array, or any case where authoritative IDX behavior does not establish exactly one organization, fails closed. The Bridge does not choose an array value, accept a browser-selected company, or infer organization from Entry. The first Customer staging readiness checklist must include documentary/test evidence that the accepted production IDX behavior supplies one deterministic organization before UAT can begin.
 
-`UUID_Entry` is the sole admission anchor. It never establishes Customer, organization, or HostApp authority. `UserType`, `IsAdmin`, `Permissions`, and `Permission_Hash` are non-authoritative.
+`UUID_Entry` is the sole admission anchor and must belong to the configured allowed-entry set. It never establishes Customer, organization, integration, HostApp, issuer, audience, roles, or permission scopes. `UserType`, `IsAdmin`, `Permissions`, and `Permission_Hash` are non-authoritative.
 
 ### 3.2 Permission projection
 
@@ -190,7 +192,7 @@ The Bridge requires these deployment values before it can become ready:
 | Configuration | Validation |
 | --- | --- |
 | `BRIDGE_IDX_MENUDETAIL_URI` | HTTPS absolute URI, no credentials/fragments, valid under selected destination mode |
-| `BRIDGE_IDX_ALLOWED_ENTRY` | Nonblank exact `UUID_Entry` admission value |
+| `BRIDGE_IDX_ALLOWED_ENTRIES` | JSON array containing one or more unique, nonblank exact `UUID_Entry` admission values; matching is case-sensitive and the legacy singleton field is rejected |
 | `BRIDGE_INTEGRATION_ID`, `BRIDGE_HOST_APP` | Nonblank server-owned canonical values |
 | `BRIDGE_ISSUER`, `BRIDGE_AUDIENCE` | Nonblank exact JWT issuer and audience |
 | `BRIDGE_JWKS_PUBLIC_URI` | Feature-004-compatible public HTTPS JWKS URI reachable from central Gateway; no loopback, private, or internal destination |
@@ -253,7 +255,7 @@ This creates no new central admin endpoint, Customer-resolution mechanism, Custo
 | Credential redaction | Canonical JWT is returned to the SPA and accepted by the central Gateway, but absent from Bridge logs, audit payloads, telemetry/traces, error bodies, persistence, diagnostics, and snapshots; it remains memory-only in the SPA |
 | Native-material non-egress | Native AccessToken, RefreshToken, raw claims, and raw MenuDetail absent from central requests, logs, audit, telemetry, persistence, snapshots, and errors |
 | Feature 004 compatibility | Bridge JWT is accepted by exactly one existing profile then resolved only through IntegrationBinding |
-| Two-configuration isolation | Distinct endpoint/Entry/integration/HostApp/key configurations cannot cross-admit |
+| Two-configuration isolation | Distinct endpoint/allowed-entry-set/integration/HostApp/key configurations cannot cross-admit |
 | SPA handoff | Existing Frontend-Auth supplies AccessToken only locally; JWT is memory-only; `sessionId` opens chat |
 | Central provisioning/session | Existing Feature 004 provisioning/readiness proves central JWKS retrieval and synthetic Bridge JWT verification; combined with healthy local `/ready`, this proves `STAGING_IDENTITY_READY`, then the unchanged central session route returns `sessionId` |
 | Real staging UAT | Real IDX login, real MenuDetail, single-company proof, canonical JWT, binding, session, chat opening, and central non-egress proof |

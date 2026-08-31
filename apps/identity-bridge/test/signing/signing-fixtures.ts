@@ -44,7 +44,7 @@ export function rsaSigningFixture(kid = 'bridge-kid'): RsaSigningFixture {
 export function bridgeEnvironment(signingKeys: readonly Record<string, unknown>[]): Record<string, unknown> {
   return {
     BRIDGE_IDX_MENUDETAIL_URI: 'https://idx.test/menu-detail',
-    BRIDGE_IDX_ALLOWED_ENTRY: 'configured-entry',
+    BRIDGE_IDX_ALLOWED_ENTRIES: '["configured-entry","configured-entry-secondary"]',
     BRIDGE_INTEGRATION_ID: 'configured-integration',
     BRIDGE_HOST_APP: 'configured-host-app',
     BRIDGE_ISSUER: 'https://bridge.test',

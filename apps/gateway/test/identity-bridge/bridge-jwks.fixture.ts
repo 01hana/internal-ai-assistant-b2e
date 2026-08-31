@@ -68,7 +68,7 @@ export function corruptProtectedAlgorithm(token: string): string {
 function bridgeConfig(signing: RsaSigningFixture, variant: Variant = {}): BridgeConfigService {
   return new BridgeConfigService({
     BRIDGE_IDX_MENUDETAIL_URI: 'https://idx-phase9.example.test/menu-detail',
-    BRIDGE_IDX_ALLOWED_ENTRY: BRIDGE_PHASE9.entry,
+    BRIDGE_IDX_ALLOWED_ENTRIES: JSON.stringify([BRIDGE_PHASE9.entry, `${BRIDGE_PHASE9.entry}-secondary`]),
     BRIDGE_INTEGRATION_ID: BRIDGE_PHASE9.integrationId,
     BRIDGE_HOST_APP: variant.hostApp ?? BRIDGE_PHASE9.hostApp,
     BRIDGE_ISSUER: variant.issuer ?? BRIDGE_PHASE9.issuer,

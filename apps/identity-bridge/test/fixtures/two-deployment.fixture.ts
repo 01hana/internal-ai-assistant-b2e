@@ -6,6 +6,7 @@ export type DeploymentFixture = Readonly<{
   name: 'A' | 'B';
   endpoint: string;
   entry: string;
+  allowedEntries: readonly [string, string];
   integrationId: string;
   hostApp: string;
   issuer: string;
@@ -15,6 +16,7 @@ export type DeploymentFixture = Readonly<{
   subject: string;
   organization: string;
   nativeToken: string;
+  nativeTokens: readonly [string, string];
   menuDetail: Readonly<Record<string, unknown>>;
   permissionScopes: readonly string[];
   signing: RsaSigningFixture;
@@ -33,7 +35,8 @@ function deployment(input: Readonly<{ name: 'A' | 'B'; action: 'Insert' | 'Updat
   const kid = `kid-${suffix}`;
   const signing = rsaSigningFixture(kid);
   const endpoint = `https://idx-${suffix}.example.test/menu-detail`;
-  const entry = `entry-${suffix}`;
+  const allowedEntries = deepFreeze([`entry-${suffix}-1`, `entry-${suffix}-2`] as const);
+  const entry = allowedEntries[0];
   const integrationId = `integration-${suffix}`;
   const hostApp = `host-${suffix}`;
   const issuer = `https://issuer-${suffix}.example.test`;
@@ -41,22 +44,23 @@ function deployment(input: Readonly<{ name: 'A' | 'B'; action: 'Insert' | 'Updat
   const jwksUri = `https://bridge-${suffix}.example.test/.well-known/jwks.json`;
   const subject = `user-${suffix}`;
   const organization = `company-${suffix}`;
-  const identityClaims = deepFreeze({
+  const identityClaims = (selectedEntry: string) => deepFreeze({
     sub: subject,
     UUID_User: subject,
     UUID_Company: organization,
-    UUID_Entry: entry,
+    UUID_Entry: selectedEntry,
     UserType: 'forged-admin',
     IsAdmin: true,
     Permissions: [`forged-${suffix}`],
     Permission_Hash: `forged-hash-${suffix}`
   });
+  const nativeTokens = deepFreeze(allowedEntries.map((selectedEntry) => token(identityClaims(selectedEntry))) as [string, string]);
   const menuDetail = deepFreeze(response([
     menu({ MenuID: input.name, MenuPermission: permission({ [input.action]: 'Y' }) })
   ]));
   const environment = deepFreeze({
     BRIDGE_IDX_MENUDETAIL_URI: endpoint,
-    BRIDGE_IDX_ALLOWED_ENTRY: entry,
+    BRIDGE_IDX_ALLOWED_ENTRIES: JSON.stringify(allowedEntries),
     BRIDGE_INTEGRATION_ID: integrationId,
     BRIDGE_HOST_APP: hostApp,
     BRIDGE_ISSUER: issuer,
@@ -69,8 +73,8 @@ function deployment(input: Readonly<{ name: 'A' | 'B'; action: 'Insert' | 'Updat
   });
 
   return deepFreeze({
-    name: input.name, endpoint, entry, integrationId, hostApp, issuer, audience, jwksUri, kid,
-    subject, organization, nativeToken: token(identityClaims), menuDetail,
+    name: input.name, endpoint, entry, allowedEntries, integrationId, hostApp, issuer, audience, jwksUri, kid,
+    subject, organization, nativeToken: nativeTokens[0], nativeTokens, menuDetail,
     permissionScopes: [`menu:${input.name}:read`, `menu:${input.name}:${input.actionName}`],
     signing, environment
   }) as DeploymentFixture;
