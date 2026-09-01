@@ -8,8 +8,10 @@
     "build": "node ../../node_modules/@nestjs/cli/bin/nest.js build --config nest-cli.json",
     "start": "node dist/main.js",
     "local:bootstrap": "node scripts/local-bootstrap.mjs",
+    "local:jwks-proxy": "node scripts/local-jwks-proxy.cjs",
     "local:verify": "node scripts/local-verify.mjs",
-    "local:verify:idx": "node scripts/local-verify-idx.cjs"
+    "local:verify:idx": "node scripts/local-verify-idx.cjs",
+    "local:verify:session": "node scripts/local-verify-session.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.26",

@@ -1,5 +1,8 @@
 import { request as httpsRequest } from 'node:https';
 import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
+import type { LookupAddress, LookupOptions } from 'node:dns';
+import type { LookupFunction } from 'node:net';
 import { ProductionJwksSourceRegistrationPolicy, assertPublicDestination } from './jwks-source-policy';
 import type { JSONWebKeySet } from 'jose';
 
@@ -47,12 +50,37 @@ async function nodeRequest(url: URL, lookupFn: LookupFn, signal: AbortSignal): P
   const request = httpsRequest;
   return new Promise((resolve, reject) => {
     if (signal.aborted) return reject(new JwksTransportError());
-    const req = request(url, { timeout: JWKS_TIMEOUT_MS, headers: { accept: 'application/json, application/jwk-set+json' }, lookup: (hostname, _options, callback) => lookupFn(hostname).then((addresses) => callback(null, addresses[0], addresses[0].includes(':') ? 6 : 4)).catch((error) => callback(error, '')) }, (response) => resolve({ statusCode: response.statusCode ?? 0, headers: response.headers, body: response }));
+    const req = request(url, { timeout: JWKS_TIMEOUT_MS, headers: { accept: 'application/json, application/jwk-set+json' }, lookup: createValidatedSocketLookup(lookupFn) }, (response) => resolve({ statusCode: response.statusCode ?? 0, headers: response.headers, body: response }));
     signal.addEventListener('abort', () => req.destroy(new JwksTransportError()), { once: true });
     req.once('timeout', () => req.destroy(new JwksTransportError()));
     req.once('error', () => reject(new JwksTransportError()));
     req.end();
   });
+}
+
+export function createValidatedSocketLookup(lookupFn: LookupFn): LookupFunction {
+  return (hostname, options, callback) => {
+    lookupFn(hostname).then((addresses) => {
+      const requestedFamily = lookupFamily(options);
+      const records = addresses.map(toLookupAddress).filter((record) => requestedFamily === 0 || record.family === requestedFamily);
+      if (records.length === 0) throw new JwksTransportError();
+      if (options.all === true) callback(null, records);
+      else callback(null, records[0].address, records[0].family);
+    }).catch(() => callback(new JwksTransportError(), ''));
+  };
+}
+
+function lookupFamily(options: LookupOptions): 0 | 4 | 6 {
+  if (options.family === undefined || options.family === 0) return 0;
+  if (options.family === 4 || options.family === 'IPv4') return 4;
+  if (options.family === 6 || options.family === 'IPv6') return 6;
+  throw new JwksTransportError();
+}
+
+function toLookupAddress(address: string): LookupAddress {
+  const family = isIP(address);
+  if (family !== 4 && family !== 6) throw new JwksTransportError();
+  return { address, family };
 }
 async function boundedBody(body: AsyncIterable<Uint8Array>, signal: AbortSignal): Promise<Uint8Array> { const parts: Uint8Array[] = []; let length = 0; try { for await (const part of body) { if (signal.aborted) throw new JwksTransportError(); length += part.length; if (length > JWKS_MAX_RESPONSE_BYTES) throw new JwksTransportError(); parts.push(part); } } catch { throw new JwksTransportError(); } const result = Buffer.concat(parts); return result; }
 function jsonContentType(value: string | string[] | undefined): boolean { const type = Array.isArray(value) ? value[0] : value; return typeof type === 'string' && /^(application\/json|application\/jwk-set\+json)(?:\s*;|$)/i.test(type); }

@@ -114,17 +114,138 @@
 
 **Pre-Phase 10 multi-entry admission correction evidence (2026-08-31)**: Before any real deployment, the singleton `BRIDGE_IDX_ALLOWED_ENTRY` authority was removed and replaced by immutable JSON `BRIDGE_IDX_ALLOWED_ENTRIES`. Configuration rejects legacy, empty, malformed, non-string, whitespace-normalized, control-character, and exact-duplicate values; admission accepts exact case-sensitive membership only after MenuDetail acceptance. Customer Auth retains authentication and Entry discovery/selection/state, the browser cannot submit Entry authority, and no Authentication/discovery call exists in Bridge production. Phase 8 now proves Deployment A Entries A1/A2 and Deployment B Entries B1/B2 are locally accepted and cross-denied before issuance with no shared mutable admission state. The focused correction matrix passes 9 suites/109 tests; the full Bridge regression passes 30 suites/261 tests; the DB-backed Phase 9 compatibility regression passes 1 suite/10 tests with no required skip; Bridge and Gateway builds pass. No Feature 003–006 or Customer production source changed, no Entry appears in canonical JWTs, and no staging operation was performed. `T065_STATUS=HUMAN_REQUIRED`; highest completed task remains T064; T065–T073 remain unchecked.
 
-**PRE_PHASE10_LOCAL_DOCKER_REHEARSAL evidence (2026-08-31)**: A production-portable, non-root Identity Bridge image and isolated local Compose stack run only `identity-bridge` plus an unprivileged HTTPS IDX proxy on deterministic private addresses. Idempotent bootstrap generated and persisted a local-only RSA-2048 PKCS#8 key, derived the public-only RS256 JWK with `kid=shinmone-scm-local-2026-01`, and created a local CA plus SAN-valid `idx-proxy.local` certificate outside image layers and tracked files. The key and CA are mounted read-only; `NODE_EXTRA_CA_CERTS` preserves TLS verification; the existing HTTPS-only transport and `allowlisted_networks` checks successfully reached only the proxy's local no-upstream TLS probe. `/health`, `/ready`, and the public-only JWKS passed; an Identity Bridge restart preserved the exact JWKS; image filesystem, metadata, and history checks found no private signing material. The bootstrap suite passes 1 suite/2 tests, Phase 8 passes 2 suites/8 tests, the full Bridge regression passes 31 suites/263 tests, and DB-backed Phase 9 compatibility passes 1 suite/10 tests; Bridge and Gateway builds, Compose rendering, image build, local startup, and `git diff --check` pass. The explicit Entry replacement marker is classified as non-Customer evidence, so `REAL_ENTRY_UUIDS_AVAILABLE=NO`, `REAL_IDX_ACCESS_TOKEN_AVAILABLE=NO`, and `REAL_IDX_LOCAL_EXCHANGE=NOT_RUN`. `PRE_PHASE10_LOCAL_DOCKER_REHEARSAL_COMPLETE=YES`; `T065_STATUS=HUMAN_REQUIRED`; `T066_STARTED=NO`; highest completed task remains T064; `CENTRAL_FEATURE004_JWKS_REACHABLE_AND_TRUSTED=NO`; `STAGING_IDENTITY_READY=NO`.
+**PRE_PHASE10_LOCAL_DOCKER_REHEARSAL evidence (2026-08-31)**: A production-portable, non-root Identity Bridge image and isolated local Compose stack run only `identity-bridge` plus an unprivileged HTTPS IDX proxy on deterministic private addresses. Idempotent bootstrap generated and persisted a local-only RSA-2048 PKCS#8 key, derived the public-only RS256 JWK with `kid=shinmone-scm-local-2026-01`, and created a local CA plus SAN-valid `idx-proxy.local` certificate outside image layers and tracked files. The key and CA are mounted read-only; `NODE_EXTRA_CA_CERTS` preserves TLS verification; the existing HTTPS-only transport and `allowlisted_networks` checks successfully reached only the proxy's local no-upstream TLS probe. `/health`, `/ready`, and the public-only JWKS passed; an Identity Bridge restart preserved the exact JWKS; image filesystem, metadata, and history checks found no private signing material. The bootstrap suite passes 1 suite/2 tests, Phase 8 passes 2 suites/8 tests, the full Bridge regression passes 31 suites/263 tests, and DB-backed Phase 9 compatibility passes 1 suite/10 tests; Bridge and Gateway builds, Compose rendering, image build, local startup, and `git diff --check` pass. At this historical checkpoint the Entry marker was still non-Customer evidence and no real credential was used; that interim state is superseded by the final authorized human runtime evidence below. `PRE_PHASE10_LOCAL_DOCKER_REHEARSAL_COMPLETE=YES`; `T065_STATUS=HUMAN_REQUIRED`; `T066_STARTED=NO`; highest completed task remains T064; `CENTRAL_FEATURE004_JWKS_REACHABLE_AND_TRUSTED=NO`; `STAGING_IDENTITY_READY=NO`.
 
-**PRE_PHASE10_REAL_IDX_LOCAL_EVIDENCE preparation (2026-08-31)**: The actual first-Customer selected Entry UUID is available and is loaded only through ignored `apps/identity-bridge/env/local.env`, which overrides the tracked replacement marker before generated public signing metadata. The recreated local Bridge reports healthy/ready with that exact one-entry configuration. The `local:verify:idx` command accepts no arguments or token environment/config/file/browser source, requires a TTY, disables terminal echo, sends an empty-body bearer exchange, validates the canonical response in memory, scans Compose logs for both credentials, and emits normalized markers only. Its focused tooling suite passes 1 suite/10 tests; the full Bridge regression passes 32 suites/273 tests; Phase 8 passes 2 suites/8 tests; DB-backed Phase 9 passes 1 suite/10 tests; Bridge/Gateway builds, Compose rendering, and `git diff --check` pass. The interactive prompt was reached, but no live AccessToken was supplied through this execution channel, so no request was sent and no real MenuDetail or canonical JWT evidence is claimed: `REAL_IDX_LOCAL_EXCHANGE=NOT_RUN`, `ENTRY_ADMISSION_MODEL=INSUFFICIENT_EVIDENCE`, and `MENUDETAIL_ACCEPTANCE_ALONE_PROVEN_SUFFICIENT=NO`. No production identity source changed. `T065_STATUS=HUMAN_REQUIRED`; `T066_STARTED=NO`; highest completed task remains T064; `CENTRAL_FEATURE004_JWKS_REACHABLE_AND_TRUSTED=NO`; `STAGING_IDENTITY_READY=NO`.
+**PRE_PHASE10_REAL_IDX_LOCAL_EVIDENCE preparation (2026-08-31)**: The actual first-Customer selected Entry UUID is available and is loaded only through ignored `apps/identity-bridge/env/local.env`, which overrides the tracked replacement marker before generated public signing metadata. The recreated local Bridge reports healthy/ready with that exact one-entry configuration. The `local:verify:idx` command accepts no arguments or token environment/config/file/browser source, requires a TTY, disables terminal echo, sends an empty-body bearer exchange, validates the canonical response in memory, scans Compose logs for both credentials, and emits normalized markers only. Its focused tooling suite passes 1 suite/10 tests; the full Bridge regression passes 32 suites/273 tests; Phase 8 passes 2 suites/8 tests; DB-backed Phase 9 passes 1 suite/10 tests; Bridge/Gateway builds, Compose rendering, and `git diff --check` pass. This preparation checkpoint ended at the human input boundary and is superseded by the final authorized human runtime evidence below. No production identity source changed. `ENTRY_ADMISSION_MODEL=INSUFFICIENT_EVIDENCE`; `MENUDETAIL_ACCEPTANCE_ALONE_PROVEN_SUFFICIENT=NO`; `T065_STATUS=HUMAN_REQUIRED`; `T066_STARTED=NO`; highest completed task remains T064; `CENTRAL_FEATURE004_JWKS_REACHABLE_AND_TRUSTED=NO`; `STAGING_IDENTITY_READY=NO`.
 
-**PRE_PHASE10_REAL_IDX_LOCAL_TTY_CORRECTION evidence (2026-08-31)**: The local verifier's macOS-prone external `stty`/`readline` path was replaced with injected Node TTY raw-mode collection. It consumes pasted synthetic credentials directly, supports CR, LF, and split terminators, rejects empty/whitespace/multiple-line input, handles Ctrl+C and terminal errors, restores the prior raw-mode state, pauses stdin, and prints only a newline plus safe progress markers. Its local request now has a 12-second abort timeout that maps only to `IDX_TRANSPORT`. The focused verifier suite passes 1 suite/20 tests; the full Bridge suite passes 32 suites/283 tests; Bridge build, Compose rendering, and `git diff --check` pass. No real credential was entered, no exchange was sent, and no production identity source or Phase 10 task state changed: `REAL_IDX_LOCAL_EXCHANGE=NOT_RUN`; `T065_STATUS=HUMAN_REQUIRED`; `T066_STARTED=NO`; highest completed task remains T064.
+**PRE_PHASE10_REAL_IDX_LOCAL_TTY_CORRECTION evidence (2026-08-31)**: The local verifier's macOS-prone external `stty`/`readline` path was replaced with injected Node TTY raw-mode collection. It consumes pasted synthetic credentials directly, supports CR, LF, and split terminators, rejects empty/whitespace/multiple-line input, handles Ctrl+C and terminal errors, restores the prior raw-mode state, pauses stdin, and prints only a newline plus safe progress markers. Its local request now has a 12-second abort timeout that maps only to `IDX_TRANSPORT`. The focused verifier suite passes 1 suite/20 tests; the full Bridge suite passes 32 suites/283 tests; Bridge build, Compose rendering, and `git diff --check` pass. This tooling-only checkpoint preceded the authorized human run and is superseded by the final runtime evidence below; no production identity source or Phase 10 task state changed. `T065_STATUS=HUMAN_REQUIRED`; `T066_STARTED=NO`; highest completed task remains T064.
 
-**PRE_PHASE10_SAME_TOKEN_MENUDETAIL_DIAGNOSTIC evidence (2026-08-31)**: The same interactive, memory-only native token is now passed exactly once to a tooling-only direct legacy MenuDetail GET and once to the local Bridge exchange; neither path prints or persists it. The direct diagnostic is bounded to 12 seconds, emits only HTTP status and a `Code === 200` boolean, and remains outside `apps/identity-bridge/src/**`, preserving the Bridge's HTTPS-only production transport. Safe comparison coverage proves direct/Bridge accept and reject combinations plus timeout or malformed direct-response `INCONCLUSIVE` classification, with no token or raw MenuDetail disclosure. The focused verifier suite passes 1 suite/26 tests; the full Bridge suite passes 32 suites/289 tests; Bridge build and Compose rendering pass. No real credential was entered and no direct or Bridge request was sent during this correction: `REAL_IDX_LOCAL_EXCHANGE=NOT_RUN`; `ENTRY_ADMISSION_MODEL=INSUFFICIENT_EVIDENCE`; `T065_STATUS=HUMAN_REQUIRED`; `T066_STARTED=NO`; highest completed task remains T064.
+**PRE_PHASE10_SAME_TOKEN_MENUDETAIL_DIAGNOSTIC evidence (2026-08-31)**: The same interactive, memory-only native token is now passed exactly once to a tooling-only direct legacy MenuDetail GET and once to the local Bridge exchange; neither path prints or persists it. The direct diagnostic is bounded to 12 seconds, emits only HTTP status and a `Code === 200` boolean, and remains outside `apps/identity-bridge/src/**`, preserving the Bridge's HTTPS-only production transport. Safe comparison coverage proves direct/Bridge accept and reject combinations plus timeout or malformed direct-response `INCONCLUSIVE` classification, with no token or raw MenuDetail disclosure. The focused verifier suite passes 1 suite/26 tests; the full Bridge suite passes 32 suites/289 tests; Bridge build and Compose rendering pass. This tooling checkpoint preceded the authorized human run and is superseded by the final runtime evidence below. `ENTRY_ADMISSION_MODEL=INSUFFICIENT_EVIDENCE`; `T065_STATUS=HUMAN_REQUIRED`; `T066_STARTED=NO`; highest completed task remains T064.
+
+**PRE_PHASE10_REAL_IDX_LOCAL_EVIDENCE final (2026-09-01)**: An authorized human operator supplied the current native AccessToken once through the hidden raw-TTY prompt. The same exact in-memory token received direct legacy MenuDetail HTTP 200 with application `Code === 200` and local Bridge exchange HTTP 200. The Bridge accepted MenuDetail, admitted the configured selected Entry, and returned a five-minute RS256 canonical JWT with a nonblank signing key identifier, empty roles, configured authority, no Entry claim, and no Customer authority. The native credential and canonical JWT were neither persisted nor logged; no raw token, claims, MenuDetail response, canonical JWT, Authorization header, or private-key material is recorded here. The earlier Bridge HTTP 401 was not reproduced by the final same-token comparison, so its cause remains unconfirmed and neither the proxy nor Bridge transport is classified as defective. Only the selected SCM Entry positive path has real evidence; no alternate-Entry/application token has been tested, so the allowlist remains and broader Entry authority remains unresolved.
+
+```text
+PRE_PHASE10_REAL_IDX_LOCAL_EVIDENCE_COMPLETE=YES
+REAL_IDX_LOCAL_EXCHANGE=PASS
+SAME_TOKEN_DIAGNOSIS=DIRECT_AND_BRIDGE_ACCEPT
+
+REAL_IDX_MENUDETAIL_REQUEST_REACHED=YES
+REAL_IDX_MENUDETAIL_ACCEPTED=YES
+REAL_IDX_ENTRY_ADMISSION=PASS
+
+CANONICAL_JWT_RECEIVED=YES
+CANONICAL_JWT_RS256=YES
+CANONICAL_JWT_TTL_VALID=YES
+CANONICAL_JWT_ENTRY_ABSENT=YES
+CANONICAL_JWT_CUSTOMER_AUTHORITY_ABSENT=YES
+
+NATIVE_TOKEN_PERSISTED=NO
+NATIVE_TOKEN_LOGGED=NO
+CANONICAL_JWT_LOGGED=NO
+
+PREVIOUS_401_REPRODUCED=NO
+PREVIOUS_401_ROOT_CAUSE=UNCONFIRMED
+PROXY_DEFECT_CONFIRMED=NO
+BRIDGE_TRANSPORT_DEFECT_CONFIRMED=NO
+
+ENTRY_ADMISSION_MODEL=INSUFFICIENT_EVIDENCE
+MENUDETAIL_ACCEPTANCE_ALONE_PROVEN_SUFFICIENT=NO
+```
+
+## Pre-T065 local full E2E development track
+
+This local-development track is deliberately separate from the numbered staging tasks. It may establish only `LOCAL_CUSTOMER_IDENTITY_E2E_READY`; it cannot complete, unblock, or alter T065–T073, `CENTRAL_FEATURE004_JWKS_REACHABLE_AND_TRUSTED`, `STAGING_IDENTITY_READY`, or the final Feature 007 gate.
+
+- [X] L001 [DOC/EVIDENCE] Correct Entry-admission evidence and the T065 worksheet; deps: T064; retain the observed Entry only in ignored local configuration as a selected positive path, prohibit wildcard/browser/Bridge Authentication authority, and preserve exact Bridge membership checks; validate documentation review; done when the provisional state is explicit.
+- [X] L002 [OPS] Prepare the local substrate; deps: L001; prove local PostgreSQL healthy, Prisma clients generated, migrations applied, deterministic seed complete, Backend runtime/build identified, Gateway build identified, and the existing Identity Bridge local runtime available; validate local evidence; done without requiring profile-gated Gateway startup.
+- [X] L003 [INTEGRATION] Complete local trust bootstrap; deps: L002; expose only Bridge JWKS through the loopback proxy and operator-owned public HTTPS tunnel, provision/replay the dedicated local Customer/binding/active RS256 TrustProfile through existing commands, start real Gateway, run its existing local signing bootstrap, prove Gateway health/JWKS, and retrieve Bridge JWKS through unchanged `HardenedJwksTransport`; done only after runtime tunnel evidence.
+- [ ] L004 [INTEGRATION] Run the real local session bootstrap; deps: L003; operator-entered native bearer reaches only local Bridge, returned canonical JWT remains in memory, and local Gateway creates a Backend session through Feature 004, IntegrationBinding, and its internal JWT; done when `201` and a real `sessionId` are evidenced with no fixture internal JWT.
+- [ ] L005 [EXTERNAL_REPO] Integrate the actual Customer SPA locally only after L004; deps: L004; existing Frontend-Auth supplies the current AccessToken, the SPA uses same-origin Bridge exchange and an in-memory canonical JWT, and RefreshToken ownership remains unchanged; done when external tests/evidence pass.
+- [ ] L006 [INTEGRATION] Prove local chat E2E; deps: L005; existing chat UI opens from the real session and displays an SSE response through Gateway and Backend; done when safe evidence establishes `LOCAL_CUSTOMER_IDENTITY_E2E_READY=YES` without a staging claim.
+
+```text
+AUTHENTICATION_ENTRIES_USER_SPECIFIC=YES
+LOCAL_ENTRY_ADMISSION_POSITIVE_PATH_ONLY=YES
+STATIC_DEPLOYMENT_ALLOWLIST_COMPLETE=UNKNOWN
+
+LOCAL_FULL_E2E_TRACK_ADDED=YES
+LOCAL_BRIDGE_PUBLIC_JWKS_URI=AVAILABLE_FOR_OPERATOR_VERIFY_ONLY
+PRODUCTION_JWKS_POLICY_CHANGED=NO
+
+L001_STATUS=PASS
+L002_STATUS=PASS
+L003_STATUS=PASS
+L004_STATUS=HUMAN_REQUIRED
+L005_STATUS=NOT_STARTED
+L006_STATUS=NOT_STARTED
+LOCAL_CUSTOMER_IDENTITY_E2E_READY=NO
+```
+
+**Corrected L002 execution evidence (2026-09-01)**: L002 is substrate-only. The existing local Compose PostgreSQL service was healthy; Prisma clients generated; all nine repository migrations applied to local `assistant_dev`; deterministic seed data created two Customers and two existing `admin` bindings; Backend runtime/build and Gateway build were identified; and the existing Identity Bridge reported health/JWKS on loopback. Gateway startup and signing bootstrap correctly move to L003 because the unchanged profile-only runtime requires an enabled active TrustProfile before startup. `LOCAL_TASK_ORDERING_DEFECT_CORRECTED=YES`; `L002_STATUS=PASS`.
+
+**L003 local tooling preparation evidence (2026-09-01)**: The dependency-free JWKS-only proxy binds exactly `127.0.0.1:3110`, fetches only the local Bridge public JWKS at `127.0.0.1:3107`, enforces GET/exact path/JSON/256-KiB bounds, and forwards no caller authority or body. Synthetic coverage passes 1 suite/7 tests; live loopback verification returns JWKS 200 while exchange, health, and readiness return 404 and POST JWKS returns 405. The local provisioning tool validates a runtime public HTTPS JWKS URI through unchanged production policy and real hardened transport before mutation, then composes the existing binding/profile commands with exact local authority and fail-closed conflict handling. Its isolated DB suite passes 1 suite/9 tests. `cloudflared` is absent, so no tunnel, Customer, binding, profile, Gateway runtime, or signing bootstrap was started; L003 stops at the operator installation boundary.
+
+**L003 hardened JWKS transport compatibility correction (2026-09-01)**: Operator evidence on Node `v22.17.1` isolated a real production transport defect after the same public tunnel JWKS passed curl, DNS, plain Node HTTPS, Content-Type, JSON, and RSA/RS256 shape validation. The custom HTTPS socket lookup ignored Node's `all=true` callback contract and always returned the single-address overload. RED-first regression coverage now proves the typed adapter returns validated address records for `all=true`, preserves ordered IPv4/IPv6 results, supports the normal single-address overload, honors explicit family 4/6 constraints, and fails closed when no compatible validated address exists. Initial and connection-time public-destination validation, mixed-answer denial, HTTPS-only retrieval, timeout, size, Content-Type, and loopback-bypass guards remain unchanged. Local-only provisioning diagnostics now distinguish policy and hardened-retrieval stages while keeping database mutation `NO` for verify-only. Automated correction evidence does not replace the required operator rerun against the active tunnel; L003 remains `HUMAN_REQUIRED`, and no local authority database mutation was performed.
+
+**L003 completion evidence (2026-09-01)**: The authorized operator rerun completed the exact L003 contract. The dedicated local Customer exists; its IntegrationBinding and active RS256 TrustProfile report `READY`; the real Gateway started after local signing bootstrap; Gateway health and public JWKS succeeded; and the corrected production `HardenedJwksTransport` accepted the runtime tunnel URI through the unchanged public-source policy and retrieved the current Bridge public JWKS. This is local development evidence only: `L003_STATUS=PASS`; `CENTRAL_FEATURE004_JWKS_REACHABLE_AND_TRUSTED=NO`; `STAGING_IDENTITY_READY=NO`.
+
+**L004 local session verifier preparation evidence (2026-09-01)**: RED-first coverage initially failed only because the local verifier surface did not exist. The completed dependency-free tool reuses the established hidden raw-TTY reader, rejects arguments and non-interactive input, sends the entered native bearer once only to the fixed local Bridge exchange, retains the exact canonical response token in memory, and sends it once only to the fixed real Gateway session route with a fresh request ID and `{pageContext:{}}`. It validates the real Gateway/Backend `201` envelope without printing the session ID and performs a read-only parameterized `psql` lookup against loopback `assistant_dev`, emitting only local Customer/HostApp match results. Focused verifier and existing IDX-tool coverage passes 2 suites/49 tests; unchanged Gateway Feature 004, provisioning, hardened-JWKS, trust-chain, and Gateway-to-Backend coverage passes 8 suites/129 tests; both independent builds pass. No interactive credential run occurred, no production source changed for L004, and L004 remains at the human input boundary: `LOCAL_SESSION_VERIFIER_READY=YES`; `L004_STATUS=HUMAN_REQUIRED`; `LOCAL_CUSTOMER_IDENTITY_E2E_READY=NO`.
+
+```text
+LOCAL_DATABASE_SCHEMA_AND_SEEDS_READY=YES
+LOCAL_BACKEND_RUNTIME_IDENTIFIED=YES
+LOCAL_GATEWAY_RUNTIME_IDENTIFIED=YES
+LOCAL_GATEWAY_SIGNING_BOOTSTRAP_IDENTIFIED=YES
+LOCAL_FEATURE004_CUSTOMER_STATE=READY
+LOCAL_FEATURE004_BINDING_STATE=READY
+LOCAL_FEATURE004_TRUST_PROFILE_STATE=READY
+LOCAL_JWKS_ONLY_PROXY_READY=YES
+LOCAL_JWKS_PROXY_ORIGIN=http://127.0.0.1:3110
+CLOUDFLARED_AVAILABLE=YES
+LOCAL_BRIDGE_PUBLIC_JWKS_URI=AVAILABLE_FOR_OPERATOR_VERIFY_ONLY
+LOCAL_FEATURE004_PROVISIONING_TOOL_READY=YES
+LOCAL_SESSION_VERIFIER_READY=YES
+L003_STATUS=PASS
+L004_STATUS=HUMAN_REQUIRED
+L005_STARTED=NO
+L006_STARTED=NO
+```
 
 ## Phase 10 — First-Customer staging provisioning
 
 - [ ] T065 [OPS] [US5] Obtain HUMAN_REQUIRED staging values in `specs/007-customer-identity-bridge/tasks.md`; deps: T064; Customer/integration/HostApp/issuer/audience/RS256/JWKS URI/lifecycle; validate operator review; done when inputs are approved, not source-coded.
+
+### T065 operator worksheet — preparation only
+
+| Value | Status | Source/evidence | Operator action required |
+|---|---|---|---|
+| `CUSTOMER_ID` | `HUMAN_REQUIRED` | `Customer.id` must already exist; binding provisioning rejects unknown Customers. Test/seed IDs are synthetic. | Supply and verify the approved central staging Customer record ID. |
+| `INTEGRATION_ID` | `HUMAN_REQUIRED` | Assistant deployment-owned; it is the binding primary key and canonical `integration_id`. Local/Phase-9 values are non-staging fixtures. | Approve one unused staging integration ID and use it identically in Bridge, binding, and TrustProfile. |
+| `HOST_APP` | `DERIVABLE` | `shinmone-scm` is the established first-Customer candidate in repository and real local evidence, but local values are not automatically promoted. | Confirm `shinmone-scm` as the exact staging `allowedHostApp` or provide the approved replacement. |
+| `BRIDGE_ISSUER` | `HUMAN_REQUIRED` | Bridge deployment/TrustProfile-owned; IDX native issuer has no authority here. | Supply the exact staging Bridge issuer used in JWTs and the TrustProfile. |
+| `BRIDGE_AUDIENCE` | `HUMAN_REQUIRED` | Central Assistant/Gateway trust-owned and matched exactly by Feature 004. | Supply the approved staging audience. |
+| `BRIDGE_JWKS_PUBLIC_URI` | `HUMAN_REQUIRED` | Must be public HTTPS, policy-compatible, and centrally reachable; the local synthetic URI is invalid staging evidence. | Provision or approve the real staging JWKS route and verify DNS, TLS, and public reachability. |
+| `SIGNING_ALGORITHM` | `KNOWN` | Bridge and Feature 004 support exactly `RS256`. | Record `RS256`; no algorithm choice remains. |
+| `ACTIVE_KID` | `HUMAN_REQUIRED` | Deployment-owned; local `shinmone-scm-local-2026-01` must not be promoted. | Allocate a nonblank staging `kid` and ensure it matches the active public JWK. |
+| `SIGNING_KEY_REFERENCE / secret-mount destination` | `HUMAN_REQUIRED` | Bridge accepts Customer-local `file:` PKCS#8 references; private material must remain in a read-only secret mount. | Provide the approved mount destination and corresponding `file:` URI without recording key contents. |
+| `KEY_LIFECYCLE / rotation state` | `HUMAN_REQUIRED` | Exactly one Bridge key must be active; initial versus successor rotation depends on existing deployment/profile state. | Inventory existing staging keys/profiles and approve active/published/retiring state, profile version, and predecessor if applicable. |
+| `BRIDGE_IDX_MENUDETAIL_URI` | `HUMAN_REQUIRED` | Production requires HTTPS. The legacy HTTP endpoint and local `idx-proxy.local` URI are not staging values. | Supply the Customer-local staging HTTPS MenuDetail URI or approved HTTPS proxy URI. |
+| `IDX_DESTINATION_MODE` | `DERIVABLE` | `public_only` is required for public destinations; `allowlisted_networks` is required for approved Customer-private destinations. | Select the mode from the approved staging endpoint's actual network topology. |
+| `IDX_ALLOWED_CIDRS` | `DERIVABLE` | Empty and not applicable under `public_only`; exact CIDRs are mandatory under `allowlisted_networks`. | Record `NOT_APPLICABLE` for public mode or supply the minimal approved staging CIDRs. |
+| `BRIDGE_IDX_ALLOWED_ENTRIES` | `HUMAN_REQUIRED` | The observed value is evidence only for one selected local positive path. Authentication Entries are user-specific, and no complete static deployment allowlist has been established. | Obtain an approved staging allowlist from the Customer authority; do not promote the local value, infer additional Entries, or use a wildcard. |
+| `BRIDGE_ALLOWED_ORIGINS / same-origin ingress decision` | `DERIVABLE` | Feature 007 V1 prefers same-origin, represented by an empty origin list; distinct-origin deployment requires exact HTTPS origins. | Confirm same-origin ingress or provide the explicit staging SPA HTTPS origin list. |
+
+Before T065 can be completed, the operator must also supply existing-command metadata: binding/profile `requestId` values, TrustProfile `id`, positive `version`, `action`, and `replacesProfileId` when rotation applies. The intended enabled states remain `IntegrationBinding.enabled=true` and TrustProfile `enabled=true`, `lifecycle=active`.
+
+```text
+T065_WORKSHEET_READY=YES
+T065_STATUS=HUMAN_REQUIRED
+T066_STARTED=NO
+HIGHEST_COMPLETED_TASK=T064
+CENTRAL_FEATURE004_JWKS_REACHABLE_AND_TRUSTED=NO
+STAGING_IDENTITY_READY=NO
+```
+
 - [ ] T066 [OPS] [US5] Deploy Customer-local Bridge and public JWKS route per `specs/007-customer-identity-bridge/design.md`; deps: T065; validate Bridge `/ready`; done when deployment evidence exists.
 - [ ] T067 [OPS] [US5] Provision existing binding with `apps/gateway/src/commands/provision-integration-binding.ts`; deps: T065,T066; enabled exact HostApp; validate command/audit outcome; done when binding active.
 - [ ] T068 [OPS] [US5] Provision TrustProfile with `apps/gateway/src/commands/provision-trust-profile.ts`; deps: T067; exact issuer/audience/RS256/real public JWKS; validate activation outcome; done when active.

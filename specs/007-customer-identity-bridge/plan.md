@@ -103,6 +103,18 @@ The Bridge is a nested package following the existing `apps/gateway` build/test 
 - **External requirements**: Customer SPA repository: no. Real Customer credentials: no. Central deployment provisioning: no; deterministic fixture/test transport only.
 - **Completion checkpoint**: `BRIDGE_FEATURE004_COMPATIBILITY_READY`.
 
+### Pre-T065 local full E2E development track
+
+- **Purpose**: Prove the actual local Bridge → Feature 004 → IntegrationBinding → Gateway internal JWT → Backend/session/chat chain before any staging provisioning.
+- **Dependencies**: Phase 9. This track is distinct from T065–T073 and cannot establish staging or final completion markers.
+- **L001 — evidence correction**: Treat the observed `UUID_Entry` solely as an ignored local positive-path value. Authentication Entry selection is user-specific; the static deployment allowlist remains unknown. Preserve exact configured membership; no wildcard, browser-supplied Entry, Bridge Authentication/discovery request, or inferred Entry set is permitted.
+- **L002 — local substrate**: Prove local PostgreSQL health, Prisma client generation, migrations, deterministic seed data, Backend runtime/build identification, Gateway build identification, and existing Bridge local runtime availability. Gateway startup is intentionally excluded because the unchanged profile-only runtime requires L003 trust provisioning first.
+- **L003 — local trust bootstrap**: Run a fixed loopback JWKS-only proxy at `127.0.0.1:3110`, obtain an operator-owned temporary public HTTPS tunnel URL, and provision a dedicated local Customer, `shinmone-scm-assistant-local` binding with `shinmone-scm`, and active RS256 TrustProfile through existing direct commands. Then start Gateway, execute its existing local signing bootstrap, prove Gateway health/JWKS, and retrieve Bridge JWKS through the real hardened transport. Use `https://bridge-local.example.test` and `internal-ai-assistant-local`; preserve `ProductionJwksSourceRegistrationPolicy` and `HardenedJwksTransport`. The tunnel exposes only `GET /.well-known/jwks.json` and denies all Bridge exchange and operational routes.
+- **L004 — local session bootstrap**: Use an operator-entered native credential only through existing local Bridge tooling. Keep the returned canonical token in memory, submit it to the local session route, and prove the real Feature 004, binding, Gateway issuer, Backend `201`, and `sessionId` chain without substituting an internal JWT fixture.
+- **L005/L006 — external SPA and chat**: After L004, apply the narrow Customer SPA handoff outside this repository, then prove an existing chat UI receives a visible SSE response. RefreshToken remains with existing browser auth and canonical JWT storage is memory-only.
+- **Security invariants**: Native tokens never traverse the JWKS tunnel or central runtime. The local completion marker is `LOCAL_CUSTOMER_IDENTITY_E2E_READY=YES` only; it never implies `CENTRAL_FEATURE004_JWKS_REACHABLE_AND_TRUSTED`, `STAGING_IDENTITY_READY`, or the Feature-completion marker.
+- **Completion checkpoint**: `LOCAL_CUSTOMER_IDENTITY_E2E_READY=YES` after L006 only.
+
 ### Phase 10 — First-Customer staging provisioning
 
 - **Purpose**: Establish the real deployment-controlled central trust prerequisite for first-Customer staging.
@@ -181,4 +193,6 @@ PHASE8_PART_OF_RUNTIME_READY_SEMANTICS=NO
 PHASE9_REQUIRES_REAL_PUBLIC_INTERNET=NO
 PHASE9_AUTOMATED_FEATURE004_COMPATIBILITY_DEFINED=YES
 PHASE10_REAL_JWKS_REACHABILITY_DEFINED=YES
+LOCAL_FULL_E2E_TRACK_DEFINED=YES
+LOCAL_FULL_E2E_IS_NOT_STAGING=YES
 ```
