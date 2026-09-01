@@ -9,6 +9,11 @@ coverage/
 .env
 .env.*
 !.env.example
+.local-secrets/
+apps/identity-bridge/env/local.env
+**/*.pem
+**/*.key
+**/*.crt
 .DS_Store
 npm-debug.log*
 Dockerfile*

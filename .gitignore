@@ -10,3 +10,5 @@ coverage/
 .cache/
 tmp/
 .gateway-local-keys/
+.local-secrets/
+apps/identity-bridge/env/local.env

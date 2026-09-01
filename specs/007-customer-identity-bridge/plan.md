@@ -9,7 +9,7 @@ Feature 007 adds a repository-owned, independently deployed Nest application at 
 
 Native IDX AccessToken, RefreshToken, raw native claims, raw MenuDetail, and Customer-local private signing material never enter central Assistant services. The short-lived canonical JWT is intentionally returned to the SPA and sent to the registered central Gateway, but is redacted everywhere else. No Customer Auth Backend, Customer business Backend, Feature 003, Feature 004, Feature 005, or Feature 006 production change is planned.
 
-The Bridge is a nested package following the existing `apps/gateway` build/test conventions: independent `npm --prefix apps/identity-bridge` build and test scripts, Nest bootstrap/module/configuration, and no database dependency. No second Docker packaging pattern is planned because the repository currently supplies no standalone nested-app Docker convention; deployment packaging remains independent and Customer controlled.
+The Bridge is a nested package following the existing `apps/gateway` build/test conventions: independent `npm --prefix apps/identity-bridge` build and test scripts, Nest bootstrap/module/configuration, and no database dependency. A pre-Phase-10, production-portable Bridge image and isolated local Compose rehearsal package the Bridge independently from Gateway; Customer staging and production remain deployment controlled and use the same image with approved environment, secret, ingress, and network configuration.
 
 ## 2. Dependency-Ordered Implementation Phases
 
