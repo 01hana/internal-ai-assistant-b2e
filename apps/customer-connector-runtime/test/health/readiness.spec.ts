@@ -4,6 +4,9 @@ import { validRuntimeEnvironment } from '../fixtures/runtime-environment';
 import { Phase3ReadinessInitializer } from '../../src/health/phase3-readiness.initializer';
 import { ReplayProtectionService } from '../../src/replay/replay-protection.service';
 import { ManifestBoundaryReadinessInitializer } from '../../src/manifest/manifest-boundary-readiness.initializer';
+import { ConnectorDestinationPolicy } from '../../src/upstream/connector-destination-policy';
+import { UpstreamReadinessInitializer } from '../../src/upstream/upstream-readiness.initializer';
+import { InvocationReadinessInitializer } from '../../src/invocation/invocation-readiness.initializer';
 
 describe('Customer Connector Runtime health and readiness', () => {
   it('keeps public readiness fail-closed after only foundational capabilities are available', () => {
@@ -90,6 +93,38 @@ describe('Customer Connector Runtime health and readiness', () => {
     expect(registry.snapshot()).toMatchObject({
       manifest: true, credentialProfiles: true, requestProfiles: true,
       upstream: false, invocationRoute: false
+    });
+  });
+
+  it('becomes generically production-ready only for a complete exact production network graph', () => {
+    const config = new ConnectorRuntimeConfigService(validRuntimeEnvironment());
+    const registry = new RuntimeReadinessRegistry();
+    for (const dependency of ['configuration', 'serviceAuth', 'replay', 'observability', 'bindingStore', 'bindingRoute', 'credentialProfiles', 'manifest', 'requestProfiles'] as const) registry.setReady(dependency, true);
+    const policy = new ConnectorDestinationPolicy([{ upstreamServiceRef: 'inventory-api', origin: 'https://inventory.test', basePath: '/', addressMode: 'public_only', allowedCidrs: [] }], 'production');
+    new UpstreamReadinessInitializer(registry, policy, { upstreamServiceRefs: () => ['inventory-api'] } as never).onModuleInit();
+    new InvocationReadinessInitializer(registry, config, policy).onModuleInit();
+    expect(new RuntimeReadinessService(config, registry).getPublicReadiness()).toEqual({ status: 'ready', service: 'customer-connector-runtime', runtimeDependencies: 'available', productionReady: true });
+  });
+
+  it('never treats explicit test-loopback TLS as staging or production readiness', () => {
+    const registry = new RuntimeReadinessRegistry();
+    const policy = new ConnectorDestinationPolicy([{ upstreamServiceRef: 'fixture-api', origin: 'https://fixture.test', basePath: '/', addressMode: 'test_loopback_tls', allowedCidrs: ['127.0.0.0/8'] }], 'test');
+    new UpstreamReadinessInitializer(registry, policy, { upstreamServiceRefs: () => ['fixture-api'] } as never).onModuleInit();
+    expect(registry.snapshot()).toMatchObject({ upstream: false, invocationRoute: false });
+  });
+
+  it('cannot mark an invalid CIDR network graph ready', () => {
+    const environment = {
+      ...validRuntimeEnvironment(),
+      CONNECTOR_UPSTREAMS_JSON: JSON.stringify([{
+        upstreamServiceRef: 'inventory-api', origin: 'https://inventory.test', basePath: '/',
+        addressMode: 'allowlisted_networks', allowedCidrs: ['10.0.0.0/64']
+      }])
+    };
+    const config = new ConnectorRuntimeConfigService(environment);
+    expect(config.isValid).toBe(false);
+    expect(new RuntimeReadinessService(config, new RuntimeReadinessRegistry()).getPublicReadiness()).toMatchObject({
+      status: 'not_ready', productionReady: false
     });
   });
 });

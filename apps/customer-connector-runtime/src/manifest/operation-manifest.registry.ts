@@ -5,6 +5,7 @@ import type {
   ConnectorOperationManifestV1
 } from '@internal-ai-assistant/connector-runtime-contract';
 import { RequestProfileRegistry, type MappedReadRequest } from './request-profile.registry';
+import { validateClosedJsonSchema } from './closed-json-schema.validator';
 
 declare const preparedManifestOperationBrand: unique symbol;
 
@@ -59,7 +60,7 @@ export class OperationManifestRegistry {
     const selected = this.entries.get(operationIdentity(connectorKey, operationKey, contractVersion));
     if (!selected || selected.operation.readOnly !== true || !plainObject(rawArguments)) return failure();
     const args = rawArguments as Readonly<Record<string, unknown>>;
-    if (!validateSchema(selected.operation.inputSchema, args)) return failure();
+    if (!validateClosedJsonSchema(selected.operation.inputSchema, args)) return failure();
     const request = this.requestProfiles.map(selected.operation, args);
     if (!request) return failure();
     const operation = selected.operation;
@@ -81,6 +82,12 @@ export class OperationManifestRegistry {
     if (!this.isValid) return Object.freeze([]);
     return Object.freeze([...new Set([...this.entries.values()].map((entry) => entry.operation.credentialProfileRef))]);
   }
+
+  upstreamServiceRefs(): readonly string[] {
+    if (!this.isValid) return Object.freeze([]);
+    return Object.freeze([...new Set([...this.entries.values()].map((entry) => entry.operation.upstreamServiceRef))]);
+  }
+
 }
 
 function validOperation(operation: ConnectorOperationManifestEntryV1, profiles: RequestProfileRegistry): boolean {
@@ -119,23 +126,6 @@ function schemaAtPointer(schema: ClosedJsonSchemaV1, pointer: string): ClosedJso
     }
   }
   return current;
-}
-
-function validateSchema(schema: ClosedJsonSchemaV1, value: unknown): boolean {
-  if (schema.type === 'string') return typeof value === 'string' &&
-    (schema.minLength === undefined || value.length >= schema.minLength) &&
-    (schema.maxLength === undefined || value.length <= schema.maxLength);
-  if (schema.type === 'integer') return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) &&
-    (schema.minimum === undefined || value >= schema.minimum) && (schema.maximum === undefined || value <= schema.maximum);
-  if (schema.type === 'number') return typeof value === 'number' && Number.isFinite(value) &&
-    (schema.minimum === undefined || value >= schema.minimum) && (schema.maximum === undefined || value <= schema.maximum);
-  if (schema.type === 'boolean') return typeof value === 'boolean';
-  if (schema.type === 'array') return Array.isArray(value) && value.length <= schema.maxItems && value.every((item) => validateSchema(schema.items, item));
-  if (schema.type !== 'object' || !('properties' in schema) || !plainObject(value)) return false;
-  const properties = new Map(schema.properties.map((property) => [property.name, property.schema]));
-  const keys = Object.keys(value);
-  if (keys.some((key) => !properties.has(key)) || schema.required.some((key) => !(key in value))) return false;
-  return keys.every((key) => validateSchema(properties.get(key)!, value[key]));
 }
 
 function plainObject(value: unknown): value is Readonly<Record<string, unknown>> {

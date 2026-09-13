@@ -3,7 +3,7 @@ import { createCustomerConnectorRuntimeApplication } from '../src/main';
 import { validRuntimeEnvironment } from './fixtures/runtime-environment';
 
 describe('Customer Connector Runtime bootstrap', () => {
-  it('boots with health plus the fail-closed Phase 4 binding route and no invocation route', async () => {
+  it('boots with health plus both fail-closed protected routes after Phase 6', async () => {
     const app = await createCustomerConnectorRuntimeApplication(validRuntimeEnvironment());
     await app.init();
 
@@ -20,7 +20,7 @@ describe('Customer Connector Runtime bootstrap', () => {
         });
       });
       await request(app.getHttpServer()).post('/v1/internal/connector-bindings').send({}).expect(401);
-      await request(app.getHttpServer()).post('/v1/connector/invocations').send({}).expect(404);
+      await request(app.getHttpServer()).post('/v1/connector/invocations').send({}).expect(400);
     } finally {
       await app.close();
     }

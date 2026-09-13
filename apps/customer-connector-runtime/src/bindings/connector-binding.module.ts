@@ -54,7 +54,8 @@ export class ConnectorBindingModule {
         },
         BindingLifecycleManager,
         BindingReadinessInitializer
-      ]
+      ],
+      exports: [ConnectorBindingService]
     };
   }
 }

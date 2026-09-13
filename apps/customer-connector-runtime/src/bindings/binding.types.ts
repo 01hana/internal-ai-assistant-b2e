@@ -32,6 +32,10 @@ export interface BindingResolutionExpectation {
   readonly credentialGeneration?: string;
 }
 
+export interface InvocationBindingExpectation {
+  readonly trustedContext: ConnectorBindingTrustedContextV1;
+}
+
 export interface ProtectedBindingView {
   readonly trustedContext: ConnectorBindingTrustedContextV1;
   readonly bootstrapProviderKey: string;

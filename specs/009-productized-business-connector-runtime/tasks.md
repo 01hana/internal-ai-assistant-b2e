@@ -1,7 +1,7 @@
 # Tasks: Feature 009 — Productized Business Connector Runtime
 
 **Input**: Accepted `spec.md`, `design.md`, and `plan.md` approved for Phase 1 implementation.
-**Status**: Accepted — Phase 1 baseline through Phase 5 exact-manifest/credential-boundary gates completed. T001–T044 are complete; Phase 6 is unexecuted.
+**Status**: Accepted — Phase 1 baseline through Phase 6 safe-upstream/invocation-route gates completed. T001–T057 are complete; Phase 7 is unexecuted.
 
 ```text
 PHASE1_EXECUTED=YES
@@ -11,9 +11,11 @@ T001_T035_COMPLETE=YES
 PHASE4_EXECUTED=YES
 T001_T044_COMPLETE=YES
 PHASE5_EXECUTED=YES
-PHASE6_EXECUTED=NO
-FIRST_UNEXECUTED_TASK=T045
-NEXT_ACTION=EXECUTE_PHASE6
+T001_T057_COMPLETE=YES
+PHASE6_EXECUTED=YES
+PHASE7_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T058
+NEXT_ACTION=EXECUTE_PHASE7
 ```
 **Scope**: Implement the reusable two-sided connector runtime, executable Synthetic Customer B portability fixture, removable Shinmone reference slice, and Shinmone-removal gate through the existing Feature 008 path. Feature 007 is a completed read-only predecessor; Phase 8 is `FEATURE009_IMPLEMENTATION_CONSUMING_ACCEPTED_FEATURE007_AMENDMENT`, never Feature 007 reimplementation.
 **Test rule**: Every meaningful new contract or behavior starts with an authentic RED against current code, followed by the narrow GREEN and the phase checkpoint. Never manufacture RED by breaking production code.
@@ -1250,83 +1252,226 @@ NEXT_ACTION=EXECUTE_PHASE6
 **Dependencies**: T044.  
 **Independent test**: A deterministic HTTPS fixture succeeds; every unsafe destination, response, timeout, and extraction case fails without raw release or retry.
 
-- [ ] T045 [RED] [US6] [CONNECTOR-RUNTIME] Add failing closed GET/POST-query construction and HTTPS destination-policy tests.
+- [X] T045 [RED] [US6] [CONNECTOR-RUNTIME] Add failing closed GET/POST-query construction and HTTPS destination-policy tests.
   - Files: `apps/customer-connector-runtime/test/upstream/destination-policy.spec.ts`.
   - Depends on: T044.
   - Validation: Cover exact `GET_QUERY_V1` query and `POST_QUERY_JSON_V1` object assembly from fixed literals/schema-bound named mappings, read-only agreement, exact scheme/host/port/base path, address modes, URI rejection, and no caller method/path/query/body/header/credential override.
   - Stop: Do not authorize HTTP, a broad private-network grant, or a generic proxy.
 
-- [ ] T046 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement closed read-request builders, `ConnectorDestinationPolicy`, and immutable origin validation.
+- [X] T046 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement closed read-request builders, `ConnectorDestinationPolicy`, and immutable origin validation.
   - Files: `apps/customer-connector-runtime/src/upstream/connector-destination-policy.ts`, local config integration.
   - Depends on: T045.
   - Validation: Make T045 pass and keep readiness false for unsafe destinations.
   - Stop: Destination comes only from manifest serviceRef/config; POST cannot accept an unrestricted object, template, script, or side effect.
 
-- [ ] T047 [RED] [US6] [CONNECTOR-RUNTIME] Add failing DNS resolution, address normalization, and rebinding tests.
+- [X] T047 [RED] [US6] [CONNECTOR-RUNTIME] Add failing DNS resolution, address normalization, and rebinding tests.
   - Files: `apps/customer-connector-runtime/test/upstream/dns-pinning.spec.ts`.
   - Depends on: T046.
   - Validation: Cover A/AAAA, all-address checks, IPv4-mapped IPv6, mixed answers, metadata, loopback, link-local, multicast, unspecified, public/private mode mismatch, and changed resolution.
   - Stop: No first-address-only acceptance or DNS fallback is allowed.
 
-- [ ] T048 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement all-address validation and connection-time pinned lookup.
+- [X] T048 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement all-address validation and connection-time pinned lookup.
   - Files: `apps/customer-connector-runtime/src/upstream/address-validator.ts`, `src/upstream/pinned-lookup.adapter.ts`.
   - Depends on: T047.
   - Validation: Make T047 pass with injected DNS and exact validated-address pinning.
   - Stop: Test loopback requires explicit enforced test mode and cannot satisfy staging readiness.
 
-- [ ] T049 [RED] [US6] [CONNECTOR-RUNTIME] Add failing TLS, redirect, proxy, compression, and retry tests.
+- [X] T049 [RED] [US6] [CONNECTOR-RUNTIME] Add failing TLS, redirect, proxy, compression, and retry tests.
   - Files: `apps/customer-connector-runtime/test/upstream/safe-upstream-http-client.spec.ts`.
   - Depends on: T048.
   - Validation: Cover wrong hostname/certificate, redirect, proxy, compression, retry, fixed runtime-owned content headers, provider/strategy compatibility, code-owned bearer and `X-Inventory-Key` slots, and caller/manifest credential-header denial.
   - Stop: Do not disable certificate verification or inherit system/environment proxies.
 
-- [ ] T050 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement the one-shot pinned `SafeUpstreamHttpClient` transport shell.
+- [X] T050 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement the one-shot pinned `SafeUpstreamHttpClient` transport shell.
   - Files: `apps/customer-connector-runtime/src/upstream/safe-upstream-http-client.ts` and module composition.
   - Depends on: T049.
   - Validation: Make T049 pass with TLS verification, redirects/retries/proxy disabled, `Accept-Encoding: identity`, and credential strategy applied only to the already fixed request.
   - Stop: Do not yet parse or extract unbounded response data.
 
-- [ ] T051 [RED] [US6] [CONNECTOR-RUNTIME] Add failing bounded JSON and application-response tests.
+- [X] T051 [RED] [US6] [CONNECTOR-RUNTIME] Add failing bounded JSON and application-response tests.
   - Files: `apps/customer-connector-runtime/test/upstream/bounded-json-response.spec.ts`.
   - Depends on: T050.
   - Validation: Cover 256 KiB raw cap, UTF-8, depth 8, 100 items, 64 keys, string 1,024, malformed/truncated JSON, wrong content type/encoding, HTTP failure, and application failure.
   - Stop: Do not buffer beyond the cap or return partial/raw bodies.
 
-- [ ] T052 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement bounded streaming response validation.
+- [X] T052 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement bounded streaming response validation.
   - Files: `apps/customer-connector-runtime/src/upstream/bounded-json-response.ts`, `src/upstream/safe-upstream-http-client.ts`.
   - Depends on: T051.
   - Validation: Make T051 pass and prove rejected bodies never reach extraction.
   - Stop: Raw upstream bodies must not enter logs, errors, central responses, or diagnostics.
 
-- [ ] T053 [RED] [US6] [CONNECTOR-RUNTIME] Add failing response extraction and safe-error normalization tests.
+- [X] T053 [RED] [US6] [CONNECTOR-RUNTIME] Add failing response extraction and safe-error normalization tests.
   - Files: `apps/customer-connector-runtime/test/upstream/response-extractor.spec.ts`, `test/upstream/upstream-errors.spec.ts`.
   - Depends on: T052.
   - Validation: Cover missing pointer, wrong type, Shinmone noninteger/negative count, Customer B invalid sku/quantity, provider-specific auth rejection/revocation, unavailable/application failures, and code-only responses.
   - Stop: Do not expose endpoint, status body, exception, credential, or raw result.
 
-- [ ] T054 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement manifest-bound extraction and safe upstream error mapping.
+- [X] T054 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement manifest-bound extraction and safe upstream error mapping.
   - Files: `apps/customer-connector-runtime/src/upstream/response-extractor.ts`, `src/upstream/upstream-errors.ts`, binding revocation integration.
   - Depends on: T053.
   - Validation: Make T053 pass; provider credential rejection revokes its handle/binding generation and only bounded declared fields survive.
   - Stop: Local minimization must not claim Feature 008 projection authority.
 
-- [ ] T055 [RED] [US6] [CONNECTOR-RUNTIME] Add failing Customer-local invocation route, orchestration, timeout, and cleanup tests.
+- [X] T055 [RED] [US6] [CONNECTOR-RUNTIME] Add failing Customer-local invocation route, orchestration, timeout, and cleanup tests.
   - Files: `apps/customer-connector-runtime/test/invocation/connector-invocation-route.spec.ts`, `test/upstream/timeout-cancellation.spec.ts`.
   - Depends on: T054.
   - Validation: Preserve budget/cancellation/lease RED coverage and require exact `POST /v1/connector/invocations` order: (1) method/content/encoding/raw cap, (2) central proof/digest, (3) signed claims/context, (4) atomic replay claim, (5) strict parse/schema, (6) body/config equality, (7) reference lookup, (8) binding dimensions/lease, (9) manifest operation/version/read-only/arguments/request profile, (10) compatible credential profile/provider handle resolution, (11) fixed GET or POST-query construction plus code-owned strategy application, (12) destination/DNS/pinning, (13) bounded upstream execution, (14) response validation/extraction, (15) bounded envelope, (16) lease release. Reject every bootstrap/user/cross profile and ensure no early provider/upstream call or raw reference/payload/handle/credential/upstream result release.
   - Stop: Local limits may narrow but never extend the signed remaining budget; no early credential/upstream access or unsafe response is permitted.
 
-- [ ] T056 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement and compose the Customer-local central-only invocation endpoint and generic readiness.
+- [X] T056 [GREEN] [US6] [CONNECTOR-RUNTIME] Implement and compose the Customer-local central-only invocation endpoint and generic readiness.
   - Files: `apps/customer-connector-runtime/src/invocation/connector-invocation.controller.ts`, `src/invocation/connector-invocation.service.ts`, existing `src/upstream/**`, binding lease integration, and narrow runtime module/readiness composition.
   - Depends on: T055.
   - Validation: Make T055 pass with a thin controller composing `ConnectorServiceProofVerifier`, replay, bindings, manifests, `CredentialProfileRegistry`, providers/strategies, closed request builders, destination/client, and extraction. Return only accepted envelopes; generic readiness becomes true only with valid central/bootstrap profiles, provider/profile/strategy/request-profile registries, bindings, manifests, network/upstream, and both routes. Test loopback cannot satisfy staging/production readiness.
   - Stop: Do not duplicate component logic in the controller, add permission or ToolDefinition authority, accept Browser destinations, create generic HTTP behavior, retry/redirect, return raw exception/endpoint/credential/reference/proof/claims/upstream payload, or leak a lease.
 
-- [ ] T057 [CHECKPOINT] [US6] [CONNECTOR-RUNTIME] Verify and record the Phase 6 safe-upstream gate.
+- [X] T057 [CHECKPOINT] [US6] [CONNECTOR-RUNTIME] Verify and record the Phase 6 safe-upstream gate.
   - Files: `specs/009-productized-business-connector-runtime/tasks.md` evidence only.
   - Depends on: T046, T048, T050, T052, T054, T056.
   - Validation: Record `DNS_REBINDING_PROTECTION=READY`, `REDIRECTS=DENIED`, `RAW_CUSTOMER_API_RESPONSE_CENTRAL=NO`, `BOUNDED_LOCAL_RESULT_ONLY=YES`, `CLOSED_READ_REQUEST_PROFILES=GET_QUERY_V1,POST_QUERY_JSON_V1`, `INVOCATION_ROUTE_ACTIVE=YES`, `INVOCATION_ROUTE_PROFILE=CENTRAL_SERVICE_ONLY`, `INVOCATION_PROCESSING_ORDER=PASS`, `INVOCATION_RAW_RESULT_RELEASE=NO`, and `CONNECTOR_RUNTIME_GENERIC_READINESS=PASS`.
   - Stop: Do not proceed if the invocation route is inactive or misordered, generic dark-runtime readiness is false, an unsafe address can connect, or any raw body can escape.
+
+### Phase 6 RED → GREEN and Checkpoint Evidence — 2026-09-12
+
+- Baseline: clean branch `009-productized-business-connector-runtime`; T001–T044 complete and T045 first unchecked. The read-only Spec Kit prerequisite command retained its pre-existing branch-discovery failure by resolving the current branch to the unrelated missing `002-host-integration-gateway-and-data-adapter-contract`; no setup script or hook ran, and direct Feature 009 task/plan validation proceeded.
+- Protected pre/post SHA-256 values remained unchanged: Feature 009 `spec.md` `d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73`, `design.md` `250659dc2e4bef3361953b07d99fd1a37278989a4f6a71644860abc0387801a8`, and `plan.md` `00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1`; Feature 007/008 documents and Prisma hashes also matched the Phase 5 protected baseline.
+- T045 RED: `destination-policy.spec.ts` failed before execution because `src/upstream/connector-destination-policy` did not exist (1 failed suite, 0 tests). T046 GREEN: 1 suite / 10 tests passed for closed GET/POST construction and strict HTTPS configuration.
+- T047 RED: `dns-pinning.spec.ts` failed before execution because the address/pinning modules did not exist (1 failed suite, 0 tests). T048 GREEN/hardening: 1 suite / 13 tests passed for A/AAAA, mapped IPv6, mixed-answer rejection, explicit CIDRs, test-only loopback, and one-address pinned lookup.
+- T049 RED: `safe-upstream-http-client.spec.ts` failed before execution because the safe client did not exist (1 failed suite, 0 tests). T050 GREEN/hardening: 1 suite / 8 tests passed, including a checked-in deterministic TLS fixture, native certificate/hostname verification, fixed headers, redirect/encoding/proxy/retry denial, and one request only. The sandbox-local fixture first recorded `listen EPERM`; the identical approved local-only command passed.
+- T051 RED: `bounded-json-response.spec.ts` failed before execution because the bounded-response module did not exist (1 failed suite, 0 tests). T052 GREEN: 1 suite / 9 tests passed for streaming cap, fatal UTF-8, JSON/structure/schema, content/status, optional application code, and no partial release.
+- T053 RED: response-extractor and upstream-error suites both failed before execution because their modules did not exist (2 failed suites, 0 tests). T054 GREEN: 2 suites / 11 tests passed for declared-field extraction, type/conversion checks, Customer-neutral argument correlation, safe code-only normalization, and credential-rejection ownership.
+- T055 RED: invocation/deadline coverage recorded the missing deadline module; the socket route attempt separately recorded sandbox `listen EPERM`. T056 GREEN: focused route/deadline/activation verification passed 3 suites / 5 tests through the approved local-only path. The composed success proof records `authenticate → binding lease → manifest → credential → upstream → lease release`; invalid proof output contains no request reference or credential data.
+- Final runtime validation: `npm --prefix apps/customer-connector-runtime test -- --runInBand` passed 29 suites / 218 tests; `build` and source/test `typecheck` passed. Shared-contract regression passed 10 suites / 68 tests plus build/typecheck. `git diff --check` passed.
+- Source/security review: no HTTP fallback, TLS disablement, redirect following, retry, environment proxy consumption, first-answer-only DNS acceptance, raw upstream release, Customer-specific generic branch, Prisma/database/Redis dependency, shared-contract modification, or Phase 7 source exists. The test-only TLS key/certificate are confined to `test/fixtures` and cannot establish production readiness.
+- Phase 6 task-created source/test scope: binding context-only invocation lease additions; runtime upstream/invocation/configuration/readiness composition; centralized closed-schema validation; route/readiness regressions; deterministic TLS fixtures; the seven Phase 6 upstream/invocation test files; and this evidence section. No Feature 007/008 artifact, Feature 009 spec/design/plan, Prisma, public Assistant/SSE/SDK, central adapter, Bridge, or shared-contract source changed.
+
+```text
+DNS_REBINDING_PROTECTION=READY
+REDIRECTS=DENIED
+RETRIES=DENIED
+PROXY_USAGE=NO
+TLS_VERIFICATION=ENFORCED
+RAW_CUSTOMER_API_RESPONSE_CENTRAL=NO
+BOUNDED_LOCAL_RESULT_ONLY=YES
+CREDENTIAL_FAILURE_OWNERSHIP=PASS
+DOWNSTREAM_FAILURE_RECLASSIFIED_AS_AUTH=NO
+CLOSED_READ_REQUEST_PROFILES=GET_QUERY_V1,POST_QUERY_JSON_V1
+INVOCATION_ROUTE_ACTIVE=YES
+INVOCATION_ROUTE_PROFILE=CENTRAL_SERVICE_ONLY
+INVOCATION_PROCESSING_ORDER=PASS
+INVOCATION_RAW_RESULT_RELEASE=NO
+CONNECTOR_RUNTIME_GENERIC_READINESS=PASS
+SYNTHETIC_CUSTOMER_B_UPSTREAM_REPRESENTABLE=YES
+SHINMONE_REQUIRED_BY_GENERIC_UPSTREAM=NO
+CUSTOMER_SPECIFIC_GENERIC_RUNTIME_BRANCH=NO
+T001_T057_COMPLETE=YES
+T058_EXECUTED=NO
+PHASE6_EXECUTED=YES
+PHASE7_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T058
+NEXT_ACTION=EXECUTE_PHASE7
+```
+
+### Phase 6 Human-Gate Hardening — 2026-09-13
+
+- Scope and protected baseline: this post-checkpoint hardening changed only Customer-local Phase 6 runtime/test files plus this append-only evidence. T045–T057 and their original RED → GREEN evidence remain unchanged; T058–T142 remain unchecked. Feature 009 protected SHA-256 values remained `spec.md` `d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73`, `design.md` `250659dc2e4bef3361953b07d99fd1a37278989a4f6a71644860abc0387801a8`, and `plan.md` `00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1`. Feature 007/008 documents, shared contracts, Prisma, central transport, and public interfaces remained unchanged.
+- Address/destination RED: the initial focused run recorded 4 failed suites with 9 failed / 37 passed / 46 total tests. It exposed non-semantic mapped-address/CIDR handling, configuration acceptance of invalid CIDRs, and the missing abort-aware DNS seam. GREEN: semantic IPv4/IPv6 parsing now canonicalizes all IPv4-mapped IPv6 forms, validates family-specific prefix ranges, rejects mapped prefixes below `/96`, validates configuration before readiness, and preserves all-answer checking and pinning. The focused address/config/readiness run passed 4 suites / 72 tests.
+- Cancellation/deadline/intake RED: the first focused run recorded 3 failed suites with 6 failed / 18 passed / 24 total tests, including the missing fail-fast raw-body reader, abort propagation, stream-timeout ownership, and elapsed-budget signature. GREEN: DNS and response consumption share invocation cancellation, late DNS completion cannot connect, elapsed monotonic time is subtracted before credential resolution, and the raw reader stops at declared oversize or `MAX+1` without authenticating or draining the request.
+- Response/extraction/lifecycle hardening: boundary tests now cover exact cap and cap+1, split invalid UTF-8, truncated multichunk JSON, depth 8/9, arrays 100/101, keys 64/65, strings 1,024/1,025, complete Customer B extraction, and nested generic reference-count extraction. Real binding lifecycle coverage proves HTTP 401/403 and mapped application authentication rejection release the lease, revoke the generation, tear down the provider handle, and prevent subsequent acquisition; DNS, TLS, availability, timeout, and ordinary response failures do not revoke.
+- Real-component orchestration: the new harness composes the real verifier, replay cache, binding store/service, manifest and request-profile registries, credential registry/boundary, destination policy, DNS pinning, safe HTTPS client, bounded response reader, extractor, and invocation service. Its initial run exposed an incomplete signed-context test fixture (16 failed / 4 passed / 20 tests); after correcting only the fixture, the expanded 24-test matrix passed. It proves invalid transport/proof/replay/context/binding/operation/profile/destination/DNS/budget cases stop at their owning gate and includes one complete bounded success with lease release. Deterministic native TLS hostname/certificate behavior remains covered by the separate safe-client fixture.
+- Final validation: the sandbox run passed 27 of 32 suites and 295 of 303 tests, with only 8 listener-dependent tests failing from `listen EPERM`; the identical approved local-only command passed 32 suites / 303 tests. Runtime build and typecheck passed. Shared contracts passed 10 suites / 68 tests plus build/typecheck. `git diff --check`, protected-hash checks, 142 sequential task IDs, 15 checkpoints, T001–T057 checked/T058–T142 unchecked, dependency isolation, and source guards all passed.
+- Hardening-attributed production files: `src/config/runtime-configuration.ts`; `src/invocation/connector-invocation.controller.ts`; `src/invocation/connector-invocation.service.ts`; `src/invocation/invocation-body.reader.ts`; `src/invocation/invocation-deadline.ts`; `src/upstream/address-validator.ts`; `src/upstream/bounded-json-response.ts`; `src/upstream/connector-destination-policy.ts`; `src/upstream/ip-address.ts`; `src/upstream/pinned-lookup.adapter.ts`; `src/upstream/safe-upstream-http-client.ts`; `src/upstream/upstream-execution.service.ts`.
+- Hardening-attributed test files: `test/config/configuration.spec.ts`; `test/health/readiness.spec.ts`; `test/invocation/invocation-body-reader.spec.ts`; `test/invocation/invocation-early-gates.spec.ts`; `test/upstream/bounded-json-response.spec.ts`; `test/upstream/credential-rejection-lifecycle.spec.ts`; `test/upstream/destination-policy.spec.ts`; `test/upstream/dns-pinning.spec.ts`; `test/upstream/response-extractor.spec.ts`; `test/upstream/safe-upstream-http-client.spec.ts`; `test/upstream/timeout-cancellation.spec.ts`.
+
+```text
+FEATURE009_PHASE6_HUMAN_GATE_HARDENING=PASS
+IPV4_MAPPED_IPV6_CANONICALIZATION=PASS
+MAPPED_LOOPBACK_BYPASS_DENIED=YES
+MAPPED_PRIVATE_BYPASS_DENIED=YES
+CIDR_FAMILY_PREFIX_VALIDATION=PASS
+INVALID_NETWORK_CAN_MARK_READY=NO
+GET_QUERY_SUCCESS_CONSTRUCTION=PASS
+POST_QUERY_SUCCESS_CONSTRUCTION=PASS
+ENCODED_TRAVERSAL_REJECTION=PASS
+DNS_ABORT_PROPAGATION=PASS
+DNS_AFTER_ABORT_CAN_CONNECT=NO
+STREAMING_TIMEOUT_CLASSIFICATION=PASS
+PARTIAL_RESPONSE_RELEASED=NO
+INVOCATION_FAIL_FAST_BYTE_CAP=PASS
+SIGNED_BUDGET_ELAPSED_SUBTRACTION=PASS
+SIGNED_BUDGET_EXTENDED_LOCALLY=NO
+BOUNDED_RESPONSE_LIMIT_MATRIX=PASS
+REFERENCE_COUNT_EXTRACTION_MATRIX=PASS
+CUSTOMER_B_EXTRACTION_MATRIX=PASS
+CREDENTIAL_REJECTION_REVOKES_BINDING=PASS
+NON_AUTH_FAILURE_REVOKES_BINDING=NO
+INVOCATION_EARLY_GATE_MATRIX=PASS
+INVOCATION_PROCESSING_ORDER=PASS
+DNS_REBINDING_PROTECTION=READY
+RAW_CUSTOMER_API_RESPONSE_CENTRAL=NO
+BOUNDED_LOCAL_RESULT_ONLY=YES
+CONNECTOR_RUNTIME_GENERIC_READINESS=PASS
+T057_REMAINS_COMPLETE=YES
+T058_EXECUTED=NO
+PHASE6_EXECUTED=YES
+PHASE7_EXECUTED=NO
+NEXT_ACTION=EXECUTE_PHASE7
+```
+
+### Phase 6 Final Human-Gate Hardening — 2026-09-13
+
+- Scope and baseline: this final post-checkpoint hardening preserved T045–T057, the original Phase 6 RED → GREEN/checkpoint evidence, and the previous Phase 6 Human-Gate Hardening section. T058–T142 remained unchecked. The read-only Spec Kit prerequisite command retained its pre-existing branch-discovery failure by resolving the current branch to the unrelated missing `002-host-integration-gateway-and-data-adapter-contract`; no setup script or implementation hook ran.
+- Protected pre/post SHA-256 values remained unchanged: Feature 009 `spec.md` `d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73`, `design.md` `250659dc2e4bef3361953b07d99fd1a37278989a4f6a71644860abc0387801a8`, and `plan.md` `00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1`. Feature 007/008 documents, shared-contract sources, Prisma, Assistant/SSE/SDK interfaces, central transport, and Phase 7 sources were unchanged.
+- Authentic RED: the first combined focused run failed 4 suites with 1 failed / 29 passed / 30 executed tests. Three suites could not compile because the controller lacked the shared monotonic-clock/start-time contract; the DNS suite proved `fd00:ec2::254` was incorrectly accepted through an `allowlisted_networks` CIDR. This was captured before production edits.
+- GREEN implementation: `InvocationMonotonicClock` is one production-injected clock domain shared by the controller and service. Route entry captures the internal start before bounded body intake, `handle()` accepts it as an optional internal second argument, and direct callers default to a service-captured monotonic start. The existing formula now covers the full route lifecycle and retains the 250 ms reserve without adding wire, response, log, or telemetry fields.
+- Connection lifecycle: the controller retains request `aborted` handling and also aborts on response `close` only before successful `finish`; every listener is removed in `finally`. Real-component route tests prove close cancellation reaches hanging DNS, an in-flight pinned HTTPS request, and response streaming, releases the binding lease, emits no partial extraction, and makes no retry. A normal `finish` followed by `close` leaves the signal un-aborted.
+- Destination safety: the generic unconditional deny set now explicitly contains `169.254.169.254/32` and `fd00:ec2::254/128`. Canonicalization precedes denial; denial precedes mode/allowlist evaluation. Broad and exact metadata allowlists fail, while a non-metadata Customer ULA succeeds only under its exact permitted CIDR.
+- Focused GREEN: the first post-change run reached all new behavior except three route tests whose test-only controller and service clocks were in different domains (1 failed suite, 3 failed / 68 passed / 71 tests). After correcting only that fixture wiring, the identical focused matrix passed 4 suites / 71 tests.
+- Final runtime validation: the sandbox run passed 27 of 32 suites and 306 tests, with only 8 listener-dependent tests failing from the known `listen EPERM`; the identical approved local-only command passed 32 suites / 314 tests. Runtime build and typecheck passed. Shared contracts passed 10 suites / 68 tests plus build/typecheck. `git diff --check`, protected hashes, source/dependency guards, 142 sequential task IDs, 15 checkpoints, and T001–T057 checked/T058–T142 unchecked all passed.
+- Final-hardening production files: `apps/customer-connector-runtime/src/invocation/connector-invocation.controller.ts`; `apps/customer-connector-runtime/src/invocation/connector-invocation.service.ts`; `apps/customer-connector-runtime/src/invocation/connector-invocation.module.ts`; `apps/customer-connector-runtime/src/invocation/invocation-deadline.ts`; `apps/customer-connector-runtime/src/upstream/address-validator.ts`.
+- Final-hardening test files: `apps/customer-connector-runtime/test/invocation/invocation-body-reader.spec.ts`; `apps/customer-connector-runtime/test/invocation/invocation-early-gates.spec.ts`; `apps/customer-connector-runtime/test/upstream/timeout-cancellation.spec.ts`; `apps/customer-connector-runtime/test/upstream/dns-pinning.spec.ts`.
+
+```text
+FEATURE009_PHASE6_FINAL_HUMAN_GATE_HARDENING=PASS
+SIGNED_BUDGET_INBOUND_BODY_ELAPSED_SUBTRACTION=PASS
+SIGNED_BUDGET_FULL_ROUTE_LIFECYCLE=PASS
+SIGNED_BUDGET_EXTENDED_LOCALLY=NO
+POST_BODY_CALLER_DISCONNECT_PROPAGATION=PASS
+NORMAL_RESPONSE_COMPLETION_TRIGGERS_ABORT=NO
+CALLER_ABORT_REACHES_DNS=YES
+CALLER_ABORT_REACHES_HTTP=YES
+CALLER_ABORT_RELEASES_LEASE=YES
+IPV4_METADATA_ADDRESS_DENIED=YES
+IPV6_METADATA_ADDRESS_DENIED=YES
+ALLOWLIST_CAN_OVERRIDE_METADATA_DENY=NO
+LEGITIMATE_PRIVATE_IPV6_ALLOWLIST_STILL_WORKS=YES
+IPV4_MAPPED_IPV6_CANONICALIZATION=PASS
+DNS_ABORT_PROPAGATION=PASS
+STREAMING_TIMEOUT_CLASSIFICATION=PASS
+INVOCATION_FAIL_FAST_BYTE_CAP=PASS
+CIDR_FAMILY_PREFIX_VALIDATION=PASS
+GET_QUERY_SUCCESS_CONSTRUCTION=PASS
+POST_QUERY_SUCCESS_CONSTRUCTION=PASS
+BOUNDED_RESPONSE_LIMIT_MATRIX=PASS
+REFERENCE_COUNT_EXTRACTION_MATRIX=PASS
+CUSTOMER_B_EXTRACTION_MATRIX=PASS
+CREDENTIAL_REJECTION_REVOKES_BINDING=PASS
+NON_AUTH_FAILURE_REVOKES_BINDING=NO
+INVOCATION_EARLY_GATE_MATRIX=PASS
+INVOCATION_PROCESSING_ORDER=PASS
+DNS_REBINDING_PROTECTION=READY
+RAW_CUSTOMER_API_RESPONSE_CENTRAL=NO
+BOUNDED_LOCAL_RESULT_ONLY=YES
+CONNECTOR_RUNTIME_GENERIC_READINESS=PASS
+RUNTIME_TESTS=PASS
+RUNTIME_BUILD=PASS
+RUNTIME_TYPECHECK=PASS
+SHARED_CONTRACT_REGRESSION=PASS
+T057_REMAINS_COMPLETE=YES
+T058_EXECUTED=NO
+PHASE6_EXECUTED=YES
+PHASE7_EXECUTED=NO
+NEXT_ACTION=EXECUTE_PHASE7
+```
 
 ## Phase 7 — Central Deployment, Service Authentication, and Transport
 

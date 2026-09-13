@@ -1,6 +1,7 @@
 import type {
   BindingMintInput,
   BindingResolutionExpectation,
+  InvocationBindingExpectation,
   BindingResult,
   BindingRevocationReason,
   MintedConnectorBinding,
@@ -66,6 +67,16 @@ export class ConnectorBindingService {
     } finally {
       acquired.value.release();
     }
+  }
+
+  async withInvocationLease<T>(reference: string, expectation: InvocationBindingExpectation,
+    work: (binding: ProtectedBindingView, signal: AbortSignal) => Promise<T>): Promise<BindingResult<T>> {
+    const expired = this.store.removeIfExpired(reference);
+    if (expired) await this.handles.revoke(expired, 'expired');
+    const acquired = this.store.acquireForInvocation(reference, expectation);
+    if (!acquired.ok) return acquired;
+    try { return Object.freeze({ ok: true, value: await work(acquired.value.value, acquired.value.signal) }); }
+    finally { acquired.value.release(); }
   }
 
   async revoke(

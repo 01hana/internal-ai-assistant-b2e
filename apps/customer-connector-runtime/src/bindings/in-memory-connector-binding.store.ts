@@ -10,6 +10,7 @@ import {
   MAX_CONCURRENT_BINDING_LEASES,
   type BindingMintInput,
   type BindingResolutionExpectation,
+  type InvocationBindingExpectation,
   type BindingResult,
   type BindingStoreLimits,
   type ConnectorBindingLease,
@@ -130,6 +131,18 @@ export class InMemoryConnectorBindingStore {
     }));
   }
 
+  acquireForInvocation(reference: string, expectation: InvocationBindingExpectation): BindingResult<ConnectorBindingLease> {
+    const record = this.resolveInvocationRecord(reference, expectation);
+    if (!record) return failure('CONNECTOR_BINDING_INVALID');
+    if (record.activeLeases >= MAX_CONCURRENT_BINDING_LEASES) return failure('CONNECTOR_BINDING_BUSY');
+    const controller = new AbortController();
+    record.activeLeases += 1; record.leaseAbortControllers.add(controller);
+    let released = false;
+    return success(Object.freeze({ value: protectedView(record), signal: controller.signal, release: () => {
+      if (released) return; released = true; record.leaseAbortControllers.delete(controller); record.activeLeases = Math.max(0, record.activeLeases - 1);
+    } }));
+  }
+
   revoke(reference: string): StoredConnectorBindingRecord | undefined {
     const verifier = typeof reference === 'string' ? this.hash(reference) : '';
     return this.removeByVerifier(verifier);
@@ -179,6 +192,17 @@ export class InMemoryConnectorBindingStore {
     if (!record || record.status !== 'active') return undefined;
     if (record.expiresAt <= this.now()) return undefined;
     if (!expectationMatches(record, expectation)) return undefined;
+    if (this.activeByTuple.get(record.tupleKey) !== verifier || this.generationByTuple.get(record.tupleKey) !== record.bindingGeneration) return undefined;
+    return record;
+  }
+
+  private resolveInvocationRecord(reference: string, expectation: InvocationBindingExpectation): StoredConnectorBindingRecord | undefined {
+    if (typeof reference !== 'string' || !reference.startsWith('ccr_')) return undefined;
+    const verifier = this.hash(reference); const record = this.records.get(verifier);
+    if (!record || record.status !== 'active' || record.expiresAt <= this.now()) return undefined;
+    const actual = record.trustedContext; const expected = expectation.trustedContext;
+    if (actual.customerId !== expected.customerId || actual.integrationId !== expected.integrationId || actual.hostApp !== expected.hostApp ||
+        actual.connectorInstanceId !== expected.connectorInstanceId || actual.organizationId !== expected.organizationId || actual.actorId !== expected.actorId) return undefined;
     if (this.activeByTuple.get(record.tupleKey) !== verifier || this.generationByTuple.get(record.tupleKey) !== record.bindingGeneration) return undefined;
     return record;
   }

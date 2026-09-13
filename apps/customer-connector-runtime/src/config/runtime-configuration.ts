@@ -1,6 +1,8 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { isAbsolute } from 'node:path';
 import type { CredentialProfileConfiguration } from '../credentials/credential.types';
+import type { UpstreamServiceConfiguration } from '../upstream/connector-destination-policy';
+import { parseCidr } from '../upstream/ip-address';
 
 export const CONNECTOR_RUNTIME_ENVIRONMENT = Symbol('CONNECTOR_RUNTIME_ENVIRONMENT');
 
@@ -46,6 +48,7 @@ export interface ConnectorRuntimeConfiguration {
   readonly bootstrapProfiles: readonly RuntimeServiceProfileConfiguration[];
   readonly manifestFiles: readonly string[];
   readonly credentialProfiles: readonly CredentialProfileConfiguration[];
+  readonly upstreams: readonly UpstreamServiceConfiguration[];
 }
 
 export type ConnectorRuntimeConfigurationResult =
@@ -80,6 +83,7 @@ export function parseConnectorRuntimeConfiguration(environment: Record<string, u
     const centralProfiles = parseProfiles(environment.CONNECTOR_CENTRAL_TRUST_KEYS_JSON, 'central-invocation');
     const bootstrapProfiles = parseProfiles(environment.CONNECTOR_BINDING_BOOTSTRAP_PROFILES_JSON, 'binding-bootstrap');
     const phase5 = parsePhase5Configuration(environment);
+    const upstreams = parseUpstreams(environment.CONNECTOR_UPSTREAMS_JSON);
     validateProfileRegistry(contexts, [...centralProfiles, ...bootstrapProfiles]);
     const config: ConnectorRuntimeConfiguration = {
       processRole: 'single-replica',
@@ -91,13 +95,28 @@ export function parseConnectorRuntimeConfiguration(environment: Record<string, u
       centralProfiles,
       bootstrapProfiles,
       manifestFiles: phase5.manifestFiles,
-      credentialProfiles: phase5.credentialProfiles
+      credentialProfiles: phase5.credentialProfiles,
+      upstreams
     };
     if (config.bindingScopeMaxEntries > config.bindingStoreMaxEntries || config.bindingSweepBatchSize > config.bindingStoreMaxEntries) fail();
     return Object.freeze({ ok: true, config: deepFreeze(config) });
   } catch {
     return Object.freeze({ ok: false, category: 'invalid_configuration' });
   }
+}
+
+function parseUpstreams(value: unknown): readonly UpstreamServiceConfiguration[] {
+  if (value === undefined) return Object.freeze([]);
+  const parsed = json(value);
+  if (!Array.isArray(parsed) || parsed.length > 100) fail();
+  return deepFreeze(parsed.map((entry) => {
+    if (!objectWithKeys(entry, ['upstreamServiceRef', 'origin', 'basePath', 'addressMode', 'allowedCidrs'], []) ||
+        !identifier(entry.upstreamServiceRef) || typeof entry.origin !== 'string' || typeof entry.basePath !== 'string' ||
+        !['public_only', 'allowlisted_networks', 'test_loopback_tls'].includes(entry.addressMode as string) ||
+        !Array.isArray(entry.allowedCidrs) || !entry.allowedCidrs.every((cidr) => typeof cidr === 'string' && parseCidr(cidr) !== undefined)) fail();
+    return { upstreamServiceRef: entry.upstreamServiceRef as string, origin: entry.origin, basePath: entry.basePath,
+      addressMode: entry.addressMode, allowedCidrs: entry.allowedCidrs } as UpstreamServiceConfiguration;
+  }));
 }
 
 function parsePhase5Configuration(environment: Record<string, unknown>): Readonly<{

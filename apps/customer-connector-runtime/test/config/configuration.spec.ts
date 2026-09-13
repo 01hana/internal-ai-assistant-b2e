@@ -120,4 +120,19 @@ describe('Customer Connector Runtime immutable configuration', () => {
       { ...base, CONNECTOR_MANIFEST_FILES: '["/one.json"]', CONNECTOR_CREDENTIAL_PROFILES_JSON: JSON.stringify([profile, profile]) }
     ]) expect(parseConnectorRuntimeConfiguration(environment).ok).toBe(false);
   });
+
+  it.each([
+    '10.0.0.0/64',
+    '300.300.300.300/24',
+    '2001:db8::/129',
+    '::ffff:10.0.0.0/95'
+  ])('fails startup configuration for semantically invalid upstream CIDR %s', (cidr) => {
+    expect(parseConnectorRuntimeConfiguration({
+      ...validRuntimeEnvironment(),
+      CONNECTOR_UPSTREAMS_JSON: JSON.stringify([{
+        upstreamServiceRef: 'private-api', origin: 'https://private.test', basePath: '/',
+        addressMode: 'allowlisted_networks', allowedCidrs: [cidr]
+      }])
+    })).toEqual({ ok: false, category: 'invalid_configuration' });
+  });
 });

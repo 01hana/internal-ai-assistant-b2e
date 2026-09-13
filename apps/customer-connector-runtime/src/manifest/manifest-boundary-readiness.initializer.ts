@@ -21,7 +21,5 @@ export class ManifestBoundaryReadinessInitializer implements OnModuleInit {
     this.readiness.setReady('credentialProfiles', credentialProfiles);
     this.readiness.setReady('requestProfiles', requestProfiles);
     this.readiness.setReady('manifest', manifest);
-    this.readiness.setReady('upstream', false);
-    this.readiness.setReady('invocationRoute', false);
   }
 }
