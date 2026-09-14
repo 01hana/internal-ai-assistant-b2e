@@ -1,7 +1,7 @@
 # Tasks: Feature 009 — Productized Business Connector Runtime
 
 **Input**: Accepted `spec.md`, `design.md`, and `plan.md` approved for Phase 1 implementation.
-**Status**: Accepted — Phase 1 baseline through Phase 6 safe-upstream/invocation-route gates completed. T001–T057 are complete; Phase 7 is unexecuted.
+**Status**: Accepted — Phase 1 baseline through Phase 7 central dark-transport gate completed. T001–T067 are complete; Phase 8 is unexecuted.
 
 ```text
 PHASE1_EXECUTED=YES
@@ -13,9 +13,11 @@ T001_T044_COMPLETE=YES
 PHASE5_EXECUTED=YES
 T001_T057_COMPLETE=YES
 PHASE6_EXECUTED=YES
-PHASE7_EXECUTED=NO
-FIRST_UNEXECUTED_TASK=T058
-NEXT_ACTION=EXECUTE_PHASE7
+T001_T067_COMPLETE=YES
+PHASE7_EXECUTED=YES
+PHASE8_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T068
+NEXT_ACTION=EXECUTE_PHASE8
 ```
 **Scope**: Implement the reusable two-sided connector runtime, executable Synthetic Customer B portability fixture, removable Shinmone reference slice, and Shinmone-removal gate through the existing Feature 008 path. Feature 007 is a completed read-only predecessor; Phase 8 is `FEATURE009_IMPLEMENTATION_CONSUMING_ACCEPTED_FEATURE007_AMENDMENT`, never Feature 007 reimplementation.
 **Test rule**: Every meaningful new contract or behavior starts with an authentic RED against current code, followed by the narrow GREEN and the phase checkpoint. Never manufacture RED by breaking production code.
@@ -1480,65 +1482,194 @@ NEXT_ACTION=EXECUTE_PHASE7
 **Independent test**: Trusted fixture configuration produces one exact signed round-trip; ambiguity and unsafe input fail before transport.
 **Route relationship**: The dark-mode signed round trip consumes the Phase 6 Customer-local `POST /v1/connector/invocations` endpoint by hosting the actual runtime app or its accepted route-level harness; Phase 7 does not create or emulate a second server contract.
 
-- [ ] T058 [RED] [US2] [BACKEND] Add failing exact `ConnectorDeploymentRegistry` tests.
+- [X] T058 [RED] [US2] [BACKEND] Add failing exact `ConnectorDeploymentRegistry` tests.
   - Files: `test/unit/connector-deployment.registry.spec.ts`.
   - Depends on: T057.
   - Validation: Cover exact Customer/integration/HostApp/connector/instance success, duplicate, wildcard, blank, inactive, wrong instance, unsafe URI/policy, and invalid bounds.
   - Stop: Do not add Browser/model lookup input, fallback, database registry, or wildcard selection.
 
-- [ ] T059 [GREEN] [US2] [BACKEND] Implement startup-validated immutable deployment lookup.
+- [X] T059 [GREEN] [US2] [BACKEND] Implement startup-validated immutable deployment lookup.
   - Files: `src/connectors/productized-business/connector-deployment.registry.ts`, central configuration integration.
   - Depends on: T058.
   - Validation: Make T058 pass using `ASSISTANT_CONNECTOR_DEPLOYMENTS_JSON` and exact tuple resolution, including a distinct Synthetic Customer B fixture tuple/instance without a source branch.
   - Stop: No Prisma schema, runtime CRUD, or Customer-specific source constant.
 
-- [ ] T060 [RED] [US2] [BACKEND] Add failing central signer and exact-byte proof tests.
+- [X] T060 [RED] [US2] [BACKEND] Add failing central signer and exact-byte proof tests.
   - Files: `test/unit/connector-service-auth.signer.spec.ts`.
   - Depends on: T059.
   - Validation: Cover RS256, `kid`, exact type/claims/audience/context/operation/request ID, 30-second proof, fresh UUID `jti`, body mutation, key lifecycle, and raw-byte identity.
   - Stop: Do not reuse user/Bridge signing keys or serialize after hashing.
 
-- [ ] T061 [GREEN] [US2] [BACKEND] Implement `ConnectorServiceAuthSigner` and immutable key loading.
+- [X] T061 [GREEN] [US2] [BACKEND] Implement `ConnectorServiceAuthSigner` and immutable key loading.
   - Files: `src/connectors/productized-business/connector-service-auth.signer.ts`, central service-auth configuration.
   - Depends on: T060.
   - Validation: Make T060 pass with one serialization, exact SHA-256, active file-backed key, and public lifecycle metadata.
   - Stop: Private keys, proofs, and raw request bytes stay out of logs/audit/telemetry.
 
-- [ ] T062 [RED] [US2] [BACKEND] Add failing bounded central HTTPS transport tests.
+- [X] T062 [RED] [US2] [BACKEND] Add failing bounded central HTTPS transport tests.
   - Files: `test/unit/connector-transport.client.spec.ts`, `test/unit/connector-network-policy.spec.ts`.
   - Depends on: T061.
   - Validation: Cover HTTPS, exact destination, address policy/pinning, TLS, 16 KiB bounds, absent request encoding, redirect/proxy/retry denial, response envelopes, abort, and mismatched request ID.
   - Stop: No generic HTTP surface, credential field, ref persistence, or raw response pass-through.
 
-- [ ] T063 [GREEN] [US2] [BACKEND] Implement central network policy and `ConnectorTransportClient`.
+- [X] T063 [GREEN] [US2] [BACKEND] Implement central network policy and `ConnectorTransportClient`.
   - Files: `src/connectors/productized-business/connector-network-policy.ts`, `connector-transport.client.ts`.
   - Depends on: T062.
   - Validation: Make T062 pass with deterministic DNS/TLS fixtures and cancellation.
   - Stop: No adapter registration or Assistant module import in this task.
 
-- [ ] T064 [RED] [US2] [BACKEND] Add failing safe-failure, readiness, and dark-module tests.
+- [X] T064 [RED] [US2] [BACKEND] Add failing safe-failure, readiness, and dark-module tests.
   - Files: `test/unit/productized-business-connector.module.spec.ts`, `test/integration/productized-transport-dark.spec.ts`.
   - Depends on: T063.
   - Validation: Require code-only normalized failures, fail-closed readiness, a valid configuration round trip through the already implemented Customer-local invocation route/app harness, and zero `DataAdapterRegistry` reachability.
   - Stop: Do not create a ToolCall, ToolDefinition, adapter execution, or public failure shape.
 
-- [ ] T065 [GREEN] [US2] [BACKEND] Compose the central productized transport module in dark mode.
+- [X] T065 [GREEN] [US2] [BACKEND] Compose the central productized transport module in dark mode.
   - Files: `src/connectors/productized-business/productized-business-connector.module.ts`, local module providers/readiness.
   - Depends on: T064.
   - Validation: Make T064 pass; the unregistered module signs and exchanges a bounded fixture envelope with the real Phase 6 route/app harness rather than a second fake server contract.
   - Stop: No native credential, raw reference storage, Prisma, or Assistant execution wiring.
 
-- [ ] T066 [VERIFY] [US2] [BACKEND] Verify central transport isolation and prohibited-surface scans.
+- [X] T066 [VERIFY] [US2] [BACKEND] Verify central transport isolation and prohibited-surface scans.
   - Files: `src/connectors/productized-business/**`, `test/integration/secret-redaction.spec.ts`, `prisma/schema.prisma`, `prisma/migrations/`, `src/connectors/connectors.module.ts`.
   - Depends on: T065.
   - Validation: Run central focused suites/typecheck and confirm no native credential type/value, reference persistence, schema change, registration, or sensitive observability.
   - Stop: Do not mark dark-mode isolation passing if Assistant can resolve the module.
 
-- [ ] T067 [CHECKPOINT] [US2] [BACKEND] Verify and record the Phase 7 central transport gate.
+- [X] T067 [CHECKPOINT] [US2] [BACKEND] Verify and record the Phase 7 central transport gate.
   - Files: `specs/009-productized-business-connector-runtime/tasks.md` evidence only.
   - Depends on: T059, T061, T063, T065, T066.
   - Validation: Record a machine-readable evidence block with exact signed bounded round-trip `PASS` and `ASSISTANT_EXECUTION_REACHABILITY=NO`.
   - Stop: Phase 8 cannot start with unsafe config, unsigned bytes, or active Assistant wiring.
+
+### Phase 7 RED → GREEN and Checkpoint Evidence — 2026-09-13
+
+- Entry: T057 was checked, T058–T142 were unchecked, and the approved `spec.md`, `design.md`, and `plan.md` SHA-256 values matched the protected baseline. The read-only Spec Kit prerequisite check retained its pre-existing branch-routing failure for missing Feature 002 and performed no setup or hook action.
+- T058 RED: `npm run test:unit -- --runInBand --runTestsByPath test/unit/connector-deployment.registry.spec.ts` failed with 1 suite, 0 tests because `ConnectorDeploymentRegistry` did not exist. T059 GREEN passed the exact immutable five-part registry suite; final coverage is 13 tests.
+- T060 RED: the signer suite failed at compilation because `ConnectorServiceAuthSigner` did not exist. T061 GREEN validates one serialization, exact raw-byte SHA-256, RS256 header/claims, 30-second lifetime, fresh UUID `jti`, active absolute file-backed PKCS#8 ownership, public-key matching, and central-only trust-domain rejection; final coverage is 7 tests.
+- T062 RED: the network-policy and transport suites failed with 2 suites, 0 tests because both central boundaries were absent. T063 GREEN validates semantic A/AAAA and mapped-address policy, all-answer rejection, deterministic pinning, TLS-only one-shot transport, absent content encoding, fixed headers, byte bounds, cancellation, correlation, safe envelopes, and no retry/redirect/proxy behavior; final coverage is 2 suites and 16 tests.
+- T064 RED: the dark-module suite failed with 1 suite, 0 tests because the module did not exist. T065 GREEN passed 2 module tests. The genuine Phase 6 integration was iterated through real DNS, header, and non-2xx safe-envelope boundaries; its final approved local-only run passed 1 suite and 1 test, returning the real correlated `CONNECTOR_BINDING_INVALID` envelope from the existing runtime route.
+- T066 final validation: central focused unit suites passed 5 suites/38 tests; dark transport integration passed 1 suite/1 test; existing secret-redaction integration passed 1 suite/5 tests; root build and typecheck passed. The Customer-local regression first recorded sandbox-only `listen EPERM`, then the identical approved local-only run passed 32 suites/314 tests plus build/typecheck. Shared contracts passed 10 suites/68 tests plus build/typecheck. `git diff --check` passed.
+- Protected SHA-256: `spec.md=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73`; `design.md=250659dc2e4bef3361953b07d99fd1a37278989a4f6a71644860abc0387801a8`; `plan.md=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1`. Feature 007/008, Prisma, shared-contract source, Customer-local Phase 6 source, `AppModule`, and `ConnectorsModule` remained unchanged.
+- Phase 7 attributed files: `package.json`, `package-lock.json`, `src/connectors/productized-business/connector-deployment.registry.ts`, `connector-service-auth.signer.ts`, `connector-network-policy.ts`, `connector-transport.client.ts`, `productized-business-connector.module.ts`, `test/unit/connector-deployment.registry.spec.ts`, `connector-service-auth.signer.spec.ts`, `connector-network-policy.spec.ts`, `connector-transport.client.spec.ts`, `productized-business-connector.module.spec.ts`, `test/integration/productized-transport-dark.spec.ts`, and this append-only checkpoint update. The pre-existing untracked Phase 6 TLS key fixture was preserved.
+
+```text
+T001_T067_COMPLETE=YES
+CONNECTOR_DEPLOYMENT_EXACT_MATCH=YES
+CONNECTOR_SERVICE_PROOF_SIGNING=PASS
+CONNECTOR_SERVICE_PROOF_SINGLE_SERIALIZATION=PASS
+CENTRAL_TRANSPORT_HTTPS_ONLY=YES
+CENTRAL_DNS_REBINDING_PROTECTION=READY
+CENTRAL_TLS_VERIFICATION=ENFORCED
+CENTRAL_REDIRECTS=DENIED
+CENTRAL_RETRIES=DENIED
+CENTRAL_PROXY_USAGE=NO
+CENTRAL_REQUEST_BOUND=PASS
+CENTRAL_RESPONSE_BOUND=PASS
+CENTRAL_REQUEST_ID_CORRELATION=PASS
+CUSTOMER_LOCAL_PHASE6_ROUTE_REUSED=YES
+SECOND_FAKE_INVOCATION_SERVER=NO
+SIGNED_BOUNDED_ROUND_TRIP=PASS
+NATIVE_CREDENTIAL_CENTRAL=NO
+CONNECTOR_CONTEXT_REF_PERSISTED=NO
+DATA_ADAPTER_REGISTERED=NO
+ASSISTANT_EXECUTION_REACHABILITY=NO
+SYNTHETIC_CUSTOMER_B_CENTRAL_TRANSPORT=PASS
+SHINMONE_REQUIRED_BY_CENTRAL_TRANSPORT=NO
+CUSTOMER_SPECIFIC_CENTRAL_BRANCH=NO
+T067=PASS
+T068_EXECUTED=NO
+PHASE7_EXECUTED=YES
+PHASE8_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T068
+NEXT_ACTION=EXECUTE_PHASE8
+```
+
+### Phase 7 Human-Gate Hardening — 2026-09-13
+
+- Authorized design correction: only the conflicting deployment paragraph in `design.md` changed, replacing four-part active-instance uniqueness with exact five-part tuple identity. Exact duplicates remain invalid; distinct active connector instances may coexist with no first-instance or wrong-instance fallback. `design.md` changed from SHA-256 `250659dc2e4bef3361953b07d99fd1a37278989a4f6a71644860abc0387801a8` to `bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb`; `spec.md=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73` and `plan.md=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1` remained unchanged.
+- Authentic focused RED: the five Phase 7 unit suites ran 51 tests with 9 failures and 42 passes. Failures proved the four-part instance rejection, zero-deployment readiness defect, unknown-profile readiness defects for single and mixed deployment graphs, broad private-network admission through the loopback test seam, and missing active-response teardown during streaming cancellation. Hanging-DNS and pending-HTTPS cancellation already passed and were preserved without manufacturing failures.
+- GREEN: the same five suites passed 51/51 tests. Registry introspection exposes only frozen active-count/profile-reference metadata; signer introspection exposes only exact profile presence. A graph is ready only with at least one active deployment and complete signer-profile coverage. Two same-authority active instances resolve independently by exact instance, private/ULA/metadata addresses remain denied in `public_only` test mode, and cancellation destroys active request/response state while returning only `CONNECTOR_TIMEOUT` with no retry or partial envelope.
+- Native TLS evidence: `productized-transport-dark.spec.ts` uses the same real Customer-local Phase 6 Nest/Express handler and one deterministic TLS server. A trusted certificate with the configured hostname completed the genuine correlated round trip; the same trusted certificate with a wrong hostname and the configured hostname with an untrusted certificate both failed closed through native Node HTTPS/TLS verification. No second invocation server or TLS bypass was introduced.
+- Final validation: focused unit suites passed 5 suites/51 tests; productized transport plus secret-redaction integration passed 2 suites/6 tests; root build/typecheck passed; shared contracts passed 10 suites/68 tests plus build/typecheck. The Customer-local run first preserved sandbox-only `listen EPERM` evidence (27 suites and 306 tests passed before listener failures), then the identical approved local-only command passed 32 suites/314 tests; runtime build/typecheck passed. `git diff --check`, protected-scope checks, prohibited-source scans, 142-task numbering, T067 checked, and T068–T142 unchecked all passed.
+- Original Phase 7 evidence preservation: the pre-hardening evidence block SHA-256 remains `a6f5c412156422c5c6084191b7a414fddd7c77b5cd9685990788521d80459314`; no prior RED, GREEN, checkpoint, task wording, or checkbox was rewritten.
+- Hardening-attributed production files: `src/connectors/productized-business/connector-deployment.registry.ts`, `connector-service-auth.signer.ts`, `connector-network-policy.ts`, `connector-transport.client.ts`, and `productized-business-connector.module.ts`. Test files: `test/unit/connector-deployment.registry.spec.ts`, `connector-network-policy.spec.ts`, `connector-transport.client.spec.ts`, `productized-business-connector.module.spec.ts`, and `test/integration/productized-transport-dark.spec.ts`. Evidence/artifact changes are this appended section and the single authorized `design.md` paragraph. Root dependency wiring and the pre-existing Phase 6 TLS key fixture were preserved unchanged by this hardening.
+
+```text
+FEATURE009_PHASE7_HUMAN_GATE_HARDENING=PASS
+ZERO_DEPLOYMENT_READINESS=NOT_READY
+UNKNOWN_SIGNER_PROFILE_READINESS=NOT_READY
+DEPLOYMENT_SIGNER_GRAPH_VALIDATION=PASS
+DISTINCT_ACTIVE_CONNECTOR_INSTANCES_SUPPORTED=YES
+EXACT_FIVE_PART_DUPLICATE_REJECTED=YES
+WRONG_INSTANCE_FALLBACK=NO
+TEST_LOOPBACK_ONLY_SCOPE=PASS
+TEST_LOOPBACK_ALLOWS_ARBITRARY_PRIVATE_NETWORK=NO
+TLS_CORRECT_HOST_TRUSTED_CERT=PASS
+TLS_WRONG_HOST_REJECTED=YES
+TLS_UNTRUSTED_CERT_REJECTED=YES
+MIDFLIGHT_DNS_ABORT=PASS
+MIDFLIGHT_HTTPS_ABORT=PASS
+MIDFLIGHT_RESPONSE_ABORT=PASS
+CENTRAL_RETRY_AFTER_ABORT=NO
+CONNECTOR_DEPLOYMENT_EXACT_MATCH=YES
+CONNECTOR_SERVICE_PROOF_SINGLE_SERIALIZATION=PASS
+CENTRAL_DNS_REBINDING_PROTECTION=READY
+CENTRAL_TLS_VERIFICATION=ENFORCED
+SIGNED_BOUNDED_ROUND_TRIP=PASS
+CUSTOMER_LOCAL_PHASE6_ROUTE_REUSED=YES
+SECOND_FAKE_INVOCATION_SERVER=NO
+DATA_ADAPTER_REGISTERED=NO
+ASSISTANT_EXECUTION_REACHABILITY=NO
+T067_REMAINS_COMPLETE=YES
+T068_EXECUTED=NO
+PHASE7_EXECUTED=YES
+PHASE8_EXECUTED=NO
+NEXT_ACTION=EXECUTE_PHASE8
+```
+
+### Phase 7 Human Design Amendment Approval — 2026-09-13
+
+1. The protected design originally required four-part active-instance uniqueness.
+2. Phase 7 human-gate review identified that restriction as conflicting with the desired exact five-part deployment model.
+3. The hardening implementation changed that design paragraph prematurely instead of stopping with `HUMAN_REVIEW_REQUIRED`.
+4. Human review on 2026-09-13 subsequently inspected the amended design, production implementation, tests, Feature 008 authority relationship, and exact-instance behavior.
+5. Human review explicitly approved the five-part amendment.
+6. The amended design hash now becomes the protected Feature 009 design baseline for Phase 8 and later phases.
+
+```text
+DESIGN_AMENDMENT_PREVIOUSLY_HUMAN_APPROVED=NO
+DESIGN_AMENDMENT_APPROVED_NOW=YES
+DESIGN_AMENDMENT_APPROVAL_DATE=2026-09-13
+
+DEPLOYMENT_IDENTITY=customerId,integrationId,hostApp,connectorKey,connectorInstanceId
+DISTINCT_ACTIVE_CONNECTOR_INSTANCES_SUPPORTED=YES
+EXACT_FIVE_PART_DUPLICATE_REJECTED=YES
+WRONG_INSTANCE_FALLBACK=NO
+FIRST_INSTANCE_FALLBACK=NO
+
+FEATURE008_DATA_ADAPTER_AUTHORITY_CHANGED=NO
+DATA_ADAPTER_REGISTRATION_DIMENSIONS=customerId,integrationId,hostApp,connectorKey
+DEPLOYMENT_REGISTRY_ADDS_EXACT_CONNECTOR_INSTANCE=YES
+
+OLD_FEATURE009_DESIGN_SHA256=250659dc2e4bef3361953b07d99fd1a37278989a4f6a71644860abc0387801a8
+NEW_FEATURE009_DESIGN_SHA256=bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb
+
+NEW_FEATURE009_DESIGN_HASH_ACCEPTED_AS_PROTECTED_BASELINE=YES
+
+FEATURE009_SPEC_MODIFIED=NO
+FEATURE009_PLAN_MODIFIED=NO
+FEATURE007_HISTORY_MODIFIED=NO
+FEATURE008_AUTHORITY_CHANGED=NO
+PRISMA_MODIFIED=NO
+
+T067_REMAINS_COMPLETE=YES
+T068_EXECUTED=NO
+
+PHASE7_FINAL_HUMAN_GATE=PASS
+PHASE8_READY=YES
+NEXT_ACTION=EXECUTE_PHASE8
+```
 
 ## Phase 8 — Feature 009 Shinmone Stage 2 Identity Bridge Integration
 

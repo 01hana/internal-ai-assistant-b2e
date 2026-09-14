@@ -224,7 +224,7 @@ interface ConnectorDeploymentV1 {
 }
 ```
 
-The tuple `(customerId, integrationId, hostApp, connectorKey)` must resolve to exactly one active instance. Blank values, duplicates, wildcard characters, non-HTTPS URIs, mismatched audience components, unsafe destination policy, or bounds outside central caps make the Backend unready. Lookup results are immutable until restart; there is no runtime Browser/model override or fallback.
+Each active deployment is identified by the exact five-part tuple `(customerId, integrationId, hostApp, connectorKey, connectorInstanceId)`. An exact duplicate five-part tuple is invalid, while distinct active `connectorInstanceId` values may coexist for the same first four dimensions. Every lookup must supply all five dimensions and may resolve only the exact matching instance; it never selects the first instance or falls back to another. Blank values, wildcard characters, non-HTTPS URIs, mismatched audience components, unsafe destination policy, or bounds outside central caps make the Backend unready. Lookup results are immutable until restart; there is no runtime Browser/model override or fallback.
 
 Feature 008 `DataAdapterRegistration` still decides whether the generic productized adapter is eligible for the trusted Customer/integration/HostApp/connector tuple. The deployment registry is consulted only after that adapter is selected and adds the exact instance, endpoint, audience, transport limits, and service-auth profile. It does not replace or weaken the registry.
 
