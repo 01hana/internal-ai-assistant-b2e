@@ -67,6 +67,58 @@ describe('binding request processing order and authority boundary', () => {
     expect(bindings.mint).not.toHaveBeenCalled();
   });
 
+  it('rejects signed actor or organization disagreement with the raw request before provider creation or mint', async () => {
+    const provider = providerFixture();
+    const bindings = { mint: jest.fn(), revoke: jest.fn() };
+    const authenticated = {
+      ...proof(),
+      trustedContext: { ...proofContext(), actorId: 'actor-a', organizationId: 'organization-a' }
+    };
+    const service = new ConnectorBindingRequestService(
+      { authenticateRegisteredBootstrap: jest.fn(async () => ({ ok: true, value: { proof: authenticated } })) } as never,
+      { resolve: jest.fn(() => provider) } as never,
+      bindings as never
+    );
+    const rawBody = Buffer.from(JSON.stringify({
+      version: '1', requestId: authenticated.requestId, bootstrapProfileKey: 'profile-a',
+      trustedContext: { ...authenticated.trustedContext, actorId: 'actor-b' }, providerPayload: { code: 'sensitive' }
+    }));
+
+    await expect(service.handle({
+      method: 'POST', contentType: 'application/json', authorization: 'Bearer a.b.c', rawBody
+    })).resolves.toEqual({ statusCode: 403, body: failure(authenticated.requestId, 'CONNECTOR_BINDING_INVALID') });
+    expect(provider.create).not.toHaveBeenCalled();
+    expect(bindings.mint).not.toHaveBeenCalled();
+  });
+
+  it('passes the authenticated admitted context to the selected provider and minted binding', async () => {
+    const provider = providerFixture();
+    const dynamicContext = { ...proofContext(), actorId: 'actor-b', organizationId: 'organization-b' };
+    const authenticated = { ...proof(), trustedContext: dynamicContext };
+    const mint = jest.fn(async () => ({
+      ok: true,
+      value: {
+        connectorContextRef: 'ccr_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG', expiresAt: 1_800_000_060,
+        expiresIn: 60, bindingGeneration: 1
+      }
+    }));
+    const service = new ConnectorBindingRequestService(
+      { authenticateRegisteredBootstrap: jest.fn(async () => ({ ok: true, value: { proof: authenticated } })) } as never,
+      { resolve: jest.fn(() => provider) } as never,
+      { mint, revoke: jest.fn() } as never
+    );
+    const rawBody = Buffer.from(JSON.stringify({
+      version: '1', requestId: authenticated.requestId, bootstrapProfileKey: 'profile-a',
+      trustedContext: dynamicContext, providerPayload: { code: 'sensitive' }
+    }));
+
+    await expect(service.handle({
+      method: 'POST', contentType: 'application/json', authorization: 'Bearer a.b.c', rawBody
+    })).resolves.toMatchObject({ statusCode: 200 });
+    expect(provider.create).toHaveBeenCalledWith(expect.anything(), dynamicContext);
+    expect(mint).toHaveBeenCalledWith(expect.objectContaining({ trustedContext: dynamicContext }));
+  });
+
   it('tears down a newly created provider handle when binding mint fails and returns only a safe failure', async () => {
     const provider = providerFixture();
     const service = new ConnectorBindingRequestService(

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { BridgeConfigService } from '../config/bridge-config.service';
 
-export type RuntimeDependency = 'idxTransport' | 'idxSemantics' | 'signing' | 'jwks' | 'exchange';
-const RUNTIME_DEPENDENCIES: readonly RuntimeDependency[] = Object.freeze(['idxTransport', 'idxSemantics', 'signing', 'jwks', 'exchange']);
+export type RuntimeDependency = 'idxTransport' | 'idxSemantics' | 'signing' | 'jwks' | 'connectorBinding' | 'exchange';
+const RUNTIME_DEPENDENCIES: readonly RuntimeDependency[] = Object.freeze(['idxTransport', 'idxSemantics', 'signing', 'jwks', 'connectorBinding', 'exchange']);
 
 @Injectable()
 export class BridgeReadinessRegistry {

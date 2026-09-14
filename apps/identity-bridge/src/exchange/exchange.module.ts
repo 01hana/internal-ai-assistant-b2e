@@ -16,6 +16,8 @@ import { ActiveKeyResolver } from '../signing/active-key.resolver';
 import { CanonicalTokenIssuer } from '../signing/canonical-token.issuer';
 import { ExchangeController } from './exchange.controller';
 import { ExchangeService } from './exchange.service';
+import { ConnectorBindingModule } from '../connector-binding/connector-binding.module';
+import { ConnectorBindingCoordinator } from '../connector-binding/connector-binding.coordinator';
 
 @Injectable()
 export class ExchangeReadinessInitializer implements OnModuleInit {
@@ -59,13 +61,23 @@ export class ExchangeReadinessInitializer implements OnModuleInit {
 }
 
 @Module({
-  imports: [ConfigurationModule, BridgeHealthModule, IdxTransportModule, JwksModule],
+  imports: [ConfigurationModule, BridgeHealthModule, IdxTransportModule, JwksModule, ConnectorBindingModule],
   controllers: [ExchangeController],
   providers: [
     IdxMenuDetailValidator, IdentityAdmissionService, IdxPermissionNormalizer, ScopeProjector,
     { provide: ActiveKeyResolver, useFactory: (config: BridgeConfigService) => new ActiveKeyResolver(config), inject: [BridgeConfigService] },
     { provide: CanonicalTokenIssuer, useFactory: (config: BridgeConfigService, keys: ActiveKeyResolver) => new CanonicalTokenIssuer(config, keys), inject: [BridgeConfigService, ActiveKeyResolver] },
-    ExchangeService, ExchangeReadinessInitializer
+    {
+      provide: ExchangeService,
+      useFactory: (
+        transport: MenuDetailTransport, validator: IdxMenuDetailValidator, admission: IdentityAdmissionService,
+        normalizer: IdxPermissionNormalizer, projector: ScopeProjector, issuer: CanonicalTokenIssuer,
+        connectorBinding: ConnectorBindingCoordinator
+      ) => new ExchangeService(transport, validator, admission, normalizer, projector, issuer, connectorBinding),
+      inject: [MenuDetailTransport, IdxMenuDetailValidator, IdentityAdmissionService, IdxPermissionNormalizer,
+        ScopeProjector, CanonicalTokenIssuer, ConnectorBindingCoordinator]
+    },
+    ExchangeReadinessInitializer
   ],
   exports: [ExchangeService]
 })

@@ -6,6 +6,7 @@
     "test": "node ../../node_modules/jest/bin/jest.js --config jest.config.cjs",
     "test:unit": "node ../../node_modules/jest/bin/jest.js --config jest.config.cjs --runInBand",
     "build": "node ../../node_modules/@nestjs/cli/bin/nest.js build --config nest-cli.json",
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.test.json",
     "start": "node dist/main.js",
     "local:bootstrap": "node scripts/local-bootstrap.mjs",
     "local:jwks-proxy": "node scripts/local-jwks-proxy.cjs",
@@ -14,6 +15,7 @@
     "local:verify:session": "node scripts/local-verify-session.cjs"
   },
   "dependencies": {
+    "@internal-ai-assistant/connector-runtime-contract": "file:../../packages/connector-runtime-contract",
     "@nestjs/common": "^11.1.26",
     "@nestjs/core": "^11.1.26",
     "@nestjs/platform-express": "^11.1.26",

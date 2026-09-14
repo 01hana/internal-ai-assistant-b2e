@@ -7,8 +7,15 @@ import { ScopeProjector } from '../idx/scope-projector';
 import { MenuDetailTransport } from '../idx/transport/menu-detail.transport';
 import { IdxTransportError } from '../idx/transport/transport.error';
 import { ExchangeIdentityDeniedError, ExchangeUnavailableError } from './redaction';
+import { ConnectorBindingCoordinator } from '../connector-binding/connector-binding.coordinator';
 
-export type ExchangeResult = Readonly<{ accessToken: string; tokenType: 'Bearer'; expiresIn: 300 }>;
+export type ExchangeResult = Readonly<{
+  accessToken: string;
+  tokenType: 'Bearer';
+  expiresIn: 300;
+  connectorContextRef?: string;
+  connectorContextExpiresIn?: number;
+}>;
 
 @Injectable()
 export class ExchangeService {
@@ -18,7 +25,8 @@ export class ExchangeService {
     private readonly admission: IdentityAdmissionService,
     private readonly normalizer: IdxPermissionNormalizer,
     private readonly projector: ScopeProjector,
-    private readonly issuer: CanonicalTokenIssuer
+    private readonly issuer: CanonicalTokenIssuer,
+    private readonly connectorBinding?: ConnectorBindingCoordinator
   ) {}
 
   async exchange(nativeAccessToken: string): Promise<ExchangeResult> {
@@ -40,8 +48,18 @@ export class ExchangeService {
 
     try {
       const permissionScopes = this.projector.project(this.normalizer.normalize(menus));
+      const binding = this.connectorBinding
+        ? await this.connectorBinding.bootstrap({ nativeAccessToken, acceptedIdentity: identity })
+        : Object.freeze({ ok: true as const });
+      if (!binding.ok) throw new ExchangeUnavailableError();
       const issued = await this.issuer.issue(Object.freeze({ identity, permissionScopes }));
-      return Object.freeze({ accessToken: issued.accessToken, tokenType: 'Bearer', expiresIn: 300 });
+      return Object.freeze({
+        accessToken: issued.accessToken, tokenType: 'Bearer', expiresIn: 300,
+        ...('connectorContextRef' in binding ? {
+          connectorContextRef: binding.connectorContextRef,
+          connectorContextExpiresIn: binding.expiresIn
+        } : {})
+      });
     } catch { throw new ExchangeUnavailableError(); }
   }
 }

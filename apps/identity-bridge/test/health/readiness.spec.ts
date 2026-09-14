@@ -24,11 +24,11 @@ describe('Bridge deferred readiness contract', () => {
   });
   it('computes internal readiness only after every declared dependency progresses', () => {
     const registry = new BridgeReadinessRegistry(); const readiness = new BridgeReadinessService(new BridgeConfigService(valid()), registry);
-    expect(readiness.snapshot()).toMatchObject({ configurationValid: true, ready: false, missing: ['idxTransport', 'idxSemantics', 'signing', 'jwks', 'exchange'] });
-    const dependencies = ['idxTransport', 'idxSemantics', 'signing', 'jwks', 'exchange'] as const;
+    expect(readiness.snapshot()).toMatchObject({ configurationValid: true, ready: false, missing: ['idxTransport', 'idxSemantics', 'signing', 'jwks', 'connectorBinding', 'exchange'] });
+    const dependencies = ['idxTransport', 'idxSemantics', 'signing', 'jwks', 'connectorBinding', 'exchange'] as const;
     const initialStates = registry.snapshot();
     expect(Object.isFrozen(initialStates)).toBe(true);
-    expect(initialStates).toEqual({ idxTransport: false, idxSemantics: false, signing: false, jwks: false, exchange: false });
+    expect(initialStates).toEqual({ idxTransport: false, idxSemantics: false, signing: false, jwks: false, connectorBinding: false, exchange: false });
     for (const [index, dependency] of dependencies.entries()) {
       registry.setReady(dependency, true);
       expect(readiness.snapshot()).toMatchObject({ ready: index === dependencies.length - 1, missing: dependencies.slice(index + 1) });
@@ -41,6 +41,7 @@ describe('Bridge deferred readiness contract', () => {
     const signing = { resolve: jest.fn().mockResolvedValue({ kid: 'key' }) };
     const jwks = { document: jest.fn().mockResolvedValue({ keys: [{ kid: 'key' }] }) };
     const configuration = new BridgeConfigService(valid());
+    registry.setReady('connectorBinding', true);
     const initializer = new ExchangeReadinessInitializer(
       configuration, registry, transport as never,
       new IdxMenuDetailValidator(), new IdentityAdmissionService(configuration), new IdxPermissionNormalizer(), new ScopeProjector(),
@@ -52,12 +53,13 @@ describe('Bridge deferred readiness contract', () => {
     expect(transport.execute).not.toHaveBeenCalled();
     expect(signing.resolve).toHaveBeenCalledTimes(1);
     expect(jwks.document).toHaveBeenCalledTimes(1);
-    expect(registry.snapshot()).toEqual({ idxTransport: true, idxSemantics: true, signing: true, jwks: true, exchange: true });
+    expect(registry.snapshot()).toEqual({ idxTransport: true, idxSemantics: true, signing: true, jwks: true, connectorBinding: true, exchange: true });
     expect(new BridgeReadinessService(new BridgeConfigService(valid()), registry).getPublicReadiness()).toMatchObject({ status: 'ready', runtimeDependencies: 'available', productionReady: true });
   });
   it('keeps readiness fail-closed when real signing or JWKS validation fails', async () => {
     const registry = new BridgeReadinessRegistry();
     const configuration = new BridgeConfigService(valid());
+    registry.setReady('connectorBinding', true);
     const initializer = new ExchangeReadinessInitializer(
       configuration, registry, { execute: jest.fn() } as never,
       new IdxMenuDetailValidator(), new IdentityAdmissionService(configuration), new IdxPermissionNormalizer(), new ScopeProjector(),
@@ -66,7 +68,7 @@ describe('Bridge deferred readiness contract', () => {
       { exchange: jest.fn() } as never
     );
     await initializer.onModuleInit();
-    expect(registry.snapshot()).toEqual({ idxTransport: true, idxSemantics: true, signing: false, jwks: false, exchange: false });
+    expect(registry.snapshot()).toEqual({ idxTransport: true, idxSemantics: true, signing: false, jwks: false, connectorBinding: true, exchange: false });
     expect(new BridgeReadinessService(new BridgeConfigService(valid()), registry).getPublicReadiness()).toMatchObject({ status: 'not_ready', productionReady: false });
   });
   it('turns public readiness green only after real key resolution, JWKS generation, and complete production composition', async () => {
@@ -80,7 +82,7 @@ describe('Bridge deferred readiness contract', () => {
     await app.init();
     try {
       expect(execute).not.toHaveBeenCalled();
-      expect(app.get(BridgeReadinessRegistry).snapshot()).toEqual({ idxTransport: true, idxSemantics: true, signing: true, jwks: true, exchange: true });
+      expect(app.get(BridgeReadinessRegistry).snapshot()).toEqual({ idxTransport: true, idxSemantics: true, signing: true, jwks: true, connectorBinding: true, exchange: true });
       expect(app.get(BridgeReadinessService).getPublicReadiness()).toMatchObject({ status: 'ready', runtimeDependencies: 'available', productionReady: true });
     } finally { await app.close(); }
   });

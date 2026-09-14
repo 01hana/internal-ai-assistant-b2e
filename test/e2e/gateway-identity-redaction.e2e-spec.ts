@@ -64,19 +64,38 @@ describe('Gateway identity/token non-exposure E2E (T074)', () => {
   });
 
   it('projects representative upstream and binding denials without credentials or internal diagnostics', async () => {
-    const malformed = await fetch(`${harness.gatewayOrigin}/api/v1/assistant/sessions`, { method: 'POST', headers: { authorization: 'Bearer not.a.jwt', 'content-type': 'application/json' }, body: '{}' });
+    harness.clearObservations();
+    const malformed = await fetch(`${harness.gatewayOrigin}/api/v1/assistant/sessions`, { method: 'POST', headers: { authorization: 'Bearer not.a.jwt', 'content-type': 'application/json', 'x-request-id': 'phase8-redaction-malformed' }, body: '{}' });
     const unboundToken = await issue(harness, 'phase8-redaction-unbound');
-    const resolution = await fetch(`${harness.gatewayOrigin}/api/v1/assistant/sessions`, { method: 'POST', headers: { authorization: `Bearer ${unboundToken}`, 'content-type': 'application/json' }, body: '{}' });
+    const unprofiled = await fetch(`${harness.gatewayOrigin}/api/v1/assistant/sessions`, { method: 'POST', headers: { authorization: `Bearer ${unboundToken}`, 'content-type': 'application/json', 'x-request-id': 'phase8-redaction-unprofiled' }, body: '{}' });
+    const resolutionToken = await issue(harness, binding.integrationId, { hostApp: 'other-host' });
+    const resolution = await fetch(`${harness.gatewayOrigin}/api/v1/assistant/sessions`, { method: 'POST', headers: { authorization: `Bearer ${resolutionToken}`, 'content-type': 'application/json', 'x-request-id': 'phase8-redaction-resolution' }, body: '{}' });
     expect(malformed.status).toBe(401);
+    expect(unprofiled.status).toBe(401);
     expect(resolution.status).toBe(403);
-    const [malformedBody, resolutionBody] = await Promise.all([malformed.json(), resolution.json()]);
-    const gatewayAudit = await harness.prisma.gatewayIdentityAuditEvent.findMany();
+    const [malformedBody, unprofiledBody, resolutionBody] = await Promise.all([malformed.json(), unprofiled.json(), resolution.json()]);
+    expect(malformedBody).toEqual({ statusCode: 401, code: 'UPSTREAM_IDENTITY_INVALID', message: 'Upstream identity is invalid.' });
+    expect(unprofiledBody).toEqual({ statusCode: 401, code: 'UPSTREAM_IDENTITY_INVALID', message: 'Upstream identity is invalid.' });
+    expect(resolutionBody).toEqual({ statusCode: 403, code: 'IDENTITY_ISSUANCE_DENIED', message: 'Identity issuance cannot be completed.' });
+    const gatewayAudit = await harness.prisma.gatewayIdentityAuditEvent.findMany({
+      where: { requestId: { in: ['phase8-redaction-unprofiled', 'phase8-redaction-resolution'] } }
+    });
     assertNoSensitiveLeaks([
       ['upstream-denial', { body: malformedBody, headers: Object.fromEntries(malformed.headers), cookie: malformed.headers.get('set-cookie'), location: malformed.headers.get('location') }],
+      ['unprofiled-denial', { body: unprofiledBody, headers: Object.fromEntries(unprofiled.headers), cookie: unprofiled.headers.get('set-cookie'), location: unprofiled.headers.get('location') }],
       ['resolution-denial', { body: resolutionBody, headers: Object.fromEntries(resolution.headers), cookie: resolution.headers.get('set-cookie'), location: resolution.headers.get('location') }],
       ['gateway-audit', gatewayAudit], ['gateway-logs', harness.gatewayLogs], ['backend-logs', harness.backendLogs]
-    ], secretCategories(unboundToken, undefined, harness.signingFixture.privatePem, undefined));
-    expect(gatewayAudit.some((event) => event.eventType === 'identity_resolution_denied')).toBe(true);
+    ], [
+      ...secretCategories(unboundToken, undefined, harness.signingFixture.privatePem, undefined),
+      ...secretCategories(resolutionToken, undefined, harness.signingFixture.privatePem, undefined)
+    ]);
+    expect(gatewayAudit.some((event) => event.requestId === 'phase8-redaction-unprofiled' &&
+      event.eventType === 'identity_resolution_denied')).toBe(false);
+    expect(gatewayAudit.filter((event) => event.requestId === 'phase8-redaction-resolution' &&
+      event.eventType === 'identity_resolution_denied')).toEqual([expect.objectContaining({
+      requestId: 'phase8-redaction-resolution', eventType: 'identity_resolution_denied', outcome: 'denied',
+      reasonCode: 'identity_issuance_denied'
+    })]);
   });
 
   it('projects a real Backend listener outage as safe BACKEND_UNAVAILABLE without leaking the internal credential', async () => {
@@ -93,8 +112,9 @@ describe('Gateway identity/token non-exposure E2E (T074)', () => {
   });
 });
 
-async function issue(harness: GatewayBackendTrustChainHarness, integrationId: string): Promise<string> {
-  return harness.upstreamAuthority.issue({ integrationId, ...identity });
+async function issue(harness: GatewayBackendTrustChainHarness, integrationId: string,
+  overrides: Readonly<{ hostApp?: string }> = {}): Promise<string> {
+  return harness.upstreamAuthority.issue({ integrationId, ...identity, ...overrides });
 }
 
 async function readChunks(body: ReadableStream<Uint8Array> | null): Promise<string[]> {

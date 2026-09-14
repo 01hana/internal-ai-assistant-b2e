@@ -24,7 +24,7 @@ describe('Identity Bridge exchange controller', () => {
   });
 
   it.each([
-    ...['entryId', 'UUID_Entry', 'selectedEntry', 'integrationSelector', 'customerId', 'integration_id', 'host_app', 'issuer', 'audience', 'roles', 'permissionScopes', 'provider', 'endpoint', 'MenuDetail', 'claims', 'refreshToken']
+    ...['entryId', 'UUID_Entry', 'selectedEntry', 'integrationSelector', 'customerId', 'integration_id', 'host_app', 'issuer', 'audience', 'roles', 'permissionScopes', 'provider', 'endpoint', 'MenuDetail', 'claims', 'refreshToken', 'connectorContextRef', 'connectorInstanceId', 'bootstrapProfileKey']
       .map((field) => [`authority body ${field}`, 'Bearer native-token', { [field]: 'browser-choice' }]),
     ['non-object body', 'Bearer native-token', 'body'],
     ['wrong scheme', 'Basic native-token', {}],
@@ -36,6 +36,17 @@ describe('Identity Bridge exchange controller', () => {
   it('accepts a genuinely absent body', async () => {
     const service = { exchange: jest.fn().mockResolvedValue({ accessToken: 'canonical-token', tokenType: 'Bearer', expiresIn: 300 }) };
     await expect(new ExchangeController(service as never).exchange('Bearer native-token', requestId, undefined)).resolves.toEqual({ accessToken: 'canonical-token', tokenType: 'Bearer', expiresIn: 300 });
+  });
+
+  it('returns only the paired additive connector context fields supplied by the trusted service', async () => {
+    const service = { exchange: jest.fn().mockResolvedValue({
+      accessToken: 'canonical-token', tokenType: 'Bearer', expiresIn: 300,
+      connectorContextRef: 'ccr_trusted_transient_reference', connectorContextExpiresIn: 60
+    }) };
+    await expect(new ExchangeController(service as never).exchange('Bearer native-token', requestId, {})).resolves.toEqual({
+      accessToken: 'canonical-token', tokenType: 'Bearer', expiresIn: 300,
+      connectorContextRef: 'ccr_trusted_transient_reference', connectorContextExpiresIn: 60
+    });
   });
 
   it.each([undefined, '', '   '])('returns generic 401 for a missing credential', async (authorization) => {

@@ -1,7 +1,7 @@
 # Tasks: Feature 009 — Productized Business Connector Runtime
 
 **Input**: Accepted `spec.md`, `design.md`, and `plan.md` approved for Phase 1 implementation.
-**Status**: Accepted — Phase 1 baseline through Phase 7 central dark-transport gate completed. T001–T067 are complete; Phase 8 is unexecuted.
+**Status**: Accepted — Phase 1 through Phase 8 completed and awaiting human review before Phase 9.
 
 ```text
 PHASE1_EXECUTED=YES
@@ -15,9 +15,12 @@ T001_T057_COMPLETE=YES
 PHASE6_EXECUTED=YES
 T001_T067_COMPLETE=YES
 PHASE7_EXECUTED=YES
-PHASE8_EXECUTED=NO
-FIRST_UNEXECUTED_TASK=T068
-NEXT_ACTION=EXECUTE_PHASE8
+T001_T078_COMPLETE=YES
+T001_T080_COMPLETE=YES
+PHASE8_EXECUTED=YES
+PHASE9_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T081
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 ```
 **Scope**: Implement the reusable two-sided connector runtime, executable Synthetic Customer B portability fixture, removable Shinmone reference slice, and Shinmone-removal gate through the existing Feature 008 path. Feature 007 is a completed read-only predecessor; Phase 8 is `FEATURE009_IMPLEMENTATION_CONSUMING_ACCEPTED_FEATURE007_AMENDMENT`, never Feature 007 reimplementation.
 **Test rule**: Every meaningful new contract or behavior starts with an authentic RED against current code, followed by the narrow GREEN and the phase checkpoint. Never manufacture RED by breaking production code.
@@ -1679,83 +1682,380 @@ NEXT_ACTION=EXECUTE_PHASE8
 **Independent test**: Stage 2 is impossible before MenuDetail/admission and sends the exact bearer once over the fixed secure binding transport afterward; every failure returns no reference safely.
 **Route relationship**: `ConnectorBindingClient` consumes the Phase 4 Customer-local `POST /v1/internal/connector-bindings` endpoint; Phase 8 owns only the Bridge HTTPS client and exchange composition and must not implement another binding mint service.
 
-- [ ] T068 [RED] [US4] [IDENTITY-BRIDGE] Add the outer failing amended Stage 2 acceptance regression.
+- [X] T068 [RED] [US4] [IDENTITY-BRIDGE] Add the outer failing amended Stage 2 acceptance regression.
   - Files: `apps/identity-bridge/test/connector-binding/stage2-acceptance.spec.ts`, existing exchange fixtures read-only unless the test requires additive setup.
   - Depends on: T067.
   - Validation: Run against current code and preserve failure caused by the absent post-admission Connector Runtime handoff, while existing Stage 1 continues passing.
   - Stop: Do not edit Feature 007 documents/tasks/history or manufacture failure by breaking MenuDetail/admission.
 
-- [ ] T069 [RED] [US4] [IDENTITY-BRIDGE] Add failing immutable binding destination and test-mode configuration tests.
+- [X] T069 [RED] [US4] [IDENTITY-BRIDGE] Add failing immutable binding destination and test-mode configuration tests.
   - Files: `apps/identity-bridge/test/connector-binding/binding-config.spec.ts`, `test/connector-binding/binding-destination-policy.spec.ts`.
   - Depends on: T068.
   - Validation: Cover the `BRIDGE_BINDING_TRANSPORT_V1` exact HTTPS URI/host/port/path/query, explicit address policy, HTTP/userinfo/fragment/blank/wildcard/caller URI rejection, production loopback denial, and test-only loopback TLS.
   - Stop: No Browser/native claim/request/reference field may change any destination component.
 
-- [ ] T070 [GREEN] [US4] [IDENTITY-BRIDGE] Implement immutable binding configuration and exact address policy.
+- [X] T070 [GREEN] [US4] [IDENTITY-BRIDGE] Implement immutable binding configuration and exact address policy.
   - Files: `apps/identity-bridge/src/connector-binding/**`, narrow `src/config/bridge-config.service.ts` integration, environment examples only if required by accepted deployment config.
   - Depends on: T069.
   - Validation: Make T069 pass; enforce `BRIDGE_BINDING_REQUEST_TIMEOUT_MS=2000` and reject test policy outside enforced test mode.
   - Stop: No HTTP fallback, generic proxy, Customer authentication redesign, or staging-ready test fixture.
 
-- [ ] T071 [RED] [US4] [IDENTITY-BRIDGE] Add failing Bridge binding service-proof and exact-body tests.
+- [X] T071 [RED] [US4] [IDENTITY-BRIDGE] Add failing Bridge binding service-proof and exact-body tests.
   - Files: `apps/identity-bridge/test/connector-binding/binding-service-auth.spec.ts`.
   - Depends on: T070.
   - Validation: Cover Shinmone `assistant-connector-binding+jwt`, RS256, dedicated issuer/audience/provider/key, 30-second proof, one-use `jti`, exact raw-body SHA-256, altered bytes, wrong context, shared-key rejection, and incompatibility with central/Customer-B profiles.
   - Stop: Do not reuse canonical identity/JWKS keys or central invocation keys.
 
-- [ ] T072 [GREEN] [US4] [IDENTITY-BRIDGE] Implement the separate binding signer and single-serialization proof builder.
+- [X] T072 [GREEN] [US4] [IDENTITY-BRIDGE] Implement the separate binding signer and single-serialization proof builder.
   - Files: `apps/identity-bridge/src/connector-binding/**`.
   - Depends on: T071.
   - Validation: Make T071 pass with file-backed active key and exact bytes preserved for send.
   - Stop: Service proof supplies authentication/integrity only; HTTPS confidentiality remains mandatory.
 
-- [ ] T073 [RED] [US4] [IDENTITY-BRIDGE] Add failing HTTPS binding client success and bounds tests.
+- [X] T073 [RED] [US4] [IDENTITY-BRIDGE] Add failing HTTPS binding client success and bounds tests.
   - Files: `apps/identity-bridge/test/connector-binding/binding-client.spec.ts`.
   - Depends on: T072.
   - Validation: Use deterministic TLS against the Phase 4 binding route/app harness to require `BRIDGE_BINDING_TRANSPORT_V1`, exact route, JSON, absent content encoding, 16,384-byte request, 4,096-byte response, and one successful reference response.
   - Stop: HTTP must remain rejected even under test mode.
 
-- [ ] T074 [GREEN] [US4] [IDENTITY-BRIDGE] Implement the bounded HTTPS-only `ConnectorBindingClient` success path.
+- [X] T074 [GREEN] [US4] [IDENTITY-BRIDGE] Implement the bounded HTTPS-only `ConnectorBindingClient` success path.
   - Files: `apps/identity-bridge/src/connector-binding/**`, narrow Bridge module composition.
   - Depends on: T073.
   - Validation: Make T073 pass with exact configured URI, pinned connection, TLS certificate/hostname verification, and response validation.
   - Stop: Do not call the client from `/identity/exchange` yet or implement a duplicate Bridge-side binding mint service.
 
-- [ ] T075 [RED] [US4] [IDENTITY-BRIDGE] Add failing binding transport attack, timeout, and cancellation tests.
+- [X] T075 [RED] [US4] [IDENTITY-BRIDGE] Add failing binding transport attack, timeout, and cancellation tests.
   - Files: `apps/identity-bridge/test/connector-binding/binding-transport-security.spec.ts`.
   - Depends on: T074.
   - Validation: Cover A/AAAA/all addresses, mapped IPv6, rebinding, wrong hostname/cert, redirect, proxy env, 2,000 ms timeout, socket/body abort, retry/alternate endpoint/second-send counters, and bearer sentinel capture.
   - Stop: Do not weaken TLS, inherit a proxy, resend, redirect, or use another endpoint.
 
-- [ ] T076 [GREEN] [US4] [IDENTITY-BRIDGE] Implement fail-closed binding transport cancellation and egress controls.
+- [X] T076 [GREEN] [US4] [IDENTITY-BRIDGE] Implement fail-closed binding transport cancellation and egress controls.
   - Files: `apps/identity-bridge/src/connector-binding/**`.
   - Depends on: T075.
   - Validation: Make T075 pass with `AbortController`, socket destruction, zero retry/redirect/proxy/fallback/alternate destination/second bearer send.
   - Stop: Timeout must yield no accepted response or `connectorContextRef`.
 
-- [ ] T077 [RED] [US4] [IDENTITY-BRIDGE] Add failing exchange ordering, authority, RefreshToken, failure, and negative-surface tests.
+- [X] T077 [RED] [US4] [IDENTITY-BRIDGE] Add failing exchange ordering, authority, RefreshToken, failure, and negative-surface tests.
   - Files: `apps/identity-bridge/test/exchange/exchange.service.spec.ts`, `test/exchange/exchange.controller.spec.ts`, `test/exchange/redaction.spec.ts`, `test/connector-binding/stage2-acceptance.spec.ts`.
   - Depends on: T076.
   - Validation: Require MenuDetail/admission first; exact same AccessToken once; no RefreshToken; Shinmone IDX provider payload/profile carrying accepted Entry/native expiry evidence; provider-owned volatile handle state; Browser non-authority; safe failure/no reference; and no generic-binding/central/evidence/model/SSE leakage.
   - Stop: Connector Runtime cannot become identity, Entry, permission, Customer, HostApp, or Gateway authority.
 
-- [ ] T078 [GREEN] [US4] [IDENTITY-BRIDGE] Compose the post-admission Stage 2 handoff and additive exchange response.
+- [X] T078 [GREEN] [US4] [IDENTITY-BRIDGE] Compose the post-admission Stage 2 handoff and additive exchange response.
   - Files: `apps/identity-bridge/src/exchange/**`, `src/connector-binding/**`, narrow `src/bridge.module.ts` composition.
   - Depends on: T077.
   - Validation: Make T077 and outer T068 pass; return the unchanged canonical JWT plus reference metadata only after a successful mint.
   - Stop: No Feature 007 claim/permission/JWKS/session redesign and no native bearer outside the two allowed destinations.
 
-- [ ] T079 [VERIFY] [US4] [IDENTITY-BRIDGE] Verify Feature 007 compatibility and immutable historical evidence.
+- [X] T079 [VERIFY] [US4] [IDENTITY-BRIDGE] Verify Feature 007 compatibility and immutable historical evidence.
   - Files: Existing Bridge MenuDetail/admission/permission/signing/JWKS/exchange suites, Gateway/session regressions, Feature 007 documents and `tasks.md` read-only.
   - Depends on: T078.
   - Validation: Run all Bridge tests/build and focused Gateway/session suites; compare protected hashes; scan central, reference, EvidenceRef, GroundedAnswerInput, model, SSE, public, log, audit, and telemetry surfaces.
   - Stop: `FEATURE007_HISTORICAL_TASKS_REWRITTEN` must remain `NO`; any authority drift is `HUMAN_REQUIRED`.
 
-- [ ] T080 [CHECKPOINT] [US4] [IDENTITY-BRIDGE] Verify and record the Phase 8 accepted-amendment gate.
+- [X] T080 [CHECKPOINT] [US4] [IDENTITY-BRIDGE] Verify and record the Phase 8 accepted-amendment gate.
   - Files: `specs/009-productized-business-connector-runtime/tasks.md` evidence only.
   - Depends on: T070, T072, T074, T076, T078, T079.
   - Validation: Record every Feature 007 amendment and `BRIDGE_BINDING_*` marker plus `SHINMONE_BINDING_BOOTSTRAP_PROFILE=BRIDGE_BINDING_TRANSPORT_V1` and `GENERIC_BINDING_ROUTE_PROFILE=BINDING_BOOTSTRAP_ONLY`.
   - Stop: Phase 9 cannot start unless MenuDetail remains authority, the handoff is exact/secure/one-shot, no RefreshToken or central credential exists, and Feature 007 history is untouched.
+
+### Phase 8 Partial Execution Evidence — 2026-09-14
+
+T068–T078 completed in the accepted RED → GREEN order. T079 then stopped on a reproducible pre-existing Gateway redaction baseline failure. No Gateway, Backend, Feature 007/008, shared-contract, Customer Runtime, Prisma, public Assistant/SSE/SDK, or protected Feature 009 source was changed to bypass it. T080 remains unchecked and Phase 9 was not entered.
+
+Authentic RED evidence:
+
+```text
+T068: stage2-acceptance.spec.ts exited 1 before production changes; the ConnectorBindingCoordinator module was absent and ExchangeService accepted only six constructor arguments.
+T069: binding configuration/destination suites exited 1 before production changes; connectorBinding configuration and its semantic destination-policy module were absent.
+T071: binding-service-auth.spec.ts exited 1 before production changes; the separate binding service-auth signer module was absent.
+T073: binding-client.spec.ts exited 1 before production changes; the HTTPS binding client module was absent (1 failed suite, 0 tests).
+T075: binding-transport-security.spec.ts exposed two failures against the initial success-only client: invalid HTTP status 600 was accepted and the first cancellation fixture aborted before request creation (1 suite; 2 failed, 12 passed). The fixture was synchronized to the actual request-creation boundary, while production was narrowed to reject invalid statuses.
+T077: exchange-stage2.spec.ts plus the outer acceptance suite exited 1 before exchange composition; the coordinator module was absent and ExchangeService still accepted six arguments (2 failed suites, 0 tests).
+```
+
+Focused GREEN evidence:
+
+```text
+T070: binding-config.spec.ts + binding-destination-policy.spec.ts = 2 suites, 24 tests passed.
+T072: signer plus adjacent configuration/policy = 3 suites, 27 tests passed.
+T074: real Phase 4 Customer Runtime binding-route TLS round trip = 1 suite, 2 tests passed. The sandboxed listener attempt produced only listen EPERM; the identical approved local-only command passed.
+T076: binding-client.spec.ts + binding-transport-security.spec.ts = 2 suites, 16 tests passed; later TLS hostname/certificate and exact 2,000 ms lifecycle coverage increased binding-client.spec.ts to 5 passing tests.
+T078: exchange-stage2.spec.ts + stage2-acceptance.spec.ts = 2 suites, 4 tests passed.
+Full Identity Bridge regression = 41 suites, 375 tests passed.
+Identity Bridge build = PASS.
+Identity Bridge source/test typecheck = PASS.
+Customer Runtime regression = 32 suites, 314 tests passed; build/typecheck = PASS.
+Shared connector contract regression = 10 suites, 68 tests passed; build/typecheck = PASS.
+```
+
+T079 blocker evidence:
+
+```text
+npm run test:e2e -- --runInBand --runTestsByPath test/e2e/gateway-backend-trust-chain.e2e-spec.ts test/e2e/gateway-customer-isolation.e2e-spec.ts test/e2e/gateway-identity-negative.e2e-spec.ts test/e2e/gateway-identity-redaction.e2e-spec.ts
+RESULT=FAIL: 3 suites passed, 1 suite failed; 17 tests passed, 1 failed.
+FAILURE=test/e2e/gateway-identity-redaction.e2e-spec.ts expected the unbound integration token response to be HTTP 403 but received HTTP 401.
+
+npm run test:e2e -- --runInBand --runTestsByPath test/e2e/gateway-identity-redaction.e2e-spec.ts
+RESULT=FAIL: identical focused rerun; 1 suite failed, 3 tests passed, 1 failed with the same expected-403/received-401 assertion.
+ROOT_CAUSE=The shared Gateway harness provisions RegisteredUpstreamTrustProfile rows only for its explicit IntegrationBinding fixtures. The test issues a token for phase8-redaction-unbound without provisioning a corresponding trust profile, so CandidateTrustProfileResolver returns no candidate and MultiProfileUpstreamTokenVerifier correctly produces the 401 UPSTREAM_IDENTITY_INVALID boundary before CanonicalIdentityResolver can produce the expected 403 binding denial.
+CLASSIFICATION=PRE_EXISTING_STALE_GATEWAY_TEST_HARNESS
+PHASE8_CAUSATION=NO
+REPAIR_ATTEMPTED=NO
+```
+
+Exact Phase 8-attributed changed files at the T079 stop:
+
+```text
+apps/identity-bridge/package.json
+apps/identity-bridge/src/config/bridge-config.service.ts
+apps/identity-bridge/src/connector-binding/connector-binding-destination.policy.ts
+apps/identity-bridge/src/connector-binding/connector-binding-service-auth.signer.ts
+apps/identity-bridge/src/connector-binding/connector-binding.client.ts
+apps/identity-bridge/src/connector-binding/connector-binding.coordinator.ts
+apps/identity-bridge/src/connector-binding/connector-binding.module.ts
+apps/identity-bridge/src/exchange/exchange.module.ts
+apps/identity-bridge/src/exchange/exchange.service.ts
+apps/identity-bridge/src/health/readiness.service.ts
+apps/identity-bridge/test/connector-binding/binding-client.spec.ts
+apps/identity-bridge/test/connector-binding/binding-config.spec.ts
+apps/identity-bridge/test/connector-binding/binding-destination-policy.spec.ts
+apps/identity-bridge/test/connector-binding/binding-fixtures.ts
+apps/identity-bridge/test/connector-binding/binding-service-auth.spec.ts
+apps/identity-bridge/test/connector-binding/binding-transport-security.spec.ts
+apps/identity-bridge/test/connector-binding/exchange-stage2.spec.ts
+apps/identity-bridge/test/connector-binding/stage2-acceptance.spec.ts
+apps/identity-bridge/test/exchange/exchange.controller.spec.ts
+apps/identity-bridge/test/exchange/redaction.spec.ts
+apps/identity-bridge/test/health/readiness.spec.ts
+apps/identity-bridge/test/jwks/jwks-readiness.spec.ts
+apps/identity-bridge/test/security/isolation.spec.ts
+specs/009-productized-business-connector-runtime/tasks.md
+```
+
+Protected hashes remained unchanged through the stop:
+
+```text
+FEATURE009_SPEC_SHA256=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73
+FEATURE009_DESIGN_SHA256=bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb
+FEATURE009_PLAN_SHA256=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1
+FEATURE007_SPEC_SHA256=030f899f46d94d15b1357fb62de599e578a22cae5c388ddd35f57f194fa997cd
+FEATURE007_DESIGN_SHA256=22439db8e4d7154d24311e41ecdea05c22d55edca159076779024a89c33be369
+FEATURE007_PLAN_SHA256=cf3a2d5c36345eea6d61b7c26ce9cda20a4503cbc1a6b748a478fda3b0c9f9ea
+FEATURE007_TASKS_SHA256=eb6f7c4cded0e704fff9ef9e46dda7e4d6c79ab22da86502b8f33c0692b3b269
+FEATURE008_SPEC_SHA256=59fb07a7d885d8b754bc23c1e8adf89c3100fab4eee9c753381010c0822b1cce
+FEATURE008_DESIGN_SHA256=d50bb4655b94a6fcd3dc4f56baa46609bce795d91de9b812a0fbfd96eaaa83b4
+FEATURE008_PLAN_SHA256=53e32cc7a9b19a9a61304a999388758e8b288aec4197fb513e6b5de0f7772833
+FEATURE008_TASKS_SHA256=4859a4052d9510e9ee9cd8de46588eade96f0247e87c0a61b7e3b430793a6b8f
+PRISMA_SCHEMA_SHA256=e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733
+SPECS_DS_STORE_SHA256=3997f3af185d3d6ac31d493a98e75ee397088b6fcf966ecee095d1264bd00e51
+```
+
+```text
+FEATURE009_PHASE8=BLOCKED_AT_T079
+FEATURE009_IMPLEMENTATION_CONSUMING_ACCEPTED_FEATURE007_AMENDMENT=YES
+FEATURE007_REIMPLEMENTED=NO
+MENUDETAIL_REMAINS_AUTHORITY=YES
+IDENTITY_ADMISSION_PRECEDES_STAGE2=YES
+BRIDGE_BINDING_TRANSPORT_PROFILE=BRIDGE_BINDING_TRANSPORT_V1
+BRIDGE_BINDING_HTTPS_ONLY=YES
+BRIDGE_BINDING_TIMEOUT_MS=2000
+BRIDGE_BINDING_RETRY=NO
+BRIDGE_BINDING_REDIRECT=NO
+BRIDGE_BINDING_PROXY_INHERITANCE=NO
+BRIDGE_BINDING_TLS_HOSTNAME_VERIFY=YES
+CENTRAL_NATIVE_CREDENTIAL_ALLOWED=NO
+REFRESH_TOKEN_HANDOFF_ALLOWED=NO
+SHINMONE_BINDING_BOOTSTRAP_PROFILE=BRIDGE_BINDING_TRANSPORT_V1
+GENERIC_BINDING_ROUTE_PROFILE=BINDING_BOOTSTRAP_ONLY
+T068_T078_COMPLETE=YES
+T079=BLOCKED
+T080=BLOCKED
+T081_EXECUTED=NO
+PHASE8_EXECUTED=NO
+PHASE9_EXECUTED=NO
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
+
+### Phase 8 Human-Gate Hardening — 2026-09-14
+
+Human review accepted T068–T078 and identified one dynamic admitted-context defect plus the separately pre-existing stale Gateway redaction expectation recorded above. This append-only hardening preserves the original Phase 8 RED/GREEN and T079 blocker evidence unchanged, changes no Feature 007 history or Feature 008 authority, and does not enter T081 or Phase 9.
+
+Dynamic actor/organization authentic RED and GREEN evidence:
+
+```text
+npm --prefix apps/identity-bridge test -- --runInBand --runTestsByPath test/connector-binding/binding-config.spec.ts test/connector-binding/binding-service-auth.spec.ts
+RED_RESULT=2 suites failed; 8 tests failed, 13 passed, 21 total
+RED_CAUSE=Base-only binding context was rejected and the signer required one deployment-static actor/organization.
+GREEN_RESULT=2 suites passed; 21 tests passed
+
+npm --prefix apps/customer-connector-runtime test -- --runInBand --runTestsByPath test/service-auth/verifier-profiles.spec.ts test/bindings/binding-security.spec.ts
+RED_RESULT=1 suite failed, 1 passed; 2 tests failed, 26 passed, 28 total
+RED_CAUSE=Base-only bootstrap profiles rejected valid signed actor/organization claims.
+GREEN_RESULT=2 suites passed; 28 tests passed
+
+npm --prefix apps/identity-bridge test -- --runInBand --runTestsByPath test/connector-binding/binding-client.spec.ts
+SANDBOX_RESULT=1 suite failed only from four listen EPERM cases; 2 tests passed
+IDENTICAL_LOCAL_ONLY_RESULT=1 suite passed; 6 tests passed
+USER_A_BINDING_MINT=PASS
+USER_B_BINDING_MINT=PASS
+MULTI_USER_DISTINCT_REFERENCES=PASS
+CROSS_ACTOR_REFERENCE_USE=DENIED
+DEPLOYMENT_CONFIG_CHANGED_BETWEEN_USERS=NO
+```
+
+The Bridge configuration now treats actor and organization only as optional narrowing constraints. The signer derives both proof and body context from the admitted identity for each request and keeps the exact Stage 1 native token only in the provider payload. Customer Runtime bootstrap verification keeps the four base deployment dimensions exact while allowing signed actor/organization claims when the registered profile does not narrow them; central-invocation matching is unchanged. Proof/body disagreement still fails before provider creation or mint, and the provider plus binding store receive the authenticated admitted context.
+
+Gateway stale-test-only repair and T079 results:
+
+```text
+npm run test:e2e -- --runInBand --runTestsByPath test/e2e/gateway-identity-redaction.e2e-spec.ts
+FIRST_MAINTENANCE_RUN=compile-time test helper literal narrowing; 1 failed suite, 0 tests
+SECOND_MAINTENANCE_RUN=authentication audit was present as expected but the assertion was overly broad; 1 failed, 3 passed
+FINAL_RESULT=1 suite passed; 4 tests passed
+GATEWAY_UNPROFILED_TOKEN_STATUS=401
+GATEWAY_UNPROFILED_TOKEN_CODE=UPSTREAM_IDENTITY_INVALID
+GATEWAY_UNPROFILED_IDENTITY_RESOLUTION_AUDIT=NO
+GATEWAY_RESOLUTION_DENIAL_STATUS=403
+GATEWAY_RESOLUTION_DENIAL_CODE=IDENTITY_ISSUANCE_DENIED
+GATEWAY_RESOLUTION_DENIAL_AUDIT=PASS
+GATEWAY_PRODUCTION_FILES_CHANGED=NONE
+GATEWAY_PRODUCTION_TRUST_POLICY_CHANGED=NO
+
+npm run test:e2e -- --runInBand --runTestsByPath test/e2e/gateway-backend-trust-chain.e2e-spec.ts test/e2e/gateway-customer-isolation.e2e-spec.ts test/e2e/gateway-identity-negative.e2e-spec.ts test/e2e/gateway-identity-redaction.e2e-spec.ts
+Test Suites: 4 passed, 4 total
+Tests: 18 passed, 18 total
+
+npm run test:contract -- --runInBand --runTestsByPath test/contract/assistant-sessions.contract.spec.ts test/contract/gateway-internal-identity.contract.spec.ts
+Test Suites: 2 passed, 2 total
+Tests: 19 passed, 19 total
+
+RUN_CUSTOMER_US1_TESTS=true npm run test:integration -- --runInBand --runTestsByPath test/integration/customer-session-isolation.spec.ts test/integration/secret-redaction.spec.ts
+Test Suites: 2 passed, 2 total
+Tests: 6 passed, 6 total
+```
+
+Full component regression and build/typecheck evidence:
+
+```text
+npm --prefix apps/identity-bridge test -- --runInBand
+SANDBOX_RESULT=40 suites and 376 tests passed; one suite/four tests failed only from listen EPERM
+IDENTICAL_LOCAL_ONLY_RESULT=41 suites passed; 380 tests passed
+IDENTITY_BRIDGE_BUILD=PASS
+IDENTITY_BRIDGE_TYPECHECK=PASS
+
+npm --prefix apps/customer-connector-runtime test -- --runInBand
+SANDBOX_RESULT=27 suites and 315 tests passed; five suites/eight tests failed only from listen EPERM
+IDENTICAL_LOCAL_ONLY_RESULT=32 suites passed; 323 tests passed
+CUSTOMER_RUNTIME_BUILD=PASS
+CUSTOMER_RUNTIME_TYPECHECK=PASS
+
+npm --prefix packages/connector-runtime-contract test -- --runInBand
+Test Suites: 10 passed, 10 total
+Tests: 68 passed, 68 total
+SHARED_CONTRACT_BUILD=PASS
+SHARED_CONTRACT_TYPECHECK=PASS
+
+git diff --check
+RESULT=PASS
+```
+
+Protected hashes remained unchanged:
+
+```text
+FEATURE009_SPEC_SHA256=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73
+FEATURE009_DESIGN_SHA256=bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb
+FEATURE009_PLAN_SHA256=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1
+FEATURE007_SPEC_SHA256=030f899f46d94d15b1357fb62de599e578a22cae5c388ddd35f57f194fa997cd
+FEATURE007_DESIGN_SHA256=22439db8e4d7154d24311e41ecdea05c22d55edca159076779024a89c33be369
+FEATURE007_PLAN_SHA256=cf3a2d5c36345eea6d61b7c26ce9cda20a4503cbc1a6b748a478fda3b0c9f9ea
+FEATURE007_TASKS_SHA256=eb6f7c4cded0e704fff9ef9e46dda7e4d6c79ab22da86502b8f33c0692b3b269
+FEATURE008_SPEC_SHA256=59fb07a7d885d8b754bc23c1e8adf89c3100fab4eee9c753381010c0822b1cce
+FEATURE008_DESIGN_SHA256=d50bb4655b94a6fcd3dc4f56baa46609bce795d91de9b812a0fbfd96eaaa83b4
+FEATURE008_PLAN_SHA256=53e32cc7a9b19a9a61304a999388758e8b288aec4197fb513e6b5de0f7772833
+FEATURE008_TASKS_SHA256=4859a4052d9510e9ee9cd8de46588eade96f0247e87c0a61b7e3b430793a6b8f
+PRISMA_SCHEMA_SHA256=e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733
+SPECS_DS_STORE_SHA256=3997f3af185d3d6ac31d493a98e75ee397088b6fcf966ecee095d1264bd00e51
+PRISMA_MIGRATIONS_CHANGED=NO
+```
+
+Human-gate hardening production files:
+
+```text
+apps/identity-bridge/src/config/bridge-config.service.ts
+apps/identity-bridge/src/connector-binding/connector-binding-service-auth.signer.ts
+apps/customer-connector-runtime/src/service-auth/service-proof.verifier.ts
+```
+
+Human-gate hardening test files:
+
+```text
+apps/identity-bridge/test/connector-binding/binding-fixtures.ts
+apps/identity-bridge/test/connector-binding/binding-config.spec.ts
+apps/identity-bridge/test/connector-binding/binding-service-auth.spec.ts
+apps/identity-bridge/test/connector-binding/binding-client.spec.ts
+apps/customer-connector-runtime/test/service-auth/verifier-profiles.spec.ts
+apps/customer-connector-runtime/test/bindings/binding-security.spec.ts
+test/e2e/gateway-identity-redaction.e2e-spec.ts
+```
+
+Final Phase 8 accepted-amendment gate:
+
+```text
+FEATURE009_PHASE8_HUMAN_GATE_HARDENING=PASS
+FEATURE009_PHASE8=PASS
+FEATURE009_IMPLEMENTATION_CONSUMING_ACCEPTED_FEATURE007_AMENDMENT=YES
+FEATURE007_REIMPLEMENTED=NO
+ADMITTED_ACTOR_RUNTIME_BINDING=PASS
+ADMITTED_ORGANIZATION_RUNTIME_BINDING=PASS
+MULTI_ACTOR_SAME_DEPLOYMENT=PASS
+MULTI_ORG_SAME_DEPLOYMENT=PASS
+STATIC_ACTOR_REQUIRED_BY_DEPLOYMENT=NO
+STATIC_ORGANIZATION_REQUIRED_BY_DEPLOYMENT=NO
+OPTIONAL_ACTOR_CONSTRAINT_NARROWS_ONLY=PASS
+OPTIONAL_ORGANIZATION_CONSTRAINT_NARROWS_ONLY=PASS
+BOOTSTRAP_BASE_CONTEXT_EXACT=PASS
+SIGNED_DYNAMIC_CONTEXT_BODY_EQUALITY=PASS
+CROSS_ACTOR_REFERENCE_USE=DENIED
+CROSS_PROFILE_ACCEPTANCE=NO
+MENUDETAIL_REMAINS_AUTHORITY=YES
+IDENTITY_ADMISSION_PRECEDES_STAGE2=YES
+SAME_NATIVE_TOKEN_STAGE2=YES
+REFRESH_TOKEN_HANDOFF=NO
+CENTRAL_NATIVE_CREDENTIAL=NO
+BRIDGE_BINDING_TRANSPORT_PROFILE=BRIDGE_BINDING_TRANSPORT_V1
+BRIDGE_BINDING_HTTPS_ONLY=YES
+BRIDGE_BINDING_TIMEOUT_MS=2000
+BRIDGE_BINDING_RETRY=NO
+BRIDGE_BINDING_REDIRECT=NO
+BRIDGE_BINDING_PROXY_INHERITANCE=NO
+BRIDGE_BINDING_TLS_HOSTNAME_VERIFY=YES
+SHINMONE_BINDING_BOOTSTRAP_PROFILE=BRIDGE_BINDING_TRANSPORT_V1
+GENERIC_BINDING_ROUTE_PROFILE=BINDING_BOOTSTRAP_ONLY
+GATEWAY_STALE_REDACTION_TEST_REPAIRED=YES
+GATEWAY_PRODUCTION_FILES_CHANGED=NONE
+GATEWAY_PRODUCTION_TRUST_POLICY_CHANGED=NO
+BRIDGE_FULL_REGRESSION=PASS
+CUSTOMER_RUNTIME_FULL_REGRESSION=PASS
+SHARED_CONTRACT_REGRESSION=PASS
+GATEWAY_T079_FOCUSED_REGRESSION=PASS
+BUILD_TYPECHECK=PASS
+GIT_DIFF_CHECK=PASS
+PROTECTED_HASHES=PASS
+FEATURE007_HISTORICAL_TASKS_REWRITTEN=NO
+FEATURE008_ACCEPTED_AUTHORITY_CHANGED=NO
+PRISMA_MODIFIED=NO
+SPEC_DESIGN_PLAN_MODIFIED=NO
+T068_T078_REMAIN_COMPLETE=YES
+T079=PASS
+T080=PASS
+T081_EXECUTED=NO
+PHASE8_EXECUTED=YES
+PHASE9_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T081
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
 
 ## Phase 9 — ProductizedBusinessConnectorAdapter Through Feature 008
 

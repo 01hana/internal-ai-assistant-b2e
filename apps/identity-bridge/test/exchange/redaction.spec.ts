@@ -27,10 +27,24 @@ describe('Identity Bridge exchange redaction boundary', () => {
     }
   });
 
+  it('releases an opaque connector reference without native or service-auth material', async () => {
+    const controller = new ExchangeController({ exchange: jest.fn().mockResolvedValue({
+      accessToken: 'canonical-jwt', tokenType: 'Bearer', expiresIn: 300,
+      connectorContextRef: 'ccr_safe_transient_reference', connectorContextExpiresIn: 60
+    }) } as never);
+    const response = await controller.exchange('Bearer native-access-token-sentinel', undefined, {});
+    expect(response).toEqual({
+      accessToken: 'canonical-jwt', tokenType: 'Bearer', expiresIn: 300,
+      connectorContextRef: 'ccr_safe_transient_reference', connectorContextExpiresIn: 60
+    });
+    expect(JSON.stringify(response)).not.toMatch(/native-access|service-proof|providerPayload|acceptedEntry|refresh/i);
+  });
+
   it('contains no logging, persistence, central-runtime, native-verification, or early-session surface', () => {
     const root = join(__dirname, '../../src');
     const sources = [
-      'exchange/exchange.controller.ts', 'exchange/exchange.service.ts', 'exchange/exchange.module.ts', 'exchange/redaction.ts'
+      'exchange/exchange.controller.ts', 'exchange/exchange.service.ts', 'exchange/exchange.module.ts', 'exchange/redaction.ts',
+      'connector-binding/connector-binding.client.ts', 'connector-binding/connector-binding.coordinator.ts'
     ].map((file) => readFileSync(join(root, file), 'utf8')).join('\n');
     expect(sources).not.toMatch(/console\.|logger|telemetry|trace|audit|persist|database|prisma|apps\/gateway|GatewayModule|ManagedIdentityExchangeModule|ManagedUpstreamTokenIssuer|IntegrationBinding|CustomerScope|createSession|ES512|NativeIdxJwtVerifier|IdxJwksVerifier/i);
     expect(sources).not.toMatch(/refreshToken|customerId|integrationSelector/);

@@ -135,9 +135,14 @@ function fresh(notBefore: unknown, expiresAt: unknown, now: number): boolean {
 
 function contextMatches(profile: RuntimeServiceProfileConfiguration, claims: Readonly<Record<string, unknown>>): boolean {
   const context = profile.trustedContext;
-  return claims.customer_id === context.customerId && claims.integration_id === context.integrationId &&
-    claims.host_app === context.hostApp && claims.connector_instance_id === context.connectorInstanceId &&
-    (context.organizationId === undefined ? claims.organization_id === undefined : claims.organization_id === context.organizationId) &&
+  const baseMatches = claims.customer_id === context.customerId && claims.integration_id === context.integrationId &&
+    claims.host_app === context.hostApp && claims.connector_instance_id === context.connectorInstanceId;
+  if (!baseMatches) return false;
+  if (profile.kind === 'binding-bootstrap') {
+    return (context.organizationId === undefined || claims.organization_id === context.organizationId) &&
+      (context.actorId === undefined || claims.actor_id === context.actorId);
+  }
+  return (context.organizationId === undefined ? claims.organization_id === undefined : claims.organization_id === context.organizationId) &&
     (context.actorId === undefined ? claims.actor_id === undefined : claims.actor_id === context.actorId);
 }
 

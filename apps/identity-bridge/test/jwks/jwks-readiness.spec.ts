@@ -15,8 +15,8 @@ describe('Bridge JWKS capability readiness', () => {
     try {
       const registry = app.get(BridgeReadinessRegistry);
       const readiness = app.get(BridgeReadinessService);
-      expect(registry.snapshot()).toEqual({ idxTransport: false, idxSemantics: false, signing: false, jwks: true, exchange: false });
-      expect(readiness.snapshot()).toMatchObject({ configurationValid: true, ready: false, missing: ['idxTransport', 'idxSemantics', 'signing', 'exchange'] });
+      expect(registry.snapshot()).toEqual({ idxTransport: false, idxSemantics: false, signing: false, jwks: true, connectorBinding: false, exchange: false });
+      expect(readiness.snapshot()).toMatchObject({ configurationValid: true, ready: false, missing: ['idxTransport', 'idxSemantics', 'signing', 'connectorBinding', 'exchange'] });
       expect(readiness.getPublicReadiness()).toMatchObject({ status: 'not_ready', productionReady: false });
     } finally {
       await app.close();

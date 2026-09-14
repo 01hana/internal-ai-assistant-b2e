@@ -91,4 +91,52 @@ describe('profile-isolated RS256 service-proof verification', () => {
     const verifier = new ConnectorServiceProofVerifier(new RuntimeServiceProfileRegistry([profiles.central.config]), now);
     await expect(verifier.verify('central-invocation', forged)).resolves.toEqual({ ok: false, code: 'CONNECTOR_AUTH_FAILED' });
   });
+
+  it.each([
+    ['actor-a', 'organization-a'],
+    ['actor-b', 'organization-b']
+  ])('accepts signed bootstrap actor %s and organization %s when the registered profile is base-context-only', async (actorId, organizationId) => {
+    const profiles = serviceProofFixtureSet();
+    const verifier = new ConnectorServiceProofVerifier(new RuntimeServiceProfileRegistry([profiles.bridge.config]), now);
+    const proof = await signServiceProof(profiles.bridge, { actor_id: actorId, organization_id: organizationId });
+    await expect(verifier.verify('binding-bootstrap', proof, profiles.bridge.config.profileKey)).resolves.toMatchObject({
+      ok: true,
+      value: { trustedContext: { actorId, organizationId } }
+    });
+  });
+
+  it('applies optional bootstrap actor and organization configuration only as exact narrowing constraints', async () => {
+    const profiles = serviceProofFixtureSet();
+    const constrained = {
+      ...profiles.bridge.config,
+      trustedContext: Object.freeze({
+        ...profiles.bridge.config.trustedContext,
+        actorId: 'actor-a',
+        organizationId: 'organization-a'
+      })
+    };
+    const constrainedProfile = { ...profiles.bridge, config: constrained };
+    const verifier = new ConnectorServiceProofVerifier(new RuntimeServiceProfileRegistry([constrained]), now);
+    await expect(verifier.verify('binding-bootstrap', await signServiceProof(constrainedProfile), constrained.profileKey))
+      .resolves.toMatchObject({ ok: true });
+    await expect(verifier.verify('binding-bootstrap', await signServiceProof(constrainedProfile, {
+      actor_id: 'actor-b'
+    }), constrained.profileKey)).resolves.toEqual({ ok: false, code: 'CONNECTOR_AUTH_FAILED' });
+    await expect(verifier.verify('binding-bootstrap', await signServiceProof(constrainedProfile, {
+      organization_id: 'organization-b'
+    }), constrained.profileKey)).resolves.toEqual({ ok: false, code: 'CONNECTOR_AUTH_FAILED' });
+  });
+
+  it.each([
+    ['Customer', { customer_id: 'other-customer' }],
+    ['integration', { integration_id: 'other-integration' }],
+    ['HostApp', { host_app: 'other-host' }],
+    ['connector instance', { connector_instance_id: 'other-instance' }]
+  ])('keeps bootstrap base-context %s exact', async (_label, override) => {
+    const profiles = serviceProofFixtureSet();
+    const verifier = new ConnectorServiceProofVerifier(new RuntimeServiceProfileRegistry([profiles.bridge.config]), now);
+    await expect(verifier.verify('binding-bootstrap', await signServiceProof(profiles.bridge, {
+      actor_id: 'actor-a', organization_id: 'organization-a', ...override
+    }), profiles.bridge.config.profileKey)).resolves.toEqual({ ok: false, code: 'CONNECTOR_AUTH_FAILED' });
+  });
 });
