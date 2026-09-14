@@ -83,6 +83,35 @@ describe('DataAdapter contract', () => {
 
     expect(acceptRegistration).toEqual(expect.any(Function));
   });
+
+  it('keeps productized execution authority out of DataAdapterExecuteInput', () => {
+    const acceptInput = (_input: DataAdapterExecuteInput): void => undefined;
+    const base: DataAdapterExecuteInput = {
+      requestId: HOST.requestId,
+      organizationId: HOST.organizationId,
+      actorId: HOST.actorId,
+      toolKey: OPERATION.canonicalToolKey,
+      arguments: OPERATION.arguments,
+      host: HOST,
+      operation: OPERATION,
+      transientConnectorContext: Object.freeze({ connectorContextRef: 'ccr_transient_only' })
+    };
+
+    acceptInput(base);
+    // @ts-expect-error ToolDefinition owns timeout authority; adapter input does not.
+    acceptInput({ ...base, timeoutMs: 5_000 });
+    // @ts-expect-error Trusted startup binding owns connector instance selection.
+    acceptInput({ ...base, connectorInstanceId: 'instance-browser-selected' });
+    // @ts-expect-error Destination never belongs to adapter execution input.
+    acceptInput({ ...base, destination: 'https://attacker.example' });
+    // @ts-expect-error Credentials never belong to adapter execution input.
+    acceptInput({ ...base, credential: 'secret' });
+
+    expect(Object.keys(base).sort()).toEqual([
+      'actorId', 'arguments', 'host', 'operation', 'organizationId', 'requestId',
+      'toolKey', 'transientConnectorContext'
+    ]);
+  });
 });
 
 const HOST: HostIntegrationContext = Object.freeze({

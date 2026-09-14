@@ -30,6 +30,13 @@ export class ProductizedBusinessConnectorTransportService {
     }catch{this.configured=false;}
   }
   readiness():Readonly<{status:'ready'|'not_ready';productionReady:boolean}>{return Object.freeze({status:this.configured?'ready':'not_ready',productionReady:this.configured&&this.options.allowTestLoopbackTls!==true});}
+  executionConstraints(selector: Parameters<ConnectorDeploymentRegistry['resolve']>[0]):Readonly<{ok:true;maxTransportMs:number;productionReady:boolean}>|Readonly<{ok:false}>{
+    if(!this.configured||!this.registry)return Object.freeze({ok:false});
+    const found=this.registry.resolve(selector);
+    return found.ok
+      ? Object.freeze({ok:true,maxTransportMs:found.value.maxTransportMs,productionReady:this.options.allowTestLoopbackTls!==true})
+      : Object.freeze({ok:false});
+  }
   async invoke(request:ConnectorInvocationRequestV1,signal:AbortSignal,remainingMs:number):Promise<InvokeResult>{
     if(!this.configured||!this.registry||!this.signer||!this.client)return unavailable();
     try{

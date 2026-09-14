@@ -85,5 +85,8 @@ describe('US4 tool failure safe response gate', () => {
     );
     expect(JSON.stringify(newAuditEvents)).not.toContain('Error:');
     expect(JSON.stringify(newReviewItems)).not.toContain('stack');
+    expect(JSON.stringify({ events, newAuditEvents, newReviewItems })).not.toMatch(
+      /connectorContextRef|ccr_|nativeAccessToken|service.?proof|providerPayload|RAW_LOCAL_RESULT/i
+    );
   });
 });

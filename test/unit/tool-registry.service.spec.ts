@@ -37,6 +37,23 @@ describe('ToolRegistryService', () => {
     });
   });
 
+  it('resolves only the exact active read-only key and version without latest-version fallback', async () => {
+    const service = new ToolRegistryService(
+      createPrismaServiceMock([
+        toolDefinition({ name: 'inventory.stock-on-hand', version: '1.0.0' }),
+        toolDefinition({ name: 'inventory.stock-on-hand', version: '2.0.0' })
+      ]),
+      customerToolPolicyMock()
+    );
+
+    await expect(service.resolveExactExecutableTool('inventory.stock-on-hand', '1.0.0')).resolves.toEqual({
+      tool: expect.objectContaining({ key: 'inventory.stock-on-hand', version: '1.0.0' })
+    });
+    await expect(service.resolveExactExecutableTool('inventory.stock-on-hand', '3.0.0')).resolves.toEqual({
+      deniedReason: 'tool_not_registered'
+    });
+  });
+
   it('normalizes DB records without consulting connector listTools capability reports', async () => {
     const service = new ToolRegistryService(createPrismaServiceMock([toolDefinition({ name: 'mock.orders.status.lookup' })]), customerToolPolicyMock());
 
@@ -259,7 +276,10 @@ function createPrismaServiceMock(tools: ReturnType<typeof toolDefinition>[]) {
     db: {
       toolDefinition: {
         findMany: jest.fn(async () => tools),
-        findFirst: jest.fn(async ({ where }: { where: { name: string } }) => tools.find((tool) => tool.name === where.name) ?? null)
+        findFirst: jest.fn(async ({ where }: { where: { name: string } }) => tools.find((tool) => tool.name === where.name) ?? null),
+        findUnique: jest.fn(async ({ where }: { where: { name_version: { name: string; version: string } } }) =>
+          tools.find((tool) => tool.name === where.name_version.name && tool.version === where.name_version.version) ?? null
+        )
       }
     }
   } as never;

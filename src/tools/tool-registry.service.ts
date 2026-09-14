@@ -83,6 +83,17 @@ export class ToolRegistryService {
     };
   }
 
+  async resolveExactExecutableTool(toolKey: string, version: string): Promise<ToolRegistryResolveResult> {
+    const tool = await this.prisma.db.toolDefinition.findUnique({
+      where: { name_version: { name: toolKey, version } }
+    });
+
+    if (!tool) return { deniedReason: 'tool_not_registered' };
+    if (!tool.isActive) return { deniedReason: 'tool_inactive' };
+    if (tool.operation !== ToolOperation.read || tool.hasSideEffect) return { deniedReason: 'operation_denied' };
+    return { tool: normalizeToolDefinition(tool) };
+  }
+
   async resolveToolForCustomer(toolKey: string, customerScope: CustomerScope): Promise<CustomerToolRegistryResolveResult> {
     const global = await this.resolveRegisteredTool(toolKey);
     if (!global.tool) {

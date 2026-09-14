@@ -210,6 +210,24 @@ describe('AssistantReadonlyRuntimeService', () => {
     expect(result.deniedReason).toBe('missing_scope');
   });
 
+  it('keeps productized transport unreachable until the existing permission precheck succeeds', async () => {
+    const transportInvoke = jest.fn();
+    const productizedExecute = jest.fn(() => transportInvoke());
+    const registrySelect = jest.fn().mockResolvedValue({ execute: productizedExecute });
+    const service = createRuntimeService({
+      permission: { allowed: false, reason: 'missing_scope', missingScopes: ['inventory:read'] },
+      registrySelect,
+      connectorExecute: productizedExecute
+    });
+
+    const result = await service.execute(runtimeInput());
+
+    expect(registrySelect).not.toHaveBeenCalled();
+    expect(productizedExecute).not.toHaveBeenCalled();
+    expect(transportInvoke).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ toolLifecycle: 'blocked', deniedReason: 'missing_scope' });
+  });
+
   it('fails the started ToolCall with a bounded code when trusted registry selection fails', async () => {
     const connectorExecute = jest.fn();
     const completeToolCall = jest.fn();

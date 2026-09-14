@@ -10,6 +10,18 @@ import {
 describe('AdapterResultProjectorService', () => {
   const service = new AdapterResultProjectorService(new LlmInputSanitizerService());
 
+  it('rejects an undeclared productized local field before projection', () => {
+    const result = service.project({
+      tool: toolDefinition(),
+      resultPolicy: allowedPolicy(),
+      rawResult: { itemSku: 'SKU-001', availableQuantity: 4, rawCustomerPayload: 'SECRET' },
+      permissionScopes: ['inventory:read']
+    });
+
+    expect(result).toEqual({ projected: false, errorCode: 'ADAPTER_RESULT_PROJECTION_FAILED' });
+    expect(JSON.stringify(result)).not.toContain('SECRET');
+  });
+
   it('validates the raw shape before projecting only server-allowed fields', () => {
     const result = service.project({
       tool: toolDefinition(),

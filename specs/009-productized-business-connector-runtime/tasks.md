@@ -1,7 +1,7 @@
 # Tasks: Feature 009 — Productized Business Connector Runtime
 
 **Input**: Accepted `spec.md`, `design.md`, and `plan.md` approved for Phase 1 implementation.
-**Status**: Accepted — Phase 1 through Phase 8 completed and awaiting human review before Phase 9.
+**Status**: Accepted — Phase 1 through Phase 9 completed and awaiting human review before Phase 10.
 
 ```text
 PHASE1_EXECUTED=YES
@@ -18,8 +18,10 @@ PHASE7_EXECUTED=YES
 T001_T078_COMPLETE=YES
 T001_T080_COMPLETE=YES
 PHASE8_EXECUTED=YES
-PHASE9_EXECUTED=NO
-FIRST_UNEXECUTED_TASK=T081
+T001_T089_COMPLETE=YES
+PHASE9_EXECUTED=YES
+PHASE10_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T090
 NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 ```
 **Scope**: Implement the reusable two-sided connector runtime, executable Synthetic Customer B portability fixture, removable Shinmone reference slice, and Shinmone-removal gate through the existing Feature 008 path. Feature 007 is a completed read-only predecessor; Phase 8 is `FEATURE009_IMPLEMENTATION_CONSUMING_ACCEPTED_FEATURE007_AMENDMENT`, never Feature 007 reimplementation.
@@ -2063,59 +2065,147 @@ NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 **Dependencies**: T080.  
 **Independent test**: Permission and exact ToolDefinition/registry selection precede transport; only projected safe fields reach evidence and mocks never serve as fallback.
 
-- [ ] T081 [RED] [US8] [BACKEND] Add failing productized adapter contract and compatibility tests.
+- [X] T081 [RED] [US8] [BACKEND] Add failing productized adapter contract and compatibility tests.
   - Files: `test/unit/productized-business-connector.adapter.spec.ts`, `test/unit/data-adapter-contract.spec.ts`.
   - Depends on: T080.
   - Validation: Preserve RED for absent adapter identity/capability/readiness while `DataAdapterExecuteInput` remains unchanged.
   - Stop: Do not add timeout, operation, destination, or credential authority to the adapter input.
 
-- [ ] T082 [GREEN] [US8] [BACKEND] Implement the unregistered `ProductizedBusinessConnectorAdapter` shell.
+- [X] T082 [GREEN] [US8] [BACKEND] Implement the unregistered `ProductizedBusinessConnectorAdapter` shell.
   - Files: `src/connectors/productized-business/productized-business-connector.adapter.ts`.
   - Depends on: T081.
   - Validation: Make T081 pass for capability/compatibility/readiness without module registration.
   - Stop: No Assistant execution, public contract, or mock fallback.
 
-- [ ] T083 [RED] [US8] [BACKEND] Add failing permission, exact ToolDefinition re-resolution, budget, and abort tests.
+- [X] T083 [RED] [US8] [BACKEND] Add failing permission, exact ToolDefinition re-resolution, budget, and abort tests.
   - Files: `test/unit/productized-business-connector.adapter.spec.ts`, `test/unit/assistant-readonly-runtime.service.spec.ts`.
   - Depends on: T082.
   - Validation: Require permission before transport, exact key/version lookup, 5,000 ms authority, 250 ms reserve, max 4,500 ms signed budget, elapsed subtraction, exhaustion failure, and abort propagation.
   - Stop: No second timeout authority or transport before permission.
 
-- [ ] T084 [GREEN] [US8] [BACKEND] Implement adapter execution using existing ToolDefinition timeout authority.
+- [X] T084 [GREEN] [US8] [BACKEND] Implement adapter execution using existing ToolDefinition timeout authority.
   - Files: `src/connectors/productized-business/productized-business-connector.adapter.ts`, narrow `src/tools/tool-registry.service.ts` exact-version lookup if required.
   - Depends on: T083.
   - Validation: Make T083 pass without changing `DataAdapterExecuteInput` or Feature 008 ordering.
   - Stop: Local/deployment limits may narrow but never extend `ToolDefinition.timeoutMs`.
 
-- [ ] T085 [RED] [US8] [BACKEND] Add failing transport-failure, projection, and evidence boundary tests.
+- [X] T085 [RED] [US8] [BACKEND] Add failing transport-failure, projection, and evidence boundary tests.
   - Files: `test/integration/productized-adapter-projection.spec.ts`, `test/integration/tool-failure-safe-response.spec.ts`, `test/unit/adapter-result-projector.service.spec.ts`.
   - Depends on: T084.
   - Validation: Require started ToolCall failure mapping, extra bounded fields rejected/minimized, raw local result absent, and projected facts only in EvidenceRef/GroundedAnswerInput.
   - Stop: Do not bypass outputSchema, masking, minimization, or existing failure decisions.
 
-- [ ] T086 [GREEN] [US8] [BACKEND] Complete adapter response normalization through the existing projector/evidence path.
+- [X] T086 [GREEN] [US8] [BACKEND] Complete adapter response normalization through the existing projector/evidence path.
   - Files: `src/connectors/productized-business/productized-business-connector.adapter.ts`, approved Feature 008 composition only where necessary.
   - Depends on: T085.
   - Validation: Make T085 pass and rerun Feature 008 raw-result/evidence regressions.
   - Stop: No new projector, EvidenceRef type, AnswerDecision, or SSE event.
 
-- [ ] T087 [RED] [US8] [BACKEND] Add failing exact registration and zero-fallback composition tests.
+- [X] T087 [RED] [US8] [BACKEND] Add failing exact registration and zero-fallback composition tests.
   - Files: `test/unit/connectors-module.spec.ts`, `test/integration/productized-adapter-registration.spec.ts`, existing mock adapter tests.
   - Depends on: T086.
   - Validation: Require one exact Customer/integration/HostApp/connector registration, duplicate failure, deployment mismatch failure, and no mock fallback.
   - Stop: No wildcard or operation authority in registration.
 
-- [ ] T088 [GREEN] [US8] [BACKEND] Add exact productized registration beside unchanged mocks.
+- [X] T088 [GREEN] [US8] [BACKEND] Add exact productized registration beside unchanged mocks.
   - Files: `src/connectors/connectors.module.ts`, `src/connectors/productized-business/productized-business-connector.module.ts`, test app provider composition.
   - Depends on: T087.
   - Validation: Make T087 pass and rerun mock/runtime Feature 008 suites.
   - Stop: Do not remove or rewrite mock behavior in this phase.
 
-- [ ] T089 [CHECKPOINT] [US8] [BACKEND] Verify and record the Phase 9 Feature 008 integration gate.
+- [X] T089 [CHECKPOINT] [US8] [BACKEND] Verify and record the Phase 9 Feature 008 integration gate.
   - Files: `specs/009-productized-business-connector-runtime/tasks.md` evidence only.
   - Depends on: T082, T084, T086, T088.
   - Validation: Record a machine-readable evidence block with `FEATURE008_PROJECTION_BYPASS=NO`, `FEATURE008_TIMEOUT_SINGLE_AUTHORITY=ToolDefinition.timeoutMs`, and `MOCK_FALLBACK=NO`.
   - Stop: Phase 10 cannot start with any alternate execution, projection, or timeout path.
+
+### Phase 9 RED → GREEN and Checkpoint Evidence — 2026-09-14
+
+Entry and scope:
+
+- Protected Feature 009 hashes matched the approved baseline: `spec.md=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73`, `design.md=bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb`, and `plan.md=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1`.
+- T001–T080 were checked and T081–T142 were unchecked. The only pre-entry untracked path was the preserved Phase 6 fixture `apps/customer-connector-runtime/test/fixtures/phase6-upstream.key`.
+- The read-only Spec Kit prerequisite selector returned its pre-existing stale Feature 002 directory error. Feature 009's accepted artifacts remained authoritative; `.specify` was not modified and no implementation hook was configured or run.
+
+Authentic task evidence:
+
+- T081 RED: `npm run test:unit -- --runInBand --runTestsByPath test/unit/productized-business-connector.adapter.spec.ts test/unit/data-adapter-contract.spec.ts` produced 1 failed and 1 passed suite, with 5 existing tests passing; TypeScript reported the missing productized adapter module.
+- T082 GREEN: the identical command passed 2 suites and 7 tests. The adapter shell had fixed identity, trusted capability metadata, empty `listTools()`, exact compatibility, and no module registration.
+- T083 RED: `npm run test:unit -- --runInBand --runTestsByPath test/unit/productized-business-connector.adapter.spec.ts test/unit/assistant-readonly-runtime.service.spec.ts` produced 1 failed and 1 passed suite with 23 tests passing; the adapter lacked the clock/execution boundary required by the budget test.
+- T084 GREEN: `npm run test:unit -- --runInBand --runTestsByPath test/unit/productized-business-connector.adapter.spec.ts test/unit/assistant-readonly-runtime.service.spec.ts test/unit/tool-registry.service.spec.ts` passed 3 suites and 61 tests. Exact key/version re-resolution, permission-before-transport, elapsed subtraction, the 250 ms reserve, the 500 ms minimum, and same-authority cancellation passed.
+- T085 RED: `npm test -- --runInBand --runTestsByPath test/integration/productized-adapter-projection.spec.ts test/integration/tool-failure-safe-response.spec.ts test/unit/adapter-result-projector.service.spec.ts` preserved the productized-success failure as `CONNECTOR_RESPONSE_INVALID` before success mapping. The same run also exposed a test-authoring helper typo, which was corrected without production effect, and listener-dependent coverage hit sandbox-only `listen EPERM`.
+- T086 GREEN: the non-listener projection command passed 2 suites and 25 tests, and the identical listener-dependent safe-failure command passed 1 suite and 1 test through the approved local-only path. Post-GREEN hardening then exercised the real `AssistantReadonlyRuntimeService`, real `DataAdapterRegistry`, and real `AdapterResultProjectorService`: success completed the existing ToolCall only with projected facts, while a transport failure failed the started ToolCall without projection or completion.
+- T087 RED: `npm test -- --runInBand --runTestsByPath test/unit/connectors-module.spec.ts test/integration/productized-adapter-registration.spec.ts test/unit/mock-connector-adapter.spec.ts` produced 2 failed and 1 passed suite; all 3 new registration assertions failed while 4 unchanged mock tests passed.
+- T088 GREEN: the identical command passed 3 suites and 10 tests. One exact productized registration was composed beside the unchanged two mock registrations; duplicate active four-part mappings, wrong dimensions, and missing deployments failed closed without mock fallback.
+
+Final T089 verification:
+
+- Phase 9 plus Feature 008 unit inventory: 13 suites and 139 tests passed.
+- Phase 9 plus Feature 008 integration inventory: the sandbox run preserved listener-only `EPERM`; the identical approved local-only command passed 7 suites and 30 tests.
+- Existing Assistant SSE contract: 1 suite and 6 tests passed.
+- Root build and typecheck passed.
+- Customer-local runtime: sandbox execution passed 27 suites/315 tests and failed only 5 listener suites/8 tests with `EPERM`; the identical approved local-only command passed all 32 suites and 323 tests. Runtime build and typecheck passed.
+- Shared connector contract: 10 suites and 68 tests passed; build and typecheck passed.
+- `git diff --check`, protected Feature 007/008/009 and Prisma hashes, 142-task sequencing, source guards, and T090–T142 unchecked state passed.
+- Generic production sources contain no Shinmone, Customer B, native-token, credential, endpoint, persistence, query-understanding, or discovery branch. `connectorContextRef` appears only in the transient invocation request assembled after existing authority checks.
+
+Phase 9 production files:
+
+```text
+src/connectors/connectors.module.ts
+src/connectors/productized-business/productized-adapter-binding.registry.ts
+src/connectors/productized-business/productized-business-connector.adapter.ts
+src/connectors/productized-business/productized-business-connector.module.ts
+src/tools/tool-registry.service.ts
+```
+
+Phase 9 test files:
+
+```text
+test/integration/productized-adapter-projection.spec.ts
+test/integration/productized-adapter-registration.spec.ts
+test/integration/tool-failure-safe-response.spec.ts
+test/unit/adapter-result-projector.service.spec.ts
+test/unit/assistant-readonly-runtime.service.spec.ts
+test/unit/connectors-module.spec.ts
+test/unit/data-adapter-contract.spec.ts
+test/unit/productized-adapter-binding.registry.spec.ts
+test/unit/productized-business-connector.adapter.spec.ts
+test/unit/tool-registry.service.spec.ts
+```
+
+```text
+FEATURE009_PHASE9=PASS
+FEATURE008_PROJECTION_BYPASS=NO
+FEATURE008_PERMISSION_BYPASS=NO
+FEATURE008_TOOLCALL_BYPASS=NO
+FEATURE008_TIMEOUT_SINGLE_AUTHORITY=ToolDefinition.timeoutMs
+DATA_ADAPTER_EXECUTE_INPUT_CHANGED=NO
+PRODUCTIZED_ADAPTER_EXACT_REGISTRATION=YES
+PRODUCTIZED_ADAPTER_WILDCARD_REGISTRATION=NO
+EXACT_CONNECTOR_INSTANCE_BINDING=YES
+FIRST_INSTANCE_FALLBACK=NO
+MOCK_REGISTRATIONS_PRESERVED=YES
+MOCK_RESULTS_UNCHANGED=YES
+MOCK_FALLBACK=NO
+RAW_LOCAL_RESULT_EVIDENCE=NO
+RAW_LOCAL_RESULT_MODEL=NO
+RAW_LOCAL_RESULT_SSE=NO
+CONNECTOR_CONTEXT_REF_PERSISTED=NO
+CENTRAL_NATIVE_CREDENTIAL=NO
+CUSTOMER_SPECIFIC_ADAPTER_BRANCH=NO
+SHINMONE_REQUIRED_BY_ADAPTER=NO
+SPEC_DESIGN_PLAN_MODIFIED=NO
+FEATURE007_HISTORY_MODIFIED=NO
+FEATURE008_ACCEPTED_AUTHORITY_CHANGED=NO
+PRISMA_MODIFIED=NO
+T081_T089_COMPLETE=YES
+T090_EXECUTED=NO
+PHASE9_EXECUTED=YES
+PHASE10_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T090
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
 
 ## Phase 10 — Generic ToolDefinition Discovery Migration
 

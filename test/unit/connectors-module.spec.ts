@@ -17,14 +17,17 @@ import {
   MockConnectorModule
 } from '../../src/connectors/mock/mock-connector.module';
 import { AppConfigModule } from '../../src/common/config/app-config.module';
+import { ToolsModule } from '../../src/tools/tools.module';
+import { ProductizedBusinessConnectorModule } from '../../src/connectors/productized-business/productized-business-connector.module';
+import { PRODUCTIZED_DATA_ADAPTER_REGISTRATIONS } from '../../src/connectors/productized-business/productized-adapter-binding.registry';
 
 describe('ConnectorsModule', () => {
-  it('provides and exports one frozen explicit exact mock registration array', async () => {
+  it('provides one frozen combined registration array while preserving exact mocks', async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppConfigModule, ConnectorsModule] }).compile();
     const registrations = moduleRef.get<DataAdapterRegistrations>(DATA_ADAPTER_REGISTRATIONS);
 
-    expect(registrations).toBe(MOCK_DATA_ADAPTER_REGISTRATIONS);
     expect(registrations).toHaveLength(2);
+    expect(registrations).toEqual(MOCK_DATA_ADAPTER_REGISTRATIONS);
     expect(registrations.map(({ customerId, integrationId, hostApp, connectorKey }) => ({
       customerId,
       integrationId,
@@ -39,7 +42,7 @@ describe('ConnectorsModule', () => {
     expect(moduleRef.get(DataAdapterRegistry)).toBeInstanceOf(DataAdapterRegistry);
   });
 
-  it('uses one useValue provider with no multi-provider, factory, dynamic loading, or external source', () => {
+  it('combines trusted productized registrations with mocks through one factory provider', () => {
     const providers = (Reflect.getMetadata(MODULE_METADATA.PROVIDERS, ConnectorsModule) ?? []) as unknown[];
     const imports = (Reflect.getMetadata(MODULE_METADATA.IMPORTS, ConnectorsModule) ?? []) as unknown[];
     const registrationProviders = providers.filter(
@@ -47,13 +50,14 @@ describe('ConnectorsModule', () => {
     );
 
     expect(registrationProviders).toHaveLength(1);
-    expect(Object.keys(registrationProviders[0]).sort()).toEqual(['provide', 'useValue']);
-    expect(registrationProviders[0].useValue).toBe(MOCK_DATA_ADAPTER_REGISTRATIONS);
+    expect(Object.keys(registrationProviders[0]).sort()).toEqual(['inject', 'provide', 'useFactory']);
+    expect(registrationProviders[0].inject).toEqual([PRODUCTIZED_DATA_ADAPTER_REGISTRATIONS]);
     expect(registrationProviders[0]).not.toHaveProperty('multi');
-    expect(registrationProviders[0]).not.toHaveProperty('useFactory');
+    expect(registrationProviders[0]).not.toHaveProperty('useValue');
     expect(registrationProviders[0]).not.toHaveProperty('useClass');
-    expect(imports).toEqual([PermissionsModule, MockConnectorModule]);
-    expect(providers).toEqual([registrationProviders[0], DataAdapterRegistry, AdapterResultProjectorService]);
+    expect(imports).toEqual(expect.arrayContaining([PermissionsModule, MockConnectorModule, ToolsModule]));
+    expect(imports.some((entry) => isRecord(entry) && entry.module === ProductizedBusinessConnectorModule)).toBe(true);
+    expect(providers).toEqual(expect.arrayContaining([registrationProviders[0], DataAdapterRegistry, AdapterResultProjectorService]));
   });
 
   it('preserves an explicitly overridden duplicate array so the registry fails ambiguous', async () => {
