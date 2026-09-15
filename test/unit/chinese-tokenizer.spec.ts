@@ -2,6 +2,7 @@ import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-t
 import { DOMAIN_LEXICON } from '../../src/query-understanding/domain-lexicon';
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 import { TokenizerAdapter } from '../../src/query-understanding/tokenizer-adapter.interface';
+import { createToolDiscoveryFixtureService } from '../support/tool-discovery.fixture';
 
 const hostIntegrationContext = {
   requestId: 'req-tokenizer-001',
@@ -16,7 +17,7 @@ const hostIntegrationContext = {
 
 describe('Traditional Chinese tokenizer', () => {
   it('splits Traditional Chinese sentences on Chinese and ASCII punctuation', async () => {
-    const service = new RuleBasedQueryUnderstandingPipeline();
+    const service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
 
     const result = await service.understand({
       requestId: 'req-tokenizer-001',
@@ -34,7 +35,7 @@ describe('Traditional Chinese tokenizer', () => {
   });
 
   it('keeps multi-condition queries and extracts business phrases', async () => {
-    const service = new RuleBasedQueryUnderstandingPipeline();
+    const service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
 
     const result = await service.understand({
       requestId: 'req-tokenizer-002',
@@ -79,10 +80,10 @@ describe('Traditional Chinese tokenizer', () => {
     const lexiconTerms = DOMAIN_LEXICON.flatMap((entry) => entry.terms);
     const result = await adapter.tokenize({
       requestId: 'req-tokenizer-lexicon',
-      text: '工單 製令 料號 品號 SKU 訂單 銷售單 客戶 供應商 庫存 查詢 取消 更新 修改 核准 刪除'
+      text: '工單 製令 料號 品號 SKU 訂單 銷售單 客戶 供應商 庫存 狀態 進度 可用 可用量 歷史 存量 筆數 幾筆 幾張 新增 查詢 查找 查閱 取消 更新 修改 核准 刪除'
     });
     const termsWithoutTimeOrSingleCharRead = lexiconTerms.filter(
-      (term) => !['查', '看', '確認', '今天', '昨天', '本週', '上週', '本月', '近三個月'].includes(term)
+      (term) => !['查', '看', '確認', '今天', '昨天', '本週', '上週', '本月', '這個月', '近三個月'].includes(term)
     );
 
     expect(result.tokens.map((token) => token.value)).toEqual(expect.arrayContaining(termsWithoutTimeOrSingleCharRead));
@@ -115,7 +116,7 @@ describe('Traditional Chinese tokenizer', () => {
         ]
       })
     };
-    const service = new RuleBasedQueryUnderstandingPipeline(fakeTokenizer);
+    const service = new RuleBasedQueryUnderstandingPipeline(fakeTokenizer, createToolDiscoveryFixtureService());
 
     const result = await service.understand({
       requestId: 'req-tokenizer-004',

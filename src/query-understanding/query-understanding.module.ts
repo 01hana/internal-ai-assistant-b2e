@@ -5,9 +5,10 @@ import { DefaultTokenizerAdapter } from './default-tokenizer.adapter';
 import { QueryUnderstandingRepository } from './query-understanding.repository';
 import { QueryUnderstandingService } from './query-understanding.service';
 import { RuleBasedQueryUnderstandingPipeline } from './rule-based-query-understanding.pipeline';
+import { ToolsModule } from '../tools/tools.module';
 
 @Module({
-  imports: [PrismaModule, AuditModule],
+  imports: [PrismaModule, AuditModule, ToolsModule],
   providers: [
     QueryUnderstandingRepository,
     QueryUnderstandingService,

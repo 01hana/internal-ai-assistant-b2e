@@ -13,6 +13,7 @@ export function scoreQueryUnderstandingConfidence(input: {
   resolvedReferences: QueryUnderstandingResolvedReference[];
   clarificationNeeds: QueryUnderstandingClarificationNeed[];
   hasDocumentEvidenceRequirement?: boolean;
+  discoveryConfidence?: number;
 }): number {
   if (input.text.length === 0 || isPunctuationOnly(input.text)) {
     return 0;
@@ -26,5 +27,8 @@ export function scoreQueryUnderstandingConfidence(input: {
   if (input.text.length > 12) confidence += 0.1;
   if (input.clarificationNeeds.some((need) => need.blocking)) confidence -= 0.35;
 
+  if (!input.clarificationNeeds.some((need) => need.blocking) && input.candidateTools.length > 0) {
+    confidence = Math.max(confidence, input.discoveryConfidence ?? 0);
+  }
   return Math.max(0, Math.min(1, Number(confidence.toFixed(2))));
 }

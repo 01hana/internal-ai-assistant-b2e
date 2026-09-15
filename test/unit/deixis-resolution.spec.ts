@@ -1,4 +1,6 @@
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
+import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
+import { createToolDiscoveryFixtureService } from '../support/tool-discovery.fixture';
 
 const hostIntegrationContext = {
   requestId: 'req-deixis-001',
@@ -12,7 +14,7 @@ const hostIntegrationContext = {
 };
 
 describe('deixis resolution', () => {
-  const service = new RuleBasedQueryUnderstandingPipeline();
+  const service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
 
   it('resolves pronoun-like references from PageContext entityType/entityId', async () => {
     const result = await service.understand({

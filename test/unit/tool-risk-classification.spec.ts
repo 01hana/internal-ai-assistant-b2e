@@ -1,8 +1,10 @@
 import { RiskLevel } from '../../src/generated/prisma/enums';
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
+import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
+import { createToolDiscoveryFixtureService } from '../support/tool-discovery.fixture';
 
 describe('US2 tool risk classification and selection', () => {
-  const service = new RuleBasedQueryUnderstandingPipeline();
+  const service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
   const hostIntegrationContext = {
     requestId: 'req-us2-tools',
     customerId: 'customer-a',

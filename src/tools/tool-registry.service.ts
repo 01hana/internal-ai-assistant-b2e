@@ -94,6 +94,27 @@ export class ToolRegistryService {
     return { tool: normalizeToolDefinition(tool) };
   }
 
+  async listDiscoverableToolsForCustomer(customerScope: Readonly<Pick<CustomerScope, 'customerId'>>): Promise<RegisteredToolDefinition[]> {
+    const tools = await this.prisma.db.toolDefinition.findMany({
+      where: { isActive: true, operation: ToolOperation.read, hasSideEffect: false },
+      orderBy: [{ name: 'asc' }, { version: 'asc' }]
+    });
+    const allowed: RegisteredToolDefinition[] = [];
+    for (const tool of tools) {
+      if (!tool.isActive || tool.operation !== ToolOperation.read || tool.hasSideEffect) continue;
+      try {
+        const policy = await this.customerToolPolicy.resolve({
+          customerId: customerScope.customerId,
+          toolDefinitionId: tool.id
+        });
+        if (policy.allowed) allowed.push(normalizeToolDefinition(tool));
+      } catch {
+        // Discovery catalog failures are deny-by-default.
+      }
+    }
+    return allowed;
+  }
+
   async resolveToolForCustomer(toolKey: string, customerScope: CustomerScope): Promise<CustomerToolRegistryResolveResult> {
     const global = await this.resolveRegisteredTool(toolKey);
     if (!global.tool) {

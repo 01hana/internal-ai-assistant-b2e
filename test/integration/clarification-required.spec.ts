@@ -104,4 +104,28 @@ describe('US4 clarification required gate', () => {
     );
     expect(JSON.stringify(newAuditEvents)).not.toContain('目前狀態');
   });
+
+  it('blocks same-anchor metadata ambiguity before tool execution', async () => {
+    const original = state.toolDefinitions.find((tool) => tool.name === 'mock.orders.status.lookup');
+    if (!original) throw new Error('Missing order lookup fixture.');
+    state.toolDefinitions.push({ ...original, id: 'tool-definition-orders-ambiguous-001', name: 'generic.orders.status.alternate' });
+    state.customerToolPolicies.push({
+      customerId: 'customer-a', toolDefinitionId: 'tool-definition-orders-ambiguous-001',
+      enabled: true, requiredRoles: [], requiredPermissionScopes: []
+    });
+    const initialToolCallCount = state.toolCalls.length;
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/assistant/sessions/session-owned-001/messages')
+      .set(createIdentityHeaders({ 'x-request-id': 'req-tool-metadata-ambiguity' }))
+      .send({
+        message: '請查 SO-10001 訂單目前狀態',
+        pageContext: { module: 'orders', entityType: 'order', entityId: 'SO-10001', visibleColumns: ['status'] }
+      });
+
+    expect(response.status).toBe(200);
+    expect(state.toolCalls).toHaveLength(initialToolCallCount);
+    expect(state.clarificationQuestions.at(-1)).toEqual(expect.objectContaining({ reason: 'tool_ambiguity' }));
+    expect(parseSseResponse(response.text).map(({ event }) => event)).toEqual(['answer_delta', 'final']);
+  });
 });

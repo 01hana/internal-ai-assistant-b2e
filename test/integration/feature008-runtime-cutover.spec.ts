@@ -123,10 +123,14 @@ describe('Feature 008 registry runtime cutover', () => {
     const adapter = createAdapter();
     const { app, state } = await createScenario(registrations(adapter));
     const select = jest.spyOn(app.get(DataAdapterRegistry), 'select');
-    jest.spyOn(app.get(ToolRegistryService), 'validateNamedOperation').mockReturnValue({
-      valid: false,
-      deniedReason: 'schema_invalid',
-      schemaErrorReason: 'test_invalid_input'
+    const toolRegistry = app.get(ToolRegistryService);
+    const validateNamedOperation = toolRegistry.validateNamedOperation.bind(toolRegistry);
+    let validationCount = 0;
+    jest.spyOn(toolRegistry, 'validateNamedOperation').mockImplementation((tool, candidate) => {
+      validationCount += 1;
+      return validationCount === 1
+        ? validateNamedOperation(tool, candidate)
+        : { valid: false, deniedReason: 'schema_invalid', schemaErrorReason: 'test_invalid_input' };
     });
 
     const response = await sendOrderRequest(app, 'req-phase5-invalid-input');

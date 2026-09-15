@@ -1,8 +1,10 @@
 import { AssistantTaskState } from '../../src/generated/prisma/enums';
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
+import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
+import { createToolDiscoveryFixtureService } from '../support/tool-discovery.fixture';
 
 describe('assistant context state and page context parsing', () => {
-  const service = new RuleBasedQueryUnderstandingPipeline();
+  const service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
   const hostIntegrationContext = {
     requestId: 'req-assistant-context',
     customerId: 'customer-a',

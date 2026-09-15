@@ -53,7 +53,7 @@ describe('query understanding persistence integration', () => {
         resolvedReferences: [],
         entityCandidates: [{ type: 'orderId', value: 'SO-10001', confidence: 0.95 }],
         subTasks: [],
-        candidateTools: [{ key: 'mock.orders.status.lookup', reason: 'order status query' }],
+        candidateTools: [{ key: 'mock.orders.status.lookup', arguments: { entityId: 'SO-10001' }, reason: 'metadata_discovery' }],
         riskLevel: RiskLevel.low,
         confidence: 0.92,
         clarificationNeeds: [],

@@ -1,7 +1,7 @@
 # Tasks: Feature 009 — Productized Business Connector Runtime
 
 **Input**: Accepted `spec.md`, `design.md`, and `plan.md` approved for Phase 1 implementation.
-**Status**: Accepted — Phase 1 through Phase 9 completed and awaiting human review before Phase 10.
+**Status**: Accepted — Phase 1 through Phase 10 completed and awaiting human review before Phase 11.
 
 ```text
 PHASE1_EXECUTED=YES
@@ -20,8 +20,10 @@ T001_T080_COMPLETE=YES
 PHASE8_EXECUTED=YES
 T001_T089_COMPLETE=YES
 PHASE9_EXECUTED=YES
-PHASE10_EXECUTED=NO
-FIRST_UNEXECUTED_TASK=T090
+T001_T099_COMPLETE=YES
+PHASE10_EXECUTED=YES
+PHASE11_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T100
 NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 ```
 **Scope**: Implement the reusable two-sided connector runtime, executable Synthetic Customer B portability fixture, removable Shinmone reference slice, and Shinmone-removal gate through the existing Feature 008 path. Feature 007 is a completed read-only predecessor; Phase 8 is `FEATURE009_IMPLEMENTATION_CONSUMING_ACCEPTED_FEATURE007_AMENDMENT`, never Feature 007 reimplementation.
@@ -2213,65 +2215,239 @@ NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 **Dependencies**: T089.  
 **Independent test**: Active permitted read-only tools are discovered generically; ambiguity clarifies; mocks remain equivalent before old branches are removed.
 
-- [ ] T090 [RED] [US7] [BACKEND] Add failing metadata-driven discovery contract tests.
+- [X] T090 [RED] [US7] [BACKEND] Add failing metadata-driven discovery contract tests.
   - Files: `test/unit/tool-discovery.service.spec.ts`, `test/unit/tool-registry.service.spec.ts`.
   - Depends on: T089.
   - Validation: Preserve RED for absent `x-assistant-discovery-v1` parsing, policy filtering, active/read-only filtering, required groups, deterministic scoring, and ties.
   - Stop: No Customer/HostApp/Shinmone/endpoint/credential/full-question branch.
 
-- [ ] T091 [GREEN] [US7] [BACKEND] Implement discovery metadata parsing, catalog filtering, and scoring.
+- [X] T091 [GREEN] [US7] [BACKEND] Implement discovery metadata parsing, catalog filtering, and scoring.
   - Files: `src/tools/tool-discovery.service.ts`, `src/tools/tool-registry.service.ts`, `src/tools/tool-registry.types.ts`, `src/tools/tools.module.ts`.
   - Depends on: T090.
   - Validation: Make T090 pass with exact Customer policy, active read-only tools, required concept groups, deterministic score, and clarification result.
   - Stop: Discovery returns candidates only; ToolDefinition re-resolution remains canonical authority.
 
-- [ ] T092 [DATA] [US7] [BACKEND] Add equivalent discovery metadata to all existing mock ToolDefinitions.
+- [X] T092 [DATA] [US7] [BACKEND] Add equivalent discovery metadata to all existing mock ToolDefinitions.
   - Files: `scripts/seed.ts`, `test/support/us1-test-app.helper.ts`, existing mock ToolDefinition fixtures.
   - Depends on: T091.
   - Validation: Run seed idempotency and metadata-schema tests for every existing mock operation; add the Synthetic Customer B fixture definition/policy for `inventory.stock-on-hand` with generic inventory/stock/lookup concepts and a distinct `{sku, quantity}` output policy.
   - Stop: Do not add the Shinmone reference ToolDefinition yet, change Prisma, or add Customer-specific discovery logic.
 
-- [ ] T093 [VERIFY] [US7] [BACKEND] Prove existing mock questions through `ToolDiscoveryService` before branch removal.
+- [X] T093 [VERIFY] [US7] [BACKEND] Prove existing mock questions through `ToolDiscoveryService` before branch removal.
   - Files: Existing mock/query-understanding unit, integration, and eval suites plus new discovery tests.
   - Depends on: T092.
   - Validation: Run all current mock query cases and record equivalent candidate, arguments, permission, adapter, and answer behavior.
   - Stop: Old hard-coded branches remain until this task is green.
 
-- [ ] T094 [RED] [US7] [BACKEND] Add failing generic planner integration and ambiguity/argument-binding tests.
+- [X] T094 [RED] [US7] [BACKEND] Add failing generic planner integration and ambiguity/argument-binding tests.
   - Files: `test/unit/query-understanding.service.spec.ts`, `test/unit/query-understanding-pipeline-wiring.spec.ts`, `test/integration/clarification-required.spec.ts`.
   - Depends on: T093.
   - Validation: Cover normalized resource/metric/intent/time concepts, missing groups, tied/low scores, invalid argumentBindings, and no execution on clarification.
   - Stop: Do not match complete phrases or inject Customer/HostApp data into the lexicon.
 
-- [ ] T095 [GREEN] [US7] [BACKEND] Integrate `ToolDiscoveryService` into generic Query Understanding/Planning.
+- [X] T095 [GREEN] [US7] [BACKEND] Integrate `ToolDiscoveryService` into generic Query Understanding/Planning.
   - Files: `src/query-understanding/**`, `src/tools/tools.module.ts`.
   - Depends on: T094.
   - Validation: Make T094 pass while the old branches remain available only for the controlled equivalence step.
   - Stop: Candidate text may not replace ToolDefinition key/version/argument validation.
 
-- [ ] T096 [RED] [US7] [BACKEND] Add failing source guards for obsolete and forbidden routing branches.
+- [X] T096 [RED] [US7] [BACKEND] Add failing source guards for obsolete and forbidden routing branches.
   - Files: `test/unit/query-understanding-generic-routing.guard.spec.ts`.
   - Depends on: T095.
   - Validation: Require absence of old mock-key branches and Customer/HostApp/complete-question literals in routing; add generic-source guards for Shinmone paths/result fields/IDs, `acceptedEntry`, mandatory `nativeAccessToken`, MenuDetail/Bridge-only bootstrap, bearer-only application, and JWT-exp assumptions while exempting explicit integration/compatibility areas; preserve RED from obsolete branches or leakage.
   - Stop: Do not delete branches before T093 and T095 are green.
 
-- [ ] T097 [GREEN] [US7] [BACKEND] Remove obsolete hard-coded candidate branches after proven metadata equivalence.
+- [X] T097 [GREEN] [US7] [BACKEND] Remove obsolete hard-coded candidate branches after proven metadata equivalence.
   - Files: `src/query-understanding/**` where T096 identifies routing plus generic contract/central/runtime files identified by the guard; explicit `apps/customer-connector-runtime/integrations/shinmone/**` remains exempt.
   - Depends on: T096.
   - Validation: Make T096 pass by removing obsolete routing and moving any reference-specific assumption behind the Shinmone integration registry; rerun mock discovery/query/runtime and generic-source guard suites.
   - Stop: Do not remove generic lexicon, clarification, or existing non-tool understanding behavior.
 
-- [ ] T098 [VERIFY] [US7] [BACKEND] Run full query-understanding and no-answer/eval regressions.
+- [X] T098 [VERIFY] [US7] [BACKEND] Run full query-understanding and no-answer/eval regressions.
   - Files: `test/unit/query-*.spec.ts`, `test/integration/assistant-planning.spec.ts`, `test/integration/clarification-required.spec.ts`, `test/eval/**`.
   - Depends on: T097.
   - Validation: Run unit/integration/eval suites; confirm policy-denied tools are absent and ambiguous/insufficient queries never execute.
   - Stop: Do not accept a regression hidden by fallback routing.
 
-- [ ] T099 [CHECKPOINT] [US7] [BACKEND] Verify and record the Phase 10 generic-discovery gate.
+- [X] T099 [CHECKPOINT] [US7] [BACKEND] Verify and record the Phase 10 generic-discovery gate.
   - Files: `specs/009-productized-business-connector-runtime/tasks.md` evidence only.
   - Depends on: T091, T092, T093, T095, T097, T098.
   - Validation: Record a machine-readable evidence block with `CUSTOMER_BRANCH_IN_ASSISTANT_CORE=NO`, `SHINMONE_FULL_QUERY_BRANCH=NO`, and `MOCK_DISCOVERY_COMPATIBILITY=PASS`.
   - Stop: Phase 11 cannot start if any Customer-specific branch or mock regression survives.
+
+### Phase 10 Interrupted Execution Recovery — 2026-09-14
+
+Entry, interruption, and reconstruction:
+
+- The recovery resumed the staged interrupted Phase 10 worktree without rewriting Phase 1–9 evidence. The stale read-only Spec Kit prerequisite selector still reported the pre-existing Feature 002 directory error; `.specify` was not modified and no implementation hook was configured or run.
+- Entry hashes matched the protected baseline: `spec.md=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73`, `design.md=bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb`, `plan.md=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1`, `prisma/schema.prisma=e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733`, and the sealed Phase 9 adapter `src/connectors/productized-business/productized-business-connector.adapter.ts=8e84df809867bb8ec56ef555c07c7b9ae933a055aed813b6448d95148601ffb9`.
+- The original interrupted T090 RED output was unavailable. A human-authorized `git archive HEAD` Phase 9 reconstruction copied only the staged T090 test versions and linked the existing dependency installation. The focused run failed 2 suites before test execution with `ToolDiscoveryService`/parser and `listDiscoverableToolsForCustomer` absent. Main-worktree status and protected hashes were identical before and after reconstruction.
+- The original interrupted T094 RED output was likewise reconstructed from a second sealed Phase 9 archive with accepted T091–T093 artifacts but without T095 pipeline/module wiring. Its identical approved local-only run failed all 3 suites: the old pipeline constructor rejected the discovery dependency, `QueryUnderstandingModule` lacked `ToolDiscoveryService`, and a same-anchor ambiguity executed the old hard-coded tool path. The sandbox attempt's listener-only `EPERM` was preserved. The three main-worktree test files exactly matched the reconstructed test hashes before GREEN.
+- Both isolated reconstruction trees were removed after their outputs and non-mutation checks were recorded. No reconstruction log or dependency copy entered the repository.
+
+Task evidence:
+
+- T091 GREEN: the focused discovery/registry command passed 2 suites and 70 tests. The catalog filters exact Customer policy before metadata parsing/scoring; metadata is closed and immutable; authority/routing/transport/credential-like argument targets are rejected case-insensitively; discovery scope is the immutable trusted `{customerId}` projection.
+- T092 DATA: the discovery/registry/equivalence command passed 3 suites and 75 tests. `DOTENV_CONFIG_PATH=.env.test npm run test:db:init` first hit sandbox-only database `EPERM`, then passed through the approved local database path. `DOTENV_CONFIG_PATH=.env.test npm run prisma:seed` passed twice against only `assistant_test`. The focused seed/policy command initially exposed unstable generated ToolDefinition IDs in the new idempotency snapshot; after keying evidence by `name@version`, it passed 2 suites with 5 tests passed and 6 environment-gated tests skipped. All three fixture sources expose exactly one Customer B discoverable read tool: `inventory.stock-on-hand`.
+- T093 VERIFY: four representative full paths—order status, work-order progress, inventory availability, and business-partner history—passed through discovery, Customer policy, canonical ToolDefinition re-resolution/validation, permission, mock adapter, projection, EvidenceRef, AnswerDecision, answer, and unchanged SSE. The vertical suite passed 1 suite/4 tests; action-draft, approval, and cancellation/side-effect regressions passed 3 suites/12 tests before obsolete routing removal and 5 suites/18 tests including vertical/clarification coverage after removal.
+- T095 GREEN: the reconstructed T094 files passed 3 suites/8 tests, and the expanded discovery/planner set passed 5 suites/49 tests. `QueryUnderstandingToolCandidate` now explicitly carries readonly bounded `key`, `arguments`, and `reason`; discovery confidence clears the existing threshold only for a unique valid match. Ranking compares required-group matches before optional coverage and uses stable key/version ordering.
+- T096 RED: `npm run test:unit -- --runInBand --runTestsByPath test/unit/query-understanding-generic-routing.guard.spec.ts` failed all 3 tests against exact mock-key literals, `mock.general.lookup`, `inferCandidateTools`, and tool-key task/subtask inference.
+- T097 GREEN: the routing guard plus Customer-neutral decomposer passed 2 suites/10 tests after those branches were removed. Generic document, risk, clarification, deixis, PageContext, evidence, and time helpers remain; no Customer, HostApp, complete-question, or reference-integration routing replacement was added.
+
+Final T098/T099 verification:
+
+- Root unit: 80 suites passed, 1 skipped; 539 tests passed, 3 skipped, 542 total.
+- Root integration: 50 suites passed, 17 skipped; 173 tests passed, 131 skipped, 304 total.
+- Root contract: 10 suites passed, 3 skipped; 44 tests passed, 39 skipped, 83 total. Existing Assistant/SSE contracts remain unchanged.
+- Root eval: 1 suite passed, 1 skipped; 10 tests passed, 3 skipped, 13 total.
+- Root build and typecheck passed.
+- Customer-local runtime: the sandbox run failed only 5 listener suites/8 tests with `listen EPERM`; the identical approved local-only command passed all 32 suites and 323 tests. Runtime build and typecheck passed.
+- Shared connector contract: 10 suites and 68 tests passed; build and typecheck passed.
+- `git diff --check`, protected Feature 007/008/009 and Prisma checks, exact Phase 9 adapter hash, generic-routing source guards, and 142-task sequencing passed. T001–T099 are checked and T100–T142 remain unchecked. The pre-existing untracked Phase 6 TLS key fixture remains untouched.
+
+Phase 10 production/data files:
+
+```text
+scripts/seed.ts
+src/query-understanding/domain-lexicon.ts
+src/query-understanding/query-confidence.scorer.ts
+src/query-understanding/query-task-decomposer.ts
+src/query-understanding/query-understanding.module.ts
+src/query-understanding/query-understanding.types.ts
+src/query-understanding/rule-based-query-understanding.pipeline.ts
+src/query-understanding/time-range.parser.ts
+src/tools/tool-discovery.service.ts
+src/tools/tool-registry.service.ts
+src/tools/tool-registry.types.ts
+src/tools/tools.module.ts
+```
+
+Phase 10 test/fixture files:
+
+```text
+test/eval/internal-assistant-core.eval.spec.ts
+test/integration/clarification-required.spec.ts
+test/integration/customer-reset-seed.spec.ts
+test/integration/customer-tool-policy.spec.ts
+test/integration/feature008-runtime-cutover.spec.ts
+test/integration/query-understanding-persistence.spec.ts
+test/integration/tool-discovery-mock-equivalence.spec.ts
+test/support/tool-discovery.fixture.ts
+test/support/us1-test-app.helper.ts
+test/unit/assistant-context-state.spec.ts
+test/unit/chinese-tokenizer.spec.ts
+test/unit/deixis-resolution.spec.ts
+test/unit/query-normalization.spec.ts
+test/unit/query-task-decomposer.spec.ts
+test/unit/query-understanding-generic-routing.guard.spec.ts
+test/unit/query-understanding-pipeline-wiring.spec.ts
+test/unit/query-understanding-placeholder.spec.ts
+test/unit/query-understanding.service.spec.ts
+test/unit/tool-discovery-equivalence.spec.ts
+test/unit/tool-discovery.service.spec.ts
+test/unit/tool-registry.service.spec.ts
+test/unit/tool-risk-classification.spec.ts
+```
+
+```text
+FEATURE009_PHASE10_INTERRUPTED_EXECUTION_RECOVERY=PASS
+T090_RED_RECOVERY_MODE=HUMAN_AUTHORIZED_RECONSTRUCTED_PREDECESSOR
+T090_ORIGINAL_RED_OUTPUT_PRESERVED=NO
+T094_RED_RECOVERY_MODE=HUMAN_AUTHORIZED_RECONSTRUCTED_PRE_T095
+T094_ORIGINAL_RED_OUTPUT_PRESERVED=NO
+T096_AUTHENTIC_RED=YES
+TOOL_DISCOVERY_METADATA_VERSION=x-assistant-discovery-v1
+TOOL_DISCOVERY_CUSTOMER_POLICY_FILTER=PASS
+TOOL_DISCOVERY_ACTIVE_READONLY_ONLY=PASS
+DISCOVERY_OPERATION_AUTHORITY=NO
+TOOLDEFINITION_CANONICAL_OPERATION_AUTHORITY=YES
+DISCOVERY_ARGUMENT_BINDINGS=BOUNDED_NORMALIZED_SIGNALS_ONLY
+DISCOVERY_AMBIGUITY_NO_EXECUTION=PASS
+DISCOVERY_INSUFFICIENT_SCORE_NO_EXECUTION=PASS
+DISCOVERY_INVALID_BINDING_NO_EXECUTION=PASS
+CUSTOMER_TOOL_CATALOG_ISOLATION=PASS
+MOCK_DISCOVERY_EQUIVALENCE=PASS
+MOCK_DISCOVERY_COMPATIBILITY=PASS
+SYNTHETIC_CUSTOMER_B_GENERIC_DISCOVERY=PASS
+CUSTOMER_BRANCH_IN_ASSISTANT_CORE=NO
+CUSTOMER_SPECIFIC_ASSISTANT_CORE_BRANCH=NO
+HOSTAPP_BRANCH_IN_ASSISTANT_CORE=NO
+COMPLETE_QUESTION_BRANCH_IN_ASSISTANT_CORE=NO
+SHINMONE_FULL_QUERY_BRANCH=NO
+FEATURE008_AUTHORITIES_PRESERVED=YES
+PRODUCTIZED_ADAPTER_MODIFIED=NO
+FEATURE009_SPEC_DESIGN_PLAN_MODIFIED=NO
+FEATURE007_HISTORY_MODIFIED=NO
+PRISMA_MODIFIED=NO
+T090_T099_COMPLETE=YES
+T100_EXECUTED=NO
+PHASE10_EXECUTED=YES
+PHASE11_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T100
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
+
+### Phase 10 Final Human-Gate Evidence Hardening — 2026-09-14
+
+Human review found that the original T096 guard did not explicitly enforce the absence of bearer-only credential application, JWT parsing/claims authority, or JWT-exp-derived expiry/remint semantics in generic discovery and query orchestration. The guard now covers all Phase 10 generic query/discovery sources and uses bounded semantic patterns with positive and negative self-tests. The existing `ToolRegistryService` bearer-input rejection remains an allowed Customer-neutral security control. No generic production violation was found and no production source was changed.
+
+Narrow verification evidence:
+
+- The first focused run passed the three real-source scans but exposed two defects in the newly added guard self-tests: overlapping bearer rule classification and an uncovered compound JWT-remint identifier. It reported 1 failed and 2 passed suites, with 2 failed and 60 passed tests. Both defects were corrected only in the guard test.
+- The identical focused command then passed 3 suites and 62 tests. `npm run typecheck` passed, and `git diff --check` passed before and after this evidence append. The full T098 inventory was not rerun because no production issue was found.
+- Protected hashes remained unchanged: Feature 007 `spec.md=030f899f46d94d15b1357fb62de599e578a22cae5c388ddd35f57f194fa997cd`, `design.md=22439db8e4d7154d24311e41ecdea05c22d55edca159076779024a89c33be369`, `plan.md=cf3a2d5c36345eea6d61b7c26ce9cda20a4503cbc1a6b748a478fda3b0c9f9ea`, `tasks.md=eb6f7c4cded0e704fff9ef9e46dda7e4d6c79ab22da86502b8f33c0692b3b269`; Feature 008 `spec.md=59fb07a7d885d8b754bc23c1e8adf89c3100fab4eee9c753381010c0822b1cce`, `design.md=d50bb4655b94a6fcd3dc4f56baa46609bce795d91de9b812a0fbfd96eaaa83b4`, `plan.md=53e32cc7a9b19a9a61304a999388758e8b288aec4197fb513e6b5de0f7772833`, `tasks.md=4859a4052d9510e9ee9cd8de46588eade96f0247e87c0a61b7e3b430793a6b8f`; Feature 009 `spec.md=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73`, `design.md=bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb`, `plan.md=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1`; `prisma/schema.prisma=e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733`; and the sealed Phase 9 adapter `=8e84df809867bb8ec56ef555c07c7b9ae933a055aed813b6448d95148601ffb9`.
+- Hardening-attributed files were exactly `test/unit/query-understanding-generic-routing.guard.spec.ts` and this append-only `tasks.md` evidence. The pre-existing Phase 10 worktree and untracked Phase 6 TLS fixture were preserved. T090–T099 remain checked; T100–T142 remain unchecked.
+
+```text
+FEATURE009_PHASE10=PASS
+
+PHASE10_INTERRUPTED_EXECUTION_RECOVERY=PASS
+T090_RED_RECOVERY_MODE=HUMAN_AUTHORIZED_RECONSTRUCTED_PREDECESSOR
+T090_ORIGINAL_RED_OUTPUT_PRESERVED=NO
+T094_RED_RECOVERY_MODE=HUMAN_AUTHORIZED_RECONSTRUCTED_PRE_T095
+T094_ORIGINAL_RED_OUTPUT_PRESERVED=NO
+T096_AUTHENTIC_RED=YES
+
+T096_GENERIC_BEARER_ASSUMPTION_GUARD=PASS
+T096_GENERIC_JWT_EXP_ASSUMPTION_GUARD=PASS
+
+TOOL_DISCOVERY_METADATA_VERSION=x-assistant-discovery-v1
+TOOL_DISCOVERY_CUSTOMER_POLICY_FILTER=PASS
+TOOL_DISCOVERY_ACTIVE_READONLY_ONLY=PASS
+DISCOVERY_ARGUMENT_AUTHORITY_GUARD=PASS
+DISCOVERY_OPERATION_AUTHORITY=NO
+TOOLDEFINITION_CANONICAL_OPERATION_AUTHORITY=YES
+
+CUSTOMER_TOOL_CATALOG_ISOLATION=PASS
+CUSTOMER_B_DISCOVERABLE_READ_ONLY_TOOLS=inventory.stock-on-hand
+
+MOCK_DISCOVERY_EQUIVALENCE=PASS
+MOCK_DISCOVERY_COMPATIBILITY=PASS
+
+HARDCODED_MOCK_TOOL_ROUTING=NO
+CUSTOMER_BRANCH_IN_ASSISTANT_CORE=NO
+HOSTAPP_BRANCH_IN_ASSISTANT_CORE=NO
+COMPLETE_QUESTION_BRANCH_IN_ASSISTANT_CORE=NO
+SHINMONE_FULL_QUERY_BRANCH=NO
+
+FEATURE008_AUTHORITIES_PRESERVED=YES
+PRODUCTIZED_ADAPTER_MODIFIED=NO
+FEATURE009_SPEC_DESIGN_PLAN_MODIFIED=NO
+FEATURE007_HISTORY_MODIFIED=NO
+PRISMA_MODIFIED=NO
+
+PROTECTED_HASHES=PASS
+GIT_DIFF_CHECK=PASS
+
+T090_T099_COMPLETE=YES
+T100_EXECUTED=NO
+
+PHASE10_EXECUTED=YES
+PHASE11_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T100
+
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
 
 ## Phase 11 — First Shinmone Reference Configuration
 

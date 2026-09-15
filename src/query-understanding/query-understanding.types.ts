@@ -42,7 +42,7 @@ export interface QueryUnderstandingPhrase {
 export interface QueryUnderstandingNormalizedTerm {
   originalTerm: string;
   normalizedTerm: string;
-  category: 'resource' | 'entity' | 'operation' | 'time' | 'module' | 'unknown';
+  category: 'resource' | 'entity' | 'operation' | 'metric' | 'time' | 'module' | 'unknown';
   confidence: number;
   reason: string;
 }
@@ -85,8 +85,9 @@ export interface QueryUnderstandingClarificationNeed {
 }
 
 export interface QueryUnderstandingToolCandidate {
-  key: string;
-  reason: string;
+  readonly key: string;
+  readonly arguments: Readonly<Record<string, unknown>>;
+  readonly reason: string;
 }
 
 export interface QueryUnderstandingOutput {

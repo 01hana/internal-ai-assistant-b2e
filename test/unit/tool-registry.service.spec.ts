@@ -54,6 +54,22 @@ describe('ToolRegistryService', () => {
     });
   });
 
+  it('lists only active read-only no-side-effect tools allowed by the exact Customer policy', async () => {
+    const tools = [
+      toolDefinition({ id: 'allowed', name: 'allowed.read' }),
+      toolDefinition({ id: 'denied', name: 'denied.read' }),
+      toolDefinition({ id: 'inactive', name: 'inactive.read', isActive: false }),
+      toolDefinition({ id: 'write', name: 'write.tool', operation: ToolOperation.update, hasSideEffect: true } as never)
+    ];
+    const policy = { resolve: jest.fn(async ({ toolDefinitionId }: { toolDefinitionId: string }) => ({ allowed: toolDefinitionId === 'allowed', policy: {} })) };
+    const service = new ToolRegistryService(createPrismaServiceMock(tools), policy as never);
+
+    await expect(service.listDiscoverableToolsForCustomer({ customerId: 'customer-a' } as never)).resolves.toEqual([
+      expect.objectContaining({ id: 'allowed', key: 'allowed.read' })
+    ]);
+    expect(policy.resolve).toHaveBeenCalledTimes(2);
+  });
+
   it('normalizes DB records without consulting connector listTools capability reports', async () => {
     const service = new ToolRegistryService(createPrismaServiceMock([toolDefinition({ name: 'mock.orders.status.lookup' })]), customerToolPolicyMock());
 

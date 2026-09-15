@@ -2,6 +2,8 @@ import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { RiskLevel } from '../../src/generated/prisma/enums';
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
+import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
+import { createToolDiscoveryFixtureService } from '../support/tool-discovery.fixture';
 import {
   createAuthorizedInternalIdentityHeaders,
   createIdentityHeaders,
@@ -29,7 +31,7 @@ describe('internal assistant core deterministic eval baseline', () => {
   };
 
   it('query-understanding-routing-and-entities', async () => {
-    const pipeline = new RuleBasedQueryUnderstandingPipeline();
+    const pipeline = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
 
     const structuredInput = {
       requestId: 'req-eval-query-understanding-structured',

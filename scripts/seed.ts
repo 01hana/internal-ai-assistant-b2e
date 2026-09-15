@@ -214,24 +214,44 @@ async function seedToolDefinitions(prisma: PrismaClient) {
 }
 
 async function seedCustomerToolPolicies(prisma: PrismaClient, toolDefinitions: Array<{ id: string; name: string; version: string }>) {
-  const lookup = toolDefinitions.find((tool) => tool.name === 'mock.orders.status.lookup' && tool.version === '1.0.0');
-  if (!lookup) throw new Error('Required global ToolDefinition mock.orders.status.lookup@1.0.0 was not seeded.');
-  for (const customerId of [CUSTOMER_A_ID, CUSTOMER_B_ID]) {
-    await prisma.customerToolPolicy.upsert({
-      where: { customerId_toolDefinitionId: { customerId, toolDefinitionId: lookup.id } },
-      update: { enabled: true, requiredRoles: [], requiredPermissionScopes: [] },
-      create: { customerId, toolDefinitionId: lookup.id, enabled: true, requiredRoles: [], requiredPermissionScopes: [] }
-    });
+  const customerATools = toolDefinitions.filter((tool) => tool.name.startsWith('mock.'));
+  const customerBTools = toolDefinitions.filter((tool) => tool.name === 'inventory.stock-on-hand');
+  if (customerATools.length !== 6 || customerBTools.length !== 1) throw new Error('Required discovery ToolDefinitions were not seeded.');
+  const obsoleteCustomerBReadTool = toolDefinitions.find((tool) => tool.name === 'mock.orders.status.lookup' && tool.version === '1.0.0');
+  if (!obsoleteCustomerBReadTool) throw new Error('Required mock order status ToolDefinition was not seeded.');
+  await prisma.customerToolPolicy.deleteMany({
+    where: { customerId: CUSTOMER_B_ID, toolDefinitionId: obsoleteCustomerBReadTool.id }
+  });
+  for (const [customerId, tools] of [[CUSTOMER_A_ID, customerATools], [CUSTOMER_B_ID, customerBTools]] as const) {
+    for (const lookup of tools) {
+      await prisma.customerToolPolicy.upsert({
+        where: { customerId_toolDefinitionId: { customerId, toolDefinitionId: lookup.id } },
+        update: { enabled: true, requiredRoles: [], requiredPermissionScopes: [] },
+        create: { customerId, toolDefinitionId: lookup.id, enabled: true, requiredRoles: [], requiredPermissionScopes: [] }
+      });
+    }
   }
 }
 
-const baseInputSchema = {
+const discoveryMetadata = (input: {
+  resource: string[]; intent?: string[]; metric?: string[]; timeRange?: string[];
+  required?: string[]; taskType: string; entityConcepts?: string[]; argumentName?: string;
+}) => ({
+  version: '1', locale: 'zh-TW', resourceConcepts: input.resource,
+  intentConcepts: input.intent ?? ['read'], metricConcepts: input.metric ?? [],
+  timeRangeConcepts: input.timeRange ?? [], requiredConceptGroups: input.required ?? ['resource'],
+  argumentBindings: input.entityConcepts ? [{ argumentName: input.argumentName ?? 'entityId', source: 'entity_value', concepts: input.entityConcepts }] : [],
+  taskType: input.taskType, requiredEvidence: ['identity_context', 'structured_record']
+});
+
+const baseInputSchema = (metadata: ReturnType<typeof discoveryMetadata>) => ({
   type: 'object',
   required: ['entityId'],
   properties: {
     entityId: { type: 'string' }
-  }
-};
+  },
+  'x-assistant-discovery-v1': metadata
+});
 
 const createMockOutputSchema = (input: {
   required: string[];
@@ -268,7 +288,7 @@ const MOCK_TOOL_DEFINITIONS = [
     description: 'Lookup mock order status for internal assistant development.',
     resource: 'orders',
     operation: ToolOperation.read,
-    inputSchema: baseInputSchema,
+    inputSchema: baseInputSchema(discoveryMetadata({ resource: ['order'], metric: ['status'], taskType: 'order_status_lookup', entityConcepts: ['orderId'] })),
     outputSchema: createMockOutputSchema({
       required: ['orderId', 'status'],
       properties: {
@@ -305,7 +325,7 @@ const MOCK_TOOL_DEFINITIONS = [
     description: 'Mock order status update side effect for internal assistant development.',
     resource: 'orders',
     operation: ToolOperation.update,
-    inputSchema: baseInputSchema,
+    inputSchema: baseInputSchema(discoveryMetadata({ resource: ['order'], intent: ['update'], required: ['resource', 'intent'], taskType: 'order_status_update', entityConcepts: ['orderId'] })),
     outputSchema: createMockOutputSchema({
       required: ['orderId', 'status'],
       properties: {
@@ -335,7 +355,7 @@ const MOCK_TOOL_DEFINITIONS = [
     description: 'Mock order cancellation side effect for internal assistant development.',
     resource: 'orders',
     operation: ToolOperation.update,
-    inputSchema: baseInputSchema,
+    inputSchema: baseInputSchema(discoveryMetadata({ resource: ['order'], intent: ['cancel'], required: ['resource', 'intent'], taskType: 'order_cancel', entityConcepts: ['orderId'] })),
     outputSchema: createMockOutputSchema({
       required: ['orderId', 'status'],
       properties: {
@@ -365,7 +385,7 @@ const MOCK_TOOL_DEFINITIONS = [
     description: 'Lookup mock work order progress for internal assistant development.',
     resource: 'work_orders',
     operation: ToolOperation.read,
-    inputSchema: baseInputSchema,
+    inputSchema: baseInputSchema(discoveryMetadata({ resource: ['workOrder'], metric: ['progress'], taskType: 'work_order_progress_lookup', entityConcepts: ['workOrderId'] })),
     outputSchema: createMockOutputSchema({
       required: ['workOrderId', 'status'],
       properties: {
@@ -404,7 +424,7 @@ const MOCK_TOOL_DEFINITIONS = [
     description: 'Lookup mock inventory availability for internal assistant development.',
     resource: 'inventory',
     operation: ToolOperation.read,
-    inputSchema: baseInputSchema,
+    inputSchema: baseInputSchema(discoveryMetadata({ resource: ['inventory'], metric: ['availability'], taskType: 'inventory_availability_lookup', entityConcepts: ['itemSku'] })),
     outputSchema: createMockOutputSchema({
       required: ['itemSku', 'availableQuantity'],
       properties: {
@@ -441,7 +461,7 @@ const MOCK_TOOL_DEFINITIONS = [
     description: 'Lookup mock customer or supplier history for internal assistant development.',
     resource: 'business_partners',
     operation: ToolOperation.read,
-    inputSchema: baseInputSchema,
+    inputSchema: baseInputSchema(discoveryMetadata({ resource: ['businessPartner'], metric: ['history'], taskType: 'business_partner_history_lookup', entityConcepts: ['customerId', 'supplierId'] })),
     outputSchema: createMockOutputSchema({
       required: ['partnerId', 'relationshipStatus'],
       properties: {
@@ -473,6 +493,20 @@ const MOCK_TOOL_DEFINITIONS = [
       summarizeOutput: true
     },
     isActive: true
+  },
+  {
+    name: 'inventory.stock-on-hand', version: '1.0.0',
+    description: 'Synthetic Customer B stock-on-hand fixture.', resource: 'inventory', operation: ToolOperation.read,
+    inputSchema: {
+      type: 'object', additionalProperties: false, required: ['sku'], properties: { sku: { type: 'string' } },
+      'x-assistant-discovery-v1': discoveryMetadata({ resource: ['inventory', 'stock'], intent: ['read', 'lookup'], metric: ['availability'], taskType: 'inventory_stock_lookup', entityConcepts: ['itemSku'], argumentName: 'sku' })
+    },
+    outputSchema: createMockOutputSchema({
+      required: ['sku', 'quantity'], properties: { sku: { type: 'string' }, quantity: { type: 'number' } },
+      allowedFieldPaths: ['sku', 'quantity'], evidenceSafeProvenanceFields: ['sku']
+    }),
+    requiredPermissions: ['inventory:read'], riskLevel: RiskLevel.low, connectorKey: 'business', timeoutMs: 5000,
+    auditBehavior: { summarizeInput: true, summarizeOutput: true }, isActive: true
   }
 ];
 

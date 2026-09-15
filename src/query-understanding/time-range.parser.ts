@@ -25,10 +25,10 @@ export function parseTimeRanges(text: string, now: Date, timezone: string): Time
     const start = addDays(thisWeekStart, -7);
     ranges.push(toRange('last_week', start, addDays(start, 6), timezone, '上週'));
   }
-  if (text.includes('本月')) {
+  if (text.includes('本月') || text.includes('這個月')) {
     const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
     const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0));
-    ranges.push(toRange('this_month', start, end, timezone, '本月'));
+    ranges.push(toRange('this_month', start, end, timezone, text.includes('這個月') ? '這個月' : '本月'));
   }
   if (text.includes('近三個月')) {
     ranges.push(toRange('last_three_months', addMonths(today, -3), today, timezone, '近三個月'));

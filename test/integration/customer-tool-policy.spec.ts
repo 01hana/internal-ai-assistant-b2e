@@ -4,6 +4,7 @@ import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState } fr
 import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
 import { CUSTOMER_TOOL_PHASE6 } from '../support/customer-tool-phase6-fixtures';
 import { ToolRegistryService } from '../../src/tools/tool-registry.service';
+import { parseToolDiscoveryMetadataV1 } from '../../src/tools/tool-discovery.service';
 import { CUSTOMER_SCOPE_FIXTURES, createCustomerScopeFixtureScope } from '../support/customer-scope-fixtures';
 
 const describeUs3 = process.env.RUN_CUSTOMER_US3_TESTS === 'true' ? describe : describe.skip;
@@ -144,6 +145,40 @@ describe('Feature 008 ToolDefinition result-policy authority', () => {
           policy: expect.objectContaining({ version: '1' })
         })
       );
+      expect(parseToolDiscoveryMetadataV1(resolved.tool!.inputSchema)).toEqual(
+        expect.objectContaining({ version: '1', locale: 'zh-TW' })
+      );
     }
+  });
+
+  it('keeps Synthetic Customer B on the same generic discovery and result-policy contracts', async () => {
+    const registry = app.get(ToolRegistryService);
+    const definition = state.toolDefinitions.find((tool) => tool.name === 'inventory.stock-on-hand');
+    expect(definition).toBeDefined();
+    const resolution = await registry.resolveToolForCustomer(
+      'inventory.stock-on-hand',
+      createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerB)
+    );
+    expect(resolution.resolved?.tool.connectorKey).toBe('business');
+    expect(parseToolDiscoveryMetadataV1(resolution.resolved!.tool.inputSchema)).toEqual(
+      expect.objectContaining({ resourceConcepts: ['inventory', 'stock'], taskType: 'inventory_stock_lookup' })
+    );
+    expect(registry.resolveResultPolicy(resolution.resolved!.tool)).toEqual(
+      expect.objectContaining({ allowed: true, policy: expect.objectContaining({ allowedFieldPaths: ['sku', 'quantity'] }) })
+    );
+  });
+
+  it('keeps discoverable read-only catalogs Customer-isolated', async () => {
+    const registry = app.get(ToolRegistryService);
+    const customerA = await registry.listDiscoverableToolsForCustomer({ customerId: 'customer-a' });
+    const customerB = await registry.listDiscoverableToolsForCustomer({ customerId: 'customer-b' });
+    expect(customerA.map(({ key }) => key).sort()).toEqual([
+      'mock.business-partner.history.lookup',
+      'mock.inventory.availability.lookup',
+      'mock.orders.status.lookup',
+      'mock.work-orders.progress.lookup'
+    ]);
+    expect(customerB.map(({ key }) => key)).toEqual(['inventory.stock-on-hand']);
+    expect(customerB.map(({ key }) => key)).not.toContain('mock.orders.status.lookup');
   });
 });

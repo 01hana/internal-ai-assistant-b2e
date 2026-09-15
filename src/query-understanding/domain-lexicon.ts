@@ -15,12 +15,21 @@ export const DOMAIN_LEXICON: DomainLexiconEntry[] = [
   { terms: ['訂單', '銷售單'], normalizedTerm: 'order', category: 'resource', phraseCategory: 'resource' },
   { terms: ['客戶', '供應商'], normalizedTerm: 'businessPartner', category: 'resource', phraseCategory: 'resource' },
   { terms: ['庫存'], normalizedTerm: 'inventory', category: 'resource', phraseCategory: 'resource' },
+  { terms: ['狀態'], normalizedTerm: 'status', category: 'metric', phraseCategory: 'metric' },
+  { terms: ['進度'], normalizedTerm: 'progress', category: 'metric', phraseCategory: 'metric' },
+  { terms: ['可用', '可用量'], normalizedTerm: 'availability', category: 'metric', phraseCategory: 'metric' },
+  { terms: ['歷史'], normalizedTerm: 'history', category: 'metric', phraseCategory: 'metric' },
+  { terms: ['存量'], normalizedTerm: 'stock', category: 'resource', phraseCategory: 'resource' },
+  { terms: ['筆數', '幾筆', '幾張'], normalizedTerm: 'count', category: 'metric', phraseCategory: 'metric' },
+  { terms: ['新增'], normalizedTerm: 'newCount', category: 'metric', phraseCategory: 'metric' },
   { terms: ['查', '查詢', '看', '確認'], normalizedTerm: 'read', category: 'operation', phraseCategory: 'intent' },
+  { terms: ['查找', '查閱'], normalizedTerm: 'lookup', category: 'operation', phraseCategory: 'intent' },
   { terms: ['更新', '修改'], normalizedTerm: 'update', category: 'operation', phraseCategory: 'intent' },
   { terms: ['取消'], normalizedTerm: 'cancel', category: 'operation', phraseCategory: 'intent' },
   { terms: ['核准'], normalizedTerm: 'approve', category: 'operation', phraseCategory: 'intent' },
   { terms: ['刪除'], normalizedTerm: 'delete', category: 'operation', phraseCategory: 'intent' },
-  { terms: ['今天', '昨天', '本週', '上週', '本月', '近三個月'], normalizedTerm: 'timeRange', category: 'time', phraseCategory: 'time' }
+  { terms: ['今天', '昨天', '本週', '上週', '本月', '這個月', '近三個月'], normalizedTerm: 'timeRange', category: 'time', phraseCategory: 'time' },
+  { terms: ['本月', '這個月'], normalizedTerm: 'this_month', category: 'time', phraseCategory: 'time' }
 ];
 
 export const BUSINESS_TERMS = DOMAIN_LEXICON.flatMap((entry) => entry.terms);

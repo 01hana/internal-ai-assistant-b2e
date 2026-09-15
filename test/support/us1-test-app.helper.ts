@@ -1800,7 +1800,14 @@ function createInitialState(): MockState {
           requiredRoles: [],
           requiredPermissionScopes: []
         }
-      ])
+      ]),
+      ...['tool-definition-work-orders-001', 'tool-definition-inventory-001', 'tool-definition-business-partner-001'].map((toolDefinitionId) => ({
+        customerId: 'customer-a', toolDefinitionId, enabled: true, requiredRoles: [], requiredPermissionScopes: []
+      })),
+      {
+        customerId: 'customer-b', toolDefinitionId: 'tool-definition-customer-b-stock-001',
+        enabled: true, requiredRoles: [], requiredPermissionScopes: []
+      }
     ],
     actionDrafts: createActionDrafts(baseDate),
     approvalRequests: createApprovalRequests(baseDate),
@@ -2735,6 +2742,26 @@ function createToolDefinitions(baseDate: Date): ToolDefinitionRecord[] {
       ],
       evidenceProvenance: ['partnerId'],
       baseDate
+    }),
+    createToolDefinition({
+      id: 'tool-definition-customer-b-stock-001',
+      name: 'inventory.stock-on-hand',
+      description: 'Synthetic Customer B stock-on-hand fixture.',
+      resource: 'inventory',
+      requiredPermissions: ['inventory:read'],
+      connectorKey: 'business',
+      inputProperty: 'sku',
+      entityConcepts: ['itemSku'],
+      discoveryResource: ['inventory', 'stock'],
+      discoveryIntent: ['read', 'lookup'],
+      discoveryMetric: ['availability'],
+      taskType: 'inventory_stock_lookup',
+      outputRequired: ['sku', 'quantity'],
+      outputProperties: { sku: { type: 'string' }, quantity: { type: 'number' } },
+      outputAllowed: ['sku', 'quantity'],
+      evidenceProvenance: ['sku'],
+      timeoutMs: 5000,
+      baseDate
     })
   ];
 }
@@ -2755,8 +2782,25 @@ function createToolDefinition(input: {
   hasSideEffect?: boolean;
   requiresConfirmation?: boolean;
   requiresApproval?: boolean;
+  connectorKey?: string;
+  timeoutMs?: number;
+  inputProperty?: string;
+  entityConcepts?: string[];
+  discoveryResource?: string[];
+  discoveryIntent?: string[];
+  discoveryMetric?: string[];
+  taskType?: string;
   baseDate: Date;
 }): ToolDefinitionRecord {
+  const inputProperty = input.inputProperty ?? 'entityId';
+  const discovery = discoveryMetadataForTool(input.name, {
+    resource: input.discoveryResource,
+    intent: input.discoveryIntent,
+    metric: input.discoveryMetric,
+    entityConcepts: input.entityConcepts,
+    argumentName: inputProperty,
+    taskType: input.taskType
+  });
   return {
     id: input.id,
     name: input.name,
@@ -2766,10 +2810,11 @@ function createToolDefinition(input: {
     operation: input.operation ?? ToolOperation.read,
     inputSchema: {
       type: 'object',
-      required: ['entityId'],
+      required: [inputProperty],
       properties: {
-        entityId: { type: 'string' }
-      }
+        [inputProperty]: { type: 'string' }
+      },
+      'x-assistant-discovery-v1': discovery
     },
     outputSchema: {
       type: 'object',
@@ -2797,8 +2842,8 @@ function createToolDefinition(input: {
     hasSideEffect: input.hasSideEffect ?? false,
     requiresConfirmation: input.requiresConfirmation ?? false,
     requiresApproval: input.requiresApproval ?? false,
-    connectorKey: 'mock',
-    timeoutMs: 3000,
+    connectorKey: input.connectorKey ?? 'mock',
+    timeoutMs: input.timeoutMs ?? 3000,
     auditBehavior: {
       summarizeInput: true,
       summarizeOutput: true
@@ -2806,6 +2851,31 @@ function createToolDefinition(input: {
     isActive: true,
     createdAt: new Date(input.baseDate),
     updatedAt: new Date(input.baseDate)
+  };
+}
+
+function discoveryMetadataForTool(name: string, overrides: {
+  resource?: string[]; intent?: string[]; metric?: string[]; entityConcepts?: string[];
+  argumentName: string; taskType?: string;
+}) {
+  const definitions: Record<string, { resource: string[]; intent: string[]; metric: string[]; entity: string[]; taskType: string }> = {
+    'mock.orders.status.lookup': { resource: ['order'], intent: ['read'], metric: ['status'], entity: ['orderId'], taskType: 'order_status_lookup' },
+    'mock.orders.status.update': { resource: ['order'], intent: ['update'], metric: ['status'], entity: ['orderId'], taskType: 'order_status_update' },
+    'mock.orders.cancel': { resource: ['order'], intent: ['cancel'], metric: [], entity: ['orderId'], taskType: 'order_cancel' },
+    'mock.work-orders.progress.lookup': { resource: ['workOrder'], intent: ['read'], metric: ['progress'], entity: ['workOrderId'], taskType: 'work_order_progress_lookup' },
+    'mock.inventory.availability.lookup': { resource: ['inventory'], intent: ['read'], metric: ['availability'], entity: ['itemSku'], taskType: 'inventory_availability_lookup' },
+    'mock.business-partner.history.lookup': { resource: ['businessPartner'], intent: ['read'], metric: ['history'], entity: ['customerId', 'supplierId'], taskType: 'business_partner_history_lookup' }
+  };
+  const base = definitions[name] ?? {
+    resource: overrides.resource ?? [], intent: overrides.intent ?? ['read'], metric: overrides.metric ?? [],
+    entity: overrides.entityConcepts ?? [], taskType: overrides.taskType ?? 'general_lookup'
+  };
+  return {
+    version: '1', locale: 'zh-TW', resourceConcepts: overrides.resource ?? base.resource,
+    intentConcepts: overrides.intent ?? base.intent, metricConcepts: overrides.metric ?? base.metric,
+    timeRangeConcepts: [], requiredConceptGroups: ['resource'],
+    argumentBindings: [{ argumentName: overrides.argumentName, source: 'entity_value', concepts: overrides.entityConcepts ?? base.entity }],
+    taskType: overrides.taskType ?? base.taskType, requiredEvidence: ['identity_context', 'structured_record']
   };
 }
 

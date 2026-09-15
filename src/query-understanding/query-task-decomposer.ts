@@ -1,65 +1,14 @@
 import { RiskLevel } from '../generated/prisma/enums';
-import { hasEntity } from './entity-extractor';
 import {
   QueryUnderstandingEntityCandidate,
-  QueryUnderstandingNormalizedTerm,
   QueryUnderstandingResolvedReference,
   QueryUnderstandingSentence,
-  QueryUnderstandingSubTask,
-  QueryUnderstandingToolCandidate
+  QueryUnderstandingSubTask
 } from './query-understanding.types';
 
-export interface QueryUnderstandingPlannedCandidate extends QueryUnderstandingToolCandidate {
-  arguments: Record<string, unknown>;
-}
-
-export function inferCandidateTools(
-  text: string,
-  entities: QueryUnderstandingEntityCandidate[],
-  normalizedTerms: QueryUnderstandingNormalizedTerm[]
-): QueryUnderstandingPlannedCandidate[] {
-  if (text.length === 0 || isPunctuationOnly(text)) {
-    return [];
-  }
-
-  if (isDestructiveIntent(text)) {
-    return [];
-  }
-
-  if (isDocumentKnowledgeQuery(text)) {
-    return [];
-  }
-
-  const tools: QueryUnderstandingPlannedCandidate[] = [];
-  if (hasEntity(entities, 'orderId') || hasNormalized(normalizedTerms, 'order')) {
-    tools.push(candidate('mock.orders.status.lookup', 'order status query', firstEntityValue(entities, ['orderId'])));
-  }
-  if (hasEntity(entities, 'workOrderId') || hasNormalized(normalizedTerms, 'workOrder')) {
-    tools.push(candidate('mock.work-orders.progress.lookup', 'work order progress query', firstEntityValue(entities, ['workOrderId'])));
-  }
-  if (hasEntity(entities, 'itemSku') || hasNormalized(normalizedTerms, 'inventory') || hasNormalized(normalizedTerms, 'itemSku')) {
-    tools.push(candidate('mock.inventory.availability.lookup', 'inventory availability query', firstEntityValue(entities, ['itemSku'])));
-  }
-  if (hasNormalized(normalizedTerms, 'businessPartner')) {
-    tools.push(
-      candidate(
-        'mock.business-partner.history.lookup',
-        'business partner history query',
-        firstEntityValue(entities, ['customerId', 'supplierId'])
-      )
-    );
-  }
-
-  return tools.length > 0 ? tools : [candidate('mock.general.lookup', 'generic internal lookup')];
-}
-
-export function inferTaskType(text: string, candidateTools: QueryUnderstandingToolCandidate[]): string {
+export function inferTaskType(text: string): string {
   if (text.length === 0 || isPunctuationOnly(text)) {
     return 'clarification_required';
-  }
-
-  if (candidateTools.length > 1) {
-    return 'multi_intent_lookup';
   }
 
   if (isDocumentKnowledgeQuery(text)) {
@@ -68,12 +17,6 @@ export function inferTaskType(text: string, candidateTools: QueryUnderstandingTo
     if (text.includes('錯誤代碼')) return 'error_code_lookup';
     return 'document_knowledge_lookup';
   }
-
-  const firstTool = candidateTools[0]?.key ?? '';
-  if (firstTool.includes('orders')) return 'order_status_lookup';
-  if (firstTool.includes('work-orders')) return 'work_order_progress_lookup';
-  if (firstTool.includes('inventory')) return 'inventory_availability_lookup';
-  if (firstTool.includes('business-partner')) return 'business_partner_history_lookup';
 
   return 'general_lookup';
 }
@@ -127,19 +70,11 @@ export function inferRiskLevel(text: string): RiskLevel {
 
 export function decomposeSubTasks(
   sentences: QueryUnderstandingSentence[],
-  text: string,
-  candidateTools: QueryUnderstandingToolCandidate[]
+  fallbackTaskType = 'general_lookup'
 ): QueryUnderstandingSubTask[] {
-  if (candidateTools.length <= 1) {
-    return sentences.map((sentence) => ({
-      type: inferTaskType(sentence.text, candidateTools),
-      text: sentence.text
-    }));
-  }
-
-  return candidateTools.map((tool) => ({
-    type: tool.key.includes('inventory') ? 'inventory_availability_lookup' : 'order_status_lookup',
-    text
+  return sentences.map((sentence) => ({
+    type: fallbackTaskType === 'general_lookup' ? inferTaskType(sentence.text) : fallbackTaskType,
+    text: sentence.text
   }));
 }
 
@@ -166,27 +101,4 @@ export function isDocumentKnowledgeQuery(text: string): boolean {
 
 export function isDocumentTaskType(taskType: string): boolean {
   return ['document_knowledge_lookup', 'field_explanation_lookup', 'policy_lookup', 'error_code_lookup'].includes(taskType);
-}
-
-function hasNormalized(terms: QueryUnderstandingNormalizedTerm[], normalizedTerm: string): boolean {
-  return terms.some((term) => term.normalizedTerm === normalizedTerm);
-}
-
-function isDestructiveIntent(text: string): boolean {
-  return text.includes('刪除') || text.includes('取消') || text.includes('核准');
-}
-
-function candidate(key: string, reason: string, entityId?: string): QueryUnderstandingPlannedCandidate {
-  return {
-    key,
-    arguments: entityId ? { entityId } : {},
-    reason
-  };
-}
-
-function firstEntityValue(
-  entities: QueryUnderstandingEntityCandidate[],
-  types: readonly QueryUnderstandingEntityCandidate['type'][]
-): string | undefined {
-  return entities.find((entity) => types.includes(entity.type))?.value;
 }

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DefaultTokenizerAdapter } from './default-tokenizer.adapter';
 import { generateClarificationNeeds } from './clarification-need.generator';
 import { extractEntityCandidates } from './entity-extractor';
@@ -9,7 +9,6 @@ import { QueryUnderstandingInput, QueryUnderstandingOutput } from './query-under
 import { normalizeQueryText, splitQuerySentences } from './query-sentence-splitter';
 import {
   decomposeSubTasks,
-  inferCandidateTools,
   inferRequiredEvidence,
   inferRiskLevel,
   isDocumentTaskType,
@@ -18,13 +17,15 @@ import {
 import { resolveDeixisReferences } from './deixis-resolver';
 import { scoreQueryUnderstandingConfidence } from './query-confidence.scorer';
 import { TokenizerAdapter } from './tokenizer-adapter.interface';
+import { ToolDiscoveryService } from '../tools/tool-discovery.service';
+import { RiskLevel } from '../generated/prisma/enums';
 
 @Injectable()
 export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPipeline {
   constructor(
-    @Optional()
     @Inject('TokenizerAdapter')
-    private readonly tokenizerAdapter: TokenizerAdapter = new DefaultTokenizerAdapter()
+    private readonly tokenizerAdapter: TokenizerAdapter,
+    private readonly toolDiscovery: ToolDiscoveryService
   ) {}
 
   async understand(input: QueryUnderstandingInput): Promise<QueryUnderstandingOutput> {
@@ -50,19 +51,30 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
       input.pageContext,
       input.assistantContextState
     );
-    const candidateTools = inferCandidateTools(normalizedText, entityCandidates, normalizedTerms);
-    const taskType = inferTaskType(normalizedText, candidateTools);
-    const requiredEvidence = inferRequiredEvidence(taskType, entityCandidates, resolvedReferences);
     const riskLevel = inferRiskLevel(normalizedText);
-    const subTasks = decomposeSubTasks(sentences, normalizedText, candidateTools);
-    const clarificationNeeds = generateClarificationNeeds({
+    const documentTaskType = inferTaskType(normalizedText);
+    const discovery = isDocumentTaskType(documentTaskType) || riskLevel !== RiskLevel.low
+      ? undefined
+      : await this.toolDiscovery.discover({
+          customerScope: Object.freeze({ customerId: input.hostIntegrationContext.customerId }),
+          normalizedTerms, phrases, timeRanges: timeRangeResult.timeRanges, entityCandidates
+        });
+    const candidateTools = [...(discovery?.candidates ?? [])];
+    const taskType = discovery?.taskType ?? documentTaskType;
+    const requiredEvidence = discovery?.requiredEvidence.length
+      ? [...discovery.requiredEvidence]
+      : inferRequiredEvidence(taskType, entityCandidates, resolvedReferences);
+    const subTasks = discovery?.discoveredTaskTypes.length
+      ? discovery.discoveredTaskTypes.map((type, index) => ({ type, text: sentences[index]?.text ?? normalizedText }))
+      : decomposeSubTasks(sentences, taskType);
+    const clarificationNeeds = [...(discovery?.clarificationNeeds ?? []), ...generateClarificationNeeds({
       text: normalizedText,
       timeClarifications: timeRangeResult.clarificationNeeds,
       entityCandidates,
       resolvedReferences,
       candidateTools,
       allowNoToolCandidate: isDocumentTaskType(taskType)
-    });
+    })];
     const confidence = scoreQueryUnderstandingConfidence({
       text: normalizedText,
       entityCandidates,
@@ -70,6 +82,7 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
       resolvedReferences,
       clarificationNeeds,
       hasDocumentEvidenceRequirement: requiredEvidence.includes('document_chunk')
+      , discoveryConfidence: discovery?.matchConfidence
     });
 
     return {

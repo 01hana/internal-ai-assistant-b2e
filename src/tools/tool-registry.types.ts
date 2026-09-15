@@ -40,6 +40,28 @@ export interface RegisteredToolDefinition {
   requiresApproval: boolean;
 }
 
+export type ToolDiscoveryConceptGroup = 'resource' | 'intent' | 'metric' | 'timeRange';
+export type ToolDiscoveryArgumentSource = 'entity_value' | 'normalized_term' | 'time_range_label';
+
+export interface ToolDiscoveryArgumentBindingV1 {
+  readonly argumentName: string;
+  readonly source: ToolDiscoveryArgumentSource;
+  readonly concepts: readonly string[];
+}
+
+export interface ToolDiscoveryMetadataV1 {
+  readonly version: '1';
+  readonly locale: 'zh-TW';
+  readonly resourceConcepts: readonly string[];
+  readonly intentConcepts: readonly string[];
+  readonly metricConcepts: readonly string[];
+  readonly timeRangeConcepts: readonly string[];
+  readonly requiredConceptGroups: readonly ToolDiscoveryConceptGroup[];
+  readonly argumentBindings: readonly ToolDiscoveryArgumentBindingV1[];
+  readonly taskType: string;
+  readonly requiredEvidence: readonly string[];
+}
+
 export interface ToolRegistryResolveResult {
   tool?: RegisteredToolDefinition;
   deniedReason?: ToolPermissionDeniedReason;

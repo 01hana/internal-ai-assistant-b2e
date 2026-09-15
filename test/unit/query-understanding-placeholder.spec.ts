@@ -1,8 +1,10 @@
 import { RiskLevel } from '../../src/generated/prisma/enums';
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
+import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
+import { createToolDiscoveryFixtureService } from '../support/tool-discovery.fixture';
 
 describe('RuleBasedQueryUnderstandingPipeline', () => {
-  const service = new RuleBasedQueryUnderstandingPipeline();
+  const service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
   const hostIntegrationContext = {
     requestId: 'req-qu-001',
     customerId: 'customer-a',
@@ -36,7 +38,7 @@ describe('RuleBasedQueryUnderstandingPipeline', () => {
         arguments: {
           entityId: 'SO-10001'
         },
-        reason: 'order status query'
+        reason: 'metadata_discovery'
       }
     ]);
     expect(result.riskLevel).toBe(RiskLevel.low);
