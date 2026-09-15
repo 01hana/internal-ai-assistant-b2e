@@ -130,6 +130,41 @@ describe('ToolDiscoveryService', () => {
     await expect(customerA.discover(discoveryInput())).resolves.toMatchObject({ candidates: [{ key: 'mock.orders.status.lookup' }] });
     await expect(customerB.discover(discoveryInput({ customerScope: scope('customer-b') }))).resolves.toMatchObject({ candidates: [] });
   });
+
+  it('discovers the monthly new-work-order count from generic concepts without phrase routing or arguments', async () => {
+    const reference = schema({
+      id: 'tool-monthly-new-work-orders',
+      key: 'work-orders.monthly-new-count',
+      name: 'work-orders.monthly-new-count',
+      connectorKey: 'business',
+      timeoutMs: 5000,
+      inputSchema: {
+        type: 'object', required: [], properties: {}, additionalProperties: false,
+        'x-assistant-discovery-v1': {
+          version: '1', locale: 'zh-TW', resourceConcepts: ['workOrder'], intentConcepts: ['read'],
+          metricConcepts: ['newCount', 'count'], timeRangeConcepts: ['this_month'],
+          requiredConceptGroups: ['resource', 'metric', 'timeRange'], argumentBindings: [],
+          taskType: 'work_order_monthly_new_count', requiredEvidence: ['identity_context', 'structured_record']
+        }
+      }
+    });
+    const result = await serviceWith([reference]).discover(discoveryInput({
+      normalizedTerms: [
+        { originalTerm: '工單', normalizedTerm: 'workOrder', category: 'resource', confidence: 0.9, reason: 'domain_lexicon' },
+        { originalTerm: '新增', normalizedTerm: 'newCount', category: 'metric', confidence: 0.9, reason: 'domain_lexicon' },
+        { originalTerm: '幾張', normalizedTerm: 'count', category: 'metric', confidence: 0.9, reason: 'domain_lexicon' },
+        { originalTerm: '這個月', normalizedTerm: 'this_month', category: 'time', confidence: 0.9, reason: 'domain_lexicon' }
+      ],
+      phrases: [],
+      entityCandidates: [],
+      timeRanges: [{ label: 'this_month', start: '2026-09-01', end: '2026-09-30', timezone: 'Asia/Taipei', source: '這個月', confidence: 1 }]
+    }));
+    expect(result).toMatchObject({
+      candidates: [{ key: 'work-orders.monthly-new-count', arguments: {}, reason: 'metadata_discovery' }],
+      taskType: 'work_order_monthly_new_count',
+      matchConfidence: 0.95
+    });
+  });
 });
 
 function serviceWith(tools: ReturnType<typeof schema>[]) {

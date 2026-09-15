@@ -42,6 +42,7 @@ import {
 } from './internal-identity-test-module.helper';
 import { isValidNormalizedKnowledgeDocumentAccessPolicy } from '../../src/retrieval/knowledge-access-policy.types';
 import { DataAdapterRegistrations } from '../../src/connectors/data-adapter-registration';
+import type { ToolRegistryService } from '../../src/tools/tool-registry.service';
 
 type SessionRecord = {
   id: string;
@@ -436,6 +437,10 @@ export type Us1TestAppOptions = {
   internalIdentityVerifierMode?: 'static' | 'remote';
   forceMessageServiceErrorForSessionId?: string;
   dataAdapterRegistrations?: DataAdapterRegistrations;
+  dataAdapterRegistrationsFactory?: (input: Readonly<{
+    toolRegistry: ToolRegistryService;
+    mockRegistrations: DataAdapterRegistrations;
+  }>) => DataAdapterRegistrations;
 };
 
 export async function createUs1TestAppWithState(
@@ -498,8 +503,19 @@ export async function createUs1TestAppWithState(
     builder.overrideProvider(INTERNAL_IDENTITY_TOKEN_VERIFIER)
       .useValue(createStaticInternalIdentityTokenVerifier(internalIdentity));
   }
-  builder.overrideProvider(DATA_ADAPTER_REGISTRATIONS)
-    .useValue(options.dataAdapterRegistrations ?? testMockRegistrations);
+  if (options.dataAdapterRegistrationsFactory) {
+    const { ToolRegistryService } = await import('../../src/tools/tool-registry.service');
+    builder.overrideProvider(DATA_ADAPTER_REGISTRATIONS).useFactory({
+      factory: (toolRegistry: ToolRegistryService) => options.dataAdapterRegistrationsFactory!({
+        toolRegistry,
+        mockRegistrations: testMockRegistrations
+      }),
+      inject: [ToolRegistryService]
+    });
+  } else {
+    builder.overrideProvider(DATA_ADAPTER_REGISTRATIONS)
+      .useValue(options.dataAdapterRegistrations ?? testMockRegistrations);
+  }
   const moduleRef = await builder.compile();
 
   const { AssistantMessageService } = await import('../../src/assistant/message/assistant-message.service');
@@ -759,7 +775,13 @@ function createPrismaMock(state: MockState) {
               : left.updatedAt.getTime() - right.updatedAt.getTime()
           )[0] ?? null;
         }
-      )
+      ),
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        const composite = where.name_version as { name?: string; version?: string } | undefined;
+        return state.toolDefinitions.find((item) =>
+          composite !== undefined && item.name === composite.name && item.version === composite.version
+        ) ?? null;
+      })
     },
     assistantContextState: {
       create: jest.fn(async ({ data }: { data: Partial<ContextStateRecord> }) => {
@@ -1805,6 +1827,10 @@ function createInitialState(): MockState {
         customerId: 'customer-a', toolDefinitionId, enabled: true, requiredRoles: [], requiredPermissionScopes: []
       })),
       {
+        customerId: 'customer-a', toolDefinitionId: 'tool-definition-shinmone-monthly-new-count-001',
+        enabled: true, requiredRoles: [], requiredPermissionScopes: []
+      },
+      {
         customerId: 'customer-b', toolDefinitionId: 'tool-definition-customer-b-stock-001',
         enabled: true, requiredRoles: [], requiredPermissionScopes: []
       }
@@ -2762,8 +2788,46 @@ function createToolDefinitions(baseDate: Date): ToolDefinitionRecord[] {
       evidenceProvenance: ['sku'],
       timeoutMs: 5000,
       baseDate
-    })
+    }),
+    createShinmoneReferenceToolDefinition(baseDate)
   ];
+}
+
+function createShinmoneReferenceToolDefinition(baseDate: Date): ToolDefinitionRecord {
+  return {
+    id: 'tool-definition-shinmone-monthly-new-count-001',
+    name: 'work-orders.monthly-new-count',
+    version: '1.0.0',
+    description: 'Count new work orders for the current month through a configured Customer-local connector.',
+    resource: 'work_orders',
+    operation: ToolOperation.read,
+    inputSchema: {
+      type: 'object', additionalProperties: false, required: [], properties: {},
+      'x-assistant-discovery-v1': {
+        version: '1', locale: 'zh-TW', resourceConcepts: ['workOrder'], intentConcepts: ['read'],
+        metricConcepts: ['newCount', 'count'], timeRangeConcepts: ['this_month'],
+        requiredConceptGroups: ['resource', 'metric', 'timeRange'], argumentBindings: [],
+        taskType: 'work_order_monthly_new_count', requiredEvidence: ['identity_context', 'structured_record']
+      }
+    },
+    outputSchema: {
+      type: 'object', required: ['metricKey', 'period', 'count'], additionalProperties: false,
+      properties: {
+        metricKey: { type: 'string', enum: ['work-orders.monthly-new-count'] },
+        period: { type: 'string', enum: ['thisMonth'] },
+        count: { type: 'integer', minimum: 0 }
+      },
+      'x-assistant-result-policy': {
+        version: '1', allowedFieldPaths: ['metricKey', 'period', 'count'], deniedFieldPaths: [], permissionMasks: [],
+        limits: { maxDepth: 2, maxItems: 10, maxStringLength: 128, maxTotalBytes: 4096 },
+        evidenceSafeProvenanceFields: ['metricKey', 'period']
+      }
+    },
+    requiredPermissions: ['work-orders:read'], riskLevel: RiskLevel.low, hasSideEffect: false,
+    requiresConfirmation: false, requiresApproval: false, connectorKey: 'business', timeoutMs: 5000,
+    auditBehavior: { summarizeInput: true, summarizeOutput: true }, isActive: true,
+    createdAt: new Date(baseDate), updatedAt: new Date(baseDate)
+  };
 }
 
 function createToolDefinition(input: {

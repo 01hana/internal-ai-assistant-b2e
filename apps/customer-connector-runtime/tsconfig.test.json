@@ -5,5 +5,5 @@
     "rootDir": ".",
     "types": ["jest", "node"]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "integrations/**/*.ts", "test/**/*.ts"]
 }

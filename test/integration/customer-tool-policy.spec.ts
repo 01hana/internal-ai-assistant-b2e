@@ -61,7 +61,14 @@ describeUs3('CustomerToolPolicy contract', () => {
       .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims.customerA, requestId: 'req-us3-inactive' }))
       .send({ message: '這張訂單目前狀態？', pageContext: { module: 'orders', entityId: 'SO-10001', visibleColumns: ['status'] } });
 
-    expect(prismaMock.customerToolPolicy.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.customerToolPolicy.findUnique).not.toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        customerId_toolDefinitionId: {
+          customerId: 'customer-a',
+          toolDefinitionId: CUSTOMER_TOOL_PHASE6.toolDefinitionId
+        }
+      }
+    }));
     expect(snapshotDeniedWork(state)).toEqual(before);
   });
 });
@@ -168,6 +175,54 @@ describe('Feature 008 ToolDefinition result-policy authority', () => {
     );
   });
 
+  it('exposes the Customer A monthly new-work-order reference only through its closed ToolDefinition and policy', async () => {
+    const registry = app.get(ToolRegistryService);
+    const definition = state.toolDefinitions.find((tool) => tool.name === 'work-orders.monthly-new-count');
+    expect(definition).toBeDefined();
+
+    const resolution = await registry.resolveToolForCustomer(
+      'work-orders.monthly-new-count',
+      createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerA)
+    );
+    expect(resolution.resolved?.tool).toMatchObject({
+      key: 'work-orders.monthly-new-count',
+      version: '1.0.0',
+      operation: 'read',
+      connectorKey: 'business',
+      timeoutMs: 5000,
+      requiredPermissionScopes: ['work-orders:read']
+    });
+    expect(parseToolDiscoveryMetadataV1(resolution.resolved!.tool.inputSchema)).toEqual({
+      version: '1',
+      locale: 'zh-TW',
+      resourceConcepts: ['workOrder'],
+      intentConcepts: ['read'],
+      metricConcepts: ['newCount', 'count'],
+      timeRangeConcepts: ['this_month'],
+      requiredConceptGroups: ['resource', 'metric', 'timeRange'],
+      argumentBindings: [],
+      taskType: 'work_order_monthly_new_count',
+      requiredEvidence: ['identity_context', 'structured_record']
+    });
+    expect(registry.resolveResultPolicy(resolution.resolved!.tool)).toEqual(
+      expect.objectContaining({
+        allowed: true,
+        policy: expect.objectContaining({
+          allowedFieldPaths: ['metricKey', 'period', 'count'],
+          evidenceSafeProvenanceFields: ['metricKey', 'period']
+        })
+      })
+    );
+    expect(JSON.stringify(resolution.resolved!.tool.inputSchema)).not.toMatch(
+      /customer-a|integration-erp|host.?app|shinmone|Dashboard|credential|token|connectorContextRef|這個月新增幾張工單/i
+    );
+
+    await expect(registry.resolveToolForCustomer(
+      'work-orders.monthly-new-count',
+      createCustomerScopeFixtureScope(CUSTOMER_SCOPE_FIXTURES.customerB)
+    )).resolves.toEqual({ deniedReason: 'customer_policy_denied' });
+  });
+
   it('keeps discoverable read-only catalogs Customer-isolated', async () => {
     const registry = app.get(ToolRegistryService);
     const customerA = await registry.listDiscoverableToolsForCustomer({ customerId: 'customer-a' });
@@ -176,7 +231,8 @@ describe('Feature 008 ToolDefinition result-policy authority', () => {
       'mock.business-partner.history.lookup',
       'mock.inventory.availability.lookup',
       'mock.orders.status.lookup',
-      'mock.work-orders.progress.lookup'
+      'mock.work-orders.progress.lookup',
+      'work-orders.monthly-new-count'
     ]);
     expect(customerB.map(({ key }) => key)).toEqual(['inventory.stock-on-hand']);
     expect(customerB.map(({ key }) => key)).not.toContain('mock.orders.status.lookup');

@@ -194,7 +194,7 @@ const KNOWLEDGE_DOCUMENT_FIXTURES = [
 
 async function seedToolDefinitions(prisma: PrismaClient) {
   const definitions = [];
-  for (const tool of MOCK_TOOL_DEFINITIONS) {
+  for (const tool of [...MOCK_TOOL_DEFINITIONS, SHINMONE_REFERENCE_TOOL_DEFINITION]) {
     definitions.push(await prisma.toolDefinition.upsert({
       where: {
         name_version: {
@@ -214,9 +214,9 @@ async function seedToolDefinitions(prisma: PrismaClient) {
 }
 
 async function seedCustomerToolPolicies(prisma: PrismaClient, toolDefinitions: Array<{ id: string; name: string; version: string }>) {
-  const customerATools = toolDefinitions.filter((tool) => tool.name.startsWith('mock.'));
+  const customerATools = toolDefinitions.filter((tool) => tool.name.startsWith('mock.') || tool.name === 'work-orders.monthly-new-count');
   const customerBTools = toolDefinitions.filter((tool) => tool.name === 'inventory.stock-on-hand');
-  if (customerATools.length !== 6 || customerBTools.length !== 1) throw new Error('Required discovery ToolDefinitions were not seeded.');
+  if (customerATools.length !== 7 || customerBTools.length !== 1) throw new Error('Required discovery ToolDefinitions were not seeded.');
   const obsoleteCustomerBReadTool = toolDefinitions.find((tool) => tool.name === 'mock.orders.status.lookup' && tool.version === '1.0.0');
   if (!obsoleteCustomerBReadTool) throw new Error('Required mock order status ToolDefinition was not seeded.');
   await prisma.customerToolPolicy.deleteMany({
@@ -509,6 +509,43 @@ const MOCK_TOOL_DEFINITIONS = [
     auditBehavior: { summarizeInput: true, summarizeOutput: true }, isActive: true
   }
 ];
+
+const SHINMONE_REFERENCE_TOOL_DEFINITION = {
+  name: 'work-orders.monthly-new-count',
+  version: '1.0.0',
+  description: 'Count new work orders for the current month through a configured Customer-local connector.',
+  resource: 'work_orders',
+  operation: ToolOperation.read,
+  inputSchema: {
+    type: 'object', additionalProperties: false, required: [], properties: {},
+    'x-assistant-discovery-v1': discoveryMetadata({
+      resource: ['workOrder'], intent: ['read'], metric: ['newCount', 'count'], timeRange: ['this_month'],
+      required: ['resource', 'metric', 'timeRange'], taskType: 'work_order_monthly_new_count'
+    })
+  },
+  outputSchema: {
+    type: 'object', required: ['metricKey', 'period', 'count'], additionalProperties: false,
+    properties: {
+      metricKey: { type: 'string', enum: ['work-orders.monthly-new-count'] },
+      period: { type: 'string', enum: ['thisMonth'] },
+      count: { type: 'integer', minimum: 0 }
+    },
+    'x-assistant-result-policy': {
+      version: '1', allowedFieldPaths: ['metricKey', 'period', 'count'], deniedFieldPaths: [], permissionMasks: [],
+      limits: { maxDepth: 2, maxItems: 10, maxStringLength: 128, maxTotalBytes: 4096 },
+      evidenceSafeProvenanceFields: ['metricKey', 'period']
+    }
+  },
+  requiredPermissions: ['work-orders:read'],
+  riskLevel: RiskLevel.low,
+  hasSideEffect: false,
+  requiresConfirmation: false,
+  requiresApproval: false,
+  connectorKey: 'business',
+  timeoutMs: 5000,
+  auditBehavior: { summarizeInput: true, summarizeOutput: true },
+  isActive: true
+};
 
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;

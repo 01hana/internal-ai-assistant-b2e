@@ -132,6 +132,16 @@ function assertSeedInvariants(snapshot: SeedSnapshot): void {
   for (const definition of mockDefinitions) {
     expect(parseToolDiscoveryMetadataV1(definition.inputSchema)).toEqual(expect.objectContaining({ version: '1', locale: 'zh-TW' }));
   }
+  const referenceDefinition = snapshot.toolDefinitions.find((tool) => tool.name === 'work-orders.monthly-new-count');
+  expect(referenceDefinition).toMatchObject({
+    version: '1.0.0', operation: ToolOperation.read, isActive: true, hasSideEffect: false
+  });
+  expect(parseToolDiscoveryMetadataV1(referenceDefinition!.inputSchema)).toEqual(expect.objectContaining({
+    resourceConcepts: ['workOrder'], metricConcepts: ['newCount', 'count'], timeRangeConcepts: ['this_month']
+  }));
+  expect(snapshot.toolPolicies).toContainEqual({
+    customerId: 'customer-a', toolKey: 'work-orders.monthly-new-count@1.0.0', enabled: true
+  });
   const enabledCustomerBReadTools = snapshot.toolDefinitions
     .filter((tool) => tool.isActive && tool.operation === ToolOperation.read && !tool.hasSideEffect)
     .filter((tool) => snapshot.toolPolicies.some((policy) => policy.customerId === 'customer-b' && policy.toolKey === `${tool.name}@${tool.version}` && policy.enabled))

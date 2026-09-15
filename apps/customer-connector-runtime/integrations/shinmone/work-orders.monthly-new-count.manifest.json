@@ -1,0 +1,68 @@
+{
+  "version": "1",
+  "connectorKey": "business",
+  "operations": [
+    {
+      "operationKey": "work-orders.monthly-new-count",
+      "contractVersion": "1.0.0",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "upstreamServiceRef": "shinmone-scm-api",
+      "request": {
+        "profile": "GET_QUERY_V1",
+        "path": "/Dashboard/KPIStats",
+        "fixedQuery": { "TimeRange": "thisMonth" },
+        "argumentMappings": []
+      },
+      "credentialProfileRef": "shinmone-idx-bearer-v1",
+      "readOnly": true,
+      "response": {
+        "acceptedHttpStatuses": [200],
+        "acceptedApplicationCodes": [200],
+        "contentType": "application/json",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "code": { "type": "integer" },
+            "metricKey": { "type": "string", "maxLength": 64 },
+            "period": { "type": "string", "maxLength": 32 },
+            "data": {
+              "type": "object",
+              "properties": {
+                "newOrders": {
+                  "type": "object",
+                  "properties": { "current": { "type": "integer", "minimum": 0 } },
+                  "required": ["current"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["newOrders"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["code", "metricKey", "period", "data"],
+          "additionalProperties": false
+        },
+        "extraction": [
+          { "sourcePointer": "/metricKey", "targetField": "metricKey", "conversion": "string" },
+          { "sourcePointer": "/period", "targetField": "period", "conversion": "string" },
+          { "sourcePointer": "/data/newOrders/current", "targetField": "count", "conversion": "non_negative_integer" }
+        ]
+      },
+      "limits": {
+        "maxRequestBytes": 4096,
+        "maxResponseBytes": 262144,
+        "maxDepth": 8,
+        "maxItems": 100,
+        "maxStringLength": 1024,
+        "timeoutMs": 3500
+      },
+      "errorMap": {},
+      "readinessDependency": "shinmone-scm-api"
+    }
+  ]
+}

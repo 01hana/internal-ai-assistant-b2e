@@ -18,10 +18,19 @@ import {
 } from '../../src/connectors/mock/mock-connector.module';
 import { AppConfigModule } from '../../src/common/config/app-config.module';
 import { ToolsModule } from '../../src/tools/tools.module';
-import { ProductizedBusinessConnectorModule } from '../../src/connectors/productized-business/productized-business-connector.module';
+import {
+  ProductizedBusinessConnectorModule,
+  ProductizedBusinessConnectorTransportService
+} from '../../src/connectors/productized-business/productized-business-connector.module';
 import { PRODUCTIZED_DATA_ADAPTER_REGISTRATIONS } from '../../src/connectors/productized-business/productized-adapter-binding.registry';
+import { shinmoneAdapterBinding } from '../support/shinmone-reference.fixture';
 
 describe('ConnectorsModule', () => {
+  const originalProductizedBindings = process.env.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON;
+  afterEach(() => {
+    if (originalProductizedBindings === undefined) delete process.env.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON;
+    else process.env.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON = originalProductizedBindings;
+  });
   it('provides one frozen combined registration array while preserving exact mocks', async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppConfigModule, ConnectorsModule] }).compile();
     const registrations = moduleRef.get<DataAdapterRegistrations>(DATA_ADAPTER_REGISTRATIONS);
@@ -86,6 +95,24 @@ describe('ConnectorsModule', () => {
     expect(second.healthCheck).not.toHaveBeenCalled();
     expect(first.execute).not.toHaveBeenCalled();
     expect(second.execute).not.toHaveBeenCalled();
+  });
+
+  it('composes the exact reference binding beside unchanged mock registrations', async () => {
+    process.env.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON = JSON.stringify([shinmoneAdapterBinding()]);
+    const transport = {
+      executionConstraints: jest.fn(() => ({ ok: true, maxTransportMs: 4500, productionReady: true })),
+      invoke: jest.fn()
+    };
+    const moduleRef = await Test.createTestingModule({ imports: [AppConfigModule, ConnectorsModule] })
+      .overrideProvider(ProductizedBusinessConnectorTransportService)
+      .useValue(transport)
+      .compile();
+    const registrations = moduleRef.get<DataAdapterRegistrations>(DATA_ADAPTER_REGISTRATIONS);
+    expect(registrations.slice(0, 2)).toEqual(MOCK_DATA_ADAPTER_REGISTRATIONS);
+    expect(registrations[2]).toMatchObject({
+      customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp',
+      connectorKey: 'business', active: true, adapter: { key: 'productized-business' }
+    });
   });
 });
 

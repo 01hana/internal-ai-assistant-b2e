@@ -1,7 +1,7 @@
 # Tasks: Feature 009 — Productized Business Connector Runtime
 
 **Input**: Accepted `spec.md`, `design.md`, and `plan.md` approved for Phase 1 implementation.
-**Status**: Accepted — Phase 1 through Phase 10 completed and awaiting human review before Phase 11.
+**Status**: Accepted — Phase 1 through Phase 11 completed and awaiting human review before Phase 12.
 
 ```text
 PHASE1_EXECUTED=YES
@@ -22,8 +22,10 @@ T001_T089_COMPLETE=YES
 PHASE9_EXECUTED=YES
 T001_T099_COMPLETE=YES
 PHASE10_EXECUTED=YES
-PHASE11_EXECUTED=NO
-FIRST_UNEXECUTED_TASK=T100
+T001_T107_COMPLETE=YES
+PHASE11_EXECUTED=YES
+PHASE12_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T108
 NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 ```
 **Scope**: Implement the reusable two-sided connector runtime, executable Synthetic Customer B portability fixture, removable Shinmone reference slice, and Shinmone-removal gate through the existing Feature 008 path. Feature 007 is a completed read-only predecessor; Phase 8 is `FEATURE009_IMPLEMENTATION_CONSUMING_ACCEPTED_FEATURE007_AMENDMENT`, never Feature 007 reimplementation.
@@ -2455,53 +2457,148 @@ NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 **Dependencies**: T099.  
 **Independent test**: The actual Chinese question resolves generically and a fixture returns exactly the bounded three-field result through Feature 008 projection.
 
-- [ ] T100 [RED] [US7] [BACKEND] Add failing Shinmone ToolDefinition, Customer policy, discovery metadata, output policy, and seed-idempotency tests.
+- [X] T100 [RED] [US7] [BACKEND] Add failing Shinmone ToolDefinition, Customer policy, discovery metadata, output policy, and seed-idempotency tests.
   - Files: `test/integration/customer-tool-policy.spec.ts`, `test/integration/customer-tool-idempotency.spec.ts`, `test/unit/tool-discovery.service.spec.ts`, seed test fixtures.
   - Depends on: T099.
   - Validation: Require key `work-orders.monthly-new-count`, contract `1.0.0`, read-only policy, generic work-order/new-count/this-month concepts, and only metric/period/count output.
   - Stop: No Prisma schema/migration, Customer routing branch, complete-question literal, endpoint, or credential in discovery metadata.
 
-- [ ] T101 [GREEN] [US7] [BACKEND] Seed the reference ToolDefinition, Customer policy, discovery metadata, and output policy idempotently.
+- [X] T101 [GREEN] [US7] [BACKEND] Seed the reference ToolDefinition, Customer policy, discovery metadata, and output policy idempotently.
   - Files: `scripts/seed.ts`, `test/support/us1-test-app.helper.ts` and approved test fixtures.
   - Depends on: T100.
   - Validation: Make T100 pass and run seed twice without duplicate/change drift.
   - Stop: Do not declare any live Shinmone HTTP destination ready.
 
-- [ ] T102 [RED] [US7] [CONNECTOR-RUNTIME] Add failing Shinmone IDX bootstrap, bearer-profile, manifest, and response fixture tests.
+- [X] T102 [RED] [US7] [CONNECTOR-RUNTIME] Add failing Shinmone IDX bootstrap, bearer-profile, manifest, and response fixture tests.
   - Files: `apps/customer-connector-runtime/test/integrations/shinmone-bootstrap-provider.spec.ts`, `test/integrations/shinmone-manifest.spec.ts`, fixture upstream responses.
   - Depends on: T101.
   - Validation: Require Shinmone-only provider schema for same accepted token/Entry, provider-owned handle storage, native JWT-exp cap and rejection/remint semantics, `shinmone-idx-bearer-v1`, exact `GET_QUERY_V1 /Dashboard/KPIStats?TimeRange=thisMonth`, `/data/newOrders/current`, and exactly three bounded fields.
   - Stop: No alternate API, dynamic query/path, raw envelope, or checked-in HTTP origin.
 
-- [ ] T103 [GREEN] [US7] [CONNECTOR-RUNTIME] Add the removable Shinmone IDX provider, bearer profile, and closed V1 manifest.
+- [X] T103 [GREEN] [US7] [CONNECTOR-RUNTIME] Add the removable Shinmone IDX provider, bearer profile, and closed V1 manifest.
   - Files: `apps/customer-connector-runtime/integrations/shinmone/**` and runtime integration configuration fixtures.
   - Depends on: T102.
   - Validation: Make T102 pass through the generic manifest and upstream executor.
   - Stop: Native token/accepted Entry/JWT-exp/bearer/remint assumptions stay inside this integration provider/profile; the manifest contains only `credentialProfileRef`, closed GET profile data, and no credential/header/callback/Assistant-core logic.
 
-- [ ] T104 [RED] [US7] [BACKEND] Add failing exact reference deployment and adapter configuration tests.
+- [X] T104 [RED] [US7] [BACKEND] Add failing exact reference deployment and adapter configuration tests.
   - Files: `test/integration/shinmone-connector-deployment.spec.ts`, `test/unit/connectors-module.spec.ts`, central deployment fixtures.
   - Depends on: T103.
   - Validation: Require one exact Customer/integration/HostApp/connector instance, operation/version availability, HTTPS-only destination, and inactive/no-match failure.
   - Stop: No wildcard, database registry, real credential, or live HTTP endpoint.
 
-- [ ] T105 [GREEN] [US7] [BACKEND] Compose the exact reference deployment and productized adapter registration fixtures/configuration.
+- [X] T105 [GREEN] [US7] [BACKEND] Compose the exact reference deployment and productized adapter registration fixtures/configuration.
   - Files: `src/connectors/connectors.module.ts`, central deployment fixtures/configuration, approved test app helper.
   - Depends on: T104.
   - Validation: Make T104 pass and preserve all mock registrations.
   - Stop: Do not hard-code Customer/Shinmone behavior in the adapter or Query Understanding.
 
-- [ ] T106 [VERIFY] [US7] [BACKEND] Prove the fixture vertical slice from natural language through projected evidence.
+- [X] T106 [VERIFY] [US7] [BACKEND] Prove the fixture vertical slice from natural language through projected evidence.
   - Files: `test/integration/shinmone-monthly-new-count.fixture.spec.ts`, query/evidence/public contract regressions, `prisma/schema.prisma`, `prisma/migrations/` read-only.
   - Depends on: T105.
   - Validation: Start with `這個月新增幾張工單？`; prove generic unique discovery, canonical ToolDefinition, permission, adapter, fixed manifest, bounded result, outputSchema projection, and evidence; scan for forbidden branches and schema changes.
   - Stop: Direct operation invocation alone is insufficient and no fixture may claim live staging readiness.
 
-- [ ] T107 [CHECKPOINT] [US7] [BACKEND] Verify and record the Phase 11 reference-configuration gate.
+- [X] T107 [CHECKPOINT] [US7] [BACKEND] Verify and record the Phase 11 reference-configuration gate.
   - Files: `specs/009-productized-business-connector-runtime/tasks.md` evidence only.
   - Depends on: T101, T103, T105, T106.
   - Validation: Record a machine-readable evidence block with `GENERIC_REAL_QUESTION_RESOLUTION=PASS`, `REFERENCE_MANIFEST_FIXTURE=PASS`, and `CENTRAL_PRISMA_SCHEMA_CHANGE=NO`.
   - Stop: Phase 12 cannot start if the question uses a specific branch or the manifest/result differs from the accepted mapping.
+
+### Phase 11 Interrupted Execution Completion — 2026-09-15
+
+- Entry and recovery:
+  - Resumed the existing T100–T106 worktree without restarting or manufacturing RED evidence. The read-only Spec Kit prerequisite selector still targeted missing Feature 002; the accepted Feature 009 artifacts remained authoritative. No `before_implement` or `after_implement` hooks were configured.
+  - Human-accepted recovery retained: `AnswerDecisionService` has no diff from the pre-recovery baseline; the single T106 assertion correction proves `count=17` through projected `EvidenceRef` data while requiring the existing answer to remain a string and the decision to remain `answered`.
+  - T100 authentic RED: the generic discovery suite was already GREEN (1 suite / 40 tests), while the policy suite exposed two missing-reference assertions before `work-orders.monthly-new-count@1.0.0` was seeded. The interrupted run did not retain a complete original Jest total, so no total was reconstructed.
+  - T102 authentic RED: 2 suites failed at TypeScript compilation because `integrations/shinmone` did not exist; 0 tests executed.
+  - T104 authentic RED: 2 suites failed at TypeScript compilation because the exact Shinmone deployment/adapter fixture did not exist; 0 tests executed.
+- GREEN and fixture evidence:
+  - Added the Customer A-only `work-orders.monthly-new-count@1.0.0` ToolDefinition, policy, closed discovery metadata, three-field output policy, exact five-part deployment fixture, and productized-adapter registration fixture without changing Prisma or the sealed adapter.
+  - Added the removable Customer-local Shinmone integration under `apps/customer-connector-runtime/integrations/shinmone/**`: provider-owned volatile handles, Shinmone-only native-token/Entry/JWT-exp handling, fixed bearer strategy, closed manifest, and exact `GET /Dashboard/KPIStats?TimeRange=thisMonth` mapping.
+  - Two identical `DOTENV_CONFIG_PATH=.env.test npm run prisma:seed` local-only runs passed against `assistant_test`. The sandbox attempt failed only with Prisma `EPERM`; the gated reset/seed/idempotency suite passed in the identical approved local environment and proved Customer B retains only `inventory.stock-on-hand` as its discoverable read tool.
+  - T106 current recovered vertical passed (1 suite / 1 test): actual Chinese question, generic unique discovery, canonical tool/version, `work-orders:read`, real Bridge binding TLS, real central Runtime TLS, fixed Shinmone TLS upstream, one bearer send, Feature 008 projection to exactly `count`, `metricKey`, and `period`, projected count 17, `answered`, existing SSE completion, and leak guards.
+- Build and packaging evidence:
+  - `npm --prefix apps/customer-connector-runtime run build`: PASS.
+  - Compiled entry exists at `dist/src/main.js`; compiled Shinmone JavaScript and `dist/integrations/shinmone/work-orders.monthly-new-count.manifest.json` exist.
+  - The built integration module resolved its manifest path inside `dist/integrations/shinmone`; reading and parsing that exact built artifact returned operation `work-orders.monthly-new-count`. No source fallback was used.
+  - Repository search found no launcher, container, CI, or deployment reference that starts `apps/customer-connector-runtime` through the obsolete `dist/main.js` path. Unrelated Backend, Gateway, and Identity Bridge `dist/main.js` references remain valid.
+- Final verification:
+  - Focused Phase 11/Feature 008 unit inventory: 15 suites / 163 tests PASS.
+  - Phase 11 integration inventory: 12 suites PASS, 35 tests PASS; 1 gate-controlled suite / 9 tests skipped in the ungated run. The explicit gated rerun initially recorded only sandbox socket/listener `EPERM`, then passed local-only at 3 suites / 15 tests with no skips.
+  - Existing SSE contract: 1 suite / 6 tests PASS.
+  - Customer Runtime sandbox run: 29 suites and 325 tests passed; 5 suites / 8 tests failed only with `listen EPERM`. Identical approved local-only rerun: 34 suites / 333 tests PASS.
+  - Customer Runtime build/typecheck: PASS. Shared connector contract: 10 suites / 68 tests, build, and typecheck PASS. Root build/typecheck: PASS. `git diff --check`: PASS.
+  - Protected hashes remained unchanged: Feature 009 spec `d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73`; design `bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb`; plan `00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1`; Prisma schema `e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733`; sealed Phase 9 adapter `8e84df809867bb8ec56ef555c07c7b9ae933a055aed813b6448d95148601ffb9`. Feature 007/008 hashes and Prisma migrations were unchanged.
+- Phase 11 task-attributed files:
+  - Runtime packaging/integration: `apps/customer-connector-runtime/nest-cli.json`, `package.json`, `tsconfig.json`, `tsconfig.test.json`, and `apps/customer-connector-runtime/integrations/shinmone/**`.
+  - Backend configuration/fixtures: `scripts/seed.ts`, `test/support/us1-test-app.helper.ts`, `test/support/shinmone-reference.fixture.ts`.
+  - Tests: `apps/customer-connector-runtime/test/integrations/**`, `test/integration/customer-reset-seed.spec.ts`, `customer-tool-policy.spec.ts`, `shinmone-connector-deployment.spec.ts`, `shinmone-reference-vertical.spec.ts`, `test/unit/connectors-module.spec.ts`, `tool-discovery.service.spec.ts`, and `shinmone-reference-boundary.guard.spec.ts`.
+  - Evidence: `specs/009-productized-business-connector-runtime/tasks.md`. The pre-existing untracked `apps/customer-connector-runtime/test/fixtures/phase6-upstream.key` was preserved and is not attributed to Phase 11.
+
+```text
+FEATURE009_PHASE11=PASS
+GENERIC_REAL_QUESTION_RESOLUTION=PASS
+REFERENCE_TOOL_DEFINITION=work-orders.monthly-new-count
+REFERENCE_MANIFEST_FIXTURE=PASS
+T106_REAL_USER_QUESTION=PASS
+T106_GENERIC_DISCOVERY=PASS
+T106_CANONICAL_TOOL=work-orders.monthly-new-count@1.0.0
+T106_PERMISSION=PASS
+T106_BRIDGE_BINDING_TLS=PASS
+T106_CENTRAL_RUNTIME_TLS=PASS
+T106_UPSTREAM_TLS=PASS
+T106_UPSTREAM_METHOD=GET
+T106_UPSTREAM_PATH=/Dashboard/KPIStats?TimeRange=thisMonth
+T106_BEARER_SEND_COUNT=1
+T106_PROJECTED_FIELDS=count,metricKey,period
+T106_PROJECTED_COUNT=17
+T106_PROJECTED_COUNT_AUTHORITY=EvidenceRef
+T106_ANSWER_DECISION=answered
+T106_EXISTING_ANSWER_PATH_MODIFIED=NO
+T106_EXISTING_SSE_PATH=PASS
+T106_NATIVE_ACCESS_TOKEN_RELEASED=NO
+T106_CONNECTOR_CONTEXT_REF_RELEASED=NO
+T106_ACCEPTED_ENTRY_RELEASED=NO
+T106_RAW_NEW_ORDERS_RELEASED=NO
+SHINMONE_INTEGRATION_LOCATION=apps/customer-connector-runtime/integrations/shinmone
+SHINMONE_INTEGRATION_REMOVABLE=YES
+SHINMONE_NATIVE_TOKEN_ASSUMPTION_GENERIC=NO
+SHINMONE_ACCEPTED_ENTRY_ASSUMPTION_GENERIC=NO
+SHINMONE_BEARER_ASSUMPTION_GENERIC=NO
+SHINMONE_JWT_EXP_ASSUMPTION_GENERIC=NO
+CUSTOMER_BRANCH_IN_ASSISTANT_CORE=NO
+SHINMONE_FULL_QUERY_BRANCH=NO
+PRODUCTIZED_ADAPTER_CUSTOMER_BRANCH=NO
+FEATURE008_PROJECTION_BYPASS=NO
+FEATURE008_ANSWER_AUTHORITY_CHANGED=NO
+FEATURE008_ANSWER_DECISION_MODIFIED_BY_PHASE11=NO
+CENTRAL_NATIVE_CREDENTIAL=NO
+SEED_RUN_1=PASS
+SEED_RUN_2=PASS
+SEED_IDEMPOTENCY=PASS
+CUSTOMER_A_REFERENCE_TOOL_ENABLED=work-orders.monthly-new-count@1.0.0
+CUSTOMER_B_REFERENCE_TOOL_ENABLED=NO
+CUSTOMER_B_DISCOVERABLE_READ_ONLY_TOOLS=inventory.stock-on-hand
+CUSTOMER_RUNTIME_BUILD=PASS
+CUSTOMER_RUNTIME_COMPILED_ENTRY=dist/src/main.js
+CUSTOMER_RUNTIME_OLD_DIST_MAIN_REFERENCES=NONE
+SHINMONE_INTEGRATION_PRESENT_IN_BUILD_ARTIFACT=YES
+SHINMONE_MANIFEST_PRESENT_IN_BUILD_ARTIFACT=YES
+SHINMONE_MANIFEST_LOAD_FROM_BUILD_ARTIFACT=PASS
+CENTRAL_PRISMA_SCHEMA_CHANGE=NO
+PRISMA_SCHEMA_MODIFIED=NO
+PRISMA_MIGRATIONS_MODIFIED=NO
+FEATURE007_HISTORY_MODIFIED=NO
+FEATURE008_ACCEPTED_CONTRACT_MODIFIED=NO
+FEATURE009_SPEC_DESIGN_PLAN_MODIFIED=NO
+T100_T107_COMPLETE=YES
+T108_EXECUTED=NO
+PHASE11_EXECUTED=YES
+PHASE12_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T108
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
 
 ## Phase 12 — Shinmone SPA Transient Reference Delivery
 
