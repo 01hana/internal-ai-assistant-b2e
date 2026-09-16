@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { RiskLevel, ExecutionDecision, ToolCallStatus, ToolExecutionStatus, ToolOperation } from '../../src/generated/prisma/enums';
 import { AssistantReadonlyRuntimeService } from '../../src/assistant/runtime/assistant-readonly-runtime.service';
 import { AssistantReadonlyRuntimeInput } from '../../src/assistant/runtime/runtime.types';
@@ -208,6 +210,132 @@ describe('AssistantReadonlyRuntimeService', () => {
     expect(blockToolCall).toHaveBeenCalledWith(expect.objectContaining({ deniedReason: 'missing_scope' }));
     expect(result.toolLifecycle).toBe('blocked');
     expect(result.deniedReason).toBe('missing_scope');
+  });
+
+  it('re-resolves a stable explicitly disabled discovery match and creates one blocked ToolCall', async () => {
+    const connectorExecute = jest.fn();
+    const registrySelect = jest.fn();
+    const startToolCall = jest.fn();
+    const blockToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-policy-denied' } });
+    const recordDenied = jest.fn();
+    const checkResolvedCustomerTool = jest.fn();
+    const resolveToolForCustomer = jest.fn().mockResolvedValue({ deniedReason: 'customer_policy_denied' });
+    const service = createRuntimeService({
+      resolveToolForCustomer,
+      checkResolvedCustomerTool,
+      connectorExecute,
+      registrySelect,
+      startToolCall,
+      blockToolCall,
+      recordDenied
+    });
+    const input = runtimeInput();
+    input.executionPlan.candidateTools = [{
+      key: 'mock.orders.status.lookup',
+      arguments: { entityId: 'SO-10001' },
+      reason: 'metadata_discovery_policy_denied'
+    }];
+
+    const result = await service.execute(input);
+
+    expect(resolveToolForCustomer).toHaveBeenCalledWith('mock.orders.status.lookup', input.customerScope);
+    expect(checkResolvedCustomerTool).not.toHaveBeenCalled();
+    expect(startToolCall).not.toHaveBeenCalled();
+    expect(registrySelect).not.toHaveBeenCalled();
+    expect(connectorExecute).not.toHaveBeenCalled();
+    expect(recordDenied).toHaveBeenCalledWith(expect.objectContaining({ deniedReason: 'customer_policy_denied' }));
+    expect(blockToolCall).toHaveBeenCalledTimes(1);
+    expect(blockToolCall).toHaveBeenCalledWith(expect.objectContaining({ deniedReason: 'customer_policy_denied' }));
+    expect(result).toMatchObject({
+      toolCallId: 'tool-call-policy-denied',
+      toolLifecycle: 'blocked',
+      deniedReason: 'customer_policy_denied'
+    });
+  });
+
+  it('uses the current enabled policy and invokes the existing permission precheck after a denied discovery snapshot', async () => {
+    const checkResolvedCustomerTool = jest.fn().mockResolvedValue({
+      allowed: false,
+      reason: 'missing_scope',
+      missingScopes: ['orders:read']
+    });
+    const blockToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-current-permission' } });
+    const resolveToolForCustomer = jest.fn().mockResolvedValue({
+      resolved: {
+        tool: registeredTool(),
+        requiredRoles: [],
+        requiredPermissionScopes: ['orders:read']
+      }
+    });
+    const registrySelect = jest.fn();
+    const connectorExecute = jest.fn();
+    const service = createRuntimeService({
+      resolveToolForCustomer,
+      checkResolvedCustomerTool,
+      blockToolCall,
+      registrySelect,
+      connectorExecute
+    });
+    const input = runtimeInput();
+    input.executionPlan.candidateTools = [{
+      key: 'mock.orders.status.lookup',
+      arguments: { entityId: 'SO-10001' },
+      reason: 'metadata_discovery_policy_denied'
+    }];
+
+    const result = await service.execute(input);
+
+    expect(resolveToolForCustomer).toHaveBeenCalledWith('mock.orders.status.lookup', input.customerScope);
+    expect(checkResolvedCustomerTool).toHaveBeenCalledWith(expect.objectContaining({
+      customerScope: input.customerScope,
+      resolvedTool: expect.objectContaining({ tool: expect.objectContaining({ key: 'mock.orders.status.lookup' }) })
+    }));
+    expect(blockToolCall).toHaveBeenCalledWith(expect.objectContaining({ deniedReason: 'missing_scope' }));
+    expect(registrySelect).not.toHaveBeenCalled();
+    expect(connectorExecute).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ toolLifecycle: 'blocked', deniedReason: 'missing_scope' });
+  });
+
+  it('fails closed when an originally eligible discovery candidate is disabled before runtime', async () => {
+    const connectorExecute = jest.fn();
+    const registrySelect = jest.fn();
+    const blockToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-latest-policy-denied' } });
+    const checkResolvedCustomerTool = jest.fn();
+    const resolveToolForCustomer = jest.fn().mockResolvedValue({ deniedReason: 'customer_policy_denied' });
+    const service = createRuntimeService({
+      resolveToolForCustomer,
+      checkResolvedCustomerTool,
+      connectorExecute,
+      registrySelect,
+      blockToolCall
+    });
+    const input = runtimeInput();
+    input.executionPlan.candidateTools = [{
+      key: 'mock.orders.status.lookup',
+      arguments: { entityId: 'SO-10001' },
+      reason: 'metadata_discovery'
+    }];
+
+    const result = await service.execute(input);
+
+    expect(resolveToolForCustomer).toHaveBeenCalledWith('mock.orders.status.lookup', input.customerScope);
+    expect(checkResolvedCustomerTool).not.toHaveBeenCalled();
+    expect(registrySelect).not.toHaveBeenCalled();
+    expect(connectorExecute).not.toHaveBeenCalled();
+    expect(blockToolCall).toHaveBeenCalledTimes(1);
+    expect(blockToolCall).toHaveBeenCalledWith(expect.objectContaining({ deniedReason: 'customer_policy_denied' }));
+    expect(result).toMatchObject({ toolLifecycle: 'blocked', deniedReason: 'customer_policy_denied' });
+  });
+
+  it('keeps discovery provenance out of runtime policy and permission authority', () => {
+    const runtimeSource = readFileSync(
+      join(process.cwd(), 'src/assistant/runtime/assistant-readonly-runtime.service.ts'),
+      'utf8'
+    );
+
+    expect(runtimeSource).not.toContain('POLICY_DENIED_DISCOVERY_REASON');
+    expect(runtimeSource).not.toMatch(/candidate\.reason/);
+    expect(runtimeSource).toContain('resolveToolForCustomer(toolName, input.customerScope)');
   });
 
   it('keeps productized transport unreachable until the existing permission precheck succeeds', async () => {
@@ -609,6 +737,8 @@ describe('ToolCallService', () => {
 
 function createRuntimeService(overrides?: {
   registryResult?: { resolved?: { tool: RegisteredToolDefinition; requiredRoles: readonly string[]; requiredPermissionScopes: readonly string[] }; deniedReason?: ToolPermissionDeniedReason };
+  resolveToolForCustomer?: jest.Mock;
+  checkResolvedCustomerTool?: jest.Mock;
   validation?: { valid: true } | { valid: false; deniedReason: 'schema_invalid'; schemaErrorReason: string };
   permission?: { allowed: true } | { allowed: false; reason: ToolPermissionDeniedReason; missingScopes?: string[] };
   connectorExecute?: jest.Mock;
@@ -635,7 +765,7 @@ function createRuntimeService(overrides?: {
 
   return new AssistantReadonlyRuntimeService(
     {
-      resolveToolForCustomer: jest.fn().mockResolvedValue(overrides?.registryResult ?? { resolved: { tool: registeredTool(), requiredRoles: [], requiredPermissionScopes: [] } }),
+      resolveToolForCustomer: overrides?.resolveToolForCustomer ?? jest.fn().mockResolvedValue(overrides?.registryResult ?? { resolved: { tool: registeredTool(), requiredRoles: [], requiredPermissionScopes: [] } }),
       resolveResultPolicy: jest.fn().mockReturnValue({
         allowed: true,
         policy: {
@@ -671,7 +801,7 @@ function createRuntimeService(overrides?: {
       })
     } as never,
     {
-      checkResolvedCustomerTool: jest.fn().mockResolvedValue(overrides?.permission ?? { allowed: true }),
+      checkResolvedCustomerTool: overrides?.checkResolvedCustomerTool ?? jest.fn().mockResolvedValue(overrides?.permission ?? { allowed: true }),
       recordRuntimeCustomerToolDenied: overrides?.recordDenied ?? jest.fn()
     } as never,
     {

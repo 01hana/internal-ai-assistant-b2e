@@ -131,6 +131,44 @@ describe('ToolDiscoveryService', () => {
     await expect(customerB.discover(discoveryInput({ customerScope: scope('customer-b') }))).resolves.toMatchObject({ candidates: [] });
   });
 
+  it('emits one non-executable policy-denied match only for an explicitly disabled same-Customer tool', async () => {
+    const result = await serviceWith([], [schema()]).discover(discoveryInput({ customerScope: scope('customer-b') }));
+
+    expect(result).toMatchObject({
+      candidates: [{
+        key: 'mock.orders.status.lookup',
+        arguments: { entityId: 'SO-10001' },
+        reason: 'metadata_discovery_policy_denied'
+      }],
+      taskType: 'order_status_lookup',
+      matchConfidence: 0.95
+    });
+  });
+
+  it('prefers an allowed semantic match and never lets a denied match create ambiguity', async () => {
+    const result = await serviceWith(
+      [schema()],
+      [schema({ key: 'orders.denied.alternate', version: '2.0.0' })]
+    ).discover(discoveryInput());
+
+    expect(result.candidates).toEqual([
+      { key: 'mock.orders.status.lookup', arguments: { entityId: 'SO-10001' }, reason: 'metadata_discovery' }
+    ]);
+  });
+
+  it('does not select ambiguous or invalid explicitly denied matches', async () => {
+    const ambiguous = await serviceWith([], [
+      schema(),
+      schema({ key: 'orders.denied.alternate', version: '2.0.0' })
+    ]).discover(discoveryInput());
+    const invalid = await serviceWith([], [
+      schema({ inputSchema: { ...schema().inputSchema, required: ['missing'] } })
+    ]).discover(discoveryInput());
+
+    expect(ambiguous.candidates).toEqual([]);
+    expect(invalid.candidates).toEqual([]);
+  });
+
   it('discovers the monthly new-work-order count from generic concepts without phrase routing or arguments', async () => {
     const reference = schema({
       id: 'tool-monthly-new-work-orders',
@@ -167,9 +205,10 @@ describe('ToolDiscoveryService', () => {
   });
 });
 
-function serviceWith(tools: ReturnType<typeof schema>[]) {
+function serviceWith(tools: ReturnType<typeof schema>[], explicitlyDenied: ReturnType<typeof schema>[] = []) {
   return new ToolDiscoveryService({
     listDiscoverableToolsForCustomer: jest.fn().mockResolvedValue(tools),
+    listDiscoveryCatalogForCustomer: jest.fn().mockResolvedValue({ allowed: tools, explicitlyDenied }),
     validateNamedOperation: jest.fn((tool, candidate) => {
       const required = tool.inputSchema.required as string[];
       return required.every((key) => Object.prototype.hasOwnProperty.call(candidate.arguments, key))

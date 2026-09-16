@@ -1,7 +1,7 @@
 # Tasks: Feature 009 — Productized Business Connector Runtime
 
 **Input**: Accepted `spec.md`, `design.md`, and `plan.md` approved for Phase 1 implementation.
-**Status**: Accepted — Phase 1 through Phase 11 completed and awaiting human review before Phase 12.
+**Status**: Accepted — Phase 1 through Phase 12 (T001–T115) completed; awaiting human review before T116.
 
 ```text
 PHASE1_EXECUTED=YES
@@ -24,8 +24,11 @@ T001_T099_COMPLETE=YES
 PHASE10_EXECUTED=YES
 T001_T107_COMPLETE=YES
 PHASE11_EXECUTED=YES
-PHASE12_EXECUTED=NO
-FIRST_UNEXECUTED_TASK=T108
+T108_T111_COMPLETE=YES
+T108_T115_COMPLETE=YES
+PHASE12_EXECUTED=YES
+PHASE13_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T116
 NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 ```
 **Scope**: Implement the reusable two-sided connector runtime, executable Synthetic Customer B portability fixture, removable Shinmone reference slice, and Shinmone-removal gate through the existing Feature 008 path. Feature 007 is a completed read-only predecessor; Phase 8 is `FEATURE009_IMPLEMENTATION_CONSUMING_ACCEPTED_FEATURE007_AMENDMENT`, never Feature 007 reimplementation.
@@ -2606,53 +2609,439 @@ NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 **Dependencies**: T107.  
 **Independent test**: The provider reacquires and attaches a valid reference transiently, with no browser persistence or public/history leakage.
 
-- [ ] T108 [RED] [US7] [SHINMONE-SPA] Add failing in-memory identity/reference bundle and separate-expiry tests.
+- [X] T108 [RED] [US7] [SHINMONE-SPA] Add failing in-memory identity/reference bundle and separate-expiry tests.
   - Files: `/Users/evalin/Documents/ideaxpress proj/idx-shinmone-scm-frontend/tests/unit/assistantIdentityTokenProvider.spec.ts`.
   - Depends on: T107.
   - Validation: Run `npm run test:unit -- tests/unit/assistantIdentityTokenProvider.spec.ts` in the Shinmone repository; preserve RED for absent reference acquisition/cache/expiry behavior.
   - Stop: No localStorage, sessionStorage, cookie, IndexedDB, log, or RefreshToken ownership change.
 
-- [ ] T109 [GREEN] [US7] [SHINMONE-SPA] Implement the in-memory canonical-token/reference provider bundle.
+- [X] T109 [GREEN] [US7] [SHINMONE-SPA] Implement the in-memory canonical-token/reference provider bundle.
   - Files: `/Users/evalin/Documents/ideaxpress proj/idx-shinmone-scm-frontend/composables/assistant/assistantIdentityTokenProvider.ts`.
   - Depends on: T108.
   - Validation: Make T108 pass with separate expiries, 15-second refresh window, missing/expired reacquisition, and memory-only values.
   - Stop: Do not change Customer authentication, read RefreshToken, or persist either bearer/reference.
 
-- [ ] T110 [RED] [US7] [SHINMONE-SPA] Add failing existing-PageContext delivery tests.
+- [X] T110 [RED] [US7] [SHINMONE-SPA] Add failing existing-PageContext delivery tests.
   - Files: `/Users/evalin/Documents/ideaxpress proj/idx-shinmone-scm-frontend/tests/integration/assistantSdkHandoff.spec.ts`.
   - Depends on: T109.
   - Validation: Require the current provider callback to attach only `connectorContextRef` to existing PageContext immediately before send/retry, with no new request type.
   - Stop: Do not edit the SDK repository or add an Assistant public field outside existing PageContext.
 
-- [ ] T111 [GREEN] [US7] [SHINMONE-SPA] Attach the valid transient reference through the existing widget provider.
+- [X] T111 [GREEN] [US7] [SHINMONE-SPA] Attach the valid transient reference through the existing widget provider.
   - Files: `/Users/evalin/Documents/ideaxpress proj/idx-shinmone-scm-frontend/composables/assistant/assistantWidget.ts`.
   - Depends on: T110.
   - Validation: Make T110 pass; omit the field safely when no valid bundle exists.
   - Stop: Browser possession remains non-authoritative and cannot choose destination/context.
 
-- [ ] T112 [RED] [US7] [SHINMONE-SPA] Add failing refresh, native-token-change invalidation, and non-persistence/security tests.
+### Phase 12A Typecheck Classification and Evidence — 2026-09-15
+
+Human review accepted the four-file Phase 12A functional implementation and authorized the repository-wide typecheck failure as non-blocking only after complete attribution proved that it introduced no Phase 12A diagnostic. No production or test source was changed during this classification run.
+
+Phase 12A-attributed files and hashes:
+
+| File | Pre-Phase-12A SHA-256 | Accepted SHA-256 |
+| --- | --- | --- |
+| `composables/assistant/assistantIdentityTokenProvider.ts` | `a8532b1b17e3f0e00b3c50fb779e7e50c4507ae837379739dfe5c8b7f2001000` | `17142746245fa112c5ab9a1af23b6d97f2f1f41b44ab236fb7fac706ceb0b761` |
+| `composables/assistant/assistantWidget.ts` | `4fce99d2fb5809ce46db20a5a58a83f5e4c1970b7a480a054ad6fda5dc7c3c58` | `514d07a75f27e4103df432ca6daf807a0229dd87295242880b8e407dd7d439d1` |
+| `tests/unit/assistantIdentityTokenProvider.spec.ts` | `238f6dadab5c647241033aaddc1e2b9c67eefd582e80704da794607372b54d3f` | `e4f28f0dc3fde55064ccc533c0a1a1aff54c460ac9b34dde9bcd52f11b5351cc` |
+| `tests/integration/assistantSdkHandoff.spec.ts` | `a3ce4cc66b596084f180986526a32ad908eea933e15b824808f3a4a9cf14ac31` | `3e3120711bdae7e12f30cda9e3e705c981abeddbf1e0206135b33c6a088d154c` |
+
+The pre-existing Shinmone worktree modifications to `package.json`, `package-lock.json`, `nuxt.config.ts`, `app.vue`, and unrelated application files were present before Phase 12A and remain separately attributed. Phase 12A changed no package, tsconfig, Nuxt, ESLint, Vite, build, or typecheck configuration. The SDK worktree status remained identical to its pre-Phase-12A dirty baseline, and Backend production source was not changed.
+
+Authentic RED/GREEN and focused verification:
+
+- T108 RED: `npm run test:unit -- tests/unit/assistantIdentityTokenProvider.spec.ts` produced 7 expected new failures because the callable resolver had no connector-reference resolver; 44 existing tests passed.
+- T109 GREEN: the identical unit command passed 1 file and 51/51 tests.
+- T110 RED: `npm run test:integration -- tests/integration/assistantSdkHandoff.spec.ts` produced 3 expected new failures because PageContext was route-only; 12 existing tests passed.
+- T111 GREEN: the identical integration command passed 1 file and 15/15 tests.
+- `npm run test:contract -- tests/contract/assistantSecurityGuards.spec.ts` passed 1 file and 15/15 tests.
+- Touched-file ESLint passed with zero findings.
+- `scripts/quality-gate.sh` passed with zero errors and 229 pre-existing warnings.
+- `git diff --check` passed in the Shinmone and Backend repositories.
+
+The unfiltered command `set -o pipefail; npm run typecheck 2>&1 | tee /tmp/feature009-phase12a-typecheck.txt` exited 1 and preserved 113 TypeScript diagnostics across 49 files. Every diagnostic location/code was extracted from that log. The compact complete inventory is:
+
+```text
+../Frontend-Core/Frontend-Core-NuxtLayer/components/App/BaseAppBreadcrumbs.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/App/BaseAppButtonGroup.stories.ts TS2307x1,TS7006x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/App/BaseAppFooter.stories.ts TS2307x1,TS7006x3
+../Frontend-Core/Frontend-Core-NuxtLayer/components/App/BaseAppHeader.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/App/BaseAppLayout.stories.ts TS2307x1,TS1117x1,TS7006x2
+../Frontend-Core/Frontend-Core-NuxtLayer/components/App/BaseAppMobileSidebar.stories.ts TS2307x2,TS7006x4
+../Frontend-Core/Frontend-Core-NuxtLayer/components/App/BaseAppPageTitle.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/App/BaseAppSidebar.stories.ts TS2307x1,TS7006x4
+../Frontend-Core/Frontend-Core-NuxtLayer/components/App/BaseAppSidebarItem.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/App/Header/BaseAppHeaderMenu.stories.ts TS2307x1,TS7006x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Auth/BaseAuthEntrypointList.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Dashboard/BaseDashboardLinkItem.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/EditForm/BaseEditForm.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Filter/BaseFilter.stories.ts TS2307x1,TS2353x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Filter/BaseFilterButtonToggle.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Filter/BaseFilterDateEnd.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Filter/BaseFilterDateStart.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Filter/BaseFilterInput.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Filter/BaseFilterSelect.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Form/BaseForm.stories.ts TS2307x1,TS7006x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Form/BaseForm.vue TS2724x2,TS2339x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Form/BaseFormInput.stories.ts TS2307x1,TS7006x4
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Form/BaseFormOptionGroup.stories.ts TS2307x1,TS7006x4
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Form/BaseFormOptionGroup.vue TS2345x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Form/BaseFormSelect.stories.ts TS2307x1,TS7006x4
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Form/BaseFormWrap.stories.ts TS2307x1,TS7006x4
+../Frontend-Core/Frontend-Core-NuxtLayer/components/InfoPage/BaseInfoPageCard.stories.ts TS2307x1,TS7006x4
+../Frontend-Core/Frontend-Core-NuxtLayer/components/InfoPage/BaseInfoPageCardView.stories.ts TS2307x2,TS7006x5
+../Frontend-Core/Frontend-Core-NuxtLayer/components/InfoPage/BaseInfoPageCardView.vue TS2307x1,TS7053x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/List/BaseList.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/List/BaseListActionButtonExportExcel.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/List/BaseListChip.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/List/BaseListDatetime.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/List/BaseListLink.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/List/BaseListNumber.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/List/BaseListPagination.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/List/BaseListProgress.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/List/BaseListWrap.stories.ts TS2307x1,TS7006x2
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Page/BaseAppLogin.stories.ts TS2307x1,TS7006x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Page/BasePageDialog.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Page/BasePageUnderConstruction.stories.ts TS2307x1
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Quasar/BaseQuasarScrollArea.stories.ts TS2307x1,TS7006x3
+../Frontend-Core/Frontend-Core-NuxtLayer/components/Scan/BaseScan.stories.ts TS2307x1,TS7006x1
+../Frontend-Core/Frontend-Core-NuxtLayer/demo/BaseAppButtonGroup.demo.stories.ts TS2307x1,TS2698x1,TS7006x1
+../Frontend-Core/Frontend-Core-NuxtLayer/demo/BaseFilterList.demo.stories.ts TS2307x1,TS7006x1,TS2322x1
+../Frontend-Core/Frontend-Core-NuxtLayer/demo/BaseFilterListDetail.demo.stories.ts TS2307x1,TS7006x2,TS2353x3
+../Frontend-Core/Frontend-Core-NuxtLayer/types/Page/login.ts TS2724x1
+components/EditTable/EditTable.vue TS1261x1
+node_modules/.c12/github_ideaxpress_Frontend_78glzp9oCc/types/Utils/exportExcel.ts TS2307x1
+```
+
+The diagnostic categories are external Frontend-Core Storybook/module and story typing (104), external ExcelJS typing (1), external BaseForm incompatibility (5), external InfoPage typing (2), and the existing unmodified local `ChipCell.vue` filename-casing conflict (1). All external layer paths are outside the four-file authorized scope. `components/EditTable/EditTable.vue` is owned by the Shinmone repository but is unchanged in the worktree and unrelated to Phase 12A. No diagnostic or message references a Phase 12A file, `getConnectorContextRef`, or `connectorContextExpiresIn`.
+
+Protected Feature 009 hashes remained:
+
+```text
+spec.md=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73
+design.md=bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb
+plan.md=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1
+```
+
+```text
+FEATURE009_PHASE12A=PASS_WITH_PREEXISTING_TYPECHECK_BASELINE
+FEATURE009_PHASE12A_FUNCTIONAL_HUMAN_GATE=PASS
+T108_AUTHENTIC_RED=YES
+T109_GREEN=YES
+T110_AUTHENTIC_RED=YES
+T111_GREEN=YES
+FOCUSED_UNIT_TESTS=PASS_51_OF_51
+FOCUSED_INTEGRATION_TESTS=PASS_15_OF_15
+SECURITY_CONTRACT_TESTS=PASS_15_OF_15
+TOUCHED_FILE_LINT=PASS
+REPOSITORY_QUALITY_GATE=PASS
+GLOBAL_REPOSITORY_TYPECHECK=FAIL_PREEXISTING_UNRELATED
+PHASE12A_TYPECHECK_ATTRIBUTABLE_ERRORS=0
+PHASE12A_TYPECHECK_GATE=NON_BLOCKING_BASELINE_DEFECT
+TYPECHECK_ERROR_IN_ASSISTANT_IDENTITY_TOKEN_PROVIDER=NO
+TYPECHECK_ERROR_IN_ASSISTANT_WIDGET=NO
+TYPECHECK_ERROR_IN_PHASE12A_UNIT_TEST=NO
+TYPECHECK_ERROR_IN_PHASE12A_INTEGRATION_TEST=NO
+TYPECHECK_ERROR_REFERENCING_NEW_PHASE12A_SYMBOLS=NO
+PHASE12A_TSCONFIG_CHANGE=NO
+PHASE12A_PACKAGE_TYPECHECK_CHANGE=NO
+PHASE12A_NUXT_CONFIG_CHANGE=NO
+ALL_TYPECHECK_ERRORS_OUTSIDE_PHASE12A_SCOPE=YES
+TRANSIENT_IDENTITY_REFERENCE_BUNDLE=PASS
+SEPARATE_EXPIRIES=PASS
+REFERENCE_REFRESH_WINDOW_SECONDS=15
+NATIVE_TOKEN_CHANGE_INVALIDATES_REFERENCE=YES
+CONNECTOR_CONTEXT_REF_MEMORY_ONLY=YES
+CONNECTOR_CONTEXT_REF_PERSISTED=NO
+REFRESH_TOKEN_READ=NO
+EXISTING_PAGE_CONTEXT_USED=YES
+NEW_ASSISTANT_REQUEST_TYPE=NO
+BROWSER_AUTHORITY_ADDED=NO
+SDK_IMPLEMENTATION_MODIFIED=NO
+SDK_WORKTREE_MODIFIED_BY_PHASE12A=NO
+ASSISTANT_BACKEND_MODIFIED=NO
+ASSISTANT_BACKEND_MODIFIED_BY_PHASE12A=NO
+FEATURE009_SPEC_MODIFIED=NO
+FEATURE009_DESIGN_MODIFIED=NO
+FEATURE009_PLAN_MODIFIED=NO
+KNOWN_PHASE12A_PRODUCTION_DEFECT=NO
+T108_T111_COMPLETE=YES
+T112_EXECUTED=NO
+PHASE12_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T112
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
+
+- [X] T112 [RED] [US7] [SHINMONE-SPA] Add failing refresh, native-token-change invalidation, and non-persistence/security tests.
   - Files: `/Users/evalin/Documents/ideaxpress proj/idx-shinmone-scm-frontend/tests/unit/assistantIdentityTokenProvider.spec.ts`, `tests/contract/assistantSecurityGuards.spec.ts`.
   - Depends on: T111.
   - Validation: Cover remint, simultaneous invalidation, missing/expired reference, exchange failure, no ref in storage/log/history/public request/response, and no SDK-visible contract change.
   - Stop: Do not weaken sanitization or retain a reference across native credential generation changes.
 
-- [ ] T113 [GREEN] [US7] [SHINMONE-SPA] Complete safe invalidation/remint and transient-delivery handling.
+- [X] T113 [GREEN] [US7] [SHINMONE-SPA] Complete safe invalidation/remint and transient-delivery handling.
   - Files: The two allowed Shinmone composables only.
   - Depends on: T112.
   - Validation: Make T112 pass and rerun unit/integration/contract Assistant suites.
   - Stop: No broad SPA, Auth, business client, proxy, or UI modification.
 
-- [ ] T114 [VERIFY] [US7] [SDK-READ-ONLY] Verify the SDK and Assistant public contracts remain byte- and behavior-compatible.
+- [X] T114 [VERIFY] [US7] [SDK-READ-ONLY] Verify the SDK and Assistant public contracts remain byte- and behavior-compatible.
   - Files: `/Users/evalin/Documents/my proj/F2E/internal-ai-assistant/packages/assistant-sdk/src/types/public.ts`, `src/context/**`, `src/request/pageContext.ts`, `src/request/hostIntegrationRequestAdapter.ts`; Backend public/SSE contracts.
   - Depends on: T113.
   - Validation: Compare SDK status/hashes and run relevant existing SDK/Backend contract tests without edits.
   - Stop: Any SDK implementation or public type change is `HUMAN_REQUIRED`.
 
-- [ ] T115 [CHECKPOINT] [US7] [SHINMONE-SPA] Verify and record the Phase 12 transient-delivery gate.
+- [X] T115 [CHECKPOINT] [US7] [SHINMONE-SPA] Verify and record the Phase 12 transient-delivery gate.
   - Files: `specs/009-productized-business-connector-runtime/tasks.md` evidence only.
   - Depends on: T109, T111, T113, T114.
   - Validation: Record a machine-readable evidence block with `SDK_PUBLIC_API_CHANGE=NO`, `ASSISTANT_PUBLIC_API_CHANGE=NO`, and `TRANSIENT_REF_DELIVERY=PASS`.
   - Stop: Phase 13 cannot start if the reference persists, becomes authority, or requires SDK/public changes.
+
+### Phase 12B Backend SSE Recovery and Checkpoint — 2026-09-15
+
+Phase 12B resumed from the sealed Phase 12A implementation. The initial lifecycle/security additions were written before production changes and passed immediately: the provider suite passed 56/56 and the security contract suite passed 17/17. Human review therefore accepted truthful existing-behavior evidence rather than a manufactured RED. The handoff integration remained green at 15/15, so T113 required no Shinmone production change.
+
+The unchanged Customer SSE contract supplied the Backend RED under its approved local-only execution path: 10/11 tests passed and the Customer B case expected `tool_call_blocked,answer_delta,final` but received `answer_delta,final`. Read-only tracing established that the explicitly disabled same-Customer policy was omitted by `ToolRegistryService.listDiscoverableToolsForCustomer`; semantic discovery therefore produced no candidate and the request used the pre-runtime answer-only path. No blocked ToolCall or lifecycle event existed at any downstream boundary:
+
+```text
+BLOCKED_TOOLCALL_CREATED=NO
+BLOCKED_TOOL_EVENT_APPENDED=NO
+BLOCKED_TOOL_EVENT_REACHES_ORCHESTRATION=NO
+BLOCKED_TOOL_EVENT_REACHES_SSE_BUILDER=NO
+FIRST_DROPPED_BOUNDARY=ToolRegistryService.listDiscoverableToolsForCustomer
+```
+
+Focused Backend tests were then added before the production correction. The RED run failed 3 suites with 2 failed and 65 passed tests: the registry lacked the policy-disposition catalog, discovery returned no denied match, and the readonly runtime attempted normal execution. The GREEN run passed 3 suites and 102/102 tests. The resulting internal lane includes only explicitly disabled same-Customer policies, scores allowed tools first, emits a unique valid non-executable `metadata_discovery_policy_denied` disposition only when no allowed result or allowed clarification exists, and keeps missing policies invisible. The readonly runtime converts that trusted disposition to exactly one blocked ToolCall and the existing audit lifecycle without selecting or invoking an adapter.
+
+Final review added an explicit global-metadata-only ownership assertion for the denied lane. Its focused RED failed 1 suite with 1 failed and 23 passed tests because the runtime still invoked the Customer-aware resolver. The narrow GREEN moved the denied branch ahead of that resolver and used only `resolveRegisteredTool`; the complete focused set again passed 3 suites and 102/102 tests. The unchanged Customer SSE contract was then rerun: the sandbox attempt recorded `listen EPERM`, and the identical approved local-only command passed 1 suite and 11/11 tests. Root typecheck and `git diff --check` remained green.
+
+Observed Backend verification:
+
+- `npm run test:unit -- --runInBand --runTestsByPath test/unit/tool-registry.service.spec.ts test/unit/tool-discovery.service.spec.ts test/unit/assistant-readonly-runtime.service.spec.ts` passed 3 suites and 102/102 tests after the focused RED above.
+- The owning/adjacent unit inventory for registry, discovery, permission precheck, ToolCall, readonly runtime, message orchestration, and SSE event building passed 7 suites and 113/113 tests.
+- The combined permission-denial/redaction integration inventory passed 2 suites with 6 tests and skipped the 3 environment-gated Customer-policy cases. `RUN_CUSTOMER_US3_TESTS=true npm run test:integration -- --runInBand --runTestsByPath test/integration/customer-tool-permission.spec.ts` first recorded sandbox-only `listen EPERM`; the identical approved local-only rerun passed 1 suite and 3/3 tests.
+- `RUN_CUSTOMER_US1_TESTS=true npm run test:contract -- --runInBand --runTestsByPath test/contract/assistant-messages-sse.contract.spec.ts test/contract/customer-assistant-sse.contract.spec.ts test/contract/assistant-sessions.contract.spec.ts` passed 3 suites and 27/27 tests. The unchanged Customer SSE contract passed all 11 tests and restored `tool_call_blocked,answer_delta,final` for Customer B while Customer A retained `tool_call_started,tool_call_completed,evidence_attached,answer_delta,final`.
+- Root `npm run build`, `npm run typecheck`, and `git diff --check` passed. Existing non-failing ts-jest `allowJs` warnings remain baseline-only.
+
+T114 read-only compatibility verification:
+
+- SDK contracts passed 25 suites and 138/138 tests; SDK unit tests passed 44 suites and 372/372 tests. The initial sandboxed build/typecheck could not write external-repository temporary output; identical approved reruns passed `npm run build:assistant-sdk` and `npm run typecheck` without changing the five protected SDK source hashes.
+- Shinmone provider, handoff, and security suites passed 56/56, 15/15, and 17/17 respectively. Touched-file ESLint passed, `scripts/quality-gate.sh` passed with zero errors and 229 pre-existing warnings, and `git diff --check` passed.
+- The unfiltered Shinmone typecheck remained the exact Phase 12A baseline: 113 diagnostics across 49 files. Comparing complete diagnostic-line sets between `/tmp/feature009-phase12a-typecheck.txt` and `/tmp/feature009-phase12b-recovery-typecheck.txt` found 0 added and 0 removed diagnostics; no Phase 12B file or symbol appears in the set.
+
+Protected hashes after verification:
+
+```text
+FEATURE009_SPEC_SHA256=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73
+FEATURE009_DESIGN_SHA256=bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb
+FEATURE009_PLAN_SHA256=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1
+PRISMA_SCHEMA_SHA256=e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733
+SDK_PUBLIC_TYPES_SHA256=4b9d51ba4c8e77a18d6ae52d8314038c5d0112480e03e74c5308cea8ec40a44e
+SDK_PAGE_CONTEXT_SHA256=8662ef65a32d90489c4b1e1321938b1e6a6e63a229b9335e455f045b092387df
+SDK_HOST_REQUEST_ADAPTER_SHA256=d010044ceedb4efe9a1f4ef4503c66e6ba710ec0afed438c9f5a8a4dbd0301e7
+SDK_CONTEXT_RESOLUTION_SHA256=a90326bb2b0574102b44459fa394795ae68348c4758066d1bc3a26cd458051d0
+SDK_HOST_CONTEXT_PROVIDER_SHA256=df500570a32fb948d2da3764020cd0afe820a7623621a3e4a2724c7f165378f4
+PHASE12A_PROVIDER_SHA256=17142746245fa112c5ab9a1af23b6d97f2f1f41b44ab236fb7fac706ceb0b761
+PHASE12A_WIDGET_SHA256=514d07a75f27e4103df432ca6daf807a0229dd87295242880b8e407dd7d439d1
+```
+
+Phase 12B-attributed changed files are exactly:
+
+```text
+src/tools/tool-registry.service.ts
+src/tools/tool-discovery.service.ts
+src/assistant/runtime/assistant-readonly-runtime.service.ts
+test/unit/tool-registry.service.spec.ts
+test/unit/tool-discovery.service.spec.ts
+test/unit/assistant-readonly-runtime.service.spec.ts
+/Users/evalin/Documents/ideaxpress proj/idx-shinmone-scm-frontend/tests/unit/assistantIdentityTokenProvider.spec.ts
+/Users/evalin/Documents/ideaxpress proj/idx-shinmone-scm-frontend/tests/contract/assistantSecurityGuards.spec.ts
+specs/009-productized-business-connector-runtime/tasks.md
+```
+
+No SDK file, Shinmone Phase 12A production file, existing Customer SSE contract, Feature 007/008 artifact, Feature 009 spec/design/plan, Prisma file, public API, or SSE type was modified by Phase 12B.
+
+```text
+PHASE12B_BACKEND_SSE_RECOVERY=PASS
+BACKEND_SSE_ROOT_CAUSE=Explicitly disabled Customer policy was removed from the discovery catalog before semantic matching, causing pre-runtime answer-only SSE and preventing blocked ToolCall creation.
+BACKEND_SSE_RECOVERY_SCOPE=src/tools/tool-registry.service.ts,src/tools/tool-discovery.service.ts,src/assistant/runtime/assistant-readonly-runtime.service.ts
+
+CUSTOMER_A_SUCCESS_SEQUENCE=tool_call_started,tool_call_completed,evidence_attached,answer_delta,final
+CUSTOMER_B_POLICY_DENIAL_TOOLCALL=blocked
+CUSTOMER_B_POLICY_DENIAL_EXECUTION_STATUS=not_started
+CUSTOMER_B_POLICY_DENIAL_CONNECTOR_EXECUTION=NO
+CUSTOMER_B_POLICY_DENIAL_EVIDENCE=NO
+CUSTOMER_B_POLICY_DENIAL_SSE=tool_call_blocked,answer_delta,final
+BLOCKED_TOOLCALL_COUNT=1
+BLOCKED_TOOLCALL_EXECUTION_STATUS=not_started
+CONNECTOR_EXECUTION_COUNT_DELTA=0
+EVIDENCE_COUNT_DELTA=0
+CROSS_CUSTOMER_LEAK=NO
+
+CUSTOMER_ASSISTANT_SSE_CONTRACT_STALE=NO
+SSE_EXISTING_CONTRACT_RESTORED=YES
+SSE_NEW_EVENT_TYPE_ADDED=NO
+
+FEATURE009_PHASE12=PASS
+FEATURE009_PHASE12A=PASS_WITH_PREEXISTING_TYPECHECK_BASELINE
+FEATURE009_PHASE12B=PASS
+T108_T111_COMPLETE=YES
+T112_TESTS_FIRST=YES
+T112_AUTHENTIC_RED=NO_ALREADY_SATISFIED_BY_SEALED_PHASE12A
+T112_HUMAN_APPROVED_EXISTING_BEHAVIOR_EXCEPTION=YES
+T113_GREEN=YES
+T113_PRODUCTION_CHANGE_REQUIRED=NO
+T112_COMPLETE=YES
+T113_COMPLETE=YES
+T114_SDK_READ_ONLY_VERIFY=PASS
+T114_BACKEND_COMPONENT=PASS
+T114=PASS
+T115_CHECKPOINT=PASS
+T115=PASS
+
+TRANSIENT_REF_DELIVERY=PASS
+SEPARATE_EXPIRIES=PASS
+REFERENCE_REFRESH_WINDOW_SECONDS=15
+REFERENCE_REMINT=PASS
+NATIVE_TOKEN_CHANGE_INVALIDATES_REFERENCE=YES
+STALE_INFLIGHT_REFERENCE_REPOPULATION=DENIED
+EXPLICIT_INVALIDATION_CLEARS_REFERENCE=YES
+CONNECTOR_CONTEXT_REF_MEMORY_ONLY=YES
+CONNECTOR_CONTEXT_REF_PERSISTED=NO
+CONNECTOR_CONTEXT_REF_HISTORY_PERSISTED=NO
+CONNECTOR_CONTEXT_REF_LOGGED=NO
+REFRESH_TOKEN_READ=NO
+REFRESH_TOKEN_HANDOFF=NO
+
+EXISTING_PAGE_CONTEXT_USED=YES
+BROWSER_AUTHORITY_ADDED=NO
+SDK_IMPLEMENTATION_MODIFIED=NO
+SDK_PUBLIC_API_CHANGE=NO
+SDK_NEW_PUBLIC_FIELD=NO
+SDK_NEW_REQUEST_TYPE=NO
+ASSISTANT_PUBLIC_API_CHANGE=NO
+SSE_CONTRACT_CHANGE=NO
+
+GLOBAL_REPOSITORY_TYPECHECK=FAIL_PREEXISTING_UNRELATED
+PHASE12B_NEW_TYPECHECK_DIAGNOSTICS=0
+PHASE12B_ATTRIBUTABLE_TYPECHECK_ERRORS=0
+
+FEATURE007_HISTORY_MODIFIED=NO
+FEATURE008_ACCEPTED_CONTRACT_MODIFIED=NO
+FEATURE009_SPEC_DESIGN_PLAN_MODIFIED=NO
+
+T108_T115_COMPLETE=YES
+T116_EXECUTED=NO
+PHASE12_EXECUTED=YES
+PHASE13_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T116
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
+
+### Phase 12 Human-Gate Authority Recovery — 2026-09-15
+
+Human review accepted the Phase 12B discovery-catalog distinction and restored SSE lifecycle, but rejected the subsequent runtime branch that treated `metadata_discovery_policy_denied` provenance as current Customer policy authority. This section supersedes only that authority conclusion; it does not rewrite the preceding Phase 12A or Phase 12B evidence.
+
+The recovery preserved the valid catalog semantics: active read-only non-side-effect tools with an enabled same-Customer policy remain in the allowed catalog; an explicitly disabled same-Customer policy is eligible only for the separate semantic fallback lane; a missing policy remains invisible; and any allowed result or allowed ambiguity/argument clarification takes precedence over that fallback. The internal reason remains discovery provenance only.
+
+Tests were changed before the runtime correction. The focused RED command
+`npm run test:unit -- --runInBand --runTestsByPath test/unit/assistant-readonly-runtime.service.spec.ts`
+failed 1 suite with 3 failed and 24 passed tests. It proved the rejected branch bypassed `resolveToolForCustomer`, permanently denied a candidate whose policy had become enabled, and violated the new source authority guard. After removing that branch and its runtime import, the identical command passed 1 suite and 27/27 tests.
+
+The replacement coverage proves:
+
+- A stable explicitly disabled policy is re-resolved by `resolveToolForCustomer`, creates exactly one blocked ToolCall, and reaches neither permission execution, adapter selection, connector execution, nor Evidence.
+- A disabled discovery snapshot whose policy becomes enabled cannot be blindly blocked from candidate provenance; runtime re-resolves the Customer policy and must enter the existing Feature 008 permission precheck before any possible execution.
+- An allowed discovery snapshot whose policy becomes disabled is rejected by the latest runtime policy resolution, creates exactly one blocked ToolCall, and never reaches the adapter or connector.
+- A narrow source assertion scans only `AssistantReadonlyRuntimeService` and rejects `candidate.reason` or `POLICY_DENIED_DISCOVERY_REASON` as runtime authority while requiring the existing Customer-aware resolver call.
+
+Observed authority and Phase 12B regression results:
+
+- The required Phase 10 authority command covering tool registry, discovery, generic-routing guard, readonly runtime, permission precheck, and ToolCall passed 6 suites and 126/126 tests.
+- The owning Phase 12B unit inventory covering tool registry, discovery, permission precheck, ToolCall, readonly runtime, message orchestration, and SSE event building passed 7 suites and 116/116 tests.
+- The permission-denial/redaction integration inventory passed 2 suites and 6/6 active tests, with 3 Customer-policy tests skipped behind their environment gate. The explicit Customer-policy run first recorded sandbox-only `listen EPERM`; its identical approved local-only rerun passed 1 suite and 3/3 tests.
+- The three unchanged Assistant message, Customer SSE, and session contracts first recorded sandbox-only `listen EPERM`; the identical approved local-only rerun passed 3 suites and 27/27 tests. The unchanged Customer SSE contract also passed independently with 11/11 tests.
+- Customer A retained `tool_call_started,tool_call_completed,evidence_attached,answer_delta,final`. Customer B retained one `not_started` blocked ToolCall, zero connector/evidence deltas, and `tool_call_blocked,answer_delta,final` with no cross-Customer leakage.
+- Root build, root typecheck, and `git diff --check` passed.
+
+Phase 12A and SDK state were reconfirmed without edits. The provider and widget hashes remain `17142746245fa112c5ab9a1af23b6d97f2f1f41b44ab236fb7fac706ceb0b761` and `514d07a75f27e4103df432ca6daf807a0229dd87295242880b8e407dd7d439d1`. All five protected SDK source hashes remain identical to the preceding Phase 12B checkpoint. The complete Shinmone diagnostic sets remain exactly 113 diagnostics across 49 files with 0 additions and 0 removals between the authorized Phase 12A baseline and Phase 12B recovery log; no recovery file or symbol is present.
+
+Protected Backend hashes remained:
+
+```text
+FEATURE009_SPEC_SHA256=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73
+FEATURE009_DESIGN_SHA256=bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb
+FEATURE009_PLAN_SHA256=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1
+PRISMA_SCHEMA_SHA256=e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733
+```
+
+The final Phase 12 production diff contains only the valid discovery repair:
+
+```text
+src/tools/tool-registry.service.ts
+src/tools/tool-discovery.service.ts
+```
+
+`src/assistant/runtime/assistant-readonly-runtime.service.ts` was restored byte-for-byte to its pre-Phase-12B implementation after removal of the rejected branch. Authority-recovery test scope is `test/unit/assistant-readonly-runtime.service.spec.ts`; the existing Phase 12B registry/discovery tests and unchanged Customer SSE contract continue to prove the accepted fallback behavior. No SDK, Shinmone production, SSE public contract, Prisma, Feature 007/008 artifact, Feature 009 spec/design/plan, or Phase 13 file changed.
+
+```text
+FEATURE009_PHASE12=PASS
+FEATURE009_PHASE12B=PASS
+PHASE12_AUTHORITY_RECOVERY=PASS
+
+EXPLICIT_DISABLED_POLICY_DISTINCTION=PASS
+EXPLICIT_DISABLED_DISCOVERY_FALLBACK=PASS
+MISSING_POLICY_INVISIBLE=YES
+ACTIVE_READONLY_ONLY=PASS
+ALLOWED_DISCOVERY_PRIORITY=YES
+
+TOOL_DISCOVERY_CUSTOMER_POLICY_FILTER=PASS
+TOOL_DISCOVERY_ACTIVE_READONLY_ONLY=PASS
+DISCOVERY_OPERATION_AUTHORITY=NO
+DISCOVERY_PERMISSION_AUTHORITY=NO
+CANDIDATE_REASON_PERMISSION_AUTHORITY=NO
+CANDIDATE_REASON_EXECUTION_AUTHORITY=NO
+ASSISTANT_RUNTIME_BRANCH_ON_POLICY_DENIED_DISCOVERY_REASON=NO
+CUSTOMER_POLICY_RERESOLVED_AT_RUNTIME=YES
+LATEST_POLICY_DENIAL_FAILS_CLOSED=YES
+TOOLDEFINITION_CANONICAL_OPERATION_AUTHORITY=YES
+FEATURE008_PERMISSION_AUTHORITY_PRESERVED=YES
+CUSTOMER_BRANCH_IN_ASSISTANT_CORE=NO
+
+CUSTOMER_A_SUCCESS_SEQUENCE=tool_call_started,tool_call_completed,evidence_attached,answer_delta,final
+CUSTOMER_B_POLICY_DENIAL_SEQUENCE=tool_call_blocked,answer_delta,final
+CUSTOMER_B_POLICY_DENIAL_TOOLCALL=blocked
+CUSTOMER_B_POLICY_DENIAL_EXECUTION_STATUS=not_started
+CUSTOMER_B_POLICY_DENIAL_CONNECTOR_EXECUTION=NO
+CUSTOMER_B_POLICY_DENIAL_EVIDENCE=NO
+CUSTOMER_B_POLICY_DENIAL_SSE=tool_call_blocked,answer_delta,final
+BLOCKED_TOOLCALL_COUNT=1
+CONNECTOR_EXECUTION_COUNT_DELTA=0
+EVIDENCE_COUNT_DELTA=0
+CROSS_CUSTOMER_LEAK=NO
+
+CUSTOMER_ASSISTANT_SSE_CONTRACT_STALE=NO
+SSE_EXISTING_CONTRACT_RESTORED=YES
+SSE_NEW_EVENT_TYPE_ADDED=NO
+
+TRANSIENT_REF_DELIVERY=PASS
+CONNECTOR_CONTEXT_REF_PERSISTED=NO
+REFRESH_TOKEN_HANDOFF=NO
+SDK_IMPLEMENTATION_MODIFIED=NO
+SDK_PUBLIC_API_CHANGE=NO
+ASSISTANT_PUBLIC_API_CHANGE=NO
+SSE_CONTRACT_CHANGE=NO
+
+GLOBAL_REPOSITORY_TYPECHECK=FAIL_PREEXISTING_UNRELATED
+PHASE12_RECOVERY_NEW_TYPECHECK_DIAGNOSTICS=0
+PHASE12_RECOVERY_ATTRIBUTABLE_TYPECHECK_ERRORS=0
+
+T108_T115_COMPLETE=YES
+T116_EXECUTED=NO
+PHASE12_EXECUTED=YES
+PHASE13_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T116
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
 
 ## Phase 13 — Isolation, Portability, Removal, and Compatibility Closeout
 

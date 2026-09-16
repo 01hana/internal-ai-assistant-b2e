@@ -70,6 +70,29 @@ describe('ToolRegistryService', () => {
     expect(policy.resolve).toHaveBeenCalledTimes(2);
   });
 
+  it('separates enabled and explicitly disabled same-Customer discovery entries while omitting absent policies', async () => {
+    const tools = [
+      toolDefinition({ id: 'allowed', name: 'allowed.read' }),
+      toolDefinition({ id: 'denied', name: 'denied.read' }),
+      toolDefinition({ id: 'absent', name: 'absent.read' }),
+      toolDefinition({ id: 'inactive', name: 'inactive.read', isActive: false }),
+      toolDefinition({ id: 'write', name: 'write.tool', operation: ToolOperation.update, hasSideEffect: true } as never)
+    ];
+    const service = new ToolRegistryService(
+      createPrismaServiceMock(tools, [
+        { customerId: 'customer-a', toolDefinitionId: 'allowed', enabled: true },
+        { customerId: 'customer-a', toolDefinitionId: 'denied', enabled: false },
+        { customerId: 'customer-b', toolDefinitionId: 'absent', enabled: false }
+      ]),
+      customerToolPolicyMock()
+    );
+
+    await expect(service.listDiscoveryCatalogForCustomer({ customerId: 'customer-a' })).resolves.toEqual({
+      allowed: [expect.objectContaining({ id: 'allowed', key: 'allowed.read' })],
+      explicitlyDenied: [expect.objectContaining({ id: 'denied', key: 'denied.read' })]
+    });
+  });
+
   it('normalizes DB records without consulting connector listTools capability reports', async () => {
     const service = new ToolRegistryService(createPrismaServiceMock([toolDefinition({ name: 'mock.orders.status.lookup' })]), customerToolPolicyMock());
 
@@ -287,7 +310,10 @@ function outputSchemaWithPolicy(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function createPrismaServiceMock(tools: ReturnType<typeof toolDefinition>[]) {
+function createPrismaServiceMock(
+  tools: ReturnType<typeof toolDefinition>[],
+  policies: Array<{ customerId: string; toolDefinitionId: string; enabled: boolean }> = []
+) {
   return {
     db: {
       toolDefinition: {
@@ -296,6 +322,14 @@ function createPrismaServiceMock(tools: ReturnType<typeof toolDefinition>[]) {
         findUnique: jest.fn(async ({ where }: { where: { name_version: { name: string; version: string } } }) =>
           tools.find((tool) => tool.name === where.name_version.name && tool.version === where.name_version.version) ?? null
         )
+      },
+      customerToolPolicy: {
+        findUnique: jest.fn(async ({ where }: { where: { customerId_toolDefinitionId: { customerId: string; toolDefinitionId: string } } }) => {
+          const selector = where.customerId_toolDefinitionId;
+          return policies.find((policy) =>
+            policy.customerId === selector.customerId && policy.toolDefinitionId === selector.toolDefinitionId
+          ) ?? null;
+        })
       }
     }
   } as never;

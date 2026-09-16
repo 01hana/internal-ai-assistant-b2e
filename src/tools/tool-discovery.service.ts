@@ -27,6 +27,7 @@ const SOURCES = new Set(['entity_value', 'normalized_term', 'time_range_label'])
 const SAFE_NAME = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const FORBIDDEN = /(customer|hostapp|connector|adapter|endpoint|credential|password|secret|token|sql|command|callback|script|https?|uri|url|path)/i;
 const EVIDENCE = new Set(['identity_context', 'structured_record', 'manual_review', 'document_chunk']);
+export const POLICY_DENIED_DISCOVERY_REASON = 'metadata_discovery_policy_denied' as const;
 
 export interface ToolDiscoveryInput {
   readonly customerScope: Readonly<Pick<CustomerScope, 'customerId'>>;
@@ -59,8 +60,26 @@ export class ToolDiscoveryService {
   constructor(private readonly tools: ToolRegistryService) {}
 
   async discover(input: ToolDiscoveryInput): Promise<ToolDiscoveryResult> {
-    const catalog = await this.tools.listDiscoverableToolsForCustomer(input.customerScope);
+    const catalog = await this.tools.listDiscoveryCatalogForCustomer(input.customerScope);
     const signals = collectSignals(input);
+    const allowed = this.discoverFromCatalog(catalog.allowed, input, signals, 'metadata_discovery');
+    if (allowed.candidates.length > 0 || allowed.clarificationNeeds.length > 0) return allowed;
+
+    const explicitlyDenied = this.discoverFromCatalog(
+      catalog.explicitlyDenied,
+      input,
+      signals,
+      POLICY_DENIED_DISCOVERY_REASON
+    );
+    return explicitlyDenied.candidates.length > 0 ? explicitlyDenied : empty();
+  }
+
+  private discoverFromCatalog(
+    catalog: readonly RegisteredToolDefinition[],
+    input: ToolDiscoveryInput,
+    signals: Signals,
+    reason: 'metadata_discovery' | typeof POLICY_DENIED_DISCOVERY_REASON
+  ): ToolDiscoveryResult {
     const scored: ScoredCandidate[] = [];
     const blockedMatches: ToolDiscoveryMetadataV1[] = [];
     for (const tool of catalog) {
@@ -69,7 +88,7 @@ export class ToolDiscoveryService {
       if (hasConflictingWriteIntent(metadata, signals)) continue;
       const argumentsValue = bindArguments(metadata.argumentBindings, input);
       if (!argumentsValue) { blockedMatches.push(metadata); continue; }
-      const candidate = Object.freeze({ key: tool.key, arguments: argumentsValue, reason: 'metadata_discovery' });
+      const candidate = Object.freeze({ key: tool.key, arguments: argumentsValue, reason });
       if (!this.tools.validateNamedOperation(tool, candidate).valid) { blockedMatches.push(metadata); continue; }
       scored.push({
         tool,

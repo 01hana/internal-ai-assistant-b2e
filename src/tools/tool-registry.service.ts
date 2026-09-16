@@ -115,6 +115,43 @@ export class ToolRegistryService {
     return allowed;
   }
 
+  async listDiscoveryCatalogForCustomer(
+    customerScope: Readonly<Pick<CustomerScope, 'customerId'>>
+  ): Promise<Readonly<{
+    allowed: readonly RegisteredToolDefinition[];
+    explicitlyDenied: readonly RegisteredToolDefinition[];
+  }>> {
+    const tools = await this.prisma.db.toolDefinition.findMany({
+      where: { isActive: true, operation: ToolOperation.read, hasSideEffect: false },
+      orderBy: [{ name: 'asc' }, { version: 'asc' }]
+    });
+    const allowed: RegisteredToolDefinition[] = [];
+    const explicitlyDenied: RegisteredToolDefinition[] = [];
+
+    for (const tool of tools) {
+      if (!tool.isActive || tool.operation !== ToolOperation.read || tool.hasSideEffect) continue;
+      try {
+        const policy = await this.prisma.db.customerToolPolicy.findUnique({
+          where: {
+            customerId_toolDefinitionId: {
+              customerId: customerScope.customerId,
+              toolDefinitionId: tool.id
+            }
+          }
+        });
+        if (!policy) continue;
+        (policy.enabled ? allowed : explicitlyDenied).push(normalizeToolDefinition(tool));
+      } catch {
+        // Discovery catalog failures are deny-by-default and reveal no tool match.
+      }
+    }
+
+    return Object.freeze({
+      allowed: Object.freeze(allowed),
+      explicitlyDenied: Object.freeze(explicitlyDenied)
+    });
+  }
+
   async resolveToolForCustomer(toolKey: string, customerScope: CustomerScope): Promise<CustomerToolRegistryResolveResult> {
     const global = await this.resolveRegisteredTool(toolKey);
     if (!global.tool) {
