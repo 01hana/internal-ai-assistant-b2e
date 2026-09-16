@@ -2,6 +2,7 @@ import { DynamicModule, Module } from '@nestjs/common';
 import { ConnectorBindingService } from '../bindings/connector-binding.service';
 import { CredentialExecutionBoundary } from '../credentials/credential-execution.boundary';
 import { RuntimeHealthModule } from '../health/runtime-health.module';
+import { RuntimeReadinessService } from '../health/readiness.service';
 import { OperationManifestRegistry } from '../manifest/operation-manifest.registry';
 import { ServiceAuthModule } from '../service-auth/service-auth.module';
 import { ExactRawBodyAuthenticator } from '../service-auth/exact-raw-body.authenticator';
@@ -21,10 +22,10 @@ export class ConnectorInvocationModule {
       providers: [
         InvocationMonotonicClock,
         { provide: ConnectorInvocationService, useFactory: (
-          authenticator: ExactRawBodyAuthenticator, bindings: ConnectorBindingService, manifests: OperationManifestRegistry,
+          authenticator: ExactRawBodyAuthenticator, readiness: RuntimeReadinessService, bindings: ConnectorBindingService, manifests: OperationManifestRegistry,
           credentials: CredentialExecutionBoundary, upstream: UpstreamExecutionService, clock: InvocationMonotonicClock
-        ) => new ConnectorInvocationService(authenticator, bindings, manifests, credentials, upstream, () => clock.nowMilliseconds()),
-        inject: [ExactRawBodyAuthenticator, ConnectorBindingService, OperationManifestRegistry, CredentialExecutionBoundary, UpstreamExecutionService, InvocationMonotonicClock] },
+        ) => new ConnectorInvocationService(authenticator, readiness, bindings, manifests, credentials, upstream, () => clock.nowMilliseconds()),
+        inject: [ExactRawBodyAuthenticator, RuntimeReadinessService, ConnectorBindingService, OperationManifestRegistry, CredentialExecutionBoundary, UpstreamExecutionService, InvocationMonotonicClock] },
         InvocationReadinessInitializer
       ]
     };

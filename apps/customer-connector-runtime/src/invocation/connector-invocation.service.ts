@@ -16,11 +16,13 @@ export interface ConnectorInvocationInput {
   readonly requestIdHeader?: string; readonly rawBody: Uint8Array; readonly requestSignal?: AbortSignal;
 }
 export interface ConnectorInvocationResult { readonly statusCode: number; readonly body: ConnectorInvocationResponseV1; }
+interface RuntimeReadinessBoundary { snapshot(): Readonly<{ ready: boolean }>; }
 const REJECTED_REQUEST_ID = 'rejected-request';
 
 export class ConnectorInvocationService {
   constructor(
     private readonly authenticator: Pick<ExactRawBodyAuthenticator, 'authenticate'>,
+    private readonly readiness: RuntimeReadinessBoundary,
     private readonly bindings: Pick<ConnectorBindingService, 'withInvocationLease' | 'revoke'>,
     private readonly manifests: Pick<OperationManifestRegistry, 'prepare'>,
     private readonly credentials: Pick<CredentialExecutionBoundary, 'withAppliedCredential'>,
@@ -38,6 +40,7 @@ export class ConnectorInvocationService {
       return response('CONNECTOR_REQUEST_INVALID', proof.requestId);
     }
     const body = parsed.value;
+    if (!this.readiness.snapshot().ready) return response('CONNECTOR_UNAVAILABLE', body.requestId);
     let revokeCredential = false;
     try {
       const leased = await this.bindings.withInvocationLease(body.connectorContextRef, { trustedContext: {

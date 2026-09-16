@@ -12,6 +12,7 @@ import { customerBOperation, parsedManifest } from '../fixtures/phase5-manifests
 import { credentialFixtures, profileConfigurations } from '../fixtures/phase5-credentials';
 
 const NOW = 1_800_000_000;
+const READY_RUNTIME = Object.freeze({ snapshot: () => Object.freeze({ ready: true }) });
 
 describe('Phase 6 credential rejection binding lifecycle', () => {
   it.each([
@@ -79,7 +80,7 @@ async function lifecycleHarness(statusCode: number, body: string, operationOverr
   );
   return {
     bindings, reference, handleRevoke,
-    service: new ConnectorInvocationService(authenticator(), bindings, manifests, new CredentialExecutionBoundary(profiles), upstream),
+    service: new ConnectorInvocationService(authenticator(), READY_RUNTIME, bindings, manifests, new CredentialExecutionBoundary(profiles), upstream),
     input: invocationInput(reference)
   };
 }
@@ -89,7 +90,7 @@ function invocationService(bindings: ConnectorBindingService, upstream: { execut
   const profiles = new CredentialProfileRegistry(profileConfigurations,
     [fixtures.bearerProvider, fixtures.apiKeyProvider], [fixtures.bearerStrategy, fixtures.apiKeyStrategy]);
   return new ConnectorInvocationService(
-    authenticator(), bindings,
+    authenticator(), READY_RUNTIME, bindings,
     new OperationManifestRegistry([parsedManifest('inventory', [customerBOperation()])]),
     new CredentialExecutionBoundary(profiles), upstream
   );

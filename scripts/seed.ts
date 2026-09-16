@@ -536,7 +536,7 @@ const SHINMONE_REFERENCE_TOOL_DEFINITION = {
       evidenceSafeProvenanceFields: ['metricKey', 'period']
     }
   },
-  requiredPermissions: ['work-orders:read'],
+  requiredPermissions: ['menu:ORDERS:read'],
   riskLevel: RiskLevel.low,
   hasSideEffect: false,
   requiresConfirmation: false,

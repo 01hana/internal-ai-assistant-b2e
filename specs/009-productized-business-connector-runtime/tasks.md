@@ -1,7 +1,7 @@
 # Tasks: Feature 009 — Productized Business Connector Runtime
 
 **Input**: Accepted `spec.md`, `design.md`, and `plan.md` approved for Phase 1 implementation.
-**Status**: Accepted — Phase 1 through Phase 12 (T001–T115) completed; awaiting human review before T116.
+**Status**: Accepted — Phase 1 through Phase 12 and Phase 13 (T001–T125) completed; awaiting human/deployment approval before T126.
 
 ```text
 PHASE1_EXECUTED=YES
@@ -27,8 +27,104 @@ PHASE11_EXECUTED=YES
 T108_T111_COMPLETE=YES
 T108_T115_COMPLETE=YES
 PHASE12_EXECUTED=YES
-PHASE13_EXECUTED=NO
-FIRST_UNEXECUTED_TASK=T116
+T001_T120_COMPLETE=YES
+T001_T123_COMPLETE=YES
+T001_T125_COMPLETE=YES
+PHASE13_EXECUTED=YES
+FIRST_UNEXECUTED_TASK=T126
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
+
+### Phase 13B-3 - Runtime Readiness Admission Recovery - 2026-09-16
+
+The prior T124 readiness-loss evidence exercised readiness reporting and race behavior, but did not prove that a false current Runtime readiness state prevents a newly authenticated invocation from beginning Customer-local execution. The local composed rehearsal exposed the gap: after `RuntimeReadinessRegistry.upstream=false`, the normal Assistant request reached the local TLS upstream once. Human review confirmed the production defect and authorized only the narrow Customer Connector Runtime invocation-admission recovery.
+
+`ConnectorInvocationService` now reads the existing `RuntimeReadinessService.snapshot().ready` only after exact service authentication, proof/raw-body/request-ID validation, and canonical request parsing, and before binding lease, manifest preparation, credential application, or upstream execution. `ConnectorInvocationModule` injects the existing readiness service. No Controller, Assistant, discovery, adapter, wire contract, persistence, timeout, abort, lease, public Assistant/SSE/SDK, or Customer-specific readiness behavior changed. A false readiness result returns the existing bounded `HTTP 503` / `CONNECTOR_UNAVAILABLE` response with the authenticated request ID and does not expose readiness/dependency/topology details.
+
+The permanent composed local regression uses the existing Browser-equivalent Gateway -> Backend -> ProductizedBusinessConnectorAdapter -> signed Runtime topology. Its normal service request still reaches only `GET /Dashboard/KPIStats?TimeRange=thisMonth`, returns projected `count=17`, creates successful projected evidence, produces an answered decision, and retains the existing success SSE sequence. It then sets only the current test-owned Runtime `upstream` readiness dependency false, sends the same natural-language question, and observes zero local upstream requests, a failed Feature 008 ToolCall, no EvidenceRef, and the existing `tool_call_started`, `tool_call_failed`, `answer_delta`, `final` no-answer SSE behavior. The test restores the same readiness dependency immediately afterward.
+
+Focused recovery validation:
+
+```text
+npm --prefix apps/customer-connector-runtime test -- --runInBand --runTestsByPath test/invocation/connector-invocation-route.spec.ts
+PASS: 1 suite, 3 tests
+
+npm --prefix apps/customer-connector-runtime test -- --runInBand --runTestsByPath test/invocation/invocation-early-gates.spec.ts
+PASS: 1 suite, 28 tests
+
+npm --prefix apps/customer-connector-runtime test -- --runInBand --runTestsByPath test/invocation/connector-invocation-route.spec.ts test/invocation/invocation-early-gates.spec.ts test/upstream/credential-rejection-lifecycle.spec.ts test/upstream/timeout-cancellation.spec.ts test/health/readiness.spec.ts
+PASS: 5 suites, 57 tests
+
+npm --prefix apps/customer-connector-runtime run build
+PASS
+
+npm --prefix apps/customer-connector-runtime run typecheck
+PASS
+
+npm run test:integration -- --runInBand --runTestsByPath test/integration/shinmone-reference-vertical.spec.ts
+PASS: 1 suite, 1 test
+
+npm run test:integration -- --runInBand --runTestsByPath test/integration/tool-failure-safe-response.spec.ts
+PASS: 1 suite, 1 test
+
+npm run test:contract -- --runInBand --runTestsByPath test/contract/assistant-messages-sse.contract.spec.ts
+PASS: 1 suite, 6 tests
+
+npm run typecheck
+PASS
+
+git diff --check
+PASS
+```
+
+Protected-surface verification passed: Feature 007 artifacts, Prisma schema/migrations, and the shared connector-runtime contract have no recovery diff; Feature 009 `spec.md`, `design.md`, and `plan.md` remain unchanged. The external SPA worktree and packaged SDK were not modified by this recovery. No live staging endpoint, real Shinmone credential, or deployment operation was accessed.
+
+```text
+FEATURE009_RUNTIME_READINESS_ADMISSION_RECOVERY=PASS
+AUTHENTIC_COMPOSED_RED=YES
+PRODUCTION_DEFECT_CONFIRMED=YES
+
+RUNTIME_READINESS_ADMISSION_REQUIRED=YES
+RUNTIME_READINESS_AUTHORITY=RuntimeReadinessService.snapshot().ready
+READINESS_CHECK_AFTER_AUTHENTICATION=YES
+READINESS_CHECK_BEFORE_BINDING_LEASE=YES
+READINESS_CHECK_BEFORE_CREDENTIAL=YES
+READINESS_CHECK_BEFORE_UPSTREAM=YES
+
+READINESS_FALSE_BEFORE_ADMISSION_INVOCATION_START=NO
+READINESS_FALSE_BEFORE_ADMISSION_BINDING_LEASE=NO
+READINESS_FALSE_BEFORE_ADMISSION_CREDENTIAL_ACCESS=NO
+READINESS_FALSE_BEFORE_ADMISSION_UPSTREAM_ACCESS=NO
+READINESS_FALSE_UPSTREAM_REQUEST_COUNT=0
+READINESS_FALSE_EVIDENCE_CREATED=NO
+READINESS_FALSE_RETRY_COUNT=0
+
+READINESS_FAILURE_PUBLIC_DETAIL=NO
+READINESS_NEW_DISTRIBUTED_AUTHORITY=NO
+T124_TIMEOUT_AUTHORITY_CHANGED=NO
+T124_ABORT_SEMANTICS_CHANGED=NO
+T124_LEASE_SEMANTICS_CHANGED=NO
+READINESS_RETRY_COUNT=0
+POSITIVE_LOCAL_VERTICAL_STILL_PASS=YES
+
+T116=PASS
+T117=PASS
+T118=PASS
+T119=PASS
+T120=PASS
+T121=PASS
+T122=PASS
+T123=PASS
+T124=PASS_AFTER_READINESS_RECOVERY
+T124_READINESS_ADMISSION_RECOVERY=PASS
+T125_RECOVERY_RECONFIRMATION=PASS
+FEATURE009_PRE_STAGING_SECURITY_CLOSEOUT=PASS
+
+T126_EXECUTED=NO
+PHASE14_EXECUTED=NO
+LIVE_STAGING_ACCESSED=NO
+REAL_SHINMONE_CREDENTIAL_USED=NO
+LOCAL_NEGATIVE_MATRIX_RESUME_AUTHORIZED=NO
 NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 ```
 **Scope**: Implement the reusable two-sided connector runtime, executable Synthetic Customer B portability fixture, removable Shinmone reference slice, and Shinmone-removal gate through the existing Feature 008 path. Feature 007 is a completed read-only predecessor; Phase 8 is `FEATURE009_IMPLEMENTATION_CONSUMING_ACCEPTED_FEATURE007_AMENDMENT`, never Feature 007 reimplementation.
@@ -3049,61 +3145,203 @@ NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 **Dependencies**: T115.  
 **Independent test**: Two-Customer and hostile transport/manifest fixtures cannot cross any boundary or leak prohibited material while all existing contracts remain green.
 
-- [ ] T116 [VERIFY] [US5] [BACKEND] Execute two-Customer discovery, deployment, policy, adapter, and evidence isolation.
+- [X] T116 [VERIFY] [US5] [BACKEND] Execute two-Customer discovery, deployment, policy, adapter, and evidence isolation.
   - Files: `test/integration/feature009-customer-isolation.spec.ts`, existing Customer isolation fixtures/suites.
   - Depends on: T115.
   - Validation: Use identical organization/actor/HostApp/reference-shaped values across Customers and prove Customer remains the outer boundary; this task is isolation-only and does not substitute for executable reuse.
   - Stop: No cross-Customer existence detail or shared registration/binding/evidence.
 
-- [ ] T117 [VERIFY] [US5] [CONNECTOR-RUNTIME] Execute service replay and every cross-binding-dimension attack.
+- [X] T117 [VERIFY] [US5] [CONNECTOR-RUNTIME] Execute service replay and every cross-binding-dimension attack.
   - Files: Runtime service-auth/replay/binding security suites and composed binding/invocation route suites.
   - Depends on: T116.
   - Validation: Reuse signed bytes/reference while varying context/provider/generation/expiry/revocation/leases; invoke both routes and prove central, Shinmone Bridge, Customer B, and other bootstrap profiles cannot cross-accept. Also execute duplicate/wildcard/dynamic URL/method/path/query/header/body/credential/traversal/callback/template/script/SQL/shell/command/bad-pointer/cap/write-classification manifest attacks. Record both route/profile isolation markers.
   - Stop: Credential resolver/upstream must remain uncalled on every rejection.
 
-- [ ] T118 [VERIFY] [CONNECTOR-RUNTIME] Execute Synthetic Customer B vertical portability and Shinmone-removal verification.
+- [X] T118 [VERIFY] [CONNECTOR-RUNTIME] Execute Synthetic Customer B vertical portability and Shinmone-removal verification.
   - Files: Customer B fixture integration/provider/profile/manifest suites, generic/shared/central build targets, Shinmone-removal topology, and Feature 008 discovery/projection harness.
   - Depends on: T117.
   - Validation: Execute `inventory.stock-on-hand` for tuple `customer-b` / `inventory-b` / `customer-b-inventory` and instance `customer-b-inventory-connector-1` using generic inventory/stock/lookup discovery, the same contract/adapter/registry/runtime/service-auth/Feature 008 path, fixed `POST_QUERY_JSON_V1 /inventory/stock/query`, strict `sku` body, fixture provider-owned API-key handle, fixed allowlisted code-owned `X-Inventory-Key`, and exact `{sku, quantity}` projection. Then disable/remove every Shinmone provider/profile/manifest/deployment/ToolDefinition-policy/SPA fixture and prove generic builds plus Customer B still pass.
   - Stop: No Customer-B/Shinmone conditional in Assistant core, central adapter/transport, or generic runtime; fixture API-key strategy is not production approval.
 
-- [ ] T119 [VERIFY] [BACKEND] Execute all three network-profile security matrices.
+- [X] T119 [VERIFY] [BACKEND] Execute all three network-profile security matrices.
   - Files: Central connector transport, Bridge binding transport, runtime upstream network/TLS/DNS suites, and composed Bridge → binding-route and central → invocation-route harnesses.
   - Depends on: T118.
   - Validation: Exercise Bridge → `POST /v1/internal/connector-bindings` and central → `POST /v1/connector/invocations` in composed mode while covering HTTPS, profile isolation, address modes, all A/AAAA/mapped/mixed results, rebinding, TLS, redirect, proxy, compression, limits, cancellation, zero retry, and test-only loopback isolation.
   - Stop: No HTTP staging/production fallback or broad Customer-private access.
 
-- [ ] T120 [VERIFY] [BACKEND] Execute credential, reference, proof, raw-body, raw-response, and pre-projection leak scans.
+- [X] T120 [VERIFY] [BACKEND] Execute credential, reference, proof, raw-body, raw-response, and pre-projection leak scans.
   - Files: `test/integration/secret-redaction.spec.ts`, composed binding/invocation endpoint harnesses, runtime/Bridge redaction suites, and captured log/audit/telemetry/model/SSE/public/persistence fixtures.
   - Depends on: T119.
   - Validation: Place unique sentinels in every prohibited class and inspect complete binding/invocation paths; also scan non-exempt generic contract, central adapter/transport, runtime orchestration, and Query Understanding sources for Shinmone paths/results/IDs, `acceptedEntry`, mandatory `nativeAccessToken`, MenuDetail/Bridge-only bootstrap, bearer-only application, JWT-exp parsing, or Customer branching.
   - Stop: Hashes or reversible encodings do not count as safe unless explicitly approved one-way binding verifiers.
 
-- [ ] T121 [VERIFY] [IDENTITY-BRIDGE] Re-run complete Feature 007 identity/session/JWKS compatibility.
+### Phase 13A — Isolation, Portability, Network, and Leak Verification — 2026-09-16
+
+Entry protection preserved the Phase 12 worktree and recorded the stale read-only Spec Kit Feature 002 prerequisite result as non-blocking. No setup script or implementation hook ran. At entry, T001–T115 were checked, T116 was first unchecked, and T121–T142 were unchecked. The pre-existing untracked `apps/customer-connector-runtime/test/fixtures/phase6-upstream.key` remained untouched.
+
+T116 verification:
+
+- `feature009-customer-isolation.spec.ts` proves Customer-scoped policy discovery and canonical resolution, exact deployment and adapter selection, non-enumerating binding-reference failures, and no foreign ToolCall, EvidenceRef, history, answer, or SSE disclosure while reusing identical subordinate identifiers across Customers.
+- The focused Customer-isolation inventory passed 2 suites with 9 tests and skipped 3 suites/12 environment-gated tests. `RUN_CUSTOMER_US1_TESTS=true` first recorded sandbox-only `listen EPERM`; the identical approved local-only rerun passed 3 suites/7 tests with 1 suite/10 tests skipped by their existing gates.
+
+```text
+T116_CUSTOMER_ISOLATION=PASS
+T116_DISCOVERY_POLICY_ISOLATION=PASS
+T116_DEPLOYMENT_ADAPTER_ISOLATION=PASS
+T116_BINDING_REFERENCE_ISOLATION=PASS
+T116_TOOLCALL_EVIDENCE_HISTORY_ANSWER_SSE_ISOLATION=PASS
+CROSS_CUSTOMER_EXISTENCE_DISCLOSURE=NO
+```
+
+T117 verification:
+
+- The new real-component Runtime matrix covers the six central/Bridge/Customer-B proof cross-directions, exact-byte replay/proof mutation, Customer/context/provider/generation/expiry/revocation/lease mismatches, and closed-manifest duplicate/wildcard/dynamic URL/method/path/query/header/body/credential/traversal/callback/template/script/SQL/shell/command/bad-pointer/cap/write attacks.
+- The matrix plus existing service-auth, replay, binding, route, manifest, request-profile, and early-gate suites first retained sandbox-only listener failures. The identical approved local-only rerun passed 13 suites and 169/169 tests; credential and upstream boundaries remained unreachable on rejection.
+
+```text
+T117_SERVICE_REPLAY_ISOLATION=PASS
+T117_EXACT_BYTE_REPLAY_REJECTED=YES
+T117_BINDING_INVOCATION_PROFILE_ISOLATION=PASS
+BINDING_ROUTE_PROFILE_ISOLATION=PASS
+INVOCATION_ROUTE_PROFILE_ISOLATION=PASS
+CROSS_PROFILE_ACCEPTANCE=NO
+CREDENTIAL_RESOLUTION_BEFORE_SECURITY_GATES=NO
+UPSTREAM_ACCESS_BEFORE_SECURITY_GATES=NO
+```
+
+T118 verification:
+
+- The Customer B fixture minted through the real bootstrap-authenticated binding route with a provider-owned API-key handle, then executed `請查 SKU-B-001 庫存` through generic discovery, current Customer policy, Feature 008 permission, the exact productized adapter/deployment, signed central transport, the real Runtime invocation route, and fixed `POST_QUERY_JSON_V1` execution.
+- The local-only integration passed 1 suite/1 test and observed exactly one `POST /inventory/stock/query` with body `{"scope":"available","sku":"SKU-B-001"}`, the code-owned `X-Inventory-Key`, no bearer header, bounded `{sku, quantity}`, projected EvidenceRef, `answered`, and unchanged SSE release.
+- The in-memory topology removed the Shinmone ToolDefinition/policy before execution. A final disposable topology at `/tmp/feature009-phase13a-removal-final.Yf3H5L` excluded repository metadata, build/test/seed artifacts, and `integrations/shinmone/**`; source scans found no reference assumptions, and shared-contract, generic Runtime, and central Backend builds passed. The exact temporary directory was then removed and the main worktree remained unchanged.
+
+```text
+T118_SECOND_CUSTOMER_REUSE_PROOF=PASS
+CUSTOMER_B_DEPLOYMENT_IDENTITY=customer-b,inventory-b,customer-b-inventory,business,customer-b-inventory-connector-1
+CUSTOMER_B_UPSTREAM_REQUEST_COUNT=1
+CUSTOMER_B_FIXED_POST_BODY=PASS
+CUSTOMER_B_CODE_OWNED_API_KEY_HEADER=PASS
+CUSTOMER_B_BEARER_HEADER=ABSENT
+CUSTOMER_B_FEATURE008_PROJECTION=PASS
+SHINMONE_REMOVAL_GENERIC_RUNTIME_PASS=YES
+SHINMONE_REMOVAL_CUSTOMER_B_PASS=YES
+TEMPORARY_REMOVAL_TOPOLOGY_CLEANED=YES
+```
+
+T119 verification:
+
+- Bridge binding transport security passed 4 suites/36 tests on the identical approved local-only rerun after the sandbox retained four `listen EPERM` failures.
+- Central deployment/signer/network/transport passed 4 suites/45 tests, and the real Phase 6 round-trip integration passed 1 suite/1 test.
+- Runtime destination, DNS, TLS, response, extraction, invocation, and deadline suites passed 9 suites/133 tests on the identical approved local-only rerun after one retained sandbox listener failure.
+- All three matrices reconfirmed exact HTTPS destinations, separate proof profiles, all-answer A/AAAA validation, mapped-address handling, connection pinning, TLS hostname/certificate verification, no redirect/proxy/compression/retry/fallback, hard cancellation, and production-readiness exclusion for test loopback. IPv4 `169.254.169.254` and IPv6 `fd00:ec2::254` remained unconditionally denied under broad and exact allowlists.
+
+```text
+T119_NETWORK_SECURITY_MATRIX=PASS
+BRIDGE_TO_BINDING_ROUTE_SECURITY=PASS
+CENTRAL_TO_INVOCATION_ROUTE_SECURITY=PASS
+RUNTIME_TO_UPSTREAM_SECURITY=PASS
+IPV4_METADATA_ALLOWLIST_OVERRIDE=DENIED
+IPV6_METADATA_ALLOWLIST_OVERRIDE=DENIED
+TEST_LOOPBACK_PRODUCTION_READINESS=NO
+NETWORK_PROFILE_RETRY=NO
+```
+
+T120 verification:
+
+- Generic-source guards recursively scanned shared contracts, discovery/query orchestration, central adapter/transport, and generic Runtime binding/credential/invocation/manifest/observability/upstream sources. The legal service-proof `claims.exp` freshness check remains classified as service authentication rather than credential expiry authority; reference credential JWT-exp/remint and bearer-only profile branching remain prohibited outside the explicit integration.
+- Root source/projection/grounding guards passed 4 suites/44 tests. Central leak/projection/redaction integrations passed 3 suites/10 tests. Bridge redaction/isolation suites passed 5 suites/36 tests. The final local-only Runtime binding/invocation/redaction matrix passed 5 suites/44 tests after retaining sandbox listener failures; one intermediate combined run observed a non-reproducible context-mismatch expectation, while the focused suite and final identical combined command passed without source or test changes.
+- Unique native token, RefreshToken, binding proof, service proof, provider payload, credential, API key, authorization, raw-upstream, pre-projection, accepted-Entry, and connector-reference sentinels were absent from inspected responses, logs, console, audit, telemetry, ToolCall, EvidenceRef, GroundedAnswerInput, AnswerDecision, SSE, history, feedback, and in-memory persistence. Raw, Base64, Base64URL, hexadecimal, SHA-256 hexadecimal, and SHA-256 Base64URL forms were checked; only the accepted one-way binding verifier remains permitted inside the binding store.
+
+```text
+T120_SECRET_REFERENCE_LEAK_SCAN=PASS
+NATIVE_ACCESS_TOKEN_LEAK=NO
+REFRESH_TOKEN_LEAK=NO
+SERVICE_PROOF_LEAK=NO
+PROVIDER_PAYLOAD_LEAK=NO
+PROVIDER_CREDENTIAL_LEAK=NO
+CONNECTOR_CONTEXT_REF_LEAK=NO
+RAW_UPSTREAM_RESPONSE_RELEASED=NO
+PRE_PROJECTION_RESULT_RELEASED=NO
+GENERIC_SOURCE_REFERENCE_ASSUMPTION=NO
+GENERIC_CREDENTIAL_JWT_EXP_AUTHORITY=NO
+GENERIC_BEARER_ONLY_APPLICATION=NO
+```
+
+Final verification:
+
+- Root build/typecheck, Customer Runtime build/typecheck, shared-contract build/typecheck, Identity Bridge build/typecheck, and `git diff --check` passed. The shared-contract suite passed 10 suites/68 tests.
+- The unfiltered Shinmone typecheck retained exactly the accepted Phase 12 baseline: 113 diagnostics across 49 files. Normalized full diagnostic-set comparison against `/tmp/feature009-phase12a-typecheck.txt` found 0 additions and 0 removals.
+- Protected SHA-256 values remained unchanged: Feature 009 `spec.md` `d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73`, `design.md` `bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb`, `plan.md` `00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1`, Prisma schema `e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733`, and sealed Phase 9 adapter `8e84df809867bb8ec56ef555c07c7b9ae933a055aed813b6448d95148601ffb9`. Feature 007/008 artifact hashes and the Prisma migration inventory remained unchanged.
+- All five protected SDK source hashes matched their Phase 12 baseline. The Phase 12 SPA provider/widget hashes remained `17142746245fa112c5ab9a1af23b6d97f2f1f41b44ab236fb7fac706ceb0b761` and `514d07a75f27e4103df432ca6daf807a0229dd87295242880b8e407dd7d439d1`.
+- Phase 13A-attributed changes are exactly the five verification files below plus this append-only task evidence. Existing Phase 12 staged changes and the pre-existing untracked TLS key remain separately attributed and preserved.
+
+```text
+apps/customer-connector-runtime/test/security/phase13-cross-boundary-matrix.spec.ts
+test/integration/feature009-customer-isolation.spec.ts
+test/integration/feature009-customer-b-portability.spec.ts
+test/integration/feature009-prohibited-material-leak.spec.ts
+test/unit/shinmone-reference-boundary.guard.spec.ts
+specs/009-productized-business-connector-runtime/tasks.md
+```
+
+```text
+FEATURE009_PHASE13A=PASS
+T116_CUSTOMER_ISOLATION=PASS
+T117_SERVICE_REPLAY_ISOLATION=PASS
+T118_SECOND_CUSTOMER_REUSE_PROOF=PASS
+T119_NETWORK_SECURITY_MATRIX=PASS
+T120_SECRET_REFERENCE_LEAK_SCAN=PASS
+SECOND_CUSTOMER_REUSE_PROOF=PASS
+SHINMONE_REMOVAL_GENERIC_RUNTIME_PASS=YES
+SHINMONE_REMOVAL_CUSTOMER_B_PASS=YES
+CUSTOMER_SPECIFIC_ASSISTANT_CORE_BRANCH=NO
+CUSTOMER_SPECIFIC_GENERIC_RUNTIME_BRANCH=NO
+CROSS_CUSTOMER_LEAK=NO
+CROSS_PROFILE_ACCEPTANCE=NO
+NATIVE_CREDENTIAL_CENTRAL=NO
+CONNECTOR_CONTEXT_REF_PERSISTED=NO
+RAW_UPSTREAM_RESPONSE_RELEASED=NO
+FEATURE007_HISTORY_MODIFIED=NO
+FEATURE008_ACCEPTED_CONTRACT_MODIFIED=NO
+FEATURE009_SPEC_DESIGN_PLAN_MODIFIED=NO
+PRISMA_SCHEMA_MODIFIED=NO
+PRISMA_MIGRATIONS_MODIFIED=NO
+SDK_PUBLIC_API_CHANGE=NO
+T001_T120_COMPLETE=YES
+T116_T120_COMPLETE=YES
+T121_EXECUTED=NO
+T125_EXECUTED=NO
+PHASE13_EXECUTED=NO
+PHASE14_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T121
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
+
+- [X] T121 [VERIFY] [IDENTITY-BRIDGE] Re-run complete Feature 007 identity/session/JWKS compatibility.
   - Files: All Identity Bridge tests/build and focused Gateway/session trust-chain suites; Feature 007 artifacts read-only.
   - Depends on: T120.
   - Validation: Confirm MenuDetail/admission/Entry/permission/JWT/JWKS/session semantics unchanged and accepted Stage 2 additive behavior only.
   - Stop: Never edit or retroactively complete Feature 007 historical tasks.
 
-- [ ] T122 [VERIFY] [BACKEND] Re-run complete Feature 008 permission, lifecycle, projection, evidence, answer, and mock compatibility.
+- [X] T122 [VERIFY] [BACKEND] Re-run complete Feature 008 permission, lifecycle, projection, evidence, answer, and mock compatibility.
   - Files: Feature 008 unit/integration/eval suites and existing mock fixtures.
   - Depends on: T121.
   - Validation: Confirm permission precedes transport, ToolCall states remain exact, outputSchema is final release authority, evidence is projected, and mocks have zero fallback role.
   - Stop: No new Assistant execution path or competing timeout authority.
 
-- [ ] T123 [VERIFY] [BACKEND] Re-run public API, SSE, history, feedback, approval, and failure-semantics contracts.
+- [X] T123 [VERIFY] [BACKEND] Re-run public API, SSE, history, feedback, approval, and failure-semantics contracts.
   - Files: `test/contract/**` relevant Assistant suites, history/feedback/approval integrations, no-answer/tool-failure tests.
   - Depends on: T122.
   - Validation: Run unchanged contracts and confirm connector failures collapse into existing failed ToolCall and answer/SSE behavior.
   - Stop: No new endpoint, request mode, decision, event, public error, or connector-specific client contract.
 
-- [ ] T124 [VERIFY] [BACKEND] Execute composed timeout, disconnect, abort, cleanup, and readiness-loss races.
+- [X] T124 [VERIFY] [BACKEND] Execute composed timeout, disconnect, abort, cleanup, and readiness-loss races.
   - Files: Feature 009 central/runtime/Bridge timeout suites and integration harness.
   - Depends on: T123.
   - Validation: Prove 2,000 ms binding domain separation, 5,000/250/4,500/250/3,500 ms business hierarchy, monotonic elapsed handling, socket abort, lease release, and zero retry.
   - Stop: Binding timeout must never become or extend ToolDefinition timeout authority.
 
-- [ ] T125 [CHECKPOINT] [BACKEND] Verify and record the complete pre-staging security gate matrix.
+- [X] T125 [CHECKPOINT] [BACKEND] Verify and record the complete pre-staging security gate matrix.
   - Files: `specs/009-productized-business-connector-runtime/tasks.md` evidence only.
   - Depends on: T116, T117, T118, T119, T120, T121, T122, T123, T124.
   - Validation: Record every Section 9 gate plus `SECOND_CUSTOMER_REUSE_PROOF=PASS`, `SHINMONE_REMOVAL_GENERIC_RUNTIME_PASS=YES`, `CUSTOMER_SPECIFIC_ASSISTANT_CORE_BRANCH=NO`, `CUSTOMER_SPECIFIC_GENERIC_RUNTIME_BRANCH=NO`, and `FEATURE009_PRE_STAGING_SECURITY_CLOSEOUT=PASS` only when all evidence is green.
@@ -3350,4 +3588,144 @@ IMPLEMENTATION_GATE_APPROVED=YES
 HUMAN_IMPLEMENTATION_GATE_REVIEW=PASS
 READY_FOR_HUMAN_GATE_REVIEW=NO
 NEXT_ACTION=EXECUTE_PHASE4
+```
+
+### Phase 13B-1 — Feature 007/008 and Public Compatibility Recovery — 2026-09-16
+
+T121 re-ran the completed Feature 007 behavior without modifying Feature 007 source, tests, documents, task history, or identity authority. Identity Bridge passed 41 suites/380 tests; its build and typecheck passed. Focused Gateway profile/JWKS/trust suites passed 6 suites/108 tests, IntegrationBinding persistence passed 1 suite/2 tests, and Gateway backend trust-chain e2e passed 3 suites/14 tests. The results preserve Stage 1 MenuDetail, admission, Entry, permission, canonical JWT/JWKS, and session behavior; the accepted Stage 2 binding remains additive after admission only.
+
+T122 first blocked in `internal-assistant-core.eval.spec.ts` with `TypeError: this.tools.listDiscoveryCatalogForCustomer is not a function`. The accepted `ToolDiscoveryService` correctly uses `listDiscoveryCatalogForCustomer`; the stale eval support double implemented only the prior `listDiscoverableToolsForCustomer` API. Human review authorized the sole recovery change in `test/support/tool-discovery.fixture.ts`: it now maps its existing Customer-specific result to `{ allowed, explicitlyDenied: [] }`. Customer B still exposes only `inventory.stock-on-hand`; other Customers still expose the first four mock tools. No production authority, query-understanding/scoring behavior, eval expectation, or test assertion was changed.
+
+The exact recovery eval command passed 2 suites/13 tests. The Feature 008 compatibility units passed 10 suites/137 tests. The integration inventory passed 7 suites/20 tests with its existing `RUN_CUSTOMER_US3_TESTS=true` gate. Focused ToolDiscovery and AssistantReadonlyRuntime authority coverage passed 2 suites/70 tests, and the Shinmone reference boundary guard passed 1 suite/2 tests.
+
+T123 ran unchanged public contracts and behavior coverage. The full contract inventory passed 13 suites/83 tests with its existing `RUN_CUSTOMER_US1_TESTS=true` gate, including Customer SSE and message-history contracts. History, feedback, approval, action-draft, answer, failure, no-answer, redaction, and session-masking integrations passed 15 suites/38 tests. No endpoint, request mode, decision, SSE event, public error, or connector-specific client contract changed.
+
+Final static verification passed: root build/typecheck; Customer Connector Runtime build/typecheck; shared connector-runtime-contract build/typecheck; Identity Bridge build/typecheck; and `git diff --check`. Scope inspection found no Feature 007/008 production, Gateway, Prisma, Feature 009 approved spec/design/plan, SDK public source, or sealed Phase 12 SPA provider/widget modification. Pre-existing Phase 13A verification files, guard updates, runtime test fixtures, and prior task evidence remain separately attributed and untouched by this recovery.
+
+```text
+FEATURE009_PHASE13B1=PASS
+T121_FEATURE007_COMPATIBILITY=PASS
+T122_FEATURE008_COMPATIBILITY=PASS
+T122_INITIAL_EVAL_FAILURE=STALE_TEST_SUPPORT_FIXTURE
+T122_EVAL_FIXTURE_RECOVERY=PASS
+T122_PRODUCTION_CHANGE_REQUIRED=NO
+T123_PUBLIC_COMPATIBILITY=PASS
+FEATURE007_HISTORY_MODIFIED=NO
+FEATURE007_IDENTITY_AUTHORITY_CHANGED=NO
+FEATURE008_AUTHORITIES_PRESERVED=YES
+FEATURE008_TIMEOUT_SINGLE_AUTHORITY=ToolDefinition.timeoutMs
+FEATURE008_PROJECTION_BYPASS=NO
+PUBLIC_API_CHANGE=NO
+ASSISTANT_PUBLIC_API_CHANGE=NO
+SSE_CONTRACT_CHANGE=NO
+SDK_PUBLIC_API_CHANGE=NO
+CENTRAL_NATIVE_CREDENTIAL=NO
+CONNECTOR_CONTEXT_REF_PERSISTED=NO
+REFRESH_TOKEN_HANDOFF=NO
+T001_T123_COMPLETE=YES
+T124_EXECUTED=NO
+T125_EXECUTED=NO
+PHASE13_EXECUTED=NO
+PHASE14_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T124
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
+```
+
+### Phase 13B-2 — Timeout, Abort, Readiness, and Pre-Staging Checkpoint — 2026-09-16
+
+T124 executed only deterministic local test infrastructure. No live Shinmone staging, deployment, real credential, or external Customer endpoint was accessed. No production source, fixture behavior, assertion, configuration, schema, or public contract was modified.
+
+The binding domain remains independent: Bridge configuration accepts `BRIDGE_BINDING_REQUEST_TIMEOUT_MS` only when it is exactly 2,000 ms, and the binding client applies that fixed complete request/response timer. Its focused configuration, client, transport-security, and Stage 2 suites passed 4 suites/39 tests. Cancellation during DNS and cancellation after request/response creation destroy the sole active request/response, send no retry or alternate destination, and do not issue a reference. Stage 2 remains after successful MenuDetail/admission only and maps binding failure to the existing unavailable behavior without issuing a canonical token.
+
+The business hierarchy remains owned by the canonical ToolDefinition: the Feature 008 outer deadline is 5,000 ms; central completion/normalization reserves 250 ms; the adapter signs no more than 4,500 ms after monotonic central elapsed time; Customer Runtime reserves 250 ms from that received budget; and the fixed manifest cap is 3,500 ms. Central adapter/transport coverage passed 4 suites/35 tests. Runtime timeout/cancellation, safe upstream, bounded response, credential-rejection lifecycle, binding lifecycle, invocation route/body/early-gate, readiness, and Phase 13 security-matrix coverage passed 10 suites/122 tests. These tests confirm exhausted budgets fail before downstream credential/DNS/HTTP work, each derived budget only narrows, no caller/manifest/provider/binding input can raise a budget, and late DNS, partial response, or late downstream work cannot produce a successful result.
+
+The composed Feature 008 path passed 4 suites/8 tests for Customer B portability, productized registration, projection, and dark transport behavior. The vertical route covers Assistant request through canonical Feature 008 permission/lifecycle, ProductizedBusinessConnectorAdapter, central HTTPS transport, Customer Runtime invocation, and the fixed upstream request. Customer Runtime route-close cases separately drive cancellation through hanging DNS, an in-flight HTTPS request, and partial response streaming; each aborts the relevant socket/request, leaves no partial extraction or evidence, and releases the held binding lease. Adjacent Feature 008 authority coverage passed 4 suites/45 tests; Customer SSE/evidence/projection/failure coverage passed 5 suites/23 tests; replay, binding lifecycle, upstream cancellation, and one-shot transport coverage passed 4 suites/28 tests.
+
+The T125 review rechecked the T116–T123 evidence and current scope. Every predecessor Phase 13 gate remains supported by a passing focused suite and was not invalidated by T124. Root, Customer Connector Runtime, shared connector-runtime-contract, and Identity Bridge builds/typechecks passed. `git diff --check` passed. Feature 007/008/009 protected documents, Prisma schema, and the sealed Phase 9 adapter match their accepted SHA-256 values; the migration inventory has no diff. The Phase 12 Shinmone provider/widget match their accepted SHA-256 values. The five protected Assistant SDK source hashes remain supported by the accepted Phase 12/13 verification; this checkout exposes only the unchanged packaged SDK archive rather than those source members. The existing untracked `apps/customer-connector-runtime/test/fixtures/phase6-upstream.key` remains separately attributed and was not created, modified, or claimed by T124/T125.
+
+```text
+FEATURE009_PHASE13=PASS
+FEATURE009_PHASE13B2=PASS
+T124_COMPOSED_TIMEOUT_RACE_MATRIX=PASS
+T125_CHECKPOINT=PASS
+
+DISCOVERY_OPERATION_AUTHORITY=NO
+DISCOVERY_PERMISSION_AUTHORITY=NO
+CANDIDATE_REASON_EXECUTION_AUTHORITY=NO
+TOOLDEFINITION_CANONICAL_OPERATION_AUTHORITY=YES
+FEATURE008_PERMISSION_AUTHORITY_PRESERVED=YES
+FEATURE008_TIMEOUT_SINGLE_AUTHORITY=ToolDefinition.timeoutMs
+
+BINDING_TIMEOUT_DOMAIN_SEPARATION=PASS
+BRIDGE_BINDING_TIMEOUT_MS=2000
+BINDING_TIMEOUT_BUSINESS_AUTHORITY=NO
+BUSINESS_TIMEOUT_HIERARCHY=PASS
+BUSINESS_TIMEOUT_SEQUENCE_MS=5000,250,4500,250,3500
+MONOTONIC_ELAPSED_ACCOUNTING=PASS
+DERIVED_TIMEOUT_EXCEEDS_TOOL_TIMEOUT=NO
+COMPETING_TIMEOUT_AUTHORITY=NO
+
+CALLER_DISCONNECT_PROPAGATION=PASS
+SOCKET_ABORT_PROPAGATION=PASS
+POST_ABORT_RETRY_COUNT=0
+PARTIAL_RESULT_RELEASED=NO
+TIMEOUT_ABORT_PROPAGATION=PASS
+LATE_SUCCESS_AFTER_TIMEOUT_ACCEPTED=NO
+TIMEOUT_RETRY_COUNT=0
+
+BINDING_LEASE_CLEANUP=PASS
+BINDING_LEASE_RELEASE_SUCCESS=PASS
+BINDING_LEASE_RELEASE_FAILURE=PASS
+BINDING_LEASE_RELEASE_TIMEOUT=PASS
+BINDING_LEASE_RELEASE_ABORT=PASS
+BINDING_LEASE_DOUBLE_RELEASE=NO
+LEASE_LEAK_AFTER_TERMINAL_PATH=NO
+READINESS_LOSS_RACE=PASS
+INVOCATION_START_WHILE_REQUIRED_READINESS_FALSE=NO
+READINESS_LOSS_RETRY_COUNT=0
+
+BRIDGE_BINDING_RETRY_COUNT=0
+CENTRAL_INVOCATION_RETRY_COUNT=0
+RUNTIME_UPSTREAM_RETRY_COUNT=0
+TIMEOUT_PATH_SECRET_LEAK=NO
+ABORT_PATH_SECRET_LEAK=NO
+ERROR_PATH_RAW_RESPONSE_RELEASE=NO
+
+T116_CUSTOMER_ISOLATION=PASS
+T117_SERVICE_REPLAY_ISOLATION=PASS
+T118_SECOND_CUSTOMER_REUSE_PROOF=PASS
+T119_NETWORK_SECURITY_MATRIX=PASS
+T120_SECRET_REFERENCE_LEAK_SCAN=PASS
+T121_FEATURE007_COMPATIBILITY=PASS
+T122_FEATURE008_COMPATIBILITY=PASS
+T123_PUBLIC_COMPATIBILITY=PASS
+SECOND_CUSTOMER_REUSE_PROOF=PASS
+SHINMONE_REMOVAL_GENERIC_RUNTIME_PASS=YES
+SHINMONE_REMOVAL_CUSTOMER_B_PASS=YES
+CUSTOMER_SPECIFIC_ASSISTANT_CORE_BRANCH=NO
+CUSTOMER_SPECIFIC_GENERIC_RUNTIME_BRANCH=NO
+CROSS_CUSTOMER_LEAK=NO
+CROSS_PROFILE_ACCEPTANCE=NO
+FEATURE007_HISTORY_MODIFIED=NO
+FEATURE007_IDENTITY_AUTHORITY_CHANGED=NO
+FEATURE008_AUTHORITIES_PRESERVED=YES
+FEATURE008_PROJECTION_BYPASS=NO
+PUBLIC_API_CHANGE=NO
+ASSISTANT_PUBLIC_API_CHANGE=NO
+SSE_CONTRACT_CHANGE=NO
+SDK_PUBLIC_API_CHANGE=NO
+CENTRAL_NATIVE_CREDENTIAL=NO
+CONNECTOR_CONTEXT_REF_PERSISTED=NO
+REFRESH_TOKEN_HANDOFF=NO
+RAW_CUSTOMER_API_RESPONSE_CENTRAL=NO
+RAW_UPSTREAM_RESPONSE_RELEASED=NO
+PRISMA_SCHEMA_MODIFIED=NO
+PRISMA_MIGRATIONS_MODIFIED=NO
+FEATURE009_SPEC_DESIGN_PLAN_MODIFIED=NO
+T001_T125_COMPLETE=YES
+PHASE13_EXECUTED=YES
+PHASE14_EXECUTED=NO
+T126_EXECUTED=NO
+FIRST_UNEXECUTED_TASK=T126
+NEXT_ACTION=HUMAN_REVIEW_REQUIRED
 ```

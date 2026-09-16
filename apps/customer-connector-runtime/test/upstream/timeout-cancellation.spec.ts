@@ -142,6 +142,7 @@ function serviceWith(upstreamExecute: jest.Mock, clock: () => number, credential
   const manifests = new OperationManifestRegistry([parsedManifest('inventory', [customerBOperation()])]);
   return new ConnectorInvocationService(
     { authenticate: jest.fn().mockResolvedValue({ ok: true, value: { proof: proof() } }) },
+    { snapshot: () => ({ ready: true }) },
     {
       withInvocationLease: async <T>(_ref: string, _expectation: InvocationBindingExpectation,
         work: (value: ProtectedBindingView, signal: AbortSignal) => Promise<T>): Promise<BindingResult<T>> =>

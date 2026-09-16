@@ -47,9 +47,13 @@ export type GatewayUpstreamTestAuthority = Readonly<{
  * HardenedJwksTransport validates the HTTPS hostname and destination decision;
  * its explicit request seam then reaches this loopback-only TLS fixture.
  */
-export async function createGatewayUpstreamTestAuthority(): Promise<GatewayUpstreamTestAuthority> {
-  const { privateKey, publicKey } = await generateKeyPair('RS256');
-  const kid = 'feature003-phase8-upstream';
+export async function createGatewayUpstreamTestAuthority(input: Readonly<{
+  signing?: Readonly<{ privateKey: KeyLike; publicKey: KeyLike; kid: string }>;
+}> = {}): Promise<GatewayUpstreamTestAuthority> {
+  const generated = input.signing === undefined ? await generateKeyPair('RS256') : undefined;
+  const privateKey = input.signing?.privateKey ?? generated!.privateKey;
+  const publicKey = input.signing?.publicKey ?? generated!.publicKey;
+  const kid = input.signing?.kid ?? 'feature003-phase8-upstream';
   const publicJwk = await exportJWK(publicKey);
   const tls = await createTlsMaterial();
   const server = createServer({ key: tls.key, cert: tls.certificate }, (request, response) => {

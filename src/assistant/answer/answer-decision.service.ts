@@ -225,6 +225,9 @@ export class AnswerDecisionService {
         if (field === 'allocatedQuantity') {
           return `已配置數量為${value}`;
         }
+        if (field === 'count') {
+          return `數量為${value}`;
+        }
         if (field === 'documentSnippet') {
           return value;
         }

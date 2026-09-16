@@ -56,6 +56,20 @@ describe('Phase 6 real-component invocation early gates', () => {
     expectUnreached(harness, { credential: true, http: true, extraction: true });
   });
 
+  it('rejects a valid signed proof while Runtime readiness is false before binding or downstream execution', async () => {
+    const harness = await createHarness({ readiness: { snapshot: () => ({ ready: false }) } });
+    const lease = jest.spyOn(harness.bindings, 'withInvocationLease');
+    const result = await invoke(harness, requestFixture(harness.reference));
+
+    expect(result).toEqual(expect.objectContaining({
+      statusCode: 503,
+      body: { version: '1', requestId: expect.any(String), status: 'failed', error: { code: 'CONNECTOR_UNAVAILABLE' } }
+    }));
+    expect(lease).not.toHaveBeenCalled();
+    expectUnreached(harness, { credential: true, http: true, extraction: true });
+    expect(JSON.stringify(result)).not.toMatch(/readiness|dependency|customer-b-handle|ccr_/i);
+  });
+
   it('rejects replay before a second binding or credential access', async () => {
     const harness = await createHarness();
     const request = requestFixture(harness.reference);
@@ -286,6 +300,7 @@ describe('Phase 6 real-component invocation early gates', () => {
 type HarnessOptions = Readonly<{
   manifests?: OperationManifestRegistry;
   policy?: ConnectorDestinationPolicy;
+  readiness?: Readonly<{ snapshot(): Readonly<{ ready: boolean }> }>;
   resolver?: jest.Mock;
   responseBody?: string;
   credentialProviderKey?: string;
@@ -340,7 +355,8 @@ async function createHarness(options: HarnessOptions = {}) {
     policy, new SafeUpstreamHttpClient(httpRequest as never), resolver,
     new BoundedJsonResponse(), extractor
   );
-  const service = new ConnectorInvocationService(authenticator, bindings, manifests, credentials, upstream, options.clock);
+  const readiness = options.readiness ?? { snapshot: () => ({ ready: true }) };
+  const service = new ConnectorInvocationService(authenticator, readiness, bindings, manifests, credentials, upstream, options.clock);
   return { profiles, service, bindings, reference: minted.value.connectorContextRef, credentialResolve, resolver, httpRequest, extract, handleRevoke };
 }
 

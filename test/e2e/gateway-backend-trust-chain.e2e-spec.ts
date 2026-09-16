@@ -1,12 +1,16 @@
 import request = require('supertest');
 import { createGatewayBackendTrustChainHarness } from '../support/gateway-backend-trust-chain-harness';
+import { createGatewayUpstreamTestAuthority } from '../support/gateway-upstream-test-authority';
 
 const customerA = Object.freeze({ customerId: 'phase8-customer-a', integrationId: 'phase8-integration-a', allowedHostApp: 'admin' });
 const compactJwtValue = /"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"/;
 
 describe('Gateway → Backend real trust-chain foundation (T071)', () => {
   it('accepts a real upstream JWT only through Gateway binding, signing, JWKS, and Backend CustomerScope', async () => {
-    const harness = await createGatewayBackendTrustChainHarness({ label: 'gateway-backend-trust-chain', bindings: [customerA] });
+    const upstreamAuthority = await createGatewayUpstreamTestAuthority();
+    const harness = await createGatewayBackendTrustChainHarness({
+      label: 'gateway-backend-trust-chain', bindings: [customerA], upstreamAuthority
+    });
     try {
       const persistedProfile = await harness.prisma.registeredUpstreamTrustProfile.findUniqueOrThrow({
         where: { integrationId_version: { integrationId: customerA.integrationId, version: 1 } }
@@ -63,6 +67,7 @@ describe('Gateway → Backend real trust-chain foundation (T071)', () => {
       expect(session.hostApp).toBe(customerA.allowedHostApp);
     } finally {
       await harness.dispose();
+      await upstreamAuthority.dispose();
     }
   });
 });

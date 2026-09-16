@@ -10,6 +10,10 @@ export function createToolDiscoveryFixtureService(): ToolDiscoveryService {
     listDiscoverableToolsForCustomer: jest.fn(async (scope: { customerId: string }) =>
       scope.customerId === 'customer-b' ? [DISCOVERY_FIXTURE_TOOLS[4]] : DISCOVERY_FIXTURE_TOOLS.slice(0, 4)
     ),
+    listDiscoveryCatalogForCustomer: jest.fn(async (scope: { customerId: string }) => ({
+      allowed: scope.customerId === 'customer-b' ? [DISCOVERY_FIXTURE_TOOLS[4]] : DISCOVERY_FIXTURE_TOOLS.slice(0, 4),
+      explicitlyDenied: []
+    })),
     validateNamedOperation: (tool: RegisteredToolDefinition, candidate: unknown) => validator.validateNamedOperation(tool, candidate)
   } as never);
 }

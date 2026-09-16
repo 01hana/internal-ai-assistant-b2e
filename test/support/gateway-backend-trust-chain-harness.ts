@@ -10,6 +10,7 @@ import { createEphemeralRsaFixture, type EphemeralRsaFixture } from '../../apps/
 import { HardenedJwksTransport } from '../../apps/gateway/src/upstream-auth/jwks-transport.adapter';
 import { createGatewayRegistryDatabase, type GatewayRegistryDatabase } from './gateway-registry-db.helper';
 import { createGatewayUpstreamTestAuthority, type GatewayUpstreamTestAuthority } from './gateway-upstream-test-authority';
+import type { ProductizedBusinessConnectorTransportService } from '../../src/connectors/productized-business/productized-business-connector.module';
 
 export type TrustChainBindingFixture = Readonly<{
   customerId: string;
@@ -46,11 +47,21 @@ const LEGACY_UPSTREAM_AUTHORITY_ENVIRONMENT_KEYS = Object.freeze([
 export async function createGatewayBackendTrustChainHarness(input: Readonly<{
   label: string;
   bindings: readonly TrustChainBindingFixture[];
+  upstreamAuthority?: GatewayUpstreamTestAuthority;
+  backend?: Readonly<{
+    environment: Record<string, string>;
+    transport: ProductizedBusinessConnectorTransportService;
+    setupDatabase(input: Readonly<{
+      databaseUrl: string;
+      gatewayPrisma: ReturnType<typeof createGatewayPrismaClient>;
+    }>): Promise<void>;
+  }>;
 }>): Promise<GatewayBackendTrustChainHarness> {
   const bindings = validateBindings(input.bindings);
   const database = await createGatewayRegistryDatabase(input.label);
   const prisma = createGatewayPrismaClient(database.databaseUrl);
-  const upstreamAuthority = await createGatewayUpstreamTestAuthority();
+  const upstreamAuthority = input.upstreamAuthority ?? await createGatewayUpstreamTestAuthority();
+  const ownsUpstreamAuthority = input.upstreamAuthority === undefined;
   const signingFixture = await createEphemeralRsaFixture({ kid: `phase8-gateway-${randomUUID()}` });
   const signingFile = await signingFixture.writeTemporaryPem();
   const [gatewayPort, backendPort] = await reservePorts(2);
@@ -61,7 +72,7 @@ export async function createGatewayBackendTrustChainHarness(input: Readonly<{
     signingKeyReference: signingFile.fileReference,
     gatewayOrigin,
     backendOrigin
-  }), LEGACY_UPSTREAM_AUTHORITY_ENVIRONMENT_KEYS);
+  }), LEGACY_UPSTREAM_AUTHORITY_ENVIRONMENT_KEYS, input.backend?.environment);
   let gateway: INestApplication | undefined;
   let backend: INestApplication | undefined;
   let backendStopped = false;
@@ -72,6 +83,7 @@ export async function createGatewayBackendTrustChainHarness(input: Readonly<{
   try {
     await provisionExplicitBindings(prisma, bindings);
     await provisionAcceptedTrustProfiles(prisma, bindings, upstreamAuthority);
+    await input.backend?.setupDatabase({ databaseUrl: database.databaseUrl, gatewayPrisma: prisma });
     await prisma.gatewaySigningKey.create({
       data: {
         kid: signingFixture.kid,
@@ -81,7 +93,7 @@ export async function createGatewayBackendTrustChainHarness(input: Readonly<{
         activatedAt: new Date()
       }
     });
-    backend = await startBackend(backendPort, backendLogCapture.logger);
+    backend = await startBackend(backendPort, backendLogCapture.logger, input.backend?.transport);
     gateway = await startGateway(gatewayPort, gatewayLogCapture.logger, upstreamAuthority.transport);
     gatewayLogCapture.clear();
     backendLogCapture.clear();
@@ -103,10 +115,10 @@ export async function createGatewayBackendTrustChainHarness(input: Readonly<{
         backendStopped = true;
         await backend?.close();
       },
-      dispose: () => dispose({ gateway, backend: backendStopped ? undefined : backend, restoreEnvironment, signingFile, upstreamAuthority, prisma, database, restoreFetch: outboundObservation.restore })
+      dispose: () => dispose({ gateway, backend: backendStopped ? undefined : backend, restoreEnvironment, signingFile, upstreamAuthority, ownsUpstreamAuthority, prisma, database, restoreFetch: outboundObservation.restore })
     });
   } catch (error) {
-    await dispose({ gateway, backend, restoreEnvironment, signingFile, upstreamAuthority, prisma, database, restoreFetch: outboundObservation.restore });
+    await dispose({ gateway, backend, restoreEnvironment, signingFile, upstreamAuthority, ownsUpstreamAuthority, prisma, database, restoreFetch: outboundObservation.restore });
     throw error;
   }
 }
@@ -159,15 +171,28 @@ async function startGateway(port: number, logger: LoggerService, transport: Hard
   }
 }
 
-async function startBackend(port: number, logger: LoggerService): Promise<INestApplication> {
+async function startBackend(
+  port: number,
+  logger: LoggerService,
+  transport?: ProductizedBusinessConnectorTransportService
+): Promise<INestApplication> {
   jest.resetModules();
-  const [{ AppModule }, { GlobalExceptionFilter }, { RequestIdInterceptor }, { ResponseEnvelopeInterceptor }] = await Promise.all([
+  const [
+    { AppModule },
+    { GlobalExceptionFilter },
+    { RequestIdInterceptor },
+    { ResponseEnvelopeInterceptor },
+    { ProductizedBusinessConnectorTransportService: BackendProductizedBusinessConnectorTransportService }
+  ] = await Promise.all([
     import('../../src/app.module'),
     import('../../src/common/errors/global-exception.filter'),
     import('../../src/common/request-id/request-id.interceptor'),
-    import('../../src/common/response/response-envelope.interceptor')
+    import('../../src/common/response/response-envelope.interceptor'),
+    import('../../src/connectors/productized-business/productized-business-connector.module')
   ]);
-  const app = await NestFactory.create(AppModule, { logger });
+  const builder = Test.createTestingModule({ imports: [AppModule] });
+  if (transport) builder.overrideProvider(BackendProductizedBusinessConnectorTransportService).useValue(transport);
+  const app = (await builder.compile()).createNestApplication({ logger });
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ forbidNonWhitelisted: true, transform: true, whitelist: true }));
   app.useGlobalInterceptors(new RequestIdInterceptor(), new ResponseEnvelopeInterceptor());
@@ -228,11 +253,16 @@ function environmentFor(input: Readonly<{
   };
 }
 
-function installEnvironment(values: Record<string, string>, absentKeys: readonly string[] = []): () => void {
-  const trackedKeys = [...new Set([...Object.keys(values), ...absentKeys])];
+function installEnvironment(
+  values: Record<string, string>,
+  absentKeys: readonly string[] = [],
+  overrides: Record<string, string> = {}
+): () => void {
+  const installed = { ...values, ...overrides };
+  const trackedKeys = [...new Set([...Object.keys(installed), ...absentKeys])];
   const previous = Object.fromEntries(trackedKeys.map((key) => [key, process.env[key]]));
   for (const key of absentKeys) delete process.env[key];
-  Object.assign(process.env, values);
+  Object.assign(process.env, installed);
   return () => {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
@@ -246,6 +276,7 @@ async function dispose(input: Readonly<{
   restoreEnvironment(): void;
   signingFile: Readonly<{ dispose(): Promise<void> }>;
   upstreamAuthority: GatewayUpstreamTestAuthority;
+  ownsUpstreamAuthority: boolean;
   prisma: ReturnType<typeof createGatewayPrismaClient>;
   database: GatewayRegistryDatabase;
   restoreFetch(): void;
@@ -254,7 +285,7 @@ async function dispose(input: Readonly<{
   await input.backend?.close();
   input.restoreEnvironment();
   await input.signingFile.dispose();
-  await input.upstreamAuthority.dispose();
+  if (input.ownsUpstreamAuthority) await input.upstreamAuthority.dispose();
   await input.prisma.$disconnect();
   await input.database.dispose();
   input.restoreFetch();

@@ -44,6 +44,7 @@ describe('Phase 6 central-only invocation route', () => {
     const realManifests = new OperationManifestRegistry([parsedManifest('inventory', [customerBOperation()])]);
     const service = new ConnectorInvocationService(
       { authenticate: jest.fn(async () => { events.push('authenticate'); return { ok: true as const, value: { proof: proof() } }; }) },
+      { snapshot: () => { events.push('readiness'); return { ready: true }; } },
       {
         withInvocationLease: jest.fn(async (_ref, _expected, work) => { events.push('binding'); const result = await work(binding(), new AbortController().signal); events.push('release'); return { ok: true as const, value: result }; }),
         revoke: jest.fn()
@@ -53,9 +54,34 @@ describe('Phase 6 central-only invocation route', () => {
       { execute: jest.fn(async () => { events.push('upstream'); return { ok: true as const, value: { sku: 'SKU-1', quantity: 9 } }; }) }
     );
     const result = await service.handle({ method: 'POST', contentType: 'application/json', authorization: 'Bearer a.b.c', requestIdHeader: 'req-phase6-0001', rawBody });
-    expect(events).toEqual(['authenticate', 'binding', 'manifest', 'credential', 'upstream', 'release']);
+    expect(events).toEqual(['authenticate', 'readiness', 'binding', 'manifest', 'credential', 'upstream', 'release']);
     expect(result).toEqual({ statusCode: 200, body: { version: '1', requestId: 'req-phase6-0001', status: 'succeeded', result: { sku: 'SKU-1', quantity: 9 } } });
     expect(JSON.stringify(result)).not.toMatch(/api-key-secret|customer-b-handle|ccr_/);
+  });
+
+  it('rejects a valid authenticated request while Runtime readiness is false before binding or execution', async () => {
+    const rawBody = invocationBody();
+    const bindings = { withInvocationLease: jest.fn(), revoke: jest.fn() };
+    const manifests = { prepare: jest.fn() };
+    const credentials = { withAppliedCredential: jest.fn() };
+    const upstream = { execute: jest.fn() };
+    const service = new ConnectorInvocationService(
+      { authenticate: jest.fn(async () => ({ ok: true as const, value: { proof: proof() } })) },
+      { snapshot: () => ({ ready: false }) },
+      bindings, manifests, credentials, upstream
+    );
+
+    const result = await service.handle({ method: 'POST', contentType: 'application/json', authorization: 'Bearer a.b.c', requestIdHeader: 'req-phase6-0001', rawBody });
+
+    expect(result).toEqual({
+      statusCode: 503,
+      body: { version: '1', requestId: 'req-phase6-0001', status: 'failed', error: { code: 'CONNECTOR_UNAVAILABLE' } }
+    });
+    expect(bindings.withInvocationLease).not.toHaveBeenCalled();
+    expect(manifests.prepare).not.toHaveBeenCalled();
+    expect(credentials.withAppliedCredential).not.toHaveBeenCalled();
+    expect(upstream.execute).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toMatch(/readiness|dependency|customer-b-handle|ccr_/i);
   });
 });
 
