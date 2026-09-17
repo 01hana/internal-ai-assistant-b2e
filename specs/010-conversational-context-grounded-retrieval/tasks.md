@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/010-conversational-context-grounded-retrieval`  
 **Input**: `spec.md`, `design.md`, and `plan.md` in `specs/010-conversational-context-grounded-retrieval/`  
-**Implementation Status**: Phase 2 T011–T023 complete; Phase 3 not started
+**Implementation Status**: Phase 3 T024–T033 complete; Phase 4 not started
 **Testing Rule**: For every changed runtime behavior, run the named focused test first and retain authentic RED evidence, then implement and retain GREEN evidence.
 
 ## Format
@@ -336,18 +336,66 @@ NEXT_TASK_AUTHORIZED=NO
 
 ## Phase 3 — Grounded retrieval contracts and routing
 
-- [ ] T024 Define RetrievalMode, discriminated RetrievalNeed, GroundedRetrievalPlan, RetrievalCoverage, and need-result contracts in `src/retrieval/grounded-retrieval.types.ts`
-- [ ] T025 [P] Define GroundedDocumentEvidence, GroundedToolEvidence, GroundedCitation, and GroundedContextBundleV1 with separate safe requestedNeeds and needResults in `src/assistant/grounding/grounded-context-bundle.types.ts`
-- [ ] T026 [P] Add exact internal contract tests for all modes, coverage states, discriminants, bundle version, requested-need/result linkage, complete Feature 011 consumer fields, and prohibited authority fields in `test/contract/grounded-context-bundle.contract.spec.ts`
-- [ ] T027 Extend existing sentence/subtask decomposition with a deterministic four-need cap in `src/query-understanding/query-task-decomposer.ts`
-- [ ] T028 Implement deterministic CONTEXT_ONLY/RAG/TOOL/HYBRID/CLARIFY/INSUFFICIENT mode selection without execution authority in `src/retrieval/grounded-retrieval-router.service.ts`
-- [ ] T029 Enforce one Tool need, unsupported overflow, stable need IDs, and no retries/recursion in `src/retrieval/grounded-retrieval-router.service.ts`
-- [ ] T030 Add bounded retrieval-plan audit helpers without query/evidence content in `src/retrieval/grounded-retrieval-audit.service.ts`
-- [ ] T031 Register router/contracts in the existing retrieval module without adding a provider implementation in `src/retrieval/retrieval.module.ts`
-- [ ] T032 Complete table-driven routing, compound-query, overflow, ambiguity, and authority tests in `test/unit/grounded-retrieval-router.service.spec.ts`
-- [ ] T033 Run T026/T032 and record Phase 3 GREEN evidence in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+- [X] T024 Define RetrievalMode, discriminated RetrievalNeed, GroundedRetrievalPlan, RetrievalCoverage, and need-result contracts in `src/retrieval/grounded-retrieval.types.ts`
+- [X] T025 [P] Define GroundedDocumentEvidence, GroundedToolEvidence, GroundedCitation, and GroundedContextBundleV1 with separate safe requestedNeeds and needResults in `src/assistant/grounding/grounded-context-bundle.types.ts`
+- [X] T026 [P] Add exact internal contract tests for all modes, coverage states, discriminants, bundle version, requested-need/result linkage, complete Feature 011 consumer fields, and prohibited authority fields in `test/contract/grounded-context-bundle.contract.spec.ts`
+- [X] T027 Extend existing sentence/subtask decomposition with a deterministic four-need cap in `src/query-understanding/query-task-decomposer.ts`
+- [X] T028 Implement deterministic CONTEXT_ONLY/RAG/TOOL/HYBRID/CLARIFY/INSUFFICIENT mode selection without execution authority in `src/retrieval/grounded-retrieval-router.service.ts`
+- [X] T029 Enforce one Tool need, unsupported overflow, stable need IDs, and no retries/recursion in `src/retrieval/grounded-retrieval-router.service.ts`
+- [X] T030 Add bounded retrieval-plan audit helpers without query/evidence content in `src/retrieval/grounded-retrieval-audit.service.ts`
+- [X] T031 Register router/contracts in the existing retrieval module without adding a provider implementation in `src/retrieval/retrieval.module.ts`
+- [X] T032 Complete table-driven routing, compound-query, overflow, ambiguity, and authority tests in `test/unit/grounded-retrieval-router.service.spec.ts`
+- [X] T033 Run T026/T032 and record Phase 3 GREEN evidence in `specs/010-conversational-context-grounded-retrieval/tasks.md`
 
 **Checkpoint**: Routing is deterministic and auditable but cannot execute RAG, Tool, connector, or LLM work.
+
+### Phase 3 execution evidence — T024–T033 complete (2026-09-17)
+
+T004 was rerun before implementation and failed authentically with exit 1: all 8/8 cases emitted only `MISSING_FEATURE010_BEHAVIOR [T004]: bounded non-authoritative grounded retrieval routing`. After T024–T031, the expanded T032 suite passed with 14/14 tests. The router deterministically selects all six modes, chooses a lane from uncovered needs, uses stable ordinal need IDs, admits at most four needs, replaces overflow with an explicit bounded unsupported sentinel, retains at most one Tool semantic need, strips authority-bearing input, emits no retry/child/next-plan surface, and is deeply immutable. `CONTEXT_ONLY` consumes only a caller-supplied complete-coverage signal and performs no eligibility or freshness evaluation.
+
+| Task/gate | Exact command | Result |
+|---|---|---|
+| T024–T025 compile | `npm run typecheck` | Exit 0; retrieval, need-result, evidence, citation, and `GroundedContextBundleV1` contracts compile with distinct `requestedNeeds[].id` / `needResults[].needId` linkage. |
+| T026 | `npm run test:contract -- --runInBand --runTestsByPath test/contract/grounded-context-bundle.contract.spec.ts` | Exit 0; 1 suite / 5 tests passed. All modes, coverage states, discriminants, bundle version, provenance, citations, locale, Feature 011 view, readonly shapes, and authority-field absence passed. |
+| T027 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/grounded-retrieval-router.service.spec.ts test/unit/query-task-decomposer.spec.ts` | Exit 0; 2 suites / 21 tests passed at the decomposition checkpoint, including 8 decomposer tests. Existing subtask behavior stayed compatible; deterministic retrieval decomposition and overflow sentinel coverage passed. |
+| T028–T032 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/grounded-retrieval-router.service.spec.ts` | Exit 0; 1 suite / 14 tests passed. CONTEXT_ONLY, RAG, TOOL, HYBRID, CLARIFY, INSUFFICIENT, uncovered-need selection, four-need and one-Tool bounds, compound input, stable repeated output, authority sanitization, deep immutability, safe audit metadata, and no recursion/retry passed. |
+| Phase 2 gates | Focused T002, T018, T019, and T022 commands | Exit 0: T002 5/5, T018 10/10, T019 8/8, T022 21/21. Four-exchange/four-reference bounds, nested evidence identity bound, and scope isolation remain green. |
+| Query Understanding | `npm run test:unit -- --runInBand --runTestsByPath test/unit/query-task-decomposer.spec.ts test/unit/query-understanding-pipeline-wiring.spec.ts test/unit/query-understanding.service.spec.ts test/unit/assistant-planning.service.spec.ts` | Exit 0; 4 suites / 19 tests passed. |
+| Retrieval/Tool unit regressions | Focused deterministic retrieval, RetrievalService, discovery/equivalence, registry, permission, EvidenceRef, and filtering inventory | Exit 0; 8 suites / 97 tests passed. |
+| Retrieval/Tool integration regressions | Focused authorized evidence/Tool, Customer RAG/retrieval/Tool, conflict, history, transport, SOP, RetrievalRun, and discovery inventory | Exit 0; 9 suites / 20 tests passed; 4 gated suites / 24 tests skipped. |
+| Predecessor unit inventory | `npm run test:unit -- --runInBand --testPathIgnorePatterns='follow-up-semantic-resolver|grounded-document-evidence|grounded-tool-evidence|grounded-context-bundle.service|prior-grounded-evidence-eligibility'` | Exit 0; 83 suites passed, 1 skipped; 591 tests passed, 3 skipped. |
+| Contract inventory | `npm run test:contract -- --runInBand` | Exit 0; 13 suites passed, 3 skipped; 75 tests passed, 39 skipped. |
+| Predecessor integration inventory | `npm run test:integration -- --runInBand --testPathIgnorePatterns='feature010-grounded-retrieval'` | Exit 0; 56 suites passed, 17 skipped; 197 tests passed, 131 skipped. |
+| Phase 3 focused lint | `npx eslint src/retrieval/grounded-retrieval.types.ts src/retrieval/grounded-retrieval-router.service.ts src/retrieval/grounded-retrieval-audit.service.ts src/retrieval/retrieval.module.ts src/assistant/grounding/grounded-context-bundle.types.ts src/query-understanding/query-task-decomposer.ts test/contract/grounded-context-bundle.contract.spec.ts test/unit/grounded-retrieval-router.service.spec.ts test/unit/query-task-decomposer.spec.ts` | Exit 0 with no findings. |
+| Compile/diff gates | `npm run build`; `npm run typecheck`; `git diff --check` | Exit 0 for all commands. |
+
+Later-phase RED state remains authentic and unchanged: T005 7/7, T006 6/6, T007 14/14, T008 9/9, and T009 11/11 fail only through their typed missing-capability diagnostics. T010 still has 2 existing document/Tool setup cases GREEN and 8 later-phase scenarios RED. The new bundle types do not provide a bundle assembly service.
+
+The router has no dependency on `RetrievalService`, Tool runtime, connectors, or LLM services; focused route calls leave their observable invocation state untouched. The audit helper writes only mode, bounded counts/kinds, normalized safe reason codes, and duration. It does not persist query text, document content, projected values, Tool arguments/keys, permissions, connector data, or evidence payloads. `RetrievalModule` registers the router and audit helper internally while retaining its prior exports and deterministic provider selection.
+
+Frozen Feature 010 spec/design/plan hashes remain `3c33d673…`, `c060bcf6…`, and `c6d151ca…`; `.specify/feature.json` remains `718abaac…`. T002 confirms the public Assistant/API/SSE/history, schema/migrations, Feature 009, Gateway, Identity Bridge, worktree, submodule, external-frontend, and staging boundaries. Feature 009 T126–T142 remain unchecked. The pre-existing untracked `apps/customer-connector-runtime/test/fixtures/phase6-upstream.key` remains untouched.
+
+```text
+T024_T033_STATUS=COMPLETE
+RETRIEVAL_CONTRACTS=PASS
+GROUNDED_CONTEXT_BUNDLE_V1_CONTRACT=PASS
+RETRIEVAL_MODE_ROUTING=PASS
+MAX_RETRIEVAL_NEEDS=4
+MAX_TOOL_NEEDS=1
+STABLE_NEED_IDS=PASS
+ROUTER_EXECUTION_AUTHORITY=NO
+ROUTER_RECURSION=NO
+RAG_EXECUTED_BY_PHASE3=NO
+TOOL_EXECUTED_BY_PHASE3=NO
+CONNECTOR_EXECUTED_BY_PHASE3=NO
+LLM_EXECUTED_BY_PHASE3=NO
+PHASE2_BOUNDED_CONTEXT_REGRESSION=PASS
+PUBLIC_ASSISTANT_API_CHANGE=NO
+PHASE_4_STARTED=NO
+HIGHEST_COMPLETED_TASK=T033
+NEXT_TASK=T034
+NEXT_TASK_AUTHORIZED=NO
+```
 
 ---
 

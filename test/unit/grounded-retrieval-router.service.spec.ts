@@ -1,4 +1,5 @@
 import { loadFeature010Export } from '../support/feature010-red-contract.helper';
+import { GroundedRetrievalAuditService } from '../../src/retrieval/grounded-retrieval-audit.service';
 
 type Router = { route(input: Record<string, unknown>): Record<string, any> };
 type RouterConstructor = new () => Router;
@@ -31,6 +32,73 @@ describe('Feature 010 grounded retrieval router RED (T004)', () => {
     expect(plan).toMatchObject({ mode: expect.stringMatching(/CLARIFY|INSUFFICIENT/), reasonCode: 'MULTIPLE_TOOL_NEEDS_UNSUPPORTED' });
     expect(plan).not.toHaveProperty('children');
     expect(plan).not.toHaveProperty('nextPlan');
+    expect(plan.needs.filter((need: { kind: string }) => need.kind === 'TOOL')).toHaveLength(1);
+  });
+
+  it('routes compound document and Tool needs once in stable source order', () => {
+    const plan = router().route({
+      requestId: 'req-compound',
+      decomposedNeeds: [
+        { kind: 'DOCUMENT', query: 'work order SOP' },
+        { kind: 'TOOL', frame: {} }
+      ]
+    });
+    expect(plan).toMatchObject({ mode: 'HYBRID', reasonCode: 'RETRIEVAL_ROUTE_SELECTED' });
+    expect(plan.needs.map((need: { id: string }) => need.id)).toEqual(['need-1', 'need-2']);
+  });
+
+  it('selects the lane from uncovered needs without authorizing prior evidence itself', () => {
+    const plan = router().route({
+      decomposedNeeds: [
+        { kind: 'DOCUMENT', query: 'policy', coveredByPriorEvidence: true },
+        { kind: 'TOOL', frame: {} }
+      ]
+    });
+    expect(plan).toMatchObject({ mode: 'TOOL' });
+    expect(plan.needs).toHaveLength(2);
+  });
+
+  it('sanitizes authority-bearing input instead of copying it into the plan', () => {
+    const plan = router().route({
+      decomposedNeeds: [{
+        kind: 'TOOL', operationKey: 'unsafe', connector: 'unsafe', credential: 'unsafe',
+        frame: { topicKey: 'inventory', canonicalToolKey: 'unsafe', permissionResult: 'allowed' }
+      }]
+    });
+    expect(plan).toMatchObject({ mode: 'TOOL' });
+    expect(JSON.stringify(plan)).not.toMatch(/operationKey|canonicalToolKey|toolDefinitionId|adapter|connector|credential|permissionResult|rawResponse|preProjectionData|execute|retry/i);
+  });
+
+  it('is deeply immutable and does not expose retry or autonomous-plan surfaces', () => {
+    const plan = router().route({ decomposedNeeds: [{ kind: 'DOCUMENT', query: 'policy' }] });
+    expect(Object.isFrozen(plan)).toBe(true);
+    expect(Object.isFrozen(plan.needs)).toBe(true);
+    expect(Object.isFrozen(plan.needs[0])).toBe(true);
+    expect(plan).not.toHaveProperty('children');
+    expect(plan).not.toHaveProperty('nextPlan');
+    expect(plan).not.toHaveProperty('retry');
+  });
+
+  it('records only bounded plan metadata in audit output', async () => {
+    const append = jest.fn().mockResolvedValue({ id: 'audit-1' });
+    const audit = new GroundedRetrievalAuditService({ append } as never);
+    const plan = router().route({ decomposedNeeds: [{ kind: 'DOCUMENT', query: 'sensitive policy question' }] });
+    await audit.recordPlan({
+      customerScope: { customerId: 'customer-1', organizationId: 'org-1', hostApp: 'app-1', actorId: 'actor-1' } as never,
+      requestId: 'request-1', sessionId: 'session-1', messageId: 'message-1', durationMs: 3, plan: plan as never
+    });
+    const payload = append.mock.calls[0][0];
+    expect(payload).toMatchObject({ eventType: 'grounded_retrieval_planned', metadata: { mode: 'RAG', needCount: 1, needKinds: ['DOCUMENT'], unsupportedCount: 0 } });
+    expect(JSON.stringify(payload.metadata)).not.toContain('sensitive policy question');
+    expect(JSON.stringify(payload.metadata)).not.toMatch(/projectedFacts|toolArguments|canonicalToolKey|permission|connector|evidence/i);
+  });
+
+  it('normalizes untrusted reason text before it can enter a plan or audit event', () => {
+    const plan = router().route({
+      decomposedNeeds: [{ kind: 'UNSUPPORTED', reasonCode: 'query text and token=secret' }]
+    });
+    expect(plan.needs).toEqual([{ id: 'need-1', kind: 'UNSUPPORTED', reasonCode: 'UNSUPPORTED_RETRIEVAL_NEED' }]);
+    expect(JSON.stringify(plan)).not.toContain('token=secret');
   });
 });
 

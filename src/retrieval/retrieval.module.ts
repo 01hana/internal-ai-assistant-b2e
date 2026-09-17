@@ -4,10 +4,18 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { DeterministicRetrievalProvider } from './deterministic-retrieval.provider';
 import { KnowledgeChunkingService } from './knowledge-chunking.service';
 import { RetrievalService } from './retrieval.service';
+import { GroundedRetrievalAuditService } from './grounded-retrieval-audit.service';
+import { GroundedRetrievalRouterService } from './grounded-retrieval-router.service';
 
 @Module({
   imports: [PrismaModule, AuditModule],
-  providers: [DeterministicRetrievalProvider, KnowledgeChunkingService, RetrievalService],
+  providers: [
+    DeterministicRetrievalProvider,
+    GroundedRetrievalAuditService,
+    GroundedRetrievalRouterService,
+    KnowledgeChunkingService,
+    RetrievalService
+  ],
   exports: [KnowledgeChunkingService, RetrievalService]
 })
 export class RetrievalModule {}

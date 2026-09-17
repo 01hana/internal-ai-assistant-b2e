@@ -5,6 +5,19 @@ import {
   QueryUnderstandingSentence,
   QueryUnderstandingSubTask
 } from './query-understanding.types';
+import type { ConversationSemanticFrame } from '../assistant/conversation/conversation.types';
+import {
+  MAX_RETRIEVAL_NEEDS,
+  RetrievalNeed
+} from '../retrieval/grounded-retrieval.types';
+
+export { MAX_RETRIEVAL_NEEDS } from '../retrieval/grounded-retrieval.types';
+
+export interface RetrievalNeedDecompositionResult {
+  readonly needs: readonly RetrievalNeed[];
+  readonly overflowCount: number;
+  readonly reasonCode?: 'RETRIEVAL_NEED_LIMIT_EXCEEDED';
+}
 
 export function inferTaskType(text: string): string {
   if (text.length === 0 || isPunctuationOnly(text)) {
@@ -76,6 +89,35 @@ export function decomposeSubTasks(
     type: fallbackTaskType === 'general_lookup' ? inferTaskType(sentence.text) : fallbackTaskType,
     text: sentence.text
   }));
+}
+
+export function decomposeRetrievalNeeds(
+  subTasks: readonly QueryUnderstandingSubTask[],
+  semanticFrames: readonly ConversationSemanticFrame[] = []
+): RetrievalNeedDecompositionResult {
+  const overflowCount = Math.max(0, subTasks.length - MAX_RETRIEVAL_NEEDS);
+  const admittedCount = overflowCount > 0 ? MAX_RETRIEVAL_NEEDS - 1 : Math.min(subTasks.length, MAX_RETRIEVAL_NEEDS);
+  const needs: RetrievalNeed[] = subTasks.slice(0, admittedCount).map((subTask, index) => {
+    const id = `need-${index + 1}`;
+    if (isDocumentTaskType(subTask.type)) {
+      return Object.freeze({ id, kind: 'DOCUMENT' as const, query: subTask.text.trim() });
+    }
+    return Object.freeze({ id, kind: 'TOOL' as const, frame: semanticFrames[index] ?? Object.freeze({}) });
+  });
+
+  if (overflowCount > 0) {
+    needs.push(Object.freeze({
+      id: `need-${MAX_RETRIEVAL_NEEDS}`,
+      kind: 'UNSUPPORTED',
+      reasonCode: 'RETRIEVAL_NEED_LIMIT_EXCEEDED'
+    }));
+  }
+
+  return Object.freeze({
+    needs: Object.freeze(needs),
+    overflowCount,
+    ...(overflowCount > 0 ? { reasonCode: 'RETRIEVAL_NEED_LIMIT_EXCEEDED' as const } : {})
+  });
 }
 
 export function isPunctuationOnly(text: string): boolean {
