@@ -85,7 +85,6 @@ describe('Feature 010 permanent scope boundary (T002)', () => {
     const tasks = text('specs/010-conversational-context-grounded-retrieval/tasks.md');
     const ids = [...tasks.matchAll(/^- \[[ xX]\] T(\d{3})\b/gm)].map((match) => Number(match[1]));
     expect(ids).toEqual(Array.from({ length: 83 }, (_, index) => index + 1));
-    expect(tasks).toContain('- [ ] T011 Define immutable semantic-frame');
   });
 });
 

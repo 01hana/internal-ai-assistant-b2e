@@ -2,6 +2,7 @@ import { Prisma } from '../generated/prisma/client';
 import { RiskLevel } from '../generated/prisma/enums';
 import { HostIntegrationContext } from '../host-integration/host-integration.types';
 import { NormalizedPageContext } from '../assistant/page-context/page-context.types';
+import type { BoundedConversationContext } from '../assistant/conversation/conversation.types';
 
 export interface QueryUnderstandingInput {
   requestId: string;
@@ -11,6 +12,7 @@ export interface QueryUnderstandingInput {
   hostIntegrationContext: HostIntegrationContext;
   pageContext?: NormalizedPageContext;
   assistantContextState?: QueryUnderstandingContextStateSnapshot;
+  priorConversationContext?: BoundedConversationContext;
   now?: Date;
   timezone?: string;
 }

@@ -6,12 +6,14 @@ import { QueryUnderstandingRepository } from './query-understanding.repository';
 import { QueryUnderstandingService } from './query-understanding.service';
 import { RuleBasedQueryUnderstandingPipeline } from './rule-based-query-understanding.pipeline';
 import { ToolsModule } from '../tools/tools.module';
+import { ConversationSemanticReconstructorService } from '../assistant/conversation/conversation-semantic-reconstructor.service';
 
 @Module({
   imports: [PrismaModule, AuditModule, ToolsModule],
   providers: [
     QueryUnderstandingRepository,
     QueryUnderstandingService,
+    ConversationSemanticReconstructorService,
     DefaultTokenizerAdapter,
     {
       provide: 'TokenizerAdapter',
@@ -26,6 +28,7 @@ import { ToolsModule } from '../tools/tools.module';
   exports: [
     QueryUnderstandingRepository,
     QueryUnderstandingService,
+    ConversationSemanticReconstructorService,
     RuleBasedQueryUnderstandingPipeline,
     DefaultTokenizerAdapter,
     'QueryUnderstandingPipeline'

@@ -221,6 +221,60 @@ describe('AssistantPlanningService', () => {
     expect(understandAndPersist.mock.calls[0][0]).not.toHaveProperty('customerScope');
   });
 
+  it('passes bounded prior semantic context without turning it into planning authority', async () => {
+    const understandAndPersist = jest.fn().mockResolvedValue({
+      output: {
+        taskType: 'general_lookup', sentences: [], tokens: [], phrases: [], normalizedTerms: [],
+        timeRanges: [], resolvedReferences: [], entityCandidates: [], subTasks: [], candidateTools: [],
+        riskLevel: RiskLevel.low, confidence: 0.9, clarificationNeeds: [], requiredEvidence: []
+      },
+      persisted: {
+        id: 'qu-context', requestId: 'req-context', messageId: 'message-context', sentences: [], tokens: [],
+        phrases: [], normalizedTerms: [], timeRanges: null, resolvedReferences: null, entityCandidates: [],
+        subTasks: null, confidence: 0.9, clarificationNeeds: null, createdAt: new Date()
+      }
+    });
+    const create = jest.fn().mockResolvedValue({
+      id: 'plan-context', customerId: 'customer-a', sessionId: 'session-001', messageId: 'message-context',
+      taskType: 'general_lookup', requiredEvidence: [], candidateTools: [], permissionChecks: [],
+      riskAssessment: RiskLevel.low, clarificationNeeds: null, expectedAnswerShape: null,
+      requiresMultiStepToolUse: false, decision: ExecutionDecision.continue, createdAt: new Date()
+    });
+    const context = Object.freeze({
+      scope: Object.freeze({ customerId: 'customer-a', sessionId: 'session-001', organizationId: 'org-001', hostApp: 'erp', actorId: 'actor-001' }),
+      selectedExchangeIdsNewestFirst: Object.freeze(['exchange-1']), chronologicalExchangeIds: Object.freeze(['exchange-1']),
+      exchanges: Object.freeze([]), semanticFrames: Object.freeze([]), evidenceRefs: Object.freeze([]),
+      evidenceRefIds: Object.freeze([]), rejectedReasonCodes: Object.freeze([])
+    });
+    const load = jest.fn().mockResolvedValue(context);
+    const recordLoaded = jest.fn().mockResolvedValue(undefined);
+    const service = new AssistantPlanningService(
+      { understandAndPersist } as unknown as QueryUnderstandingService,
+      { db: { executionPlan: { create } } } as unknown as PrismaService,
+      { append: jest.fn() } as unknown as AuditWriterService,
+      { load } as never,
+      { recordLoaded } as never
+    );
+
+    await service.createPlan({
+      customerScope, requestId: 'req-context', sessionId: 'session-001', messageId: 'message-context',
+      text: '那個呢？', hostIntegrationContext
+    });
+
+    expect(load).toHaveBeenCalledWith({ scope: {
+      customerId: 'customer-a', sessionId: 'session-001', organizationId: customerScope.organizationId,
+      hostApp: customerScope.hostApp, actorId: customerScope.actorId
+    } });
+    expect(understandAndPersist).toHaveBeenCalledWith(expect.objectContaining({ priorConversationContext: context }));
+    expect(create.mock.calls[0][0].data.candidateTools).toEqual([]);
+    expect(create.mock.calls[0][0].data.permissionChecks).toEqual([expect.objectContaining({
+      organizationId: hostIntegrationContext.organizationId,
+      actorId: hostIntegrationContext.actorId
+    })]);
+    expect(JSON.stringify(create.mock.calls[0][0])).not.toMatch(/exchange-1/);
+    expect(recordLoaded).toHaveBeenCalledWith(expect.objectContaining({ exchangeCount: 0, evidenceRefCount: 0 }));
+  });
+
   it('maps low-confidence output into clarify decision', () => {
     expect(
       determinePlanningDecision({

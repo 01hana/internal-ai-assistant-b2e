@@ -884,13 +884,15 @@ function createPrismaMock(state: MockState) {
           orderBy,
           take,
           cursor,
-          skip
+          skip,
+          include
         }: {
           where: Record<string, unknown>;
           orderBy?: { createdAt: 'asc' | 'desc' };
           take?: number;
           cursor?: { id: string };
           skip?: number;
+          include?: Record<string, unknown>;
         }) => {
         const sorted = [...state.messages]
           .filter((item) => matchesWhere(item, where))
@@ -902,7 +904,25 @@ function createPrismaMock(state: MockState) {
         const cursorIndex = cursor ? sorted.findIndex((item) => item.id === cursor.id) : -1;
         const startIndex = cursor ? Math.max(0, cursorIndex + (skip ?? 0)) : 0;
         const paginated = sorted.slice(startIndex);
-        return typeof take === 'number' ? paginated.slice(0, take) : paginated;
+        const selected = typeof take === 'number' ? paginated.slice(0, take) : paginated;
+        if (!include) return selected;
+        return selected.map((message) => ({
+          ...message,
+          queryUnderstanding: state.queryUnderstandingResults.find((item) =>
+            item.customerId === message.customerId && item.messageId === message.id
+          ) ?? null,
+          answerDecisions: state.answerDecisions
+            .filter((item) => item.customerId === message.customerId && item.messageId === message.id)
+            .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+            .slice(0, 1),
+          groundingChecks: state.groundingChecks
+            .filter((item) => item.customerId === message.customerId && item.messageId === message.id)
+            .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+            .slice(0, 1),
+          evidenceRefs: state.evidenceRefs
+            .filter((item) => item.customerId === message.customerId && item.messageId === message.id)
+            .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
+        }));
       }),
       update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<MessageRecord> }) => {
         const message = state.messages.find((item) => matchesWhere(item, where));

@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/010-conversational-context-grounded-retrieval`  
 **Input**: `spec.md`, `design.md`, and `plan.md` in `specs/010-conversational-context-grounded-retrieval/`  
-**Implementation Status**: Phase 1 T001–T010 complete; Phase 2 not started
+**Implementation Status**: Phase 2 T011–T023 complete; Phase 3 not started
 **Testing Rule**: For every changed runtime behavior, run the named focused test first and retain authentic RED evidence, then implement and retain GREEN evidence.
 
 ## Format
@@ -272,21 +272,65 @@ NEXT_TASK_AUTHORIZED=NO
 
 ## Phase 2 — Shared contracts and bounded conversation-context foundation
 
-- [ ] T011 Define immutable semantic-frame, provenance, follow-up-decision, safe-turn, and safe-reason types in `src/assistant/conversation/conversation.types.ts`
-- [ ] T012 [P] Define context, need, chunk, ToolCall, evidence, freshness, depth, item, string, and byte limits in `src/assistant/conversation/conversation-limits.ts`
-- [ ] T013 [P] Implement recursive prohibited-key/value and bounded plain-value guards in `src/assistant/conversation/conversation-source-guard.ts`
-- [ ] T014 [P] Implement active Customer/session/organization/HostApp/actor-qualified context reads in `src/assistant/conversation/conversation-context.repository.ts`
-- [ ] T015 Implement deterministic newest-first four-exchange/four-evidence selection and incomplete-pair exclusion in `src/assistant/conversation/conversation-context-loader.service.ts`
-- [ ] T016 Implement safe semantic-frame reconstruction from QueryUnderstandingResult without Tool/permission authority in `src/assistant/conversation/conversation-semantic-reconstructor.service.ts`
-- [ ] T017 [P] Add safe context-loaded/rejected audit helpers in `src/assistant/conversation/conversation-audit.service.ts`
-- [ ] T018 Complete nested-prohibited, malformed/cyclic, bounds, ordering, and no-prose-fact unit coverage in `test/unit/conversation-context-loader.service.spec.ts`
-- [ ] T019 Add active/closed-session and colliding Customer/session/organization/HostApp/actor isolation coverage in `test/integration/feature010-context-isolation.spec.ts`
-- [ ] T020 Register the bounded conversation providers without a controller or public route in `src/assistant/assistant.module.ts`
-- [ ] T021 Wire safe prior semantic context into query understanding without prior authority in `src/query-understanding/query-understanding.module.ts`
-- [ ] T022 Add contract assertions for four-exchange/four-reference limits and prohibited source categories in `test/contract/feature010-conversation-context.contract.spec.ts`
-- [ ] T023 Run T018–T022 and record Phase 2 GREEN evidence in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+- [X] T011 Define immutable semantic-frame, provenance, follow-up-decision, safe-turn, and safe-reason types in `src/assistant/conversation/conversation.types.ts`
+- [X] T012 [P] Define context, need, chunk, ToolCall, evidence, freshness, depth, item, string, and byte limits in `src/assistant/conversation/conversation-limits.ts`
+- [X] T013 [P] Implement recursive prohibited-key/value and bounded plain-value guards in `src/assistant/conversation/conversation-source-guard.ts`
+- [X] T014 [P] Implement active Customer/session/organization/HostApp/actor-qualified context reads in `src/assistant/conversation/conversation-context.repository.ts`
+- [X] T015 Implement deterministic newest-first four-exchange/four-evidence selection and incomplete-pair exclusion in `src/assistant/conversation/conversation-context-loader.service.ts`
+- [X] T016 Implement safe semantic-frame reconstruction from QueryUnderstandingResult without Tool/permission authority in `src/assistant/conversation/conversation-semantic-reconstructor.service.ts`
+- [X] T017 [P] Add safe context-loaded/rejected audit helpers in `src/assistant/conversation/conversation-audit.service.ts`
+- [X] T018 Complete nested-prohibited, malformed/cyclic, bounds, ordering, and no-prose-fact unit coverage in `test/unit/conversation-context-loader.service.spec.ts`
+- [X] T019 Add active/closed-session and colliding Customer/session/organization/HostApp/actor isolation coverage in `test/integration/feature010-context-isolation.spec.ts`
+- [X] T020 Register the bounded conversation providers without a controller or public route in `src/assistant/assistant.module.ts`
+- [X] T021 Wire safe prior semantic context into query understanding without prior authority in `src/query-understanding/query-understanding.module.ts`
+- [X] T022 Add contract assertions for four-exchange/four-reference limits and prohibited source categories in `test/contract/feature010-conversation-context.contract.spec.ts`
+- [X] T023 Run T018–T022 and record Phase 2 GREEN evidence in `specs/010-conversational-context-grounded-retrieval/tasks.md`
 
 **Checkpoint**: Phase 2 supplies bounded guarded context before routing; it performs no factual reuse or retrieval.
+
+### Phase 2 execution evidence — T011–T023 complete (2026-09-17)
+
+T003 was rerun before implementation and failed only with three typed `MISSING_FEATURE010_BEHAVIOR [T003]` diagnostics. The original three assertions were retained; the completed T018 suite now has seven GREEN tests covering newest-four selection, chronological reconstruction, incomplete-pair and exact-scope exclusion, recursive prohibited material, malformed/cyclic/unsupported/bounded values, safe EvidenceRef candidate projection, deep immutability, non-authoritative semantic reconstruction, no Assistant-prose facts, and bounded audit metadata.
+
+| Task/gate | Exact command or evidence | Result |
+|---|---|---|
+| T011–T017 | `npm run typecheck` plus T018/T019 focused execution | Immutable contracts, canonical limits, recursive guard, exact active-scope repository, bounded loader, semantic reconstructor, and safe audit helpers compiled and passed. |
+| T018/T019/T022 | `npx jest --config jest.config.ts --runTestsByPath test/unit/conversation-context-loader.service.spec.ts test/integration/feature010-context-isolation.spec.ts test/contract/feature010-conversation-context.contract.spec.ts --runInBand` | Exit 0; 3 suites / 34 tests passed. T018=7, T019=8, T022=19. |
+| T020/T021 | `npx jest --config jest.config.ts --runTestsByPath test/unit/assistant-planning.service.spec.ts test/unit/query-understanding-pipeline-wiring.spec.ts test/unit/conversation-context-loader.service.spec.ts test/integration/assistant-planning.spec.ts --runInBand` | Exit 0 before final T018 expansion; 4 suites / 8 tests passed. The final focused Phase 2 rerun and typecheck also passed. Prior context is an internal readonly input and does not enter candidate Tool or permission authority persistence. |
+| T002 permanent scope guard | `npx jest --config jest.config.ts --runTestsByPath test/contract/feature010-scope-boundary.contract.spec.ts --runInBand` | Final exit 0 after completion recording; 1 suite / 5 tests passed. |
+| Remaining RED unit contracts | Each T004–T009 file run independently with `npx jest --config jest.config.ts --runTestsByPath <file> --runInBand` | Expected exit 1 only through typed missing-capability diagnostics: T004 8/8, T005 7/7, T006 6/6, T007 14/14, T008 9/9, T009 11/11. |
+| T010 later-phase integration | `npx jest --config jest.config.ts --runTestsByPath test/integration/feature010-grounded-retrieval.spec.ts --runInBand` | Expected exit 1; 2 existing document/Tool setup cases passed and 8 authentic later-phase cases remained RED. |
+| Predecessor unit inventory | `npm run test:unit -- --runInBand --testPathIgnorePatterns='grounded-retrieval-router|follow-up-semantic-resolver|grounded-document-evidence|grounded-tool-evidence|grounded-context-bundle|prior-grounded-evidence-eligibility'` | Final exit 0; 82 suites passed, 1 skipped; 572 tests passed, 3 skipped. |
+| Predecessor contract inventory | `npm run test:contract -- --runInBand` | Exit 0; 12 suites passed, 3 skipped; 68 tests passed, 39 skipped. |
+| Gated public contracts | `RUN_CUSTOMER_US1_TESTS=true npm run test:contract -- --runInBand` | Sandbox listener attempt failed only with `EPERM`; identical approved local rerun exited 0 with 15 suites / 107 tests passed. |
+| Predecessor integration inventory | `npm run test:integration -- --runInBand --testPathIgnorePatterns='feature010-grounded-retrieval'` | Exit 0; 56 suites passed, 17 skipped; 197 tests passed, 131 skipped. |
+| Eval inventory | `npm run test:eval -- --runInBand` | Exit 0; 1 suite passed, 1 skipped; 10 tests passed, 3 skipped. |
+| Direct Tool/connector/projection/evidence/permission unit regressions | Phase 1 exact 12-file `--runTestsByPath` inventory | Exit 0; 12 suites / 146 tests passed. |
+| Direct Tool/transport/RAG/SSE/history integration regressions | Phase 1 exact 16-file `--runTestsByPath` inventory | Exit 0; 13 suites passed, 3 gated suites skipped; 26 tests passed, 11 skipped. |
+| Compile and diff gates | `npm run build`; `npm run typecheck`; `git diff --check` | Exit 0 for all commands. |
+
+The final combined Phase 2 rerun covered T002, T018–T022, Query Understanding wiring, and Assistant planning integration with exit 0: 7 suites / 45 tests passed.
+
+Created production files are limited to the seven files under `src/assistant/conversation/`. Modified production files are limited to internal Assistant planning/module and Query Understanding module/type wiring. Tests add the Phase 2 isolation and contract suites and minimally extend the existing test application, Assistant planning, Query Understanding wiring, T003 loader, and permanent T002 guard. No schema/migration, public route/DTO/SSE/history contract, retrieval execution, Tool execution authority, Feature 009 plan/capability, Gateway, Identity Bridge, external repository, staging, long-term memory, Hybrid, bundle, LLM, or Feature 011 implementation was added.
+
+```text
+T011_T023_STATUS=COMPLETE
+PHASE2_BOUNDED_CONTEXT=PASS
+MAX_COMPLETED_EXCHANGES=4
+MAX_PRIOR_EVIDENCE_REFS=4
+CONTEXT_SCOPE_ISOLATION=PASS
+PROHIBITED_CONTEXT_MATERIAL=REJECTED
+ASSISTANT_PROSE_FACT_SOURCE=NO
+CROSS_SESSION_MEMORY=NO
+LONG_TERM_MEMORY=NO
+RETRIEVAL_EXECUTED=NO
+TOOL_EXECUTED_BY_PHASE2=NO
+PUBLIC_ASSISTANT_API_CHANGE=NO
+PHASE_3_STARTED=NO
+HIGHEST_COMPLETED_TASK=T023
+NEXT_TASK=T024
+NEXT_TASK_AUTHORIZED=NO
+```
 
 ---
 

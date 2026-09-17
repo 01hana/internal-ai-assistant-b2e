@@ -27,6 +27,10 @@ import { AssistantReadonlyRuntimeService } from './runtime/assistant-readonly-ru
 import { ToolCallService } from './runtime/tool-call.service';
 import { AssistantSessionService } from './session/assistant-session.service';
 import { AssistantSseEventBuilder } from './sse/assistant-sse-event.builder';
+import { ConversationAuditService } from './conversation/conversation-audit.service';
+import { ConversationContextLoaderService } from './conversation/conversation-context-loader.service';
+import { ConversationContextRepository } from './conversation/conversation-context.repository';
+import { ConversationSourceGuard } from './conversation/conversation-source-guard';
 
 @Module({
   imports: [
@@ -59,7 +63,15 @@ import { AssistantSseEventBuilder } from './sse/assistant-sse-event.builder';
     NoAnswerGateService,
     AssistantReadonlyRuntimeService,
     ToolCallService,
-    AssistantSseEventBuilder
+    AssistantSseEventBuilder,
+    ConversationContextRepository,
+    {
+      provide: 'ConversationContextSource',
+      useExisting: ConversationContextRepository
+    },
+    ConversationSourceGuard,
+    ConversationContextLoaderService,
+    ConversationAuditService
   ],
   exports: [
     AssistantPlanningService,

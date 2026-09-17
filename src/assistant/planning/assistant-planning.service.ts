@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { AuditWriterService } from '../../audit/audit-writer.service';
 import { Prisma, ExecutionPlan } from '../../generated/prisma/client';
 import { ExecutionDecision } from '../../generated/prisma/enums';
@@ -12,6 +12,8 @@ import {
   PersistedExecutionPlan,
   PlannedOperationCandidate
 } from './assistant-planning.types';
+import { ConversationContextLoaderService } from '../conversation/conversation-context-loader.service';
+import { ConversationAuditService } from '../conversation/conversation-audit.service';
 
 const MAX_ARGUMENT_KEYS = 32;
 const MAX_ARGUMENT_DEPTH = 4;
@@ -27,11 +29,36 @@ export class AssistantPlanningService {
   constructor(
     private readonly queryUnderstandingService: QueryUnderstandingService,
     private readonly prisma: PrismaService,
-    private readonly auditWriter: AuditWriterService
+    private readonly auditWriter: AuditWriterService,
+    @Optional() private readonly conversationContextLoader?: ConversationContextLoaderService,
+    @Optional() private readonly conversationAudit?: ConversationAuditService
   ) {}
 
   async createPlan(input: AssistantPlanningInput): Promise<AssistantPlanningResult> {
     const startedAt = new Date();
+    const priorConversationContext = this.conversationContextLoader
+      ? await this.conversationContextLoader.load({
+          scope: {
+            customerId: input.customerScope.customerId,
+            sessionId: input.sessionId,
+            organizationId: input.customerScope.organizationId,
+            hostApp: input.customerScope.hostApp,
+            actorId: input.customerScope.actorId
+          }
+        })
+      : undefined;
+    if (priorConversationContext && this.conversationAudit) {
+      await this.conversationAudit.recordLoaded({
+        customerScope: input.customerScope,
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.messageId,
+        durationMs: Math.max(0, Date.now() - startedAt.getTime()),
+        exchangeCount: priorConversationContext.exchanges.length,
+        evidenceRefCount: priorConversationContext.evidenceRefs.length,
+        rejectedReasonCodes: priorConversationContext.rejectedReasonCodes
+      });
+    }
     const { output, persisted } = await this.queryUnderstandingService.understandAndPersist({
       requestId: input.requestId,
       sessionId: input.sessionId,
@@ -39,7 +66,8 @@ export class AssistantPlanningService {
       text: input.text,
       hostIntegrationContext: input.hostIntegrationContext,
       pageContext: input.pageContext,
-      assistantContextState: input.assistantContextState
+      assistantContextState: input.assistantContextState,
+      priorConversationContext
     });
     const executionPlan = await this.prisma.db.executionPlan.create({
       data: toExecutionPlanCreateInput(input, output)
