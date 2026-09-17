@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/010-conversational-context-grounded-retrieval`  
 **Input**: `spec.md`, `design.md`, and `plan.md` in `specs/010-conversational-context-grounded-retrieval/`  
-**Implementation Status**: Not started  
+**Implementation Status**: Phase 1 T001–T010 complete; Phase 2 not started
 **Testing Rule**: For every changed runtime behavior, run the named focused test first and retain authentic RED evidence, then implement and retain GREEN evidence.
 
 ## Format
@@ -31,18 +31,242 @@
 
 ## Phase 1 — Baseline, repository inventory, RED fixtures, scope guards
 
-- [ ] T001 Record Feature 007/008/009, RAG, Tool, evidence, AnswerDecision/GroundingCheck, SSE, history, and LLM-seam baseline commands/results in `specs/010-conversational-context-grounded-retrieval/tasks.md`
-- [ ] T002 [P] Add a scope guard proving Feature 009 T126–T142, manifest, Gateway, Identity Bridge, schema, public contracts, and external repositories remain untouched in `test/contract/feature010-scope-boundary.contract.spec.ts`
-- [ ] T003 [P] Add RED bounded-context, incomplete-pair, and prohibited-source fixtures in `test/unit/conversation-context-loader.service.spec.ts`
-- [ ] T004 [P] Add RED routing-mode, four-need, and one-Tool-need fixtures in `test/unit/grounded-retrieval-router.service.spec.ts`
-- [ ] T005 [P] Add RED INHERIT/REPLACE/NEW_TOPIC/CLARIFY fixtures in `test/unit/follow-up-semantic-resolver.service.spec.ts`
-- [ ] T006 [P] Add RED document normalization, citation, and prompt-like-content fixtures in `test/unit/grounded-document-evidence.normalizer.spec.ts`
-- [ ] T007 [P] Add RED Tool normalization and raw/pre-projection rejection fixtures in `test/unit/grounded-tool-evidence.normalizer.spec.ts`
-- [ ] T008 [P] Add RED Hybrid COMPLETE/PARTIAL/INSUFFICIENT fixtures in `test/unit/grounded-context-bundle.service.spec.ts`
-- [ ] T009 [P] Add RED prior document/Tool/Hybrid eligibility fixtures in `test/unit/prior-grounded-evidence-eligibility.service.spec.ts`
-- [ ] T010 Add RED document-only, Tool-only, Hybrid, follow-up, recall, and call-count scenarios in `test/integration/feature010-grounded-retrieval.spec.ts`
+- [X] T001 Record Feature 007/008/009, RAG, Tool, evidence, AnswerDecision/GroundingCheck, SSE, history, and LLM-seam baseline commands/results in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+- [X] T002 [P] Add a scope guard proving Feature 009 T126–T142, manifest, Gateway, Identity Bridge, schema, public contracts, and external repositories remain untouched in `test/contract/feature010-scope-boundary.contract.spec.ts`
+- [X] T003 [P] Add RED bounded-context, incomplete-pair, and prohibited-source fixtures in `test/unit/conversation-context-loader.service.spec.ts`
+- [X] T004 [P] Add RED routing-mode, four-need, and one-Tool-need fixtures in `test/unit/grounded-retrieval-router.service.spec.ts`
+- [X] T005 [P] Add RED INHERIT/REPLACE/NEW_TOPIC/CLARIFY fixtures in `test/unit/follow-up-semantic-resolver.service.spec.ts`
+- [X] T006 [P] Add RED document normalization, citation, and prompt-like-content fixtures in `test/unit/grounded-document-evidence.normalizer.spec.ts`
+- [X] T007 [P] Add RED Tool normalization and raw/pre-projection rejection fixtures in `test/unit/grounded-tool-evidence.normalizer.spec.ts`
+- [X] T008 [P] Add RED Hybrid COMPLETE/PARTIAL/INSUFFICIENT fixtures in `test/unit/grounded-context-bundle.service.spec.ts`
+- [X] T009 [P] Add RED prior document/Tool/Hybrid eligibility fixtures in `test/unit/prior-grounded-evidence-eligibility.service.spec.ts`
+- [X] T010 Add RED document-only, Tool-only, Hybrid, follow-up, recall, and call-count scenarios in `test/integration/feature010-grounded-retrieval.spec.ts`
 
 **Checkpoint**: Existing suites pass; T003–T010 fail only for missing Feature 010 behavior; no production file has changed.
+
+### Phase 1 execution evidence — blocked at T001 (2026-09-16)
+
+T001 began from branch `010-conversational-context-grounded-retrieval` at commit `51508ce79daf8b45ce737a59d6253d7154e9ef7d`. The only entry worktree item was the pre-existing untracked `apps/customer-connector-runtime/test/fixtures/phase6-upstream.key`; it remains untouched. Both Spec Kit resolver forms completed with exit 0 and resolved this canonical feature directory plus `spec.md`, `design.md`, `plan.md`, and `tasks.md`:
+
+```text
+.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks
+.specify/scripts/bash/check-prerequisites.sh --paths-only
+```
+
+Protected entry SHA-256 values:
+
+```text
+Feature 007: spec=030f899f46d94d15b1357fb62de599e578a22cae5c388ddd35f57f194fa997cd
+             design=22439db8e4d7154d24311e41ecdea05c22d55edca159076779024a89c33be369
+             plan=cf3a2d5c36345eea6d61b7c26ce9cda20a4503cbc1a6b748a478fda3b0c9f9ea
+             tasks=eb6f7c4cded0e704fff9ef9e46dda7e4d6c79ab22da86502b8f33c0692b3b269
+Feature 008: spec=59fb07a7d885d8b754bc23c1e8adf89c3100fab4eee9c753381010c0822b1cce
+             design=d50bb4655b94a6fcd3dc4f56baa46609bce795d91de9b812a0fbfd96eaaa83b4
+             plan=53e32cc7a9b19a9a61304a999388758e8b288aec4197fb513e6b5de0f7772833
+             tasks=4859a4052d9510e9ee9cd8de46588eade96f0247e87c0a61b7e3b430793a6b8f
+Feature 009: spec=d73dfe52922e71f2d1481b8638fcd9cd3dadf83f5ecc1a399586cebc02a41b73
+             design=bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb
+             plan=00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1
+             tasks=ebb7089a7d2af47cdcb7e7926d3f8b0376de906a6d0c7d43c7520710d804087a
+Feature 010: spec=3c33d6737768d59d6b62f907d77be06fea2b8b6c145392527d473019436c9346
+             design=c060bcf6a9e305fbecc75697410642f261ded88eb9230ad9d36e5b9b5c02500f
+             plan=c6d151ca35e53655fefb2cfde53879208cfb3e3642d0b94df68b9b74d49835e5
+             tasks=b8a974d43790aa84eed53ce77275708acd22505d8e0bf31a2c6e1c31ec2835fd
+Feature 009 manifest=1d1747eb11b82ae2179cb78eca7d5707fd2dcb6a4a604dbb37f373dd05825352
+Prisma schema=e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733
+Prisma migration inventory=8a93d1082c2696f8b50af5adbe4e0128a8f984894d94f6d30e02f66d6b2c58ba
+Gateway source/test inventory=0354af851312a8fb65bfd4c0ffe3b81e199267f3086fb06bb57f84871387dde3
+Identity Bridge source/test inventory=d3cc54a76d8b52e225529e8dbdd82c33601b608de91b2230790218a1a89013f3
+Assistant DTO/SSE/history inventory=55a95414016374204bd7adfdfaabe005e2a878e8c06358a587acca86232a333d
+.specify/feature.json=718abaacae7e402d4d44998e680abde71aaa88fa21f72c481f4078fee4249bfd
+```
+
+Baseline command evidence captured before any Feature 010 fixture or production change:
+
+| Command | Result |
+|---|---|
+| `npm --prefix apps/identity-bridge test -- --runInBand` | Sandbox: exit 1, 40/41 suites and 376/380 tests passed; four listener cases failed only with `listen EPERM 127.0.0.1`. Identical approved local rerun: exit 0, 41 suites / 380 tests passed. |
+| `npm --prefix apps/identity-bridge run build` | Exit 0. |
+| `npm --prefix apps/identity-bridge run typecheck` | Exit 0. |
+| `npm --prefix apps/gateway test -- --runInBand --runTestsByPath test/identity-bridge/feature007-compatibility.spec.ts test/backend-client/gateway-trust-chain-wiring.spec.ts test/integration/feature004-gateway-backend.e2e.spec.ts` | Exit 0; 1 suite / 4 tests passed, 2 suites / 14 tests intentionally gated or skipped. |
+| `npm --prefix apps/gateway run build` | Exit 0. |
+| `npm run test:unit -- --runInBand` | Exit 0; 81 suites passed, 1 skipped; 564 tests passed, 3 skipped. |
+| `npm run test:contract -- --runInBand` | Exit 0; 10 suites passed, 3 skipped; 44 tests passed, 39 skipped. |
+| `RUN_CUSTOMER_US1_TESTS=true npm run test:contract -- --runInBand` | Sandbox: exit 1 only from listener `EPERM`. Identical approved local rerun: exit 0; 13 suites / 83 tests passed. |
+| `npm run test:eval -- --runInBand` | Exit 0; 1 suite passed, 1 skipped; 10 tests passed, 3 skipped. |
+| `npm run test:e2e -- --runInBand --runTestsByPath test/e2e/gateway-backend-trust-chain.e2e-spec.ts` | Exit 0; 1 suite / 1 test passed. |
+| `npm --prefix apps/customer-connector-runtime test -- --runInBand` | Sandbox: exit 1, 30 suites / 349 tests passed and 5 suites / 8 tests failed only with listener `EPERM`. Identical approved local rerun: exit 0; 35 suites / 357 tests passed. |
+| `npm --prefix apps/customer-connector-runtime run build` | Exit 0. |
+| `npm --prefix apps/customer-connector-runtime run typecheck` | Exit 0. |
+| `npm run build` | Exit 0. |
+| `npm run typecheck` | Exit 0. |
+| `npm run test:integration -- --runInBand` | Exit 1 after 53 suites passed and 17 skipped; 187 tests passed, 131 skipped, 2 failed. |
+| `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature009-customer-b-portability.spec.ts test/integration/productized-transport-dark.spec.ts` | Identical approved local run: exit 1; both isolated predecessor tests failed with the same semantic results. |
+
+The two integration failures predate every Feature 010 edit and are not missing imports, compilation, fixture/bootstrap, database, or sandbox-listener failures:
+
+```text
+test/integration/feature009-customer-b-portability.spec.ts
+  expected tool_call_completed/evidence_attached; observed tool_call_failed
+  FAIL_REASON=UNRELATED_REGRESSION
+
+test/integration/productized-transport-dark.spec.ts
+  expected CONNECTOR_BINDING_INVALID; observed CONNECTOR_UNAVAILABLE
+  FAIL_REASON=UNRELATED_REGRESSION
+```
+
+These failures block the required `PREDECESSOR_BASELINE=PASS` gate. Under the Phase 1 dependency and authentic-RED rules, T001 is not complete, T002–T010 have not started, no Feature 010 RED fixture or helper has been created, and no task checkbox has been changed. The baseline covers Feature 007 identity/session, Feature 008 Tool/projection/evidence, Feature 009 through T125, existing RAG and Tool runtime paths, EvidenceRef, AnswerDecision/GroundingCheck, SSE/history, and the LLM abstraction seam; the only failure is the isolated Feature 009 predecessor behavior above. Feature 009 T126–T142 remain unchecked.
+
+```text
+ENTRY_T001_STATUS=BLOCKED
+ENTRY_T002_T010_STATUS=NOT_STARTED
+ENTRY_REPOSITORY_INVENTORY_RECORDED=YES
+ENTRY_PREDECESSOR_BASELINE=FAIL
+ENTRY_FEATURE010_RED_FIXTURES=NOT_STARTED
+ENTRY_FEATURE009_T126_T142_UNCHANGED=YES
+ENTRY_PUBLIC_CONTRACT_BASELINE=PASS
+ENTRY_PRODUCTION_FEATURE010_BEHAVIOR_IMPLEMENTED=NO
+ENTRY_PHASE_2_STARTED=NO
+ENTRY_FEATURE010_SPECIFICATION_READY=YES
+ENTRY_FEATURE010_IMPLEMENTATION_STARTED=YES
+ENTRY_FEATURE010_TASK_EXECUTION_STARTED=YES
+ENTRY_HIGHEST_COMPLETED_TASK=NONE
+ENTRY_BLOCKED_TASK=T001
+ENTRY_NEXT_TASK=T001
+ENTRY_NEXT_TASK_AUTHORIZED=YES
+```
+
+### T001 predecessor-regression resolution evidence (2026-09-16)
+
+Diagnosis confirmed that both failures diverged at `ConnectorInvocationService`'s fail-closed runtime-readiness check, before binding lookup, credential resolution, manifest preparation, or upstream execution. Production readiness behavior was correct; the integration fixtures had not activated the test-only readiness dependencies required to reach their intended accepted Feature 009 assertions.
+
+- `test/integration/feature009-customer-b-portability.spec.ts`: the complete Customer B configuration intentionally uses `test_loopback_tls`, which cannot satisfy production/staging readiness. The fixture omitted the explicit `upstream` and `invocationRoute` test readiness activation already used by the accepted Shinmone local vertical. Restoring those fixture-only flags allows the required generic Customer B POST-query path to execute without weakening runtime readiness.
+- `test/integration/productized-transport-dark.spec.ts`: `validRuntimeEnvironment()` is a base trust/configuration fixture, not a complete Phase 5 business configuration. The dark-transport test therefore received `CONNECTOR_UNAVAILABLE` before its intended real unknown-binding lookup. The fixture now explicitly activates only its unrelated test dependencies and asserts a ready snapshot before sending the signed request; the real route, authenticator, and binding store still produce the approved `CONNECTOR_BINDING_INVALID` result.
+
+Verification evidence:
+
+| Command | Result |
+|---|---|
+| `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature009-customer-b-portability.spec.ts test/integration/productized-transport-dark.spec.ts` | Exit 0; 2 suites / 2 tests passed. |
+| `npm run test:integration -- --runInBand` | Exit 0; 55 suites passed, 17 gated suites skipped; 189 tests passed, 131 skipped. |
+| `npm run test:unit -- --runInBand --runTestsByPath test/unit/connector-deployment.registry.spec.ts test/unit/connector-network-policy.spec.ts test/unit/connector-service-auth.signer.spec.ts test/unit/connector-transport.client.spec.ts test/unit/productized-business-connector.adapter.spec.ts test/unit/productized-business-connector.module.spec.ts test/unit/tool-call.service.spec.ts test/unit/tool-discovery.service.spec.ts test/unit/tool-permission-precheck.service.spec.ts test/unit/tool-registry.service.spec.ts test/unit/evidence-ref.service.spec.ts test/unit/permission-filtering.spec.ts` | Exit 0; 12 suites / 146 tests passed. |
+| `npm run test:integration -- --runInBand --runTestsByPath test/integration/authorized-evidence-answer.spec.ts test/integration/authorized-tool-execution.spec.ts test/integration/customer-tool-permission.spec.ts test/integration/customer-tool-policy.spec.ts test/integration/permission-denied-safe-response.spec.ts test/integration/productized-adapter-projection.spec.ts test/integration/tool-discovery-mock-equivalence.spec.ts test/integration/tool-execution-failed-sse.spec.ts test/integration/tool-failure-safe-response.spec.ts` | Exit 0; 8 suites / 18 tests passed, 1 gated suite / 9 tests skipped. |
+| `npm --prefix apps/customer-connector-runtime test -- --runInBand` | Sandbox preserved the known listener-only result: 30 suites / 349 tests passed and 5 suites / 8 tests failed with `listen EPERM`; identical approved local rerun exited 0 with 35 suites / 357 tests passed. |
+| `npm run build && npm run typecheck` | Exit 0. |
+| `npm --prefix apps/customer-connector-runtime run build && npm --prefix apps/customer-connector-runtime run typecheck` | Exit 0. |
+| `git diff --check` | Exit 0. |
+
+The earlier T001 unit, contract, gated public-contract, eval, Identity Bridge, Gateway, focused trust-chain e2e, build, typecheck, inventory, and protected-hash evidence remains valid. Feature 009 T126–T142 remain unchecked; its specification/design/plan/tasks, manifest, Prisma schema, Gateway, Identity Bridge, public contracts, external repositories, and staging remain unchanged. No Feature 010 runtime behavior or RED fixture was introduced, and T002 was not started.
+
+```text
+PREDECESSOR_REGRESSION_1=PASS
+PREDECESSOR_REGRESSION_2=PASS
+ROOT_INTEGRATION_BASELINE=PASS
+REPOSITORY_INVENTORY_RECORDED=YES
+PREDECESSOR_BASELINE=PASS
+FEATURE010_RED_FIXTURES=NOT_STARTED
+FEATURE009_T126_T142_UNCHANGED=YES
+PUBLIC_CONTRACT_BASELINE=PASS
+FEATURE010_PRODUCTION_BEHAVIOR_IMPLEMENTED=NO
+PHASE_2_STARTED=NO
+FEATURE010_SPECIFICATION_READY=YES
+FEATURE010_IMPLEMENTATION_STARTED=YES
+FEATURE010_TASK_EXECUTION_STARTED=YES
+T001_STATUS=COMPLETE
+T002_STATUS=NOT_STARTED
+HIGHEST_COMPLETED_TASK=T001
+NEXT_TASK=T002
+NEXT_TASK_AUTHORIZED=NO
+```
+
+### Phase 1 T002–T010 completion evidence (2026-09-17)
+
+Preflight was repeated before adding RED fixtures. Both repaired predecessor cases passed together (exit 0; 2 suites / 2 tests), and the complete root integration baseline passed (exit 0; 55 suites passed, 17 gated suites skipped; 189 tests passed, 131 skipped):
+
+```text
+npm run test:integration -- --runInBand --runTestsByPath test/integration/feature009-customer-b-portability.spec.ts test/integration/productized-transport-dark.spec.ts
+npm run test:integration -- --runInBand
+```
+
+One test-only dynamic loader was added at `test/support/feature010-red-contract.helper.ts`. It converts only a missing target module or expected export into the typed diagnostic `MISSING_FEATURE010_BEHAVIOR [Tnnn]: <capability>`; nested dependency, syntax, transformation, TypeScript, fixture, and bootstrap errors propagate unchanged.
+
+T002 permanent guard evidence:
+
+| Task | Command | Result | Classification |
+|---|---|---|---|
+| T002 | `npm run test:contract -- --runInBand --runTestsByPath test/contract/feature010-scope-boundary.contract.spec.ts` | Exit 0; 1 suite / 5 tests passed. | `TASK_STATUS=COMPLETE / TEST_EXPECTED_STATE=GREEN` |
+
+The guard pins the accepted Feature 009 spec/design/plan/tasks and manifest hashes, Prisma schema/migration inventory, Gateway and Identity Bridge trees, frozen Feature 010 spec/design/plan, Assistant HTTP/DTO/SSE/history/package boundaries, T126–T142 unchecked state, one-worktree/no-submodule/no-local-frontend constraints, absence of `lastMonth`, and the 83-task sequential contract. `tasks.md` remains mutable execution evidence and T011 remains unchecked.
+
+Focused authentic RED evidence:
+
+| Task | Exact focused command | Result | Missing behavior observed |
+|---|---|---|---|
+| T003 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/conversation-context-loader.service.spec.ts` | Exit 1; 1 suite, 3/3 expected failures. | Newest-four/chronological reconstruction; exact five-dimension active scope; recursive prohibited-source/no-prose-fact cases each emitted `MISSING_FEATURE010_BEHAVIOR [T003]: bounded scoped conversation context loading`. |
+| T004 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/grounded-retrieval-router.service.spec.ts` | Exit 1; 1 suite, 8/8 expected failures. | CONTEXT_ONLY, RAG, TOOL, HYBRID, CLARIFY, INSUFFICIENT, four-need overflow, and one-Tool/no-recursion cases each emitted `MISSING_FEATURE010_BEHAVIOR [T004]: bounded non-authoritative grounded retrieval routing`. |
+| T005 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/follow-up-semantic-resolver.service.spec.ts` | Exit 1; 1 suite, 7/7 expected failures. | INHERIT, REPLACE, NEW_TOPIC, CLARIFY, explicit-value precedence, contradictory frame, and tied-compatible-frame cases each emitted `MISSING_FEATURE010_BEHAVIOR [T005]: deterministic semantic follow-up resolution`. |
+| T006 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/grounded-document-evidence.normalizer.spec.ts` | Exit 1; 1 suite, 6/6 expected failures. | Bounded stable normalization, EvidenceRef linkage, four malformed provenance variants, and untrusted prompt-like evidence each emitted `MISSING_FEATURE010_BEHAVIOR [T006]: bounded document evidence normalization`; no embedded citation field is required. |
+| T007 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/grounded-tool-evidence.normalizer.spec.ts` | Exit 1; 1 suite, 14/14 expected failures. | Valid `status=success` / `executionStatus=executed` projected Tool evidence; canonical failed/blocked/pending/not-executed lifecycle states; permission-denied and evidence-conflict result states; failed projection; detached evidence; raw, pre-projection, undeclared, credential, and permission-snapshot rejection each emitted `MISSING_FEATURE010_BEHAVIOR [T007]: projected-only Tool evidence normalization`. |
+| T008 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/grounded-context-bundle.service.spec.ts` | Exit 1; 1 suite, 9/9 expected failures. | COMPLETE/PARTIAL/INSUFFICIENT, exact `requestedNeeds[].id` to `needResults[].needId` separation/linkage, stable linked immutable assembly, and four recursive authority-rejection cases each emitted `MISSING_FEATURE010_BEHAVIOR [T008]: safe immutable GroundedContextBundleV1 assembly`. |
+| T009 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/prior-grounded-evidence-eligibility.service.spec.ts` | Exit 1; 1 suite, 11/11 expected failures. | Eligible document and canonical successful/executed Tool items, independent complete/incomplete Hybrid eligibility information, plus prose, stale, revoked, failed, raw, malformed, ungrounded, and cross-Customer rejection cases each emitted `MISSING_FEATURE010_BEHAVIOR [T009]: current-authorized prior grounded evidence reuse`; mode and coverage selection are not assigned to this service. |
+| T010 | `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-grounded-retrieval.spec.ts` | Exit 1; 1 suite; 2 GREEN harness cases passed and 8 authentic RED cases failed. | Existing document-only and Tool-only paths passed exact lane-count/evidence checks. Hybrid, compatible follow-up re-entry, ambiguous CLARIFY metadata, document/Tool/Hybrid zero-call recall, unsupported-lastMonth metadata, and safe persisted bundle metadata failed on direct missing Feature 010 behavior. Every failing test is labeled `FAIL_REASON=MISSING_FEATURE010_BEHAVIOR`. |
+
+All T003–T009 files transformed and compiled before emitting the typed missing-capability diagnostic. T010 bootstrapped the existing `createUs1TestAppWithState` runtime and exercised HTTP/SSE plus in-memory persistence; it did not add a second runtime or a public bundle response. No skip/todo, unconditional throw, weakened expectation, database failure, missing static import, or environment failure is accepted as RED. Totals after contract reconciliation: 58 unit RED assertions plus 8 integration RED assertions, all authentic; 2 T010 predecessor/setup assertions remain GREEN.
+
+Phase 1 contract reconciliation on 2026-09-17 confirmed and corrected five fixture mismatches without changing frozen product scope or task definitions: T006 keeps `GroundedDocumentEvidence` separate from `GroundedCitation`; T008 uses `RetrievalNeed.id` linked to `GroundedRetrievalNeedResult.needId`; T009 reports item eligibility without selecting `CONTEXT_ONLY` or coverage; T010 reuses persisted `structured_record` Tool EvidenceRefs and requires only the approved safe metadata subset, not transient citations. T007/T009 now use the existing ToolCall lifecycle (`status=success`, `executionStatus=executed`) and model denial/conflict as decision/grounding outcomes rather than invented ToolCall statuses. Corrected reruns: T002 5/5 GREEN; T003–T009 respectively 3/3, 8/8, 7/7, 6/6, 14/14, 9/9, and 11/11 authentic RED; T010 2 GREEN and 8 authentic RED. Post-correction predecessor results remained GREEN: unit 564 passed/3 skipped, repaired Feature 009 pair 2/2 passed, integration 189 passed/131 skipped, gated contracts 83/83 passed, and eval 10 passed/3 skipped.
+
+Predecessor and compatibility reruns after fixture creation:
+
+| Command | Result |
+|---|---|
+| Explicit predecessor unit inventory via `npm run test:unit -- --runInBand --runTestsByPath <all 82 predecessor unit files>` excluding the seven Feature 010 RED files | Exit 0; 81 suites passed, 1 skipped; 564 tests passed, 3 skipped. |
+| Explicit predecessor contract inventory via `npm run test:contract -- --runInBand --runTestsByPath <13 predecessor contract files>` excluding T002 | Sandbox failed only on listener `EPERM`; identical approved local rerun exit 0; 10 suites passed, 3 skipped; 44 tests passed, 39 skipped. |
+| `RUN_CUSTOMER_US1_TESTS=true npm run test:contract -- --runInBand --runTestsByPath <13 predecessor contract files>` | Approved local run exit 0; 13 suites / 83 tests passed. |
+| Explicit predecessor integration inventory via `npm run test:integration -- --runInBand --runTestsByPath <72 predecessor integration files>` excluding T010 | Sandbox failed only on listener/database-connect `EPERM`; identical approved local rerun exit 0; 55 suites passed, 17 skipped; 189 tests passed, 131 skipped. |
+| Explicit eval inventory via `npm run test:eval -- --runInBand --runTestsByPath test/eval/customer-rag-isolation.eval.spec.ts test/eval/internal-assistant-core.eval.spec.ts` | Sandbox failed only on listener `EPERM`; identical approved local rerun exit 0; 1 suite passed, 1 skipped; 10 tests passed, 3 skipped. |
+| `npm run test:unit -- --runInBand --runTestsByPath test/unit/connector-deployment.registry.spec.ts test/unit/connector-network-policy.spec.ts test/unit/connector-service-auth.signer.spec.ts test/unit/connector-transport.client.spec.ts test/unit/productized-business-connector.adapter.spec.ts test/unit/productized-business-connector.module.spec.ts test/unit/tool-call.service.spec.ts test/unit/tool-discovery.service.spec.ts test/unit/tool-permission-precheck.service.spec.ts test/unit/tool-registry.service.spec.ts test/unit/evidence-ref.service.spec.ts test/unit/permission-filtering.spec.ts` | Exit 0; 12 suites / 146 tests passed. |
+| Focused integration inventory for the repaired pair plus Tool, connector, projection, EvidenceRef, permission, transport, RAG, SSE, and history paths | Exit 0; 13 suites passed, 3 gated suites skipped; 26 tests passed, 11 skipped. |
+| `npm run build` / `npm run typecheck` | Both exit 0. |
+| `npm --prefix apps/customer-connector-runtime run build` / `npm --prefix apps/customer-connector-runtime run typecheck` | Both exit 0. |
+| `git diff --check` | Exit 0. |
+
+The exact shell inventories represented by the three bounded placeholders above were:
+
+```zsh
+unit_files=(${(f)"$(rg --files test/unit | rg '\.spec\.ts$' | rg -v 'conversation-context-loader\.service\.spec\.ts|grounded-retrieval-router\.service\.spec\.ts|follow-up-semantic-resolver\.service\.spec\.ts|grounded-document-evidence\.normalizer\.spec\.ts|grounded-tool-evidence\.normalizer\.spec\.ts|grounded-context-bundle\.service\.spec\.ts|prior-grounded-evidence-eligibility\.service\.spec\.ts')"}); npm run test:unit -- --runInBand --runTestsByPath ${unit_files[@]}
+contract_files=(${(f)"$(rg --files test/contract | rg '\.spec\.ts$' | rg -v 'feature010-scope-boundary\.contract\.spec\.ts')"}); npm run test:contract -- --runInBand --runTestsByPath ${contract_files[@]}
+contract_files=(${(f)"$(rg --files test/contract | rg '\.spec\.ts$' | rg -v 'feature010-scope-boundary\.contract\.spec\.ts')"}); RUN_CUSTOMER_US1_TESTS=true npm run test:contract -- --runInBand --runTestsByPath ${contract_files[@]}
+integration_files=(${(f)"$(rg --files test/integration | rg '\.spec\.ts$' | rg -v 'feature010-grounded-retrieval\.spec\.ts')"}); npm run test:integration -- --runInBand --runTestsByPath ${integration_files[@]}
+```
+
+The exact focused integration regression command was:
+
+```text
+npm run test:integration -- --runInBand --runTestsByPath test/integration/feature009-customer-b-portability.spec.ts test/integration/productized-transport-dark.spec.ts test/integration/authorized-evidence-answer.spec.ts test/integration/authorized-tool-execution.spec.ts test/integration/customer-tool-permission.spec.ts test/integration/customer-tool-policy.spec.ts test/integration/permission-denied-safe-response.spec.ts test/integration/productized-adapter-projection.spec.ts test/integration/tool-discovery-mock-equivalence.spec.ts test/integration/tool-execution-failed-sse.spec.ts test/integration/tool-failure-safe-response.spec.ts test/integration/rag-sop-field-explanation.spec.ts test/integration/retrieval-run-candidates.spec.ts test/integration/message-history-evidence-link.spec.ts test/integration/customer-message-history.spec.ts test/integration/customer-sse-isolation.spec.ts
+```
+
+Final protected hashes equal the Phase 1 entry values: Feature 009 spec `d73dfe52…`, design `bbec3cd7…`, plan `00fc5b55…`, tasks `ebb7089a…`, manifest `1d1747eb…`; Prisma schema `e1467399…`; Feature 010 spec `3c33d673…`, design `c060bcf6…`, plan `c6d151ca…`; Assistant controller `0ad4fada…`, DTO `3c2f59a2…`, SSE event types `9a580049…`, Assistant SSE types `e3020a68…`, history types `06acd4f1…`, package inventory `970e99f6…`, and `.specify/feature.json` `718abaac…`. The T002 tree hashes also remain equal for migrations `8a93d108…`, Gateway `0354af85…`, and Identity Bridge `d3cc54a7…`.
+
+Phase 1 changed-path inventory is limited to the mutable `tasks.md`, the two accepted predecessor fixture repairs, nine Feature 010 test files, and one test-only RED helper. The pre-existing untracked `apps/customer-connector-runtime/test/fixtures/phase6-upstream.key` remains untouched. There is no production source, schema/migration, public contract, Feature 009 planning/manifest/capability, Gateway, Identity Bridge, external repository, or staging diff.
+
+```text
+T001_T010_STATUS=COMPLETE
+REPOSITORY_INVENTORY_RECORDED=YES
+PREDECESSOR_BASELINE=PASS
+FEATURE010_SCOPE_GUARD=PASS
+FEATURE010_RED_FIXTURES=CAPTURED
+FEATURE010_RED_FAILURES_AUTHENTIC=YES
+FEATURE009_T126_T142_UNCHANGED=YES
+PUBLIC_CONTRACT_BASELINE=PASS
+PRODUCTION_FEATURE010_BEHAVIOR_IMPLEMENTED=NO
+PHASE_2_STARTED=NO
+FEATURE010_SPECIFICATION_READY=YES
+FEATURE010_IMPLEMENTATION_STARTED=YES
+FEATURE010_TASK_EXECUTION_STARTED=YES
+HIGHEST_COMPLETED_TASK=T010
+NEXT_TASK=T011
+NEXT_TASK_AUTHORIZED=NO
+```
 
 ---
 
@@ -282,7 +506,9 @@ FEATURE010_FINAL_LLM_GENERATION=NO
 FEATURE010_BACKEND_LOCAL_ACCEPTANCE=PASS
 ```
 
-## Planning Freeze
+## Planning-Freeze Baseline State (before authorized implementation execution)
+
+The following markers record the approved planning-freeze baseline only. Current execution status is recorded in the Phase 1 evidence above.
 
 ```text
 FEATURE010_SPECIFICATION_READY=YES

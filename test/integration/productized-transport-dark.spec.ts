@@ -8,6 +8,7 @@ import { Test } from '@nestjs/testing';
 import { parseConnectorInvocationRequestV1 } from '@internal-ai-assistant/connector-runtime-contract';
 import { createCustomerConnectorRuntimeApplication } from '../../apps/customer-connector-runtime/src/main';
 import { validRuntimeEnvironment } from '../../apps/customer-connector-runtime/test/fixtures/runtime-environment';
+import { RuntimeReadinessRegistry, RuntimeReadinessService } from '../../apps/customer-connector-runtime/src/health/readiness.service';
 import { ProductizedBusinessConnectorModule, ProductizedBusinessConnectorTransportService } from '../../src/connectors/productized-business/productized-business-connector.module';
 
 describe('dark central transport to real Customer-local Phase 6 route',()=>{
@@ -15,6 +16,9 @@ describe('dark central transport to real Customer-local Phase 6 route',()=>{
     const pair=generateKeyPairSync('rsa',{modulusLength:2048});const publicJwk={...pair.publicKey.export({format:'jwk'}),kid:'central-phase7',alg:'RS256',use:'sig'};
     const runtimeEnv=validRuntimeEnvironment();runtimeEnv.CONNECTOR_CENTRAL_TRUST_KEYS_JSON=JSON.stringify([{kind:'central-invocation',profileKey:'central-phase7',typ:'assistant-connector-service+jwt',issuer:'urn:assistant:connector',subject:'central-adapter',audience:'urn:assistant:connector:customer-b:inventory-b:customer-b-inventory:business:customer-b-inventory-connector-1',keyDomain:'central-phase7-domain',trustedContext:{customerId:'customer-b',integrationId:'inventory-b',hostApp:'customer-b-inventory',connectorInstanceId:'customer-b-inventory-connector-1'},keys:[{kid:'central-phase7',status:'active',publicJwk}]}]);
     const runtime=await createCustomerConnectorRuntimeApplication(runtimeEnv);await runtime.init();
+    const runtimeReadiness=runtime.get(RuntimeReadinessRegistry);
+    for(const dependency of ['bindingRoute','credentialProfiles','manifest','upstream','invocationRoute'] as const)runtimeReadiness.setReady(dependency,true);
+    expect(runtime.get(RuntimeReadinessService).snapshot()).toMatchObject({configurationValid:true,ready:true,missing:[]});
     const cert=readFileSync('apps/customer-connector-runtime/test/fixtures/phase6-upstream.crt');const key=readFileSync('apps/customer-connector-runtime/test/fixtures/phase6-upstream.key');
     const server=createServer({cert,key},runtime.getHttpAdapter().getInstance());await new Promise<void>((resolve,reject)=>server.listen(0,'127.0.0.1',resolve).once('error',reject));const port=(server.address() as AddressInfo).port;
     const dir=mkdtempSync(join(tmpdir(),'phase7-key-'));const privatePath=join(dir,'active.pem');writeFileSync(privatePath,pair.privateKey.export({format:'pem',type:'pkcs8'}));

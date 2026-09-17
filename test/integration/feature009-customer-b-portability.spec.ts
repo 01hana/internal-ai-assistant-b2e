@@ -27,6 +27,7 @@ import type { MappedReadRequest } from '../../apps/customer-connector-runtime/sr
 import { ConnectorDestinationPolicy } from '../../apps/customer-connector-runtime/src/upstream/connector-destination-policy';
 import { SafeUpstreamHttpClient } from '../../apps/customer-connector-runtime/src/upstream/safe-upstream-http-client';
 import { UpstreamExecutionService } from '../../apps/customer-connector-runtime/src/upstream/upstream-execution.service';
+import { RuntimeReadinessRegistry } from '../../apps/customer-connector-runtime/src/health/readiness.service';
 import { customerBOperation } from '../../apps/customer-connector-runtime/test/fixtures/phase5-manifests';
 import { ProductizedBusinessConnectorTransportService } from '../../src/connectors/productized-business/productized-business-connector.module';
 import { createProductizedAdapterRegistrations } from '../../src/connectors/productized-business/productized-adapter-binding.registry';
@@ -95,6 +96,9 @@ describe('Feature 009 Synthetic Customer B portability', () => {
       .compile();
     const runtimeApp = runtimeModule.createNestApplication({ bodyParser: false });
     await runtimeApp.init();
+    const runtimeReadiness = runtimeModule.get(RuntimeReadinessRegistry);
+    runtimeReadiness.setReady('upstream', true);
+    runtimeReadiness.setReady('invocationRoute', true);
     const runtimeServer = createServer({ cert: CERTIFICATE, key: PRIVATE_KEY }, runtimeApp.getHttpAdapter().getInstance());
     await listen(runtimeServer);
 
