@@ -80,10 +80,10 @@ describe('Traditional Chinese tokenizer', () => {
     const lexiconTerms = DOMAIN_LEXICON.flatMap((entry) => entry.terms);
     const result = await adapter.tokenize({
       requestId: 'req-tokenizer-lexicon',
-      text: '工單 製令 料號 品號 SKU 訂單 銷售單 客戶 供應商 庫存 狀態 進度 可用 可用量 歷史 存量 筆數 幾筆 幾張 新增 查詢 查找 查閱 取消 更新 修改 核准 刪除'
+      text: '工單 製令 料號 品號 SKU 訂單 銷售單 客戶 供應商 庫存 旅遊補助 員工旅遊補助 申請期限 補助規定 補助政策 狀態 進度 可用 可用量 歷史 存量 筆數 幾筆 幾張 新增 查詢 查找 查閱 取消 更新 修改 核准 刪除'
     });
     const termsWithoutTimeOrSingleCharRead = lexiconTerms.filter(
-      (term) => !['查', '看', '確認', '今天', '昨天', '本週', '上週', '本月', '這個月', '近三個月'].includes(term)
+      (term) => !['查', '看', '確認', '今天', '昨天', '本週', '上週', '本月', '這個月', '上個月', '近三個月'].includes(term)
     );
 
     expect(result.tokens.map((token) => token.value)).toEqual(expect.arrayContaining(termsWithoutTimeOrSingleCharRead));

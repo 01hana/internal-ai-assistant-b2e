@@ -100,6 +100,30 @@ describe('Feature 010 grounded retrieval router RED (T004)', () => {
     expect(plan.needs).toEqual([{ id: 'need-1', kind: 'UNSUPPORTED', reasonCode: 'UNSUPPORTED_RETRIEVAL_NEED' }]);
     expect(JSON.stringify(plan)).not.toContain('token=secret');
   });
+
+  it('lets a CLARIFY follow-up decision override generic decomposition', () => {
+    const plan = router().route({
+      decomposedNeeds: [{ kind: 'TOOL', frame: {} }],
+      followUpResolution: {
+        kind: 'CLARIFY', reasonCode: 'VAGUE_DEIXIS', inheritedDimensions: [], replacedDimensions: []
+      }
+    });
+    expect(plan).toMatchObject({ mode: 'CLARIFY', reasonCode: 'RETRIEVAL_NEED_AMBIGUOUS' });
+    expect(plan.needs).toEqual([{ id: 'need-1', kind: 'UNSUPPORTED', reasonCode: 'VAGUE_DEIXIS' }]);
+  });
+
+  it('routes only the whitelisted resolved follow-up frame without execution authority', () => {
+    const dimension = { value: 'inventory', sourceMessageId: 'message-1', source: 'inherited', confidence: 1 };
+    const plan = router().route({
+      decomposedNeeds: [{ kind: 'TOOL' }],
+      followUpResolution: {
+        kind: 'INHERIT', reasonCode: 'OMITTED_DIMENSIONS_INHERITED', inheritedDimensions: ['resource'], replacedDimensions: [],
+        resolvedFrame: { resource: dimension, topicKey: 'inventory', canonicalToolKey: 'forbidden', permissionResult: 'allowed' }
+      }
+    });
+    expect(plan).toMatchObject({ mode: 'TOOL', resolvedFrame: { resource: { value: 'inventory' } } });
+    expect(JSON.stringify(plan)).not.toMatch(/canonicalToolKey|permissionResult/);
+  });
 });
 
 function router(): Router {

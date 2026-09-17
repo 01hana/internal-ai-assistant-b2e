@@ -30,6 +30,11 @@ export function parseTimeRanges(text: string, now: Date, timezone: string): Time
     const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0));
     ranges.push(toRange('this_month', start, end, timezone, text.includes('這個月') ? '這個月' : '本月'));
   }
+  if (text.includes('上個月')) {
+    const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
+    const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0));
+    ranges.push(toRange('last_month', start, end, timezone, '上個月'));
+  }
   if (text.includes('近三個月')) {
     ranges.push(toRange('last_three_months', addMonths(today, -3), today, timezone, '近三個月'));
   }

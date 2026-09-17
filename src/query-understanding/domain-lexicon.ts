@@ -15,6 +15,9 @@ export const DOMAIN_LEXICON: DomainLexiconEntry[] = [
   { terms: ['訂單', '銷售單'], normalizedTerm: 'order', category: 'resource', phraseCategory: 'resource' },
   { terms: ['客戶', '供應商'], normalizedTerm: 'businessPartner', category: 'resource', phraseCategory: 'resource' },
   { terms: ['庫存'], normalizedTerm: 'inventory', category: 'resource', phraseCategory: 'resource' },
+  { terms: ['旅遊補助', '員工旅遊補助'], normalizedTerm: 'travelSubsidyPolicy', category: 'resource', phraseCategory: 'resource' },
+  { terms: ['申請期限'], normalizedTerm: 'applicationDeadline', category: 'metric', phraseCategory: 'metric' },
+  { terms: ['補助規定', '補助政策'], normalizedTerm: 'policyOverview', category: 'metric', phraseCategory: 'metric' },
   { terms: ['狀態'], normalizedTerm: 'status', category: 'metric', phraseCategory: 'metric' },
   { terms: ['進度'], normalizedTerm: 'progress', category: 'metric', phraseCategory: 'metric' },
   { terms: ['可用', '可用量'], normalizedTerm: 'availability', category: 'metric', phraseCategory: 'metric' },
@@ -28,8 +31,9 @@ export const DOMAIN_LEXICON: DomainLexiconEntry[] = [
   { terms: ['取消'], normalizedTerm: 'cancel', category: 'operation', phraseCategory: 'intent' },
   { terms: ['核准'], normalizedTerm: 'approve', category: 'operation', phraseCategory: 'intent' },
   { terms: ['刪除'], normalizedTerm: 'delete', category: 'operation', phraseCategory: 'intent' },
-  { terms: ['今天', '昨天', '本週', '上週', '本月', '這個月', '近三個月'], normalizedTerm: 'timeRange', category: 'time', phraseCategory: 'time' },
-  { terms: ['本月', '這個月'], normalizedTerm: 'this_month', category: 'time', phraseCategory: 'time' }
+  { terms: ['今天', '昨天', '本週', '上週', '本月', '這個月', '上個月', '近三個月'], normalizedTerm: 'timeRange', category: 'time', phraseCategory: 'time' },
+  { terms: ['本月', '這個月'], normalizedTerm: 'this_month', category: 'time', phraseCategory: 'time' },
+  { terms: ['上個月'], normalizedTerm: 'last_month', category: 'time', phraseCategory: 'time' }
 ];
 
 export const BUSINESS_TERMS = DOMAIN_LEXICON.flatMap((entry) => entry.terms);

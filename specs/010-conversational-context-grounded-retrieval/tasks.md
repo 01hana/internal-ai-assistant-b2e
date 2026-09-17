@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/010-conversational-context-grounded-retrieval`  
 **Input**: `spec.md`, `design.md`, and `plan.md` in `specs/010-conversational-context-grounded-retrieval/`  
-**Implementation Status**: Phase 3 T024–T033 complete; Phase 4 not started
+**Implementation Status**: Phase 4 T034–T043 complete; Phase 5 not started
 **Testing Rule**: For every changed runtime behavior, run the named focused test first and retain authentic RED evidence, then implement and retain GREEN evidence.
 
 ## Format
@@ -403,18 +403,67 @@ NEXT_TASK_AUTHORIZED=NO
 
 **Story**: US1 — Semantic follow-up and retrieval re-entry
 
-- [ ] T034 [P] [US1] Add explicit-override, omission-only inheritance, incompatible-topic, contradiction, and tied-frame cases in `test/unit/follow-up-semantic-resolver.service.spec.ts`
-- [ ] T035 [P] [US1] Add `那申請期限呢？`, `那個呢？`, compatible entity replacement, and `上個月呢？` routing cases in `test/integration/feature010-followup-routing.spec.ts`
-- [ ] T036 [P] [US1] Add tests proving prior Tool keys, permissions, RAG scores, and document claims never enter authority inputs in `test/unit/follow-up-retrieval-authority.guard.spec.ts`
-- [ ] T037 [US1] Implement INHERIT, REPLACE, NEW_TOPIC, and CLARIFY resolution in `src/assistant/conversation/follow-up-semantic-resolver.service.ts`
-- [ ] T038 [US1] Integrate current explicit-frame extraction and bounded prior frames in `src/query-understanding/rule-based-query-understanding.pipeline.ts`
-- [ ] T039 [US1] Convert resolved semantics back into non-authoritative routing inputs in `src/retrieval/grounded-retrieval-router.service.ts`
-- [ ] T040 [US1] Route document needs to canonical RAG intent and Tool needs to generic discovery signals in `src/assistant/planning/assistant-planning.service.ts`
-- [ ] T041 [US1] Persist safe resolution kind/provenance/reason audit metadata in `src/assistant/conversation/conversation-audit.service.ts`
-- [ ] T042 [US1] Complete zero-retrieval ambiguity and zero-ToolCall unsupported-last-month integration coverage in `test/integration/feature010-followup-routing.spec.ts`
-- [ ] T043 [US1] Run T034–T036/T042 and existing discovery/query-understanding evals; record US1 GREEN evidence in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+- [X] T034 [P] [US1] Add explicit-override, omission-only inheritance, incompatible-topic, contradiction, and tied-frame cases in `test/unit/follow-up-semantic-resolver.service.spec.ts`
+- [X] T035 [P] [US1] Add `那申請期限呢？`, `那個呢？`, compatible entity replacement, and `上個月呢？` routing cases in `test/integration/feature010-followup-routing.spec.ts`
+- [X] T036 [P] [US1] Add tests proving prior Tool keys, permissions, RAG scores, and document claims never enter authority inputs in `test/unit/follow-up-retrieval-authority.guard.spec.ts`
+- [X] T037 [US1] Implement INHERIT, REPLACE, NEW_TOPIC, and CLARIFY resolution in `src/assistant/conversation/follow-up-semantic-resolver.service.ts`
+- [X] T038 [US1] Integrate current explicit-frame extraction and bounded prior frames in `src/query-understanding/rule-based-query-understanding.pipeline.ts`
+- [X] T039 [US1] Convert resolved semantics back into non-authoritative routing inputs in `src/retrieval/grounded-retrieval-router.service.ts`
+- [X] T040 [US1] Route document needs to canonical RAG intent and Tool needs to generic discovery signals in `src/assistant/planning/assistant-planning.service.ts`
+- [X] T041 [US1] Persist safe resolution kind/provenance/reason audit metadata in `src/assistant/conversation/conversation-audit.service.ts`
+- [X] T042 [US1] Complete zero-retrieval ambiguity and zero-ToolCall unsupported-last-month integration coverage in `test/integration/feature010-followup-routing.spec.ts`
+- [X] T043 [US1] Run T034–T036/T042 and existing discovery/query-understanding evals; record US1 GREEN evidence in `specs/010-conversational-context-grounded-retrieval/tasks.md`
 
 **Checkpoint**: Follow-ups re-enter current retrieval routing and inherit no execution authority.
+
+### Phase 4 execution evidence — T034–T043 complete (2026-09-17)
+
+T005 was captured before implementation as an authentic missing-capability RED: exit 1 with all 7/7 original cases failing only through `MISSING_FEATURE010_BEHAVIOR [T005]`. The completed resolver suite retains those cases and adds provenance, document-aspect replacement, inherited-topic discard, and vague-deixis coverage.
+
+| Task/gate | Exact command | Result |
+|---|---|---|
+| T034/T037 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/follow-up-semantic-resolver.service.spec.ts` | Exit 0; 1 suite / 11 tests passed. INHERIT, REPLACE, NEW_TOPIC, CLARIFY, explicit-current precedence, omission-only inheritance, original-message provenance, contradiction, tied frames, and vague deixis passed. |
+| T035/T042 | `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-followup-routing.spec.ts` | Exit 0; 1 suite / 4 tests passed. Travel-policy aspect replacement routed to one RAG run and zero ToolCalls; vague deixis made zero calls; Customer B SKU replacement executed exactly one newly discovered/current-authorized ToolCall; `last_month` resolved but made zero calls. |
+| T036 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/follow-up-retrieval-authority.guard.spec.ts` | Exit 0; 1 suite / 3 tests passed. Prior Tool keys, permission results, connector/raw data, RAG score, and document claims were discarded before resolver, discovery, and router authority inputs; an independent `this_month` request retained legacy discovery behavior. |
+| T038–T041 focused GREEN | `npm run test:unit -- --runInBand --runTestsByPath test/unit/follow-up-semantic-resolver.service.spec.ts test/unit/follow-up-retrieval-authority.guard.spec.ts test/unit/grounded-retrieval-router.service.spec.ts test/unit/query-understanding.service.spec.ts test/unit/query-task-decomposer.spec.ts test/unit/query-normalization.spec.ts test/unit/assistant-planning.service.spec.ts` | Exit 0; 7 suites / 52 tests passed. Resolved semantic frames re-enter document routing or current Tool discovery, and safe resolution/planning audit metadata is recorded. |
+| Planning integration | `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-followup-routing.spec.ts test/integration/assistant-planning.spec.ts` | Exit 0; 2 suites / 5 tests passed. |
+| T002/T022/T026 contracts | `npm run test:contract -- --runInBand --runTestsByPath test/contract/feature010-scope-boundary.contract.spec.ts test/contract/feature010-conversation-context.contract.spec.ts test/contract/grounded-context-bundle.contract.spec.ts` | Exit 0; 3 suites / 31 tests passed. Public boundaries, frozen plans, Feature 009, and bundle type contracts remain protected. |
+| Phase 2/3 focused regression | `npm run test:unit -- --runInBand --runTestsByPath test/unit/conversation-context-loader.service.spec.ts test/unit/query-understanding-pipeline-wiring.spec.ts test/unit/grounded-retrieval-router.service.spec.ts`; `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-context-isolation.spec.ts` | Exit 0; unit 3 suites / 27 tests and integration 1 suite / 8 tests passed. |
+| Later-phase RED state | T006, T007, T008, and T009 run separately with their existing focused `npm run test:unit -- --runInBand --runTestsByPath <file>` commands | Expected exit 1 only through typed missing-capability diagnostics: T006 6/6, T007 14/14, T008 9/9, T009 11/11. No evidence normalization, reuse, or bundle assembly exists. |
+| T010 later-phase integration | `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-grounded-retrieval.spec.ts` | Expected exit 1; 2 setup proofs passed and 8 Hybrid/reuse/bundle-oriented cases remained RED. Phase 4 follow-up behavior is asserted through its dedicated internal planning/audit integration suite rather than new AnswerDecision/SSE metadata. |
+| Predecessor unit inventory | `npm run test:unit -- --runInBand --testPathIgnorePatterns='grounded-document-evidence.normalizer|grounded-tool-evidence.normalizer|grounded-context-bundle.service|prior-grounded-evidence-eligibility'` | Exit 0; 85 suites passed, 1 skipped; 606 tests passed, 3 skipped. |
+| Predecessor integration inventory | `npm run test:integration -- --runInBand --testPathIgnorePatterns='feature010-grounded-retrieval'` | Exit 0; 57 suites passed, 17 skipped; 201 tests passed, 131 skipped. |
+| Contract/eval inventories | `npm run test:contract -- --runInBand`; `npm run test:eval -- --runInBand` | Both exit 0. Contracts: 13 passed / 3 skipped suites, 75 passed / 39 skipped tests. Evals: 1 passed / 1 skipped suite, 10 passed / 3 skipped tests. |
+| Compile/diff gates | `npm run build`; `npm run typecheck`; `git diff --check` | Exit 0 for all commands. |
+| Phase 4 focused lint | `npx eslint <20 changed Phase 4 source/test paths>` | Exit 0 with no findings. Full `npm run lint` still reports only the four documented unrelated pre-existing errors in connector-runtime, Identity Bridge, and productized transport files. |
+
+The in-memory Prisma test helper now normalizes Prisma JSON-null sentinels to the database-equivalent `null`; this permits the existing scoped context repository to reconstruct persisted semantic frames without changing production context semantics. No schema, endpoint, DTO, SSE/history shape, Feature 009 manifest/task, connector capability, external repository, staging state, evidence eligibility, current-authority reuse, Hybrid execution, bundle assembly, or LLM behavior changed. T044 remains unchecked and unauthorized.
+
+```text
+T034_T043_STATUS=COMPLETE
+SEMANTIC_FOLLOWUP=PASS
+FOLLOWUP_DECISIONS_DETERMINISTIC=YES
+EXPLICIT_CURRENT_VALUES_WIN=YES
+OMISSION_ONLY_INHERITANCE=PASS
+NEW_TOPIC_DISCARDS_INHERITED_TOPIC=PASS
+AMBIGUOUS_FOLLOWUP_CLARIFY=PASS
+FOLLOWUP_REENTERS_RETRIEVAL_ROUTING=YES
+DOCUMENT_FOLLOWUP_ROUTE=RAG
+COMPATIBLE_TOOL_FOLLOWUP_REENTERS_DISCOVERY=YES
+PREVIOUS_TOOLCALL_EXECUTION_AUTHORITY=NO
+PRIOR_PERMISSION_AUTHORITY=NO
+PRIOR_DOCUMENT_FACT_AUTHORITY=NO
+LAST_MONTH_SEMANTIC_RESOLUTION=SUPPORTED
+LAST_MONTH_EXECUTION_CAPABILITY=NO
+LAST_MONTH_TOOLCALL_COUNT=0
+MAX_RETRIEVAL_NEEDS=4
+MAX_TOOL_NEEDS=1
+PUBLIC_ASSISTANT_API_CHANGE=NO
+PHASE_5_STARTED=NO
+HIGHEST_COMPLETED_TASK=T043
+NEXT_TASK=T044
+NEXT_TASK_AUTHORIZED=NO
+```
 
 ---
 

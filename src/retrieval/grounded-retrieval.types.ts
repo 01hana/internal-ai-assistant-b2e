@@ -1,4 +1,4 @@
-import type { ConversationSemanticFrame } from '../assistant/conversation/conversation.types';
+import type { ConversationSemanticFrame, FollowUpResolutionDecision } from '../assistant/conversation/conversation.types';
 
 export const RETRIEVAL_MODES = [
   'CONTEXT_ONLY',
@@ -86,4 +86,5 @@ export interface GroundedRetrievalRoutingInput {
   readonly decomposedNeeds: readonly RetrievalNeedCandidate[];
   readonly resolvedFrame?: ConversationSemanticFrame;
   readonly coveredByPriorEvidence?: boolean;
+  readonly followUpResolution?: FollowUpResolutionDecision;
 }

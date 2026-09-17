@@ -14,6 +14,8 @@ import {
 } from './assistant-planning.types';
 import { ConversationContextLoaderService } from '../conversation/conversation-context-loader.service';
 import { ConversationAuditService } from '../conversation/conversation-audit.service';
+import { GroundedRetrievalRouterService } from '../../retrieval/grounded-retrieval-router.service';
+import type { GroundedRetrievalPlan, RetrievalNeedCandidate } from '../../retrieval/grounded-retrieval.types';
 
 const MAX_ARGUMENT_KEYS = 32;
 const MAX_ARGUMENT_DEPTH = 4;
@@ -31,7 +33,8 @@ export class AssistantPlanningService {
     private readonly prisma: PrismaService,
     private readonly auditWriter: AuditWriterService,
     @Optional() private readonly conversationContextLoader?: ConversationContextLoaderService,
-    @Optional() private readonly conversationAudit?: ConversationAuditService
+    @Optional() private readonly conversationAudit?: ConversationAuditService,
+    @Optional() private readonly groundedRetrievalRouter?: GroundedRetrievalRouterService
   ) {}
 
   async createPlan(input: AssistantPlanningInput): Promise<AssistantPlanningResult> {
@@ -69,6 +72,25 @@ export class AssistantPlanningService {
       assistantContextState: input.assistantContextState,
       priorConversationContext
     });
+    if (output.followUpResolution && this.conversationAudit) {
+      await this.conversationAudit.recordResolution({
+        customerScope: input.customerScope,
+        requestId: input.requestId,
+        sessionId: input.sessionId,
+        messageId: input.messageId,
+        durationMs: Math.max(0, Date.now() - startedAt.getTime()),
+        decision: output.followUpResolution,
+        priorFrameCount: priorConversationContext?.semanticFrames.length ?? 0
+      });
+    }
+    const groundedRetrievalPlan = this.groundedRetrievalRouter && output.followUpResolution
+      ? this.groundedRetrievalRouter.route({
+          requestId: input.requestId,
+          decomposedNeeds: toRetrievalNeedCandidates(input.text, output),
+          resolvedFrame: output.followUpResolution.resolvedFrame,
+          followUpResolution: output.followUpResolution
+        })
+      : undefined;
     const executionPlan = await this.prisma.db.executionPlan.create({
       data: toExecutionPlanCreateInput(input, output)
     });
@@ -85,6 +107,10 @@ export class AssistantPlanningService {
         taskType: executionPlan.taskType,
         decision: executionPlan.decision,
         queryUnderstandingId: persisted.id,
+        ...(groundedRetrievalPlan ? {
+          retrievalMode: groundedRetrievalPlan.mode,
+          retrievalReasonCode: groundedRetrievalPlan.reasonCode
+        } : {}),
         ...createRuntimeDecisionMetadata({
           durationMs: Math.max(0, Date.now() - startedAt.getTime())
         })
@@ -95,9 +121,27 @@ export class AssistantPlanningService {
       queryUnderstanding: output,
       persistedQueryUnderstanding: persisted,
       executionPlan: mapExecutionPlan(executionPlan),
-      decision: executionPlan.decision
+      decision: executionPlan.decision,
+      groundedRetrievalPlan
     };
   }
+}
+
+function toRetrievalNeedCandidates(text: string, output: QueryUnderstandingOutput): readonly RetrievalNeedCandidate[] {
+  if (output.followUpResolution?.kind === 'CLARIFY') {
+    return [{ kind: 'AMBIGUOUS', reasonCode: output.followUpResolution.reasonCode }];
+  }
+  const frame = output.followUpResolution?.resolvedFrame;
+  if (frame?.timeRange?.value === 'last_month' && output.candidateTools.length === 0) {
+    return [{ kind: 'UNSUPPORTED', reasonCode: 'UNSUPPORTED_TIME_RANGE' }];
+  }
+  if (output.requiredEvidence.includes('document_chunk')) {
+    return [{ kind: 'DOCUMENT', query: text, ...(frame?.topicKey ? { topicKey: frame.topicKey } : {}) }];
+  }
+  if (output.candidateTools.length > 0) {
+    return [{ kind: 'TOOL', frame }];
+  }
+  return [{ kind: 'UNSUPPORTED', reasonCode: 'NO_CURRENT_RETRIEVAL_CAPABILITY' }];
 }
 
 export function determinePlanningDecision(output: QueryUnderstandingOutput): ExecutionDecision {

@@ -14,6 +14,7 @@ export function scoreQueryUnderstandingConfidence(input: {
   clarificationNeeds: QueryUnderstandingClarificationNeed[];
   hasDocumentEvidenceRequirement?: boolean;
   discoveryConfidence?: number;
+  hasResolvedSemanticFollowUp?: boolean;
 }): number {
   if (input.text.length === 0 || isPunctuationOnly(input.text)) {
     return 0;
@@ -29,6 +30,9 @@ export function scoreQueryUnderstandingConfidence(input: {
 
   if (!input.clarificationNeeds.some((need) => need.blocking) && input.candidateTools.length > 0) {
     confidence = Math.max(confidence, input.discoveryConfidence ?? 0);
+  }
+  if (!input.clarificationNeeds.some((need) => need.blocking) && input.hasResolvedSemanticFollowUp) {
+    confidence = Math.max(confidence, 0.8);
   }
   return Math.max(0, Math.min(1, Number(confidence.toFixed(2))));
 }

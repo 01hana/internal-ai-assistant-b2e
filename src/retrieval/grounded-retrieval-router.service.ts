@@ -13,8 +13,12 @@ import {
 @Injectable()
 export class GroundedRetrievalRouterService {
   route(input: GroundedRetrievalRoutingInput): GroundedRetrievalPlan {
-    const overflow = input.decomposedNeeds.length > MAX_RETRIEVAL_NEEDS;
-    const admittedCount = overflow ? MAX_RETRIEVAL_NEEDS - 1 : Math.min(input.decomposedNeeds.length, MAX_RETRIEVAL_NEEDS);
+    const routedInput = input.followUpResolution?.kind === 'CLARIFY'
+      ? { ...input, decomposedNeeds: [{ kind: 'AMBIGUOUS' as const, reasonCode: input.followUpResolution.reasonCode }] }
+      : input;
+    const resolvedFrame = input.followUpResolution?.resolvedFrame ?? input.resolvedFrame;
+    const overflow = routedInput.decomposedNeeds.length > MAX_RETRIEVAL_NEEDS;
+    const admittedCount = overflow ? MAX_RETRIEVAL_NEEDS - 1 : Math.min(routedInput.decomposedNeeds.length, MAX_RETRIEVAL_NEEDS);
     const needs: RetrievalNeed[] = [];
     let toolCount = 0;
     let hasAmbiguity = false;
@@ -22,7 +26,7 @@ export class GroundedRetrievalRouterService {
     let multipleToolNeeds = false;
     const coveredNeedIds = new Set<string>();
 
-    input.decomposedNeeds.slice(0, admittedCount).forEach((candidate, index) => {
+    routedInput.decomposedNeeds.slice(0, admittedCount).forEach((candidate, index) => {
       const id = stableNeedId(candidate, index, needs);
       if (candidate.kind === 'AMBIGUOUS') {
         hasAmbiguity = true;
@@ -41,7 +45,7 @@ export class GroundedRetrievalRouterService {
           needs.push(freezeNeed({ id, kind: 'UNSUPPORTED', reasonCode: 'MULTIPLE_TOOL_NEEDS_UNSUPPORTED' }));
           return;
         }
-        needs.push(freezeNeed({ id, kind: 'TOOL', frame: sanitizeFrame(candidate.frame ?? input.resolvedFrame ?? {}) }));
+        needs.push(freezeNeed({ id, kind: 'TOOL', frame: sanitizeFrame(candidate.frame ?? resolvedFrame ?? {}) }));
         if (candidate.coveredByPriorEvidence === true) coveredNeedIds.add(id);
         return;
       }
@@ -69,15 +73,15 @@ export class GroundedRetrievalRouterService {
           ? 'RETRIEVAL_NEED_AMBIGUOUS'
           : hasUnsupported || needs.length === 0
             ? 'RETRIEVAL_NEEDS_INSUFFICIENT'
-            : allCoveredByPriorEvidence(input)
+            : allCoveredByPriorEvidence(routedInput)
               ? 'PRIOR_EVIDENCE_COMPLETE'
               : 'RETRIEVAL_ROUTE_SELECTED';
 
-    const mode = selectMode({ input, needs, coveredNeedIds, overflow, multipleToolNeeds, hasAmbiguity, hasUnsupported });
+    const mode = selectMode({ input: routedInput, needs, coveredNeedIds, overflow, multipleToolNeeds, hasAmbiguity, hasUnsupported });
     return deepFreeze({
       mode,
       needs,
-      ...(input.resolvedFrame ? { resolvedFrame: sanitizeFrame(input.resolvedFrame) } : {}),
+      ...(resolvedFrame ? { resolvedFrame: sanitizeFrame(resolvedFrame) } : {}),
       reasonCode
     });
   }

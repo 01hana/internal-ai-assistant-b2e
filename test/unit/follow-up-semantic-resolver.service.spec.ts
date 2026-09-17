@@ -22,6 +22,49 @@ describe('Feature 010 semantic follow-up RED (T005)', () => {
     });
   });
 
+  it('retains original message provenance while marking inherited dimensions', () => {
+    const result = resolver().resolve({ currentFrame: {}, priorFrames: [prior] });
+    expect(result).toMatchObject({
+      kind: 'INHERIT',
+      resolvedFrame: {
+        resource: { source: 'inherited', sourceMessageId: 'message-1' },
+        entity: { source: 'inherited', sourceMessageId: 'message-1' }
+      }
+    });
+  });
+
+  it('replaces an application-deadline aspect while inheriting the document topic', () => {
+    const documentPrior = {
+      resource: dim('travelSubsidyPolicy'),
+      metricOrAspect: dim('policyOverview'),
+      topicKey: 'travelSubsidyPolicy'
+    };
+    const result = resolver().resolve({
+      currentFrame: { metricOrAspect: dim('applicationDeadline', 'current_explicit') },
+      priorFrames: [documentPrior]
+    });
+    expect(result).toMatchObject({
+      kind: 'REPLACE',
+      resolvedFrame: { resource: { value: 'travelSubsidyPolicy' }, metricOrAspect: { value: 'applicationDeadline' } },
+      replacedDimensions: ['metricOrAspect']
+    });
+  });
+
+  it('discards inherited dimensions for a complete incompatible new topic', () => {
+    const result = resolver().resolve({
+      currentFrame: { resource: dim('workOrder', 'current_explicit'), intent: dim('read', 'current_explicit'), metricOrAspect: dim('newCount', 'current_explicit') },
+      priorFrames: [prior]
+    });
+    expect(result).toMatchObject({ kind: 'NEW_TOPIC', inheritedDimensions: [], resolvedFrame: { resource: { value: 'workOrder' } } });
+    expect((result.resolvedFrame as Record<string, unknown>).entity).toBeUndefined();
+  });
+
+  it('clarifies vague deixis even when a prior frame exists', () => {
+    expect(resolver().resolve({ currentFrame: {}, priorFrames: [prior], vagueReference: true })).toMatchObject({
+      kind: 'CLARIFY', reasonCode: 'VAGUE_DEIXIS', resolvedFrame: undefined
+    });
+  });
+
   it.each([
     ['contradictory current frame', { currentFrame: { resource: dim('inventory'), topicKey: 'work-orders' }, priorFrames: [prior] }],
     ['multiple compatible frames', { currentFrame: {}, priorFrames: [prior, { ...prior, entity: { ...dim('SKU-002'), entityType: 'itemSku' } }] }]

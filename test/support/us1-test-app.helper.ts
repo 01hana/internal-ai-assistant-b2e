@@ -962,12 +962,12 @@ function createPrismaMock(state: MockState) {
           tokens: create.tokens ?? [],
           phrases: create.phrases ?? [],
           normalizedTerms: create.normalizedTerms ?? [],
-          timeRanges: create.timeRanges ?? null,
-          resolvedReferences: create.resolvedReferences ?? null,
+          timeRanges: normalizePrismaJsonNull(create.timeRanges),
+          resolvedReferences: normalizePrismaJsonNull(create.resolvedReferences),
           entityCandidates: create.entityCandidates ?? [],
-          subTasks: create.subTasks ?? null,
+          subTasks: normalizePrismaJsonNull(create.subTasks),
           confidence: create.confidence ?? 0,
-          clarificationNeeds: create.clarificationNeeds ?? null,
+          clarificationNeeds: normalizePrismaJsonNull(create.clarificationNeeds),
           createdAt: nextDate()
         };
         state.queryUnderstandingResults.push(record);
@@ -1653,6 +1653,14 @@ function createPrismaMock(state: MockState) {
 
 function restoreStateArray(target: unknown[], snapshot: unknown[]) {
   target.splice(0, target.length, ...snapshot);
+}
+
+function normalizePrismaJsonNull(value: unknown): unknown {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'object' && Object.getOwnPropertySymbols(value).some((symbol) => String(symbol).includes('prisma.objectEnumValue'))) {
+    return null;
+  }
+  return value;
 }
 
 function isAuthorizedKnowledgeChunkQuery(query: unknown): boolean {

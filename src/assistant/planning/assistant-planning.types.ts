@@ -8,6 +8,7 @@ import {
   QueryUnderstandingContextStateSnapshot,
   QueryUnderstandingOutput
 } from '../../query-understanding/query-understanding.types';
+import type { GroundedRetrievalPlan } from '../../retrieval/grounded-retrieval.types';
 
 export interface AssistantPlanningInput {
   customerScope: CustomerScope;
@@ -25,6 +26,7 @@ export interface AssistantPlanningResult {
   persistedQueryUnderstanding: PersistedQueryUnderstandingResult;
   executionPlan: PersistedExecutionPlan;
   decision: ExecutionDecision;
+  groundedRetrievalPlan?: GroundedRetrievalPlan;
 }
 
 export interface PlannedOperationCandidate {

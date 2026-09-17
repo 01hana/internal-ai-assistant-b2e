@@ -16,6 +16,6 @@ import { GroundedRetrievalRouterService } from './grounded-retrieval-router.serv
     KnowledgeChunkingService,
     RetrievalService
   ],
-  exports: [KnowledgeChunkingService, RetrievalService]
+  exports: [KnowledgeChunkingService, RetrievalService, GroundedRetrievalRouterService]
 })
 export class RetrievalModule {}
