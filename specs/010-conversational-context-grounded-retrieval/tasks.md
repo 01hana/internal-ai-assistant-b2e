@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/010-conversational-context-grounded-retrieval`  
 **Input**: `spec.md`, `design.md`, and `plan.md` in `specs/010-conversational-context-grounded-retrieval/`  
-**Implementation Status**: Phase 4 T034–T043 complete; Phase 5 not started
+**Implementation Status**: Phase 5 T044–T054 complete; Phase 6 not started
 **Testing Rule**: For every changed runtime behavior, run the named focused test first and retain authentic RED evidence, then implement and retain GREEN evidence.
 
 ## Format
@@ -471,19 +471,76 @@ NEXT_TASK_AUTHORIZED=NO
 
 **Story**: US2 — Document-only grounded retrieval
 
-- [ ] T044 [P] [US2] Add travel-subsidy and existing SOP document-only RED cases with zero ToolCalls in `test/integration/feature010-document-retrieval.spec.ts`
-- [ ] T045 [P] [US2] Add active/versioned provenance, two-chunk cap, citation, malformed metadata, and deterministic ordering cases in `test/unit/grounded-document-evidence.normalizer.spec.ts`
-- [ ] T046 [P] [US2] Add prompt-like text, control-character, authority-claim, token, proof, and connector-reference cases in `test/unit/document-evidence-source-guard.spec.ts`
-- [ ] T047 [P] [US2] Add colliding-ID Customer/organization/permission pre-filter isolation cases in `test/integration/feature010-rag-isolation.spec.ts`
-- [ ] T048 [US2] Extend attached document EvidenceRef safe summaries with document version provenance in `src/evidence/evidence-ref.service.ts`
-- [ ] T049 [US2] Implement bounded UNTRUSTED_DOCUMENT_EVIDENCE normalization from selected EvidenceRefs in `src/retrieval/grounded-document-evidence.normalizer.ts`
-- [ ] T050 [US2] Implement document source guards that prevent content/metadata from becoming instruction or authority in `src/retrieval/document-evidence-source-guard.ts`
-- [ ] T051 [US2] Implement per-need canonical RetrievalService execution with the existing two-candidate limit in `src/retrieval/grounded-document-retrieval.service.ts`
-- [ ] T052 [US2] Add stable document citation mapping and safe RAG audit metadata in `src/retrieval/grounded-document-evidence.normalizer.ts`
-- [ ] T053 [US2] Preserve existing RetrievalRun/Candidate and no-evidence behavior while returning normalized need results in `src/retrieval/retrieval.service.ts`
-- [ ] T054 [US2] Run T044–T047 and existing RAG/document-answer/isolation/eval suites; record US2 GREEN evidence in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+- [X] T044 [P] [US2] Add travel-subsidy and existing SOP document-only RED cases with zero ToolCalls in `test/integration/feature010-document-retrieval.spec.ts`
+- [X] T045 [P] [US2] Add active/versioned provenance, two-chunk cap, citation, malformed metadata, and deterministic ordering cases in `test/unit/grounded-document-evidence.normalizer.spec.ts`
+- [X] T046 [P] [US2] Add prompt-like text, control-character, authority-claim, token, proof, and connector-reference cases in `test/unit/document-evidence-source-guard.spec.ts`
+- [X] T047 [P] [US2] Add colliding-ID Customer/organization/permission pre-filter isolation cases in `test/integration/feature010-rag-isolation.spec.ts`
+- [X] T048 [US2] Extend attached document EvidenceRef safe summaries with document version provenance in `src/evidence/evidence-ref.service.ts`
+- [X] T049 [US2] Implement bounded UNTRUSTED_DOCUMENT_EVIDENCE normalization from selected EvidenceRefs in `src/retrieval/grounded-document-evidence.normalizer.ts`
+- [X] T050 [US2] Implement document source guards that prevent content/metadata from becoming instruction or authority in `src/retrieval/document-evidence-source-guard.ts`
+- [X] T051 [US2] Implement per-need canonical RetrievalService execution with the existing two-candidate limit in `src/retrieval/grounded-document-retrieval.service.ts`
+- [X] T052 [US2] Add stable document citation mapping and safe RAG audit metadata in `src/retrieval/grounded-document-evidence.normalizer.ts`
+- [X] T053 [US2] Preserve existing RetrievalRun/Candidate and no-evidence behavior while returning normalized need results in `src/retrieval/retrieval.service.ts`
+- [X] T054 [US2] Run T044–T047 and existing RAG/document-answer/isolation/eval suites; record US2 GREEN evidence in `specs/010-conversational-context-grounded-retrieval/tasks.md`
 
 **Checkpoint**: Document-only requests yield authorized normalized evidence/citations with zero ToolCalls and no document-derived authority.
+
+### Phase 5 T044–T054 completion evidence (2026-09-17)
+
+Phase 5 began from the accepted Phase 4 worktree. The frozen `spec.md`, `design.md`, and `plan.md`, Feature 009, Prisma schema/migrations, Gateway, Identity Bridge, public Assistant HTTP/DTO/SSE/history contracts, external repositories, staging, and the unrelated untracked `apps/customer-connector-runtime/test/fixtures/phase6-upstream.key` remained untouched. `RetrievalService` itself required no edit: T053 is satisfied by the additive per-need consumer plus preservation regressions.
+
+Authentic RED capture:
+
+| Task | Command | Result |
+|---|---|---|
+| T045 / original T006 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/grounded-document-evidence.normalizer.spec.ts` | Expected exit 1; 1 suite / 6 tests transformed and failed only with `MISSING_FEATURE010_BEHAVIOR [T006]: bounded document evidence normalization`. |
+| T044 | `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-document-retrieval.spec.ts` | Expected exit 1; existing SOP compatibility passed; standalone RAG planning and the missing lane failed through direct Phase 5 assertions / typed `MISSING_FEATURE010_BEHAVIOR [T044]`, with successful application bootstrap. |
+| T046 | `npm run test:unit -- --runInBand --runTestsByPath test/unit/document-evidence-source-guard.spec.ts` | Expected exit 1; 1 suite / 9 tests failed only with typed `MISSING_FEATURE010_BEHAVIOR [T046]: document evidence source guarding`. |
+| T047 | `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-rag-isolation.spec.ts` | Expected exit 1; application/fixtures bootstrapped and the case failed only with typed `MISSING_FEATURE010_BEHAVIOR [T047]: Customer-scoped pre-rank document retrieval`. |
+
+GREEN and compatibility evidence:
+
+| Gate | Exact command | Result |
+|---|---|---|
+| T044/T047 document lane | `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-document-retrieval.spec.ts test/integration/feature010-rag-isolation.spec.ts` | Exit 0; 2 suites / 7 tests passed. Standalone travel policy, resolved deadline follow-up, legacy SOP, no-evidence, source rejection, retrieval failure, and colliding-ID pre-rank isolation passed with zero ToolCalls. |
+| T045/T046 plus canonical RAG/evidence | `npm run test:unit -- --runInBand --runTestsByPath test/unit/grounded-document-evidence.normalizer.spec.ts test/unit/document-evidence-source-guard.spec.ts test/unit/retrieval.service.spec.ts test/unit/deterministic-retrieval.provider.spec.ts test/unit/evidence-ref.service.spec.ts` | Exit 0; 5 suites / 24 tests passed. Normalization is capped at two after validating every selected item; citations are separate/stable; output is deeply immutable; prompt-like prose stays untrusted data; prohibited structured sources fail closed. |
+| T002/T022/T026 | `npm run test:contract -- --runInBand --runTestsByPath test/contract/feature010-scope-boundary.contract.spec.ts test/contract/feature010-conversation-context.contract.spec.ts test/contract/grounded-context-bundle.contract.spec.ts` | Exit 0; 3 suites / 31 tests passed. |
+| Phase 2–4 focused units | `npm run test:unit -- --runInBand --runTestsByPath test/unit/conversation-context-loader.service.spec.ts test/unit/follow-up-semantic-resolver.service.spec.ts test/unit/follow-up-retrieval-authority.guard.spec.ts test/unit/grounded-retrieval-router.service.spec.ts test/unit/query-task-decomposer.spec.ts test/unit/query-understanding.service.spec.ts test/unit/query-understanding-pipeline-wiring.spec.ts test/unit/query-normalization.spec.ts test/unit/deterministic-retrieval.provider.spec.ts` | Exit 0; 9 suites / 61 tests passed. |
+| Phase 2–5 focused integrations | `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-context-isolation.spec.ts test/integration/customer-rag-permission-isolation.spec.ts test/integration/customer-retrieval-evidence-integrity.spec.ts test/integration/rag-sop-field-explanation.spec.ts test/integration/retrieval-run-candidates.spec.ts` | Exit 0; 3 suites / 13 tests passed, 2 suites / 10 tests remained intentionally gated. |
+| Predecessor unit inventory | `npm run test:unit -- --runInBand --testPathIgnorePatterns=grounded-tool-evidence.normalizer.spec.ts --testPathIgnorePatterns=grounded-context-bundle.service.spec.ts --testPathIgnorePatterns=prior-grounded-evidence-eligibility.service.spec.ts` | Exit 0; 87 suites passed, 1 skipped; 624 tests passed, 3 skipped. |
+| Predecessor integration inventory | `npm run test:integration -- --runInBand --testPathIgnorePatterns=feature010-grounded-retrieval.spec.ts` | Exit 0; 59 suites passed, 17 skipped; 206 tests passed, 131 skipped. |
+| Default contracts / gated public contracts | `npm run test:contract -- --runInBand`; `RUN_CUSTOMER_US1_TESTS=true npm run test:contract -- --runInBand` | Default exit 0: 13 passed / 3 skipped suites, 75 passed / 39 skipped tests. Sandbox gated run failed only with listener `EPERM`; identical approved local rerun exited 0 with 16 suites / 114 tests passed. |
+| Eval | `npm run test:eval -- --runInBand` | Exit 0; 1 suite / 10 tests passed, 1 suite / 3 tests skipped. |
+| Compile and format | `npm run build`; `npm run typecheck`; `git diff --check` | Exit 0 for all commands. |
+| Focused Phase 5 lint | `./node_modules/.bin/eslint <Phase 5 source/test paths>` | Exit 0 with no findings. Full `npm run lint` reports only the accepted four unrelated pre-existing findings in connector-runtime, Identity Bridge, and productized transport files. |
+
+Later-phase boundary evidence remains authentic: T007, T008, and T009 separately exit 1 only through their typed missing-capability diagnostics (14/14, 9/9, and 11/11 respectively). T010 remains 2 GREEN setup proofs plus 8 authentic RED Hybrid/reuse/bundle cases. No Tool normalization, Hybrid coordinator, prior-evidence reuse, bundle assembly, AssistantMessage orchestration, vector/embedding provider, or LLM behavior was implemented.
+
+Phase 5 changed only its additive planning/RAG/evidence services, module registration, Feature 010 tests/test helper, in-memory Customer-qualified document join, and this task evidence. `MAX_DOCUMENT_CHUNKS_PER_NEED=2`; the effective follow-up query contains both `員工旅遊補助` and `申請期限`; all normalized document facts are `UNTRUSTED_DOCUMENT_EVIDENCE`; score/rank remain diagnostic only; audits contain bounded identifiers/counts/status/reason metadata rather than document content or authority.
+
+```text
+T044_T054_STATUS=COMPLETE
+DOCUMENT_RAG_RETRIEVAL=PASS
+CANONICAL_RAG_REUSED=YES
+MAX_DOCUMENT_CHUNKS_PER_NEED=2
+DOCUMENT_PROVENANCE_REQUIRED=YES
+DOCUMENT_CITATION_MAPPING=PASS
+DOCUMENT_EVIDENCE_TRUST_CLASS=UNTRUSTED_DOCUMENT_EVIDENCE
+DOCUMENT_SOURCE_GUARD=PASS
+RAG_DOCUMENT_AUTHORITY=NO
+RAG_CROSS_CUSTOMER_ACCESS=NO
+RAG_PRE_RANK_ACCESS_FILTER=PASS
+RETRIEVAL_SCORE_FACT_AUTHORITY=NO
+DOCUMENT_ONLY_TOOLCALL_COUNT=0
+DOCUMENT_FOLLOWUP_RETRIEVAL_CONTEXT=PASS
+VECTOR_PROVIDER_SELECTED=NO
+NEW_DATABASE_TABLE=NO
+PUBLIC_ASSISTANT_API_CHANGE=NO
+PHASE_6_STARTED=NO
+HIGHEST_COMPLETED_TASK=T054
+NEXT_TASK=T055
+NEXT_TASK_AUTHORIZED=NO
+```
 
 ---
 

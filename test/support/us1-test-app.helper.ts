@@ -649,7 +649,12 @@ function createPrismaMock(state: MockState) {
 
       return state.knowledgeChunks
         .filter((chunk) => chunk.customerId === customerId && chunk.enabled)
-        .map((chunk) => ({ chunk, document: state.knowledgeDocuments.find((document) => document.id === chunk.documentId) }))
+        .map((chunk) => ({
+          chunk,
+          document: state.knowledgeDocuments.find(
+            (document) => document.id === chunk.documentId && document.customerId === chunk.customerId
+          )
+        }))
         .filter(({ document }) =>
           document?.customerId === customerId &&
           document.status === KnowledgeDocumentStatus.active &&
@@ -1516,7 +1521,9 @@ function createPrismaMock(state: MockState) {
               if (!where?.document?.status) {
                 return true;
               }
-              const document = state.knowledgeDocuments.find((doc) => doc.id === item.documentId);
+              const document = state.knowledgeDocuments.find(
+                (doc) => doc.id === item.documentId && doc.customerId === item.customerId
+              );
               return document?.status === where.document.status;
             })
             .sort((left, right) => {
@@ -1539,7 +1546,9 @@ function createPrismaMock(state: MockState) {
 
           return chunks.map((chunk) => ({
             ...chunk,
-            document: state.knowledgeDocuments.find((document) => document.id === chunk.documentId) ?? null
+            document: state.knowledgeDocuments.find(
+              (document) => document.id === chunk.documentId && document.customerId === chunk.customerId
+            ) ?? null
           }));
         }
       ),

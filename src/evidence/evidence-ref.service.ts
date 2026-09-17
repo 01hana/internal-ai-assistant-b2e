@@ -38,6 +38,24 @@ export interface AttachedEvidence<TSummary extends Record<string, unknown> = Rec
   summary: TSummary;
 }
 
+export type DocumentChunkEvidenceSummary = Readonly<{
+  documentId: string;
+  chunkId: string;
+  documentVersion: string;
+  sourceKey: string;
+  documentTitle: string;
+  heading: string | null;
+  snippet: string;
+  score: number;
+  rank: number;
+}> & Record<string, unknown>;
+
+export interface AttachedDocumentEvidence extends AttachedEvidence<DocumentChunkEvidenceSummary> {
+  readonly documentId: string;
+  readonly chunkId: string;
+  readonly observedAt: string;
+}
+
 @Injectable()
 export class EvidenceRefService {
   constructor(
@@ -103,13 +121,16 @@ export class EvidenceRefService {
 
   async attachDocumentChunkEvidence(
     input: DocumentChunkEvidenceInput
-  ): Promise<AttachedEvidence<Record<string, unknown>>> {
+  ): Promise<AttachedDocumentEvidence> {
     const { document, chunk, candidate } = await this.assertDocumentParents(input.customerScope, input);
     const snippet = toBoundedSnippet(chunk.content);
-    const summary = {
-      documentTitle: document.title,
+    const summary: DocumentChunkEvidenceSummary = {
+      documentId: document.id,
+      chunkId: chunk.id,
+      documentVersion: document.version,
+      documentTitle: toBoundedText(document.title, 256),
       sourceKey: document.sourceKey,
-      heading: chunk.heading,
+      heading: chunk.heading ? toBoundedText(chunk.heading, 256) : null,
       snippet,
       score: candidate.score,
       rank: candidate.rank
@@ -155,7 +176,10 @@ export class EvidenceRefService {
       sourceType: evidenceRef.sourceType,
       sourceId: evidenceRef.sourceId,
       fieldPaths: evidenceRef.fieldPaths,
-      summary
+      summary,
+      documentId: document.id,
+      chunkId: chunk.id,
+      observedAt: evidenceRef.timestamp.toISOString()
     };
   }
 
@@ -234,4 +258,9 @@ function toJsonInput<T>(value: T): Prisma.InputJsonValue {
 function toBoundedSnippet(value: string): string {
   const normalized = value.replace(/\s+/g, ' ').trim();
   return normalized.length > 220 ? `${normalized.slice(0, 220)}...` : normalized;
+}
+
+function toBoundedText(value: string, maxLength: number): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  return normalized.length > maxLength ? normalized.slice(0, maxLength) : normalized;
 }

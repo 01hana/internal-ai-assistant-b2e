@@ -17,7 +17,7 @@ export class MissingFeature010BehaviorError extends Error {
 }
 
 export function loadFeature010Export<T>(input: Readonly<{
-  taskId: `T00${3 | 4 | 5 | 6 | 7 | 8 | 9}`;
+  taskId: `T${number}`;
   fromTestDirectory: string;
   modulePath: string;
   exportName: string;

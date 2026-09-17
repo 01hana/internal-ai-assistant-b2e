@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CustomerScope } from '../identity/customer-scope.types';
-import { GroundedRetrievalPlan } from './grounded-retrieval.types';
+import { GroundedRetrievalNeedResult, GroundedRetrievalPlan } from './grounded-retrieval.types';
 
 @Injectable()
 export class GroundedRetrievalAuditService {
@@ -24,6 +24,33 @@ export class GroundedRetrievalAuditService {
         needKinds: input.plan.needs.map((need) => need.kind),
         unsupportedCount: input.plan.needs.filter((need) => need.kind === 'UNSUPPORTED').length,
         reasonCodes: [...new Set(reasonCodes)].sort()
+      }
+    });
+  }
+
+  recordDocumentLane(input: GroundedRetrievalAuditInput & {
+    readonly result: GroundedRetrievalNeedResult;
+    readonly candidateCount: number;
+    readonly selectedCount: number;
+    readonly citationCount: number;
+  }) {
+    return this.auditWriter.append({
+      customerScope: input.customerScope,
+      requestId: input.requestId,
+      sessionId: input.sessionId,
+      messageId: input.messageId,
+      eventType: input.result.status === 'FAILED' ? 'grounded_document_retrieval_rejected' : 'grounded_document_retrieval_completed',
+      evidenceRefIds: [...input.result.evidenceRefIds],
+      durationMs: input.durationMs,
+      metadata: {
+        needId: input.result.needId,
+        status: input.result.status,
+        ...(input.result.reasonCode ? { reasonCode: input.result.reasonCode } : {}),
+        candidateCount: input.candidateCount,
+        selectedCount: input.selectedCount,
+        evidenceRefIds: [...input.result.evidenceRefIds],
+        citationCount: input.citationCount,
+        durationMs: input.durationMs
       }
     });
   }

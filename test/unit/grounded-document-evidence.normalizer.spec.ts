@@ -1,6 +1,9 @@
 import { loadFeature010Export } from '../support/feature010-red-contract.helper';
 
-type Normalizer = { normalize(input: Record<string, unknown>): readonly Record<string, unknown>[] };
+type Normalizer = {
+  normalize(input: Record<string, unknown>): readonly Record<string, unknown>[];
+  createCitations(evidence: readonly Record<string, unknown>[]): readonly Record<string, unknown>[];
+};
 type NormalizerConstructor = new () => Normalizer;
 
 describe('Feature 010 grounded document evidence normalization RED (T006)', () => {
@@ -13,12 +16,20 @@ describe('Feature 010 grounded document evidence normalization RED (T006)', () =
     expect(result).toEqual([
       expect.objectContaining({
         kind: 'DOCUMENT', needId: 'need-1', evidenceRefId: 'evidence-document-1', documentId: 'document-1', chunkId: 'chunk-1',
-        documentVersion: 'v3', sourceKey: 'policy/travel', sourceOrder: 1,
+        documentVersion: 'v3', sourceKey: 'policy/travel',
         trustClass: 'UNTRUSTED_DOCUMENT_EVIDENCE'
       }),
-      expect.objectContaining({ evidenceRefId: 'evidence-document-2', chunkId: 'chunk-2', sourceOrder: 2 })
+      expect.objectContaining({ evidenceRefId: 'evidence-document-2', chunkId: 'chunk-2' })
     ]);
+    expect(result.every((item) => !Object.hasOwn(item, 'sourceOrder'))).toBe(true);
     expect(result.every((item) => !Object.hasOwn(item, 'citation'))).toBe(true);
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(result.every(Object.isFrozen)).toBe(true);
+
+    expect(normalizer().createCitations(result)).toEqual([
+      { citationId: 'citation-need-1-1', evidenceRefId: 'evidence-document-1', needId: 'need-1', sourceKind: 'DOCUMENT', safeLabel: 'Travel subsidy policy' },
+      { citationId: 'citation-need-1-2', evidenceRefId: 'evidence-document-2', needId: 'need-1', sourceKind: 'DOCUMENT', safeLabel: 'Travel subsidy policy' }
+    ]);
   });
 
   it.each([
@@ -43,6 +54,12 @@ describe('Feature 010 grounded document evidence normalization RED (T006)', () =
     expect(result).not.toHaveProperty('instructions');
     expect(result).not.toHaveProperty('authority');
     expect(result).not.toHaveProperty('operationKey');
+  });
+
+  it('validates every selected input before applying the two-item output cap', () => {
+    const target = normalizer();
+    expect(() => target.normalize({ needId: 'need-1', chunks: [chunk(1), chunk(2), { ...chunk(3), sourceKey: undefined }] }))
+      .toThrow(/provenance|invalid|malformed/i);
   });
 });
 

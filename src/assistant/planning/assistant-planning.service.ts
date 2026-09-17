@@ -83,11 +83,13 @@ export class AssistantPlanningService {
         priorFrameCount: priorConversationContext?.semanticFrames.length ?? 0
       });
     }
-    const groundedRetrievalPlan = this.groundedRetrievalRouter && output.followUpResolution
+    const routingFrame = output.followUpResolution?.resolvedFrame ?? output.currentSemanticFrame;
+    const shouldBuildGroundedPlan = Boolean(output.followUpResolution) || output.requiredEvidence.includes('document_chunk');
+    const groundedRetrievalPlan = this.groundedRetrievalRouter && shouldBuildGroundedPlan
       ? this.groundedRetrievalRouter.route({
           requestId: input.requestId,
           decomposedNeeds: toRetrievalNeedCandidates(input.text, output),
-          resolvedFrame: output.followUpResolution.resolvedFrame,
+          resolvedFrame: routingFrame,
           followUpResolution: output.followUpResolution
         })
       : undefined;
@@ -131,7 +133,7 @@ function toRetrievalNeedCandidates(text: string, output: QueryUnderstandingOutpu
   if (output.followUpResolution?.kind === 'CLARIFY') {
     return [{ kind: 'AMBIGUOUS', reasonCode: output.followUpResolution.reasonCode }];
   }
-  const frame = output.followUpResolution?.resolvedFrame;
+  const frame = output.followUpResolution?.resolvedFrame ?? output.currentSemanticFrame;
   if (frame?.timeRange?.value === 'last_month' && output.candidateTools.length === 0) {
     return [{ kind: 'UNSUPPORTED', reasonCode: 'UNSUPPORTED_TIME_RANGE' }];
   }

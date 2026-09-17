@@ -18,6 +18,7 @@ export type RetrievalCoverage = (typeof RETRIEVAL_COVERAGES)[number];
 export const MAX_RETRIEVAL_NEEDS = 4;
 export const MAX_TOOL_NEEDS = 1;
 export const MAX_TOOL_NEEDS_PER_TURN = MAX_TOOL_NEEDS;
+export const MAX_DOCUMENT_CHUNKS_PER_NEED = 2;
 
 export interface DocumentRetrievalNeed {
   readonly id: string;
