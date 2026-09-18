@@ -3,6 +3,9 @@ import request = require('supertest');
 import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, Us1TestState } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 import { AssistantPlanningService } from '../../src/assistant/planning/assistant-planning.service';
+import { PriorGroundedContextService } from '../../src/assistant/grounding/prior-grounded-context.service';
+import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
+import { CUSTOMER_SCOPE_FIXTURES, createCustomerScopeFixtureIdentityContext } from '../support/customer-scope-fixtures';
 
 describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
   let app: INestApplication;
@@ -93,6 +96,30 @@ describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
     await send('req-f010-cross', '你剛才引用的文件怎麼說？');
     expect(counts().retrievals).toBe(crossBefore.retrievals + 1);
     expect(metadata('req-f010-cross')).not.toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
+  });
+
+  it('does not treat the same document source type as semantic compatibility for generic unrelated topics', async () => {
+    await send('req-f010-generic-topic-seed', '退貨流程 SOP 怎麼說？');
+    const prior = state.evidenceRefs.find((item) => item.requestId === 'req-f010-generic-topic-seed')!;
+    prior.summary = { ...(prior.summary as Record<string, unknown>), sourceKey: 'security-access-policy' };
+    const identityContext = { ...createCustomerScopeFixtureIdentityContext(CUSTOMER_SCOPE_FIXTURES.customerA), requestId: 'req-f010-generic-topic' };
+    const customerScope = createCustomerScopeFromIdentityContext(identityContext);
+    const result = await app.get(PriorGroundedContextService).resolve({
+      plan: { mode: 'RAG', reasonCode: 'DOCUMENT_NEED', resolvedFrame: { topicKey: 'expense-reimbursement-policy',
+        resource: { value: 'expenseReimbursement', source: 'inherited', sourceMessageId: 'message-prior', confidence: 1 } },
+        needs: [{ id: 'need-expense', kind: 'DOCUMENT', query: 'expense reimbursement policy', topicKey: 'expense-reimbursement-policy' }] },
+      context: { scope: { customerId: 'customer-a', sessionId: 'session-owned-001', organizationId: 'org-001', hostApp: 'erp', actorId: 'actor-001' },
+        selectedExchangeIdsNewestFirst: ['exchange-prior'], chronologicalExchangeIds: ['exchange-prior'],
+        exchanges: [{ exchangeId: 'exchange-prior', requestId: 'req-f010-generic-topic-seed', userMessageId: 'message-prior',
+          assistantMessageId: prior.messageId!, createdAt: prior.timestamp.toISOString(),
+          semanticFrame: { topicKey: 'security-access-policy', resource: { value: 'securityAccess', source: 'current_explicit',
+            sourceMessageId: 'message-prior', confidence: 1 } }, evidenceRefIds: [prior.id] }],
+        semanticFrames: [], evidenceRefs: [{ id: prior.id, messageId: prior.messageId!, sourceType: 'document_chunk', sourceId: prior.sourceId,
+          observedAt: prior.timestamp.toISOString() }], evidenceRefIds: [prior.id], rejectedReasonCodes: [] },
+      customerScope, identityContext, requestId: 'req-f010-generic-topic', sessionId: 'session-owned-001',
+      sourceMessageId: 'message-current-generic', responseMessageId: 'message-response-generic'
+    });
+    expect(result).toEqual(expect.objectContaining({ complete: false, needResults: [], evidence: [], citations: [] }));
   });
 
   function counts() { return { tools: state.toolCalls.length, retrievals: state.retrievalRuns.length }; }

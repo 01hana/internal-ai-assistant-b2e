@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/010-conversational-context-grounded-retrieval`  
 **Input**: `spec.md`, `design.md`, and `plan.md` in `specs/010-conversational-context-grounded-retrieval/`  
-**Implementation Status**: Phase 6 T055–T074 complete; Phase 7 not started
+**Implementation Status**: Phase 7 T075–T083 complete; Feature 010 backend local acceptance passed
 **Testing Rule**: For every changed runtime behavior, run the named focused test first and retain authentic RED evidence, then implement and retain GREEN evidence.
 
 ## Format
@@ -672,15 +672,76 @@ NEXT_TASK_AUTHORIZED=NO
 
 ## Phase 7 — Cross-cutting security, compatibility and local backend acceptance
 
-- [ ] T075 [P] Add unchanged Assistant HTTP/SSE event/payload and history-shape contract assertions in `test/contract/feature010-public-compatibility.contract.spec.ts`
-- [ ] T076 [P] Add exact GroundedContextBundleV1 handoff assertions for current request, resolved meaning, mode, requested needs, need results, coverage, evidence, provenance, citations, locale, and prohibited execution-authority material in `test/contract/grounded-context-bundle.contract.spec.ts`
-- [ ] T077 [P] Add cross-boundary token/proof/credential/connector/raw/pre-projection/authority sentinel scans in `test/integration/feature010-grounded-bundle-leak.spec.ts`
-- [ ] T078 [P] Extend document/Tool/Hybrid/follow-up/ambiguous/unsupported-lastMonth/prior-recall/current-revocation/partial/insufficient/no-LLM routing evals in `test/eval/internal-assistant-core.eval.spec.ts`
-- [ ] T079 Run unit, contract, integration, e2e, eval, typecheck, build, and lint commands and record exact results in `specs/010-conversational-context-grounded-retrieval/tasks.md`
-- [ ] T080 Re-run existing RAG/document-answer, Customer isolation, no-answer, history, SSE, and permission suites and record results in `specs/010-conversational-context-grounded-retrieval/tasks.md`
-- [ ] T081 Re-run Feature 007 identity/session, Feature 008 Tool/projection/evidence, and Feature 009 local suites in `specs/010-conversational-context-grounded-retrieval/tasks.md`
-- [ ] T082 Verify Feature 009 manifest/T126–T142, schema, `.specify/feature.json`, AGENTS, external repositories, and staging have no Feature 010 diff in `test/contract/feature010-scope-boundary.contract.spec.ts`
-- [ ] T083 Record every Feature 010 Definition of Done gate, backend acceptance, Feature 011 readiness, and planning-freeze state while keeping final prose/Feature 009 release acceptance pending in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+- [X] T075 [P] Add unchanged Assistant HTTP/SSE event/payload and history-shape contract assertions in `test/contract/feature010-public-compatibility.contract.spec.ts`
+- [X] T076 [P] Add exact GroundedContextBundleV1 handoff assertions for current request, resolved meaning, mode, requested needs, need results, coverage, evidence, provenance, citations, locale, and prohibited execution-authority material in `test/contract/grounded-context-bundle.contract.spec.ts`
+- [X] T077 [P] Add cross-boundary token/proof/credential/connector/raw/pre-projection/authority sentinel scans in `test/integration/feature010-grounded-bundle-leak.spec.ts`
+- [X] T078 [P] Extend document/Tool/Hybrid/follow-up/ambiguous/unsupported-lastMonth/prior-recall/current-revocation/partial/insufficient/no-LLM routing evals in `test/eval/internal-assistant-core.eval.spec.ts`
+- [X] T079 Run unit, contract, integration, e2e, eval, typecheck, build, and lint commands and record exact results in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+- [X] T080 Re-run existing RAG/document-answer, Customer isolation, no-answer, history, SSE, and permission suites and record results in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+- [X] T081 Re-run Feature 007 identity/session, Feature 008 Tool/projection/evidence, and Feature 009 local suites in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+- [X] T082 Verify Feature 009 manifest/T126–T142, schema, `.specify/feature.json`, AGENTS, external repositories, and staging have no Feature 010 diff in `test/contract/feature010-scope-boundary.contract.spec.ts`
+- [X] T083 Record every Feature 010 Definition of Done gate, backend acceptance, Feature 011 readiness, and planning-freeze state while keeping final prose/Feature 009 release acceptance pending in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+
+### Phase 7 T075–T083 completion evidence (2026-09-18)
+
+Phase 7 began from the accepted T001–T074 worktree. T075 locks exact public HTTP error, SSE envelope/event payload, history-message, and EvidenceRef-ID variants while rejecting every internal bundle field from public serialization. T076 validates all seven retrieval/coverage outcomes, exact requested-need/result/evidence/citation linkage, complete Feature 011 consumer fields, deep immutability, and recursive authority rejection. T077 covers real conversation, document, Tool, permission, prior-evidence, cross-Customer, future-context, persistence, audit, SSE, and history boundaries. T078 adds real endpoint orchestration acceptance in addition to the deterministic coverage matrix.
+
+Two compatibility defects were found and repaired without changing public contracts. A failed document lane now retains its `FAILED / DOCUMENT_RETRIEVAL_FAILED` result, assembles and audits an `INSUFFICIENT` bundle, persists only safe bundle metadata, and then enters the existing `retrieval_unavailable` / `tool_failure` compatibility sink. Safe `CONNECTOR_UNAVAILABLE` propagation is limited to the mock adapter's established public code; productized connector failures remain collapsed to `TOOL_EXECUTION_FAILED`, and connector messages/raw payloads never propagate. The fixture-specific travel/return matcher was replaced by bounded generic semantic/provenance topic identities; a service-level expense-policy versus security-policy negative control proves `same sourceType != same semantic need`.
+
+| Gate | Exact command | Result |
+|---|---|---|
+| T075–T078 focused contracts | `npm run test:contract -- --runInBand --runTestsByPath test/contract/feature010-scope-boundary.contract.spec.ts test/contract/feature010-public-compatibility.contract.spec.ts test/contract/grounded-context-bundle.contract.spec.ts` | Approved local run exit 0; 3 suites / 46 tests passed. The sandbox attempt failed only on listener `EPERM`; the identical local command passed. |
+| T077/document failure/generic reuse | `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-grounded-bundle-leak.spec.ts test/integration/feature010-document-retrieval.spec.ts test/integration/feature010-prior-grounded-recall.spec.ts` | Exit 0; 3 suites / 25 tests passed. |
+| T078 endpoint eval | `npm run test:eval -- --runInBand --runTestsByPath test/eval/internal-assistant-core.eval.spec.ts` | Approved local run exit 0; 1 suite / 23 tests passed. Sandbox execution failed only on listener `EPERM`. |
+| Root unit | `npm run test:unit -- --runInBand` | Exit 0; 90 suites passed, 1 skipped; 664 tests passed, 3 skipped. |
+| Root contract | `npm run test:contract -- --runInBand` | Exit 0; 14 suites passed, 3 skipped; 111 tests passed, 39 skipped. |
+| Gated public contract | `RUN_CUSTOMER_US1_TESTS=true npm run test:contract -- --runInBand` | Approved local run exit 0; 17 suites / 150 tests passed. |
+| Root integration | `npm run test:integration -- --runInBand` | Approved local final run exit 0; 65 suites passed, 17 skipped; 251 tests passed, 131 skipped. A prior run exposed and drove the bounded mock/productized connector-code reconciliation; the final full run is green. |
+| Root E2E | `npm run test:e2e -- --runInBand` | Approved local run exit 0; 7 suites passed; 29 tests passed, 1 skipped. Sandbox execution failed only on listener/local PostgreSQL `EPERM`. |
+| Root eval | `npm run test:eval -- --runInBand` | Approved local run exit 0; 1 suite passed, 1 skipped; 23 tests passed, 3 skipped. |
+| Feature 008/RAG/Tool/evidence units | `npm run test:unit -- --runInBand --runTestsByPath test/unit/tool-discovery.service.spec.ts test/unit/tool-registry.service.spec.ts test/unit/tool-permission-precheck.service.spec.ts test/unit/tool-call.service.spec.ts test/unit/adapter-result-projector.service.spec.ts test/unit/evidence-ref.service.spec.ts test/unit/grounded-answer-input.spec.ts test/unit/retrieval.service.spec.ts test/unit/deterministic-retrieval.provider.spec.ts test/unit/permission-filtering.spec.ts test/unit/answer-decision.service.spec.ts` | Exit 0; 11 suites / 125 tests passed. |
+| T080/T081 focused integration | `RUN_CUSTOMER_US1_TESTS=true RUN_CUSTOMER_US2_TESTS=true RUN_CUSTOMER_US3_TESTS=true npm run test:integration -- --runInBand --runTestsByPath <21 accepted RAG/Tool/permission/evidence/history/SSE/Feature009 paths>` | Approved local run exit 0; 21 suites / 51 tests passed. The exact inventory included RAG SOP/candidates/isolation, authorized answer/execution, policy/permission, projection, discovery equivalence, tool failure/SSE, history, no-answer, conflict, Customer B portability, dark transport, Customer isolation, and prohibited-material leakage. |
+| Feature 007 Identity Bridge | `npm --prefix apps/identity-bridge run test -- --runInBand`; `npm --prefix apps/identity-bridge run build`; `npm --prefix apps/identity-bridge run typecheck` | Approved local test exit 0: 41 suites / 380 tests; build and typecheck exit 0. Sandbox test failed only on HTTPS listener `EPERM`. |
+| Feature 007 Gateway | `npm --prefix apps/gateway run test -- --runInBand`; `npm --prefix apps/gateway run build` | Exit 0; 71 suites passed, 10 skipped; 1,408 tests passed, 119 skipped; build passed. |
+| Feature 009 Customer Runtime | `npm --prefix apps/customer-connector-runtime run test -- --runInBand`; `npm --prefix apps/customer-connector-runtime run build`; `npm --prefix apps/customer-connector-runtime run typecheck` | Exit 0; 35 suites / 357 tests passed; build and typecheck passed. |
+| Root static gates | `npm run build`; `npm run typecheck`; `git diff --check` | Exit 0 for all commands. |
+| Changed-file lint | `npx eslint <all Phase 7 changed TypeScript files>` | Exit 0; no findings. |
+| Full lint | `npm run lint` | Expected nonzero with exactly the four accepted unrelated findings: two connector-runtime `no-unsafe-function-type`, one Identity Bridge `no-unexpected-multiline`, and one productized transport `prefer-const`. `FULL_LINT=KNOWN_PREEXISTING_ONLY`. |
+
+T082 passed all recorded hashes: Feature 009 spec/design/plan/tasks/manifest, Prisma schema/migrations, Gateway, Identity Bridge, frozen Feature 010 spec/design/plan, Assistant controller/DTO/SSE/history, package inventory, `.specify/feature.json`, and `AGENTS.md`. The repository still has one worktree, no submodule or repository-local external frontend, and no staging execution. Feature 009 T126–T142 remain unchecked with `FIRST_UNEXECUTED_TASK=T126`, `PHASE14_EXECUTED=NO`, and `LIVE_STAGING_ACCESSED=NO`. The pre-existing untracked `apps/customer-connector-runtime/test/fixtures/phase6-upstream.key` retains SHA-256 `6ab251163e505b122d4be86b124efc9bb180a1af99fd9fd5b358832a7eef61fd` and remains untouched.
+
+```text
+BOUNDED_CONVERSATION_CONTEXT=PASS
+SEMANTIC_FOLLOWUP=PASS
+GROUNDED_RETRIEVAL_ROUTING=PASS
+DOCUMENT_RAG_RETRIEVAL=PASS
+TOOL_RETRIEVAL=PASS
+HYBRID_RETRIEVAL=PASS
+PRIOR_GROUNDED_CONTEXT_REUSE=PASS
+RETRIEVAL_COVERAGE=PASS
+GROUNDED_CONTEXT_BUNDLE_V1=PASS
+CROSS_CUSTOMER_ISOLATION=PASS
+PROHIBITED_MATERIAL_LEAK=NO
+PUBLIC_ASSISTANT_API_CHANGE=NO
+SSE_EVENT_OR_PAYLOAD_CHANGE=NO
+ASSISTANT_HISTORY_SHAPE_CHANGE=NO
+PRISMA_SCHEMA_CHANGE=NO
+FEATURE010_FINAL_LLM_GENERATION=NO
+FEATURE010_BACKEND_LOCAL_ACCEPTANCE=PASS
+GROUNDED_CONTEXT_BUNDLE_CONTRACT=PASS
+FEATURE009_MANIFEST_CHANGED=NO
+FEATURE009_T126_T142_EXECUTED=NO
+FEATURE009_FINAL_RELEASE_ACCEPTANCE=PENDING
+
+GROUNDED_CONTEXT_BUNDLE_V1_CONTRACT=COMPLETE
+PHASE_6_BEHAVIOR=COMPLETE
+FEATURE011_IMPLEMENTATION_READY=YES
+FEATURE011_IMPLEMENTED=NO
+
+T075_T083_STATUS=COMPLETE
+HIGHEST_COMPLETED_TASK=T083
+NEXT_TASK=NONE
+```
 
 **Final exit gate**:
 

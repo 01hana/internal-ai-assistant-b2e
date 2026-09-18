@@ -61,7 +61,7 @@ export class GroundedContextBundleService {
   }
 }
 
-const PROHIBITED_KEY = /(operationkey|connector|adapter|credential|password|secret|token|authorization|permissionresult|permissionsnapshot|rawresponse|preprojection|deployment|endpoint|opaquehandle)/i;
+const PROHIBITED_KEY = /(operationkey|tooldefinition|connector|adapter|credential|password|secret|token|authorization|proof|permissionresult|permissionsnapshot|rawresponse|preprojection|deployment|endpoint|opaquehandle|execute|retry|nextplan|childplan)/i;
 function assertSafeTree(value: unknown, path: readonly string[], seen = new WeakSet<object>()): void {
   if (value === undefined) return;
   if (value === null || ['string', 'boolean'].includes(typeof value) || (typeof value === 'number' && Number.isFinite(value))) return;

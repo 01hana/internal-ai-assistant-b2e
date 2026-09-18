@@ -22,7 +22,10 @@ const HASHES = Object.freeze({
   sseEventTypes: '9a58004960347cf40a55fbd443da356377fa0c61c87329c0a531ffca78c5fb06',
   assistantSseTypes: 'e3020a6884e6381a766ff61fa094dd05f135c65020e3b7a0a6a89c69f62d2f9c',
   historyTypes: '06acd4f1706779e861e0b916022abf45c1732c7ee1a189731db45a991f1f5e44',
-  packageJson: '970e99f6780a56eeb6e37931d94c3eeb3084bd8cbe5f9decf49d4ca6e710bf9f'
+  packageJson: '970e99f6780a56eeb6e37931d94c3eeb3084bd8cbe5f9decf49d4ca6e710bf9f',
+  activeFeature: '718abaacae7e402d4d44998e680abde71aaa88fa21f72c481f4078fee4249bfd',
+  agentInstructions: 'e2989d23443431394adaa0008e235af2a57133961300eaf630b387ec91f556dd',
+  unrelatedKeyFixture: '6ab251163e505b122d4be86b124efc9bb180a1af99fd9fd5b358832a7eef61fd'
 });
 
 describe('Feature 010 permanent scope boundary (T002)', () => {
@@ -79,6 +82,17 @@ describe('Feature 010 permanent scope boundary (T002)', () => {
     const tracked = git(['ls-files']).split('\n').filter(Boolean);
     expect(tracked.filter((path) => /(^|\/)(?:frontend|f2e|widget|assistant-sdk)(\/|$)/i.test(path))).toEqual([]);
     expect(tracked.filter((path) => /(^|\/)specs\/010-[^/]+\/(?:spec|design|plan|tasks)\.md$/.test(path))).toHaveLength(4);
+  });
+
+  it('preserves active-feature, agent, external, staging, package, and unrelated-fixture boundaries', () => {
+    expect(hash('.specify/feature.json')).toBe(HASHES.activeFeature);
+    expect(hash('AGENTS.md')).toBe(HASHES.agentInstructions);
+    expect(hash('apps/customer-connector-runtime/test/fixtures/phase6-upstream.key')).toBe(HASHES.unrelatedKeyFixture);
+    expect(git(['submodule', 'status']).trim()).toBe('');
+    expect(git(['worktree', 'list', '--porcelain']).match(/^worktree /gm)).toHaveLength(1);
+    expect(text('.specify/feature.json')).toContain('specs/010-conversational-context-grounded-retrieval');
+    expect(text('specs/009-productized-business-connector-runtime/tasks.md')).toContain('LIVE_STAGING_ACCESSED=NO');
+    expect(hash('package.json')).toBe(HASHES.packageJson);
   });
 
   it('keeps the Feature 010 task contract sequential while allowing append-only execution evidence', () => {

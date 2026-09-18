@@ -448,6 +448,23 @@ describe('AssistantReadonlyRuntimeService', () => {
     expect(result.connectorErrorCode).toBe('TOOL_EXECUTION_FAILED');
   });
 
+  it('preserves the bounded public connector-unavailable code without releasing connector details', async () => {
+    const failToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-unavailable' } });
+    const service = createRuntimeService({
+      connectorExecute: jest.fn().mockResolvedValue({
+        status: 'failed',
+        error: { code: 'CONNECTOR_UNAVAILABLE', message: 'PRIVATE_CONNECTOR_DETAIL' }
+      }),
+      failToolCall
+    });
+
+    const result = await service.execute(runtimeInput());
+
+    expect(failToolCall).toHaveBeenCalledWith(expect.objectContaining({ errorCode: 'CONNECTOR_UNAVAILABLE' }));
+    expect(result.connectorErrorCode).toBe('CONNECTOR_UNAVAILABLE');
+    expect(JSON.stringify({ calls: failToolCall.mock.calls, result })).not.toContain('PRIVATE_CONNECTOR_DETAIL');
+  });
+
   it('fails the started ToolCall with a bounded code when connector execution throws', async () => {
     const failToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-failed-throw' } });
     const service = createRuntimeService({
@@ -760,7 +777,7 @@ function createRuntimeService(overrides?: {
   });
   const registrySelect = overrides?.registrySelect ?? jest.fn();
   if (!overrides?.registrySelect) {
-    registrySelect.mockResolvedValue({ execute: selectedAdapterExecute });
+    registrySelect.mockResolvedValue({ key: 'mock', execute: selectedAdapterExecute });
   }
 
   return new AssistantReadonlyRuntimeService(

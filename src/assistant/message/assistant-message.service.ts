@@ -1012,6 +1012,16 @@ export class AssistantMessageService {
     }
     await this.groundedAudit.recordCoverage({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
       coverage: bundle.retrieval.coverage, results: coordinated.needResults });
+    const documentRetrievalFailed = plan.needs.length === 1 && plan.needs[0]?.kind === 'DOCUMENT' &&
+      coordinated.evidence.length === 0 && coordinated.needResults.length === 1 &&
+      coordinated.needResults[0]?.status === 'FAILED' && coordinated.needResults[0]?.reasonCode === 'DOCUMENT_RETRIEVAL_FAILED';
+    if (documentRetrievalFailed) {
+      await this.groundedAudit.recordBundle({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
+        bundle, durationMs: Math.max(0, Date.now() - startedAt) });
+      return this.completeRetrievalFailure({ customerScope, requestId: input.requestId, sessionId,
+        messageId: assistantMessageId, identityContext: input.identityContext, pageContext: input.pageContext,
+        planningResult, groundedContextBundle: bundle });
+    }
     const toolExecution = 'toolExecution' in coordinated ? coordinated.toolExecution : undefined;
     const evidenceIds = bundle.evidence.map((evidence) => evidence.evidenceRefId);
     const toolFacts = bundle.evidence.flatMap((evidence) => evidence.kind === 'TOOL'
@@ -1127,6 +1137,7 @@ export class AssistantMessageService {
     identityContext: SendAssistantMessageInput['identityContext'];
     pageContext: SendAssistantMessageInput['pageContext'];
     planningResult: AssistantPlanningResult;
+    groundedContextBundle?: GroundedContextBundleV1;
   }): Promise<AssistantSseEventRecord[]> {
     const retrievalFailureReason = 'retrieval_unavailable';
     const answerDecision = await this.answerDecisionService.recordSafeDecision({
@@ -1140,9 +1151,18 @@ export class AssistantMessageService {
         delta: '目前無法取得文件 evidence'
       },
       metadata: toJsonInput({
+        ...(input.groundedContextBundle ? toSafeBundleMetadata(input.groundedContextBundle) : {}),
         retrievalFailureReason,
         noAnswerReason: NoAnswerReason.tool_failure
-      })
+      }),
+      grounding: {
+        covered: false,
+        evidenceRefIds: [],
+        metadata: toJsonInput({
+          ...(input.groundedContextBundle ? toSafeBundleMetadata(input.groundedContextBundle) : {}),
+          retrievalFailureReason
+        })
+      }
     });
 
     const reviewItem = await this.reviewItemService.createFromAssistantOutcome({
@@ -1183,6 +1203,7 @@ export class AssistantMessageService {
       decision: answerDecision.status,
       evidenceRefIds: [],
       metadata: toJsonInput({
+        ...(input.groundedContextBundle ? toSafeBundleMetadata(input.groundedContextBundle) : {}),
         retrievalFailureReason,
         noAnswerReason: NoAnswerReason.tool_failure,
         reviewItemId: reviewItem.id,

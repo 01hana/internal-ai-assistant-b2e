@@ -102,6 +102,31 @@ describe('Feature 010 grounded document retrieval RED (T044)', () => {
       .toEqual(expect.objectContaining({ status: 'FAILED', reasonCode: 'DOCUMENT_RETRIEVAL_FAILED' }));
   });
 
+  it('preserves the failed-need bundle and audits while retaining the legacy public retrieval-failure response', async () => {
+    jest.spyOn(app.get(RetrievalService), 'runDocumentRetrieval').mockRejectedValueOnce(new Error('LEAK_RAW_RESPONSE_SENTINEL'));
+    const response = await send('req-f010-p7-retrieval-failure', '退貨流程 SOP 怎麼說？');
+    const events = parseSseResponse(response.text);
+    const final = events.at(-1)?.data?.data;
+    const decision = state.answerDecisions.find((item) => item.requestId === 'req-f010-p7-retrieval-failure');
+    const grounding = state.groundingChecks.find((item) => item.requestId === 'req-f010-p7-retrieval-failure');
+    const audits = state.auditEvents.filter((item) => item.requestId === 'req-f010-p7-retrieval-failure');
+
+    expect(events.map((event) => event.event)).toEqual(['answer_delta', 'final']);
+    expect(final).toEqual(expect.objectContaining({ answerDecision: 'no_answer', noAnswerReason: 'tool_failure', evidenceRefs: [] }));
+    expect(decision).toEqual(expect.objectContaining({ noAnswerReason: 'tool_failure', metadata: expect.objectContaining({
+      retrievalFailureReason: 'retrieval_unavailable', bundleVersion: '1', mode: 'RAG', coverage: 'INSUFFICIENT',
+      needResults: [expect.objectContaining({ status: 'FAILED', reasonCode: 'DOCUMENT_RETRIEVAL_FAILED' })]
+    }) }));
+    expect(grounding?.metadata).toEqual(expect.objectContaining({ bundleVersion: '1', coverage: 'INSUFFICIENT',
+      retrievalFailureReason: 'retrieval_unavailable' }));
+    expect(audits).toEqual(expect.arrayContaining([
+      expect.objectContaining({ eventType: 'grounded_retrieval_lane_rejected', metadata: expect.objectContaining({ status: 'FAILED', reasonCode: 'DOCUMENT_RETRIEVAL_FAILED' }) }),
+      expect.objectContaining({ eventType: 'grounded_retrieval_coverage_evaluated', metadata: expect.objectContaining({ coverage: 'INSUFFICIENT' }) }),
+      expect.objectContaining({ eventType: 'grounded_context_bundle_assembled', metadata: expect.objectContaining({ mode: 'RAG', coverage: 'INSUFFICIENT' }) })
+    ]));
+    expect(JSON.stringify({ response: response.text, decision, grounding, audits })).not.toContain('LEAK_RAW_RESPONSE_SENTINEL');
+  });
+
   async function planAndRun(requestId: string, text: string) {
     const identityContext = { ...createCustomerScopeFixtureIdentityContext(CUSTOMER_SCOPE_FIXTURES.customerA), requestId };
     const customerScope = createCustomerScopeFromIdentityContext(identityContext);

@@ -250,7 +250,7 @@ export class AssistantReadonlyRuntimeService {
         entityRef,
         visibleFields,
         connectorStatus: connectorResult.status,
-        errorCode: toSafeConnectorErrorCode(connectorResult),
+        errorCode: toSafeConnectorErrorCode(connectorResult, selectedAdapter.key),
         durationMs
       });
     }
@@ -383,8 +383,9 @@ export class AssistantReadonlyRuntimeService {
   }
 }
 
-function toSafeConnectorErrorCode(result: ConnectorExecuteResult): string {
-  if (result.error?.code === 'NOT_FOUND') return 'NOT_FOUND';
+function toSafeConnectorErrorCode(result: ConnectorExecuteResult, adapterKey: string): string {
+  if (result.error?.code === 'NOT_FOUND') return result.error.code;
+  if (adapterKey === 'mock' && result.error?.code === 'CONNECTOR_UNAVAILABLE') return result.error.code;
   if (result.status === 'permission_denied' || result.status === 'requires_approval') return result.status;
   return 'TOOL_EXECUTION_FAILED';
 }

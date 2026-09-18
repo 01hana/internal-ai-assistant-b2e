@@ -135,12 +135,11 @@ function semanticallyCompatible(need: GroundedRetrievalPlan['needs'][number], re
     (need.kind === 'DOCUMENT' && /(剛才|剛剛|前面|再列一次|引用的文件|文件證據)/.test(need.query));
   if (!referencesPrior) return false;
   if (need.kind === 'DOCUMENT') {
-    const requestedFamily = documentFamily([need.topicKey, need.query]);
-    const evidenceFamily = documentFamily([priorFrame?.resource?.value, priorFrame?.metricOrAspect?.value,
-      ref.summary?.sourceKey, ref.summary?.documentTitle, ref.summary?.heading]);
-    if (requestedFamily && evidenceFamily) return requestedFamily === evidenceFamily;
-    if (/(剛才|剛剛|前面|再列一次)/.test(need.query) && /SOP|文件|規定|政策/i.test(need.query)) return linkedExchange;
-    return Boolean(need.topicKey && priorFrame?.topicKey && need.topicKey === priorFrame.topicKey);
+    if (isExplicitLinkedDocumentRecall(need.query)) return linkedExchange;
+    return areDocumentTopicsCompatible(
+      { topicKey: need.topicKey, frame: resolvedFrame },
+      { frame: priorFrame, sourceKey: ref.summary?.sourceKey }
+    );
   }
   if (need.kind !== 'TOOL') return false;
   if (!priorFrame) return false;
@@ -155,11 +154,43 @@ function hasInheritedDimension(frame: any): boolean {
   return ['resource', 'intent', 'metricOrAspect', 'timeRange', 'entity'].some((name) => frame?.[name]?.source === 'inherited');
 }
 
-function documentFamily(values: readonly unknown[]): string | undefined {
-  const text = values.filter((value): value is string => typeof value === 'string').join(' ').toLowerCase();
-  if (/travelsubsidy|旅遊|補助/.test(text)) return 'travel-subsidy';
-  if (/退貨|return|sop-return/.test(text)) return 'return-sop';
-  return undefined;
+export function areDocumentTopicsCompatible(
+  current: { readonly topicKey?: string; readonly frame?: any },
+  prior: { readonly frame?: any; readonly sourceKey?: string }
+): boolean {
+  const currentKeys = documentTopicKeys(current.topicKey, current.frame, undefined);
+  const priorKeys = documentTopicKeys(prior.frame?.topicKey, prior.frame, prior.sourceKey);
+  return currentKeys.some((key) => priorKeys.includes(key));
+}
+
+function documentTopicKeys(topicKey: unknown, frame: any, sourceKey: unknown): readonly string[] {
+  const keys: string[] = [];
+  const add = (value: unknown) => {
+    const normalized = normalizeTopicIdentity(value);
+    if (normalized && !keys.includes(normalized) && keys.length < 8) keys.push(normalized);
+  };
+  add(topicKey);
+  const resource = normalizeTopicIdentity(frame?.resource?.value);
+  const aspect = normalizeTopicIdentity(frame?.metricOrAspect?.value);
+  if (resource && aspect) add(`${resource}:${aspect}`);
+  else add(resource);
+  add(sourceKey);
+  return Object.freeze(keys);
+}
+
+function normalizeTopicIdentity(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.normalize('NFKC')
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 128);
+  return normalized || undefined;
+}
+
+function isExplicitLinkedDocumentRecall(query: string): boolean {
+  return /(剛才|剛剛|前面|再列一次|引用的文件|文件證據)/.test(query) && /SOP|文件|規定|政策|證據/i.test(query);
 }
 
 function documentAccessible(document: any, scope: CustomerScope): boolean {
