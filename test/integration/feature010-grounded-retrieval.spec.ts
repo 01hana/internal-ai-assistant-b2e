@@ -67,7 +67,7 @@ describe('Feature 010 unified grounded retrieval integration RED (T010)', () => 
     expect(state.retrievalRuns).toHaveLength(before.retrievalRuns + 1);
     expect(state.toolCalls).toHaveLength(before.toolCalls);
     expect(decision?.metadata).toEqual(expect.objectContaining({
-      followUpResolution: expect.objectContaining({ kind: 'INHERIT' }), retrievalMode: 'RAG'
+      followUpResolution: expect.objectContaining({ kind: 'REPLACE' }), retrievalMode: 'RAG'
     }));
   });
 

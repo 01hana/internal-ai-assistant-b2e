@@ -1334,7 +1334,10 @@ function createPrismaMock(state: MockState) {
         };
         state.groundingChecks.push(record);
         return record;
-      })
+      }),
+      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        state.groundingChecks.find((item) => matchesWhere(item, where)) ?? null
+      )
     },
     answerDecision: {
       create: jest.fn(async ({ data }: { data: Partial<AnswerDecisionRecord> }) => {

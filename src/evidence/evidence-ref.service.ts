@@ -36,6 +36,7 @@ export interface AttachedEvidence<TSummary extends Record<string, unknown> = Rec
   entityId?: string;
   fieldPaths: string[];
   summary: TSummary;
+  observedAt?: string;
 }
 
 export type DocumentChunkEvidenceSummary = Readonly<{
@@ -115,7 +116,8 @@ export class EvidenceRefService {
       entityType: evidenceRef.entityType ?? undefined,
       entityId: evidenceRef.entityId ?? undefined,
       fieldPaths: evidenceRef.fieldPaths,
-      summary
+      summary,
+      observedAt: evidenceRef.timestamp instanceof Date ? evidenceRef.timestamp.toISOString() : new Date().toISOString()
     };
   }
 

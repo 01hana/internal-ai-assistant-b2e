@@ -9,7 +9,7 @@ import { createCustomerScopeFromHostIntegrationContext } from '../../host-integr
 import { AnswerDecisionStatus, AssistantMessageRole, NoAnswerReason, RiskLevel } from '../../generated/prisma/enums';
 import { ReviewItemService } from '../../feedback/review-item.service';
 import { RetrievalService } from '../../retrieval/retrieval.service';
-import { AnswerDecisionService } from '../answer/answer-decision.service';
+import { AnswerDecisionService, toSafeBundleMetadata } from '../answer/answer-decision.service';
 import { ClarificationQuestionService } from '../answer/clarification-question.service';
 import { EvidenceConflictDetectorService, NormalizedEvidenceFact } from '../answer/evidence-conflict-detector.service';
 import { NoAnswerGateService } from '../answer/no-answer-gate.service';
@@ -24,6 +24,12 @@ import { AssistantSseEventBuilder } from '../sse/assistant-sse-event.builder';
 import { AssistantSseEventRecord } from '../sse/assistant-sse.types';
 import { AssistantMessageRepository } from './assistant-message.repository';
 import { SendAssistantMessageInput } from './assistant-message.types';
+import { HybridRetrievalCoordinatorService } from '../grounding/hybrid-retrieval-coordinator.service';
+import { GroundedContextBundleService } from '../grounding/grounded-context-bundle.service';
+import { PriorGroundedContextService } from '../grounding/prior-grounded-context.service';
+import type { GroundedContextBundleV1 } from '../grounding/grounded-context-bundle.types';
+import type { GroundedRetrievalPlan } from '../../retrieval/grounded-retrieval.types';
+import { GroundedRetrievalAuditService } from '../grounding/grounded-retrieval-audit.service';
 
 @Injectable()
 export class AssistantMessageService {
@@ -44,7 +50,11 @@ export class AssistantMessageService {
     private readonly approvalRequestService: ApprovalRequestService,
     private readonly escalationRequestService: EscalationRequestService,
     private readonly auditWriter: AuditWriterService,
-    private readonly sseEventBuilder: AssistantSseEventBuilder
+    private readonly sseEventBuilder: AssistantSseEventBuilder,
+    private readonly groundedCoordinator: HybridRetrievalCoordinatorService,
+    private readonly groundedBundleService: GroundedContextBundleService,
+    private readonly priorGroundedContext: PriorGroundedContextService,
+    private readonly groundedAudit: GroundedRetrievalAuditService
   ) {}
 
   async sendMessage(input: SendAssistantMessageInput): Promise<AssistantSseEventRecord[]> {
@@ -98,6 +108,7 @@ export class AssistantMessageService {
     const preRuntimeGate = this.noAnswerGateService.evaluatePreRuntime(planningResult);
     if (
       preRuntimeGate?.kind === 'clarification' &&
+      !isGroundedRecallRequest(input.message, planningResult) &&
       shouldApplyPreRuntimeClarificationGate(planningResult.executionPlan.riskAssessment, input.pageContext, preRuntimeGate.clarificationReason)
     ) {
       const clarificationQuestion = await this.clarificationQuestionService.create({
@@ -113,6 +124,7 @@ export class AssistantMessageService {
         confidence: planningResult.queryUnderstanding.confidence
       });
 
+      const clarificationBundle = this.createClarificationBundle(input.message, userMessage.id, planningResult);
       const answerDecision = await this.answerDecisionService.recordSafeDecision({
         customerScope,
         requestId: input.requestId,
@@ -127,7 +139,9 @@ export class AssistantMessageService {
           clarificationQuestionId: clarificationQuestion.id,
           reason: preRuntimeGate.clarificationReason,
           candidateRefCount: preRuntimeGate.candidateRefs.length,
-          confidence: planningResult.queryUnderstanding.confidence
+          confidence: planningResult.queryUnderstanding.confidence,
+          ...(planningResult.queryUnderstanding.followUpResolution ? { followUpResolution: planningResult.queryUnderstanding.followUpResolution } : {}),
+          ...(clarificationBundle ? toSafeBundleMetadata(clarificationBundle) : {})
         })
       });
 
@@ -362,6 +376,10 @@ export class AssistantMessageService {
         expiresAt: approvalRequest.expiresAt,
         answer: answerText
       });
+    }
+
+    if (planningResult.groundedRetrievalPlan) {
+      return this.completeGroundedRetrieval({ input, customerScope, sessionId: session.id, userMessageId: userMessage.id, assistantMessageId: assistantMessage.id, planningResult });
     }
 
     if (requiresDocumentChunkEvidence(planningResult.executionPlan.requiredEvidence)) {
@@ -933,6 +951,104 @@ export class AssistantMessageService {
     });
   }
 
+  private createClarificationBundle(question: string, messageId: string, planning: AssistantPlanningResult): GroundedContextBundleV1 | undefined {
+    const plan = planning.groundedRetrievalPlan;
+    if (!plan) return undefined;
+    const results = plan.needs.map((need) => ({
+      needId: need.id,
+      status: 'CLARIFY' as const,
+      evidenceRefIds: Object.freeze([] as string[]),
+      reasonCode: need.kind === 'UNSUPPORTED' ? need.reasonCode : plan.reasonCode
+    }));
+    return this.groundedBundleService.assemble({
+      currentRequest: { messageId, normalizedQuestion: question, ...(plan.resolvedFrame ? { resolvedFrame: plan.resolvedFrame } : {}) },
+      boundedRecentTurns: planning.priorConversationContext?.exchanges ?? [], locale: 'zh-TW', mode: 'CLARIFY',
+      requestedNeeds: plan.needs, needResults: results, evidence: [], citations: []
+    });
+  }
+
+  private async completeGroundedRetrieval(args: {
+    input: SendAssistantMessageInput;
+    customerScope: ReturnType<typeof createCustomerScopeFromHostIntegrationContext>;
+    sessionId: string;
+    userMessageId: string;
+    assistantMessageId: string;
+    planningResult: AssistantPlanningResult;
+  }): Promise<AssistantSseEventRecord[]> {
+    const startedAt = Date.now();
+    const { input, customerScope, sessionId, userMessageId, assistantMessageId, planningResult } = args;
+    const plan = effectiveRecallPlan(input.message, planningResult, planningResult.groundedRetrievalPlan!);
+    const prior = isGroundedRecallRequest(input.message, planningResult) ? await this.priorGroundedContext.resolve({
+      plan, context: planningResult.priorConversationContext, customerScope, identityContext: input.identityContext,
+      requestId: input.requestId, sessionId, sourceMessageId: userMessageId, responseMessageId: assistantMessageId
+    }) : { complete: false, needResults: Object.freeze([]), evidence: Object.freeze([]), citations: Object.freeze([]) };
+    await this.groundedAudit.recordReuse({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
+      eligibleCount: prior.evidence.length, complete: prior.complete });
+    const coordinated = prior.complete ? prior : await this.groundedCoordinator.execute({
+      plan,
+      precovered: prior,
+      documentInput: {
+        requestId: input.requestId, sessionId, messageId: assistantMessageId, identityContext: input.identityContext,
+        customerScope, resolvedFrame: plan.mode === 'RAG' ? plan.resolvedFrame : undefined
+      },
+      toolInput: {
+        requestId: input.requestId, sessionId, sourceMessageId: userMessageId, responseMessageId: assistantMessageId,
+        identityContext: input.identityContext, customerScope, hostIntegrationContext: input.hostIntegrationContext,
+        pageContext: input.pageContext, transientConnectorContext: input.transientConnectorContext,
+        executionPlan: planningResult.executionPlan
+      }
+    });
+    const mode = prior.complete ? 'CONTEXT_ONLY' as const : plan.mode;
+    const bundle = this.groundedBundleService.assemble({
+      currentRequest: { messageId: userMessageId, normalizedQuestion: input.message, ...(plan.resolvedFrame ? { resolvedFrame: plan.resolvedFrame } : {}) },
+      boundedRecentTurns: planningResult.priorConversationContext?.exchanges ?? [], locale: 'zh-TW', mode,
+      requestedNeeds: plan.needs, needResults: coordinated.needResults, evidence: coordinated.evidence, citations: coordinated.citations
+    });
+    const toolExecution = 'toolExecution' in coordinated ? coordinated.toolExecution : undefined;
+    const evidenceIds = bundle.evidence.map((evidence) => evidence.evidenceRefId);
+    const failedToolOnly = evidenceIds.length === 0 && (toolExecution?.toolLifecycle === 'failed' || toolExecution?.toolLifecycle === 'blocked');
+    const answerDecision = failedToolOnly
+      ? await this.answerDecisionService.recordSafeDecision({
+          customerScope, requestId: input.requestId, messageId: assistantMessageId,
+          status: toolExecution?.toolLifecycle === 'blocked' ? AnswerDecisionStatus.permission_denied : AnswerDecisionStatus.no_answer,
+          noAnswerReason: toolExecution?.toolLifecycle === 'blocked' ? NoAnswerReason.permission_denied : NoAnswerReason.tool_failure,
+          answer: toolExecution?.toolLifecycle === 'blocked'
+            ? { text: '目前權限不足，無法取得足夠 evidence 來回答這個問題。', delta: '目前權限不足，無法取得足夠 evidence' }
+            : { text: '目前無法取得工具結果，因此不能產生確定答案。請稍後再試或改用其他查詢條件。', delta: '目前無法取得工具結果' },
+          metadata: toJsonInput({ ...toSafeBundleMetadata(bundle), ...(toolExecution?.errorCode ? { errorCode: toolExecution.errorCode } : {}) }),
+          grounding: { covered: false, evidenceRefIds: [] }
+        })
+      : await this.answerDecisionService.decide({
+          customerScope, requestId: input.requestId, messageId: assistantMessageId, executionPlan: planningResult.executionPlan,
+          evidenceRefs: bundle.evidence.map((evidence) => ({ id: evidence.evidenceRefId, summary: evidence.kind === 'DOCUMENT'
+            ? { documentTitle: evidence.title, snippet: evidence.content }
+            : { ...evidence.projectedFacts } })),
+          groundedContextBundle: bundle,
+          followUpResolution: planningResult.queryUnderstanding.followUpResolution,
+          retrievalMode: bundle.retrieval.mode
+        });
+    await this.messageRepository.completeAssistantMessage({ customerScope, messageId: assistantMessageId, content: answerDecision.answer.text, answerDecision: answerDecision.status });
+    await this.contextStateService.updateAfterMessageFlow({ customerScope, sessionId, pageContext: input.pageContext, planningResult,
+      toolCallIds: toolExecution?.toolCallId ? [toolExecution.toolCallId] : [], evidenceRefIds: evidenceIds });
+    await this.groundedAudit.recordBundle({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
+      bundle, durationMs: Math.max(0, Date.now() - startedAt) });
+    const finalNoAnswerReason = failedToolOnly
+      ? (toolExecution?.toolLifecycle === 'blocked' ? NoAnswerReason.permission_denied : NoAnswerReason.tool_failure)
+      : answerDecision.status === AnswerDecisionStatus.no_answer ? NoAnswerReason.no_evidence : undefined;
+    const finalData = { answerDecision: answerDecision.status, answer: answerDecision.answer.text,
+      ...(finalNoAnswerReason ? { noAnswerReason: finalNoAnswerReason } : {}),
+      ...(toolExecution?.errorCode ? { errorCode: toolExecution.errorCode } : {}), evidenceRefs: evidenceIds };
+    if (toolExecution?.toolLifecycle && toolExecution.toolName) {
+      return this.sseEventBuilder.buildMessageEvents({ requestId: input.requestId, sessionId, messageId: assistantMessageId,
+        toolCallId: toolExecution.toolCallId ?? 'not-executed', toolName: toolExecution.toolName,
+        toolLifecycle: toolExecution.toolLifecycle, deniedReason: toolExecution.deniedReason, errorCode: toolExecution.errorCode,
+        evidenceRefIds: toolExecution.toolLifecycle === 'completed' ? evidenceIds.filter((id) => coordinated.evidence.some((evidence) => evidence.kind === 'TOOL' && evidence.evidenceRefId === id)) : [],
+        answerDelta: answerDecision.answer.delta, finalData });
+    }
+    return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId, sessionId, messageId: assistantMessageId,
+      answerDelta: answerDecision.answer.delta, finalData });
+  }
+
   createErrorEvent(input: { requestId: string; sessionId: string; code: string; message: string }) {
     return this.sseEventBuilder.buildErrorEvent(input);
   }
@@ -1110,6 +1226,24 @@ function normalizeEvidenceValue(value: unknown): string {
 
 function requiresDocumentChunkEvidence(requiredEvidence: Prisma.JsonValue): boolean {
   return Array.isArray(requiredEvidence) && requiredEvidence.includes('document_chunk');
+}
+
+function isGroundedRecallRequest(message: string, planning: AssistantPlanningResult): boolean {
+  return /(剛才|剛剛|你剛|再列一次|引用的文件)/.test(message) && (planning.priorConversationContext?.evidenceRefs.length ?? 0) > 0;
+}
+
+function effectiveRecallPlan(message: string, planning: AssistantPlanningResult, original: GroundedRetrievalPlan): GroundedRetrievalPlan {
+  if (!isGroundedRecallRequest(message, planning)) return original;
+  const wantsDocument = /(文件|SOP|規定|政策)/i.test(message);
+  const wantsTool = /(庫存|工單|幾張|多少)/.test(message);
+  if (!wantsDocument && !wantsTool) return original;
+  const needs = [];
+  if (wantsTool) needs.push(Object.freeze({ id: `need-${needs.length + 1}`, kind: 'TOOL' as const, frame: original.resolvedFrame ?? Object.freeze({}) }));
+  if (wantsDocument) needs.push(Object.freeze({ id: `need-${needs.length + 1}`, kind: 'DOCUMENT' as const, query: message }));
+  return Object.freeze({
+    mode: wantsTool && wantsDocument ? 'HYBRID' : wantsTool ? 'TOOL' : 'RAG',
+    needs: Object.freeze(needs), resolvedFrame: original.resolvedFrame, reasonCode: 'PRIOR_GROUNDED_RECALL_REQUESTED'
+  });
 }
 
 function stringFromMetadata(value: unknown): string | undefined {

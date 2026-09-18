@@ -23,7 +23,7 @@ import { ConversationSemanticReconstructorService } from '../assistant/conversat
 import { FollowUpSemanticResolverService } from '../assistant/conversation/follow-up-semantic-resolver.service';
 import type { ConversationSemanticFrame, SemanticDimension } from '../assistant/conversation/conversation.types';
 
-const DEPENDENT_FOLLOW_UP = /(呢|那個|剛才|剛剛|前面|同樣|這個(?!月))/;
+const DEPENDENT_FOLLOW_UP = /(呢|那個|你剛|剛才|剛剛|前面|同樣|再列一次|這個(?!月))/;
 const VAGUE_DEIXIS = /^\s*那個(?:呢)?[？?。!！]?\s*$/;
 
 @Injectable()
@@ -70,7 +70,8 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
       ? this.followUpResolver.resolve({
           currentFrame: currentSemanticFrame,
           priorFrames: input.priorConversationContext?.semanticFrames ?? [],
-          vagueReference: VAGUE_DEIXIS.test(normalizedText)
+          vagueReference: VAGUE_DEIXIS.test(normalizedText),
+          preferLatest: !VAGUE_DEIXIS.test(normalizedText)
         })
       : undefined;
     const effectiveFrame = followUpResolution?.resolvedFrame ?? currentSemanticFrame;
@@ -84,8 +85,18 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
     const riskLevel = inferRiskLevel(normalizedText);
     const resolvedDocumentTopic = effectiveFrame?.resource?.value === 'travelSubsidyPolicy';
     const documentTaskType = resolvedDocumentTopic ? 'policy_lookup' : inferTaskType(normalizedText);
+    let independentlyDecomposedSubTasks = decomposeSubTasks(sentences);
+    const hasStructuredResourceSignal = normalizedTerms.some((term) => term.category === 'resource' && ['inventory', 'stock', 'workOrder', 'order'].includes(term.normalizedTerm));
+    if (independentlyDecomposedSubTasks.length === 1 && isDocumentTaskType(independentlyDecomposedSubTasks[0].type) && hasStructuredResourceSignal) {
+      independentlyDecomposedSubTasks = [
+        { type: 'general_lookup', text: independentlyDecomposedSubTasks[0].text },
+        { type: independentlyDecomposedSubTasks[0].type, text: independentlyDecomposedSubTasks[0].text }
+      ];
+    }
+    const hasDocumentSubTask = independentlyDecomposedSubTasks.some((subTask) => isDocumentTaskType(subTask.type));
+    const hasNonDocumentSubTask = independentlyDecomposedSubTasks.some((subTask) => !isDocumentTaskType(subTask.type));
     const mustClarifyFollowUp = followUpResolution?.kind === 'CLARIFY';
-    const discovery = isDocumentTaskType(documentTaskType) || riskLevel !== RiskLevel.low
+    const discovery = (!hasNonDocumentSubTask && isDocumentTaskType(documentTaskType)) || riskLevel !== RiskLevel.low
       || mustClarifyFollowUp
       ? undefined
       : await this.toolDiscovery.discover({
@@ -95,9 +106,11 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
     const candidateTools = [...(discovery?.candidates ?? [])];
     const taskType = discovery?.taskType ?? documentTaskType;
     const requiredEvidence = discovery?.requiredEvidence.length
-      ? [...discovery.requiredEvidence]
+      ? [...new Set([...discovery.requiredEvidence, ...(hasDocumentSubTask ? ['document_chunk'] : [])])]
       : inferRequiredEvidence(taskType, entityCandidates, resolvedReferences);
-    const subTasks = discovery?.discoveredTaskTypes.length
+    const subTasks = independentlyDecomposedSubTasks.length > 1
+      ? independentlyDecomposedSubTasks
+      : discovery?.discoveredTaskTypes.length
       ? discovery.discoveredTaskTypes.map((type, index) => ({ type, text: sentences[index]?.text ?? normalizedText }))
       : decomposeSubTasks(sentences, taskType);
     const followUpClarification = mustClarifyFollowUp ? [{

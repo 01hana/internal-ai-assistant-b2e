@@ -2,6 +2,9 @@ import { Prisma } from '../../generated/prisma/client';
 import { AnswerDecisionStatus, NoAnswerReason } from '../../generated/prisma/enums';
 import { PersistedExecutionPlan } from '../planning/assistant-planning.types';
 import { CustomerScope } from '../../identity/customer-scope.types';
+import type { GroundedContextBundleV1 } from '../grounding/grounded-context-bundle.types';
+import type { FollowUpResolutionDecision } from '../conversation/conversation.types';
+import type { RetrievalMode } from '../../retrieval/grounded-retrieval.types';
 
 export interface AnswerPlan {
   answerType: 'grounded_text' | 'clarification' | 'no_answer';
@@ -21,6 +24,9 @@ export interface BuildAnswerDecisionInput {
     id: string;
     summary: Record<string, unknown>;
   }>;
+  groundedContextBundle?: GroundedContextBundleV1;
+  followUpResolution?: FollowUpResolutionDecision;
+  retrievalMode?: RetrievalMode;
 }
 
 export interface RecordSafeAnswerDecisionInput {

@@ -36,7 +36,10 @@ export class AnswerDecisionService {
         evidenceRefIds: answerPlan.selectedEvidenceRefs,
         metadata: toJsonInput({
           answerType: answerPlan.answerType,
-          missingInformationCount: answerPlan.missingInformation.length
+          missingInformationCount: answerPlan.missingInformation.length,
+          ...(input.groundedContextBundle ? toSafeBundleMetadata(input.groundedContextBundle) : {}),
+          ...(input.followUpResolution ? { followUpResolution: input.followUpResolution } : {}),
+          ...(input.retrievalMode ? { retrievalMode: input.retrievalMode } : {})
         })
       }
     });
@@ -51,7 +54,10 @@ export class AnswerDecisionService {
         groundingCheckId: groundingCheck.id,
         metadata: toJsonInput({
           answerType: answerPlan.answerType,
-          selectedEvidenceCount: answerPlan.selectedEvidenceRefs.length
+          selectedEvidenceCount: answerPlan.selectedEvidenceRefs.length,
+          ...(input.groundedContextBundle ? toSafeBundleMetadata(input.groundedContextBundle) : {}),
+          ...(input.followUpResolution ? { followUpResolution: input.followUpResolution } : {}),
+          ...(input.retrievalMode ? { retrievalMode: input.retrievalMode } : {})
         })
       }
     });
@@ -263,4 +269,21 @@ function toRecord(value: Prisma.InputJsonValue | undefined): Record<string, unkn
   }
 
   return value as Record<string, unknown>;
+}
+
+export function toSafeBundleMetadata(bundle: import('../grounding/grounded-context-bundle.types').GroundedContextBundleV1) {
+  return {
+    bundleVersion: bundle.version,
+    mode: bundle.retrieval.mode,
+    coverage: bundle.retrieval.coverage,
+    requestedNeedIds: bundle.retrieval.requestedNeeds.map((need) => need.id),
+    needResults: bundle.retrieval.needResults.map((result) => ({
+      needId: result.needId,
+      status: result.status,
+      evidenceRefIds: [...result.evidenceRefIds],
+      ...(result.reasonCode ? { reasonCode: result.reasonCode } : {})
+    })),
+    evidenceIds: bundle.evidence.map((evidence) => evidence.evidenceRefId),
+    unsupportedNeeds: bundle.unsupportedNeeds.map((need) => ({ needId: need.needId, reasonCode: need.reasonCode }))
+  };
 }

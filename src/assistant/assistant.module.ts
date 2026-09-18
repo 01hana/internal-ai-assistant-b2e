@@ -31,6 +31,14 @@ import { ConversationAuditService } from './conversation/conversation-audit.serv
 import { ConversationContextLoaderService } from './conversation/conversation-context-loader.service';
 import { ConversationContextRepository } from './conversation/conversation-context.repository';
 import { ConversationSourceGuard } from './conversation/conversation-source-guard';
+import { GroundedToolEvidenceNormalizer } from './grounding/grounded-tool-evidence.normalizer';
+import { GroundedToolRetrievalService } from './grounding/grounded-tool-retrieval.service';
+import { HybridRetrievalCoordinatorService } from './grounding/hybrid-retrieval-coordinator.service';
+import { RetrievalCoverageService } from './grounding/retrieval-coverage.service';
+import { GroundedContextBundleService } from './grounding/grounded-context-bundle.service';
+import { PriorGroundedEvidenceEligibilityService } from './grounding/prior-grounded-evidence-eligibility.service';
+import { PriorGroundedContextService } from './grounding/prior-grounded-context.service';
+import { GroundedRetrievalAuditService } from './grounding/grounded-retrieval-audit.service';
 
 @Module({
   imports: [
@@ -71,7 +79,15 @@ import { ConversationSourceGuard } from './conversation/conversation-source-guar
     },
     ConversationSourceGuard,
     ConversationContextLoaderService,
-    ConversationAuditService
+    ConversationAuditService,
+    GroundedToolEvidenceNormalizer,
+    GroundedToolRetrievalService,
+    HybridRetrievalCoordinatorService,
+    RetrievalCoverageService,
+    GroundedContextBundleService,
+    PriorGroundedEvidenceEligibilityService,
+    PriorGroundedContextService,
+    GroundedRetrievalAuditService
   ],
   exports: [
     AssistantPlanningService,

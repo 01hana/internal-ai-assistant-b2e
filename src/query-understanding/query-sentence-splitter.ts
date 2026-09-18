@@ -1,6 +1,6 @@
 import { QueryUnderstandingSentence } from './query-understanding.types';
 
-const SENTENCE_SPLIT_PATTERN = /[。！？!?]+/;
+const SENTENCE_SPLIT_PATTERN = /[。！？!?]+|[，,]\s*並/;
 
 export function normalizeQueryText(text: string): string {
   return text.trim().replace(/\s+/g, ' ');

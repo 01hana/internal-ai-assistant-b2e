@@ -9,6 +9,7 @@ import {
   QueryUnderstandingOutput
 } from '../../query-understanding/query-understanding.types';
 import type { GroundedRetrievalPlan } from '../../retrieval/grounded-retrieval.types';
+import type { BoundedConversationContext } from '../conversation/conversation.types';
 
 export interface AssistantPlanningInput {
   customerScope: CustomerScope;
@@ -27,6 +28,7 @@ export interface AssistantPlanningResult {
   executionPlan: PersistedExecutionPlan;
   decision: ExecutionDecision;
   groundedRetrievalPlan?: GroundedRetrievalPlan;
+  priorConversationContext?: BoundedConversationContext;
 }
 
 export interface PlannedOperationCandidate {

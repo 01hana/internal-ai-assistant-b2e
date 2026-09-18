@@ -16,6 +16,7 @@ import { ConversationContextLoaderService } from '../conversation/conversation-c
 import { ConversationAuditService } from '../conversation/conversation-audit.service';
 import { GroundedRetrievalRouterService } from '../../retrieval/grounded-retrieval-router.service';
 import type { GroundedRetrievalPlan, RetrievalNeedCandidate } from '../../retrieval/grounded-retrieval.types';
+import { decomposeRetrievalNeeds } from '../../query-understanding/query-task-decomposer';
 
 const MAX_ARGUMENT_KEYS = 32;
 const MAX_ARGUMENT_DEPTH = 4;
@@ -84,7 +85,7 @@ export class AssistantPlanningService {
       });
     }
     const routingFrame = output.followUpResolution?.resolvedFrame ?? output.currentSemanticFrame;
-    const shouldBuildGroundedPlan = Boolean(output.followUpResolution) || output.requiredEvidence.includes('document_chunk');
+    const shouldBuildGroundedPlan = Boolean(output.followUpResolution) || output.requiredEvidence.includes('document_chunk') || output.candidateTools.length > 0;
     const groundedRetrievalPlan = this.groundedRetrievalRouter && shouldBuildGroundedPlan
       ? this.groundedRetrievalRouter.route({
           requestId: input.requestId,
@@ -124,7 +125,8 @@ export class AssistantPlanningService {
       persistedQueryUnderstanding: persisted,
       executionPlan: mapExecutionPlan(executionPlan),
       decision: executionPlan.decision,
-      groundedRetrievalPlan
+      groundedRetrievalPlan,
+      priorConversationContext
     };
   }
 }
@@ -136,6 +138,17 @@ function toRetrievalNeedCandidates(text: string, output: QueryUnderstandingOutpu
   const frame = output.followUpResolution?.resolvedFrame ?? output.currentSemanticFrame;
   if (frame?.timeRange?.value === 'last_month' && output.candidateTools.length === 0) {
     return [{ kind: 'UNSUPPORTED', reasonCode: 'UNSUPPORTED_TIME_RANGE' }];
+  }
+  if (output.subTasks.length > 1) {
+    const decomposed = decomposeRetrievalNeeds(output.subTasks, output.subTasks.map(() => frame ?? Object.freeze({})));
+    return decomposed.needs.map((need) => {
+      if (need.kind === 'DOCUMENT') return { kind: 'DOCUMENT' as const, query: need.query,
+        ...(frame?.resource?.value === 'travelSubsidyPolicy' && frame.topicKey ? { topicKey: frame.topicKey } : {}) };
+      if (need.kind === 'TOOL') return output.candidateTools.length > 0
+        ? { kind: 'TOOL' as const, frame: need.frame }
+        : { kind: 'UNSUPPORTED' as const, reasonCode: 'NO_CURRENT_RETRIEVAL_CAPABILITY' };
+      return { kind: 'UNSUPPORTED' as const, reasonCode: need.reasonCode };
+    });
   }
   if (output.requiredEvidence.includes('document_chunk')) {
     return [{ kind: 'DOCUMENT', query: text, ...(frame?.topicKey ? { topicKey: frame.topicKey } : {}) }];
