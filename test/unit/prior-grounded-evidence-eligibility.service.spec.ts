@@ -6,7 +6,7 @@ const SCOPE = Object.freeze({ customerId: 'customer-a', sessionId: 'session-1', 
 
 describe('Feature 010 prior grounded evidence eligibility RED (T009)', () => {
   it('reuses document evidence only with active same-scope source, matching version, visibility, access, and permission [FAIL_REASON=MISSING_FEATURE010_BEHAVIOR]', () => {
-    expect(service().evaluate({ evidence: documentEvidence(), currentScope: SCOPE, currentDocument: { active: true, version: 'v3', visible: true, accessible: true, permissionAllowed: true } }))
+    expect(service().evaluate({ evidence: documentEvidence(), currentScope: SCOPE, currentDocument: { active: true, chunkEnabled: true, version: 'v3', visible: true, accessible: true, permissionAllowed: true } }))
       .toMatchObject({ eligible: true, kind: 'DOCUMENT' });
   });
 
@@ -15,6 +15,8 @@ describe('Feature 010 prior grounded evidence eligibility RED (T009)', () => {
       evidence: toolEvidence(), currentScope: SCOPE, now: '2026-09-17T01:14:59.000Z',
       currentAuthorization: { toolDefinitionActive: true, policyAllowed: true, permissionAllowed: true }
     })).toMatchObject({ eligible: true, kind: 'TOOL', maxAgeSeconds: 900 });
+    expect(service().evaluate({ evidence: toolEvidence(), currentScope: SCOPE, now: '2026-09-17T01:15:00.000Z', currentAuthorization: authorized() }))
+      .toMatchObject({ eligible: true, kind: 'TOOL' });
   });
 
   it('reports Hybrid item eligibility independently so orchestration can distinguish complete and incomplete sets [FAIL_REASON=MISSING_FEATURE010_BEHAVIOR]', () => {
@@ -38,6 +40,9 @@ describe('Feature 010 prior grounded evidence eligibility RED (T009)', () => {
     ['revoked Tool policy', { evidence: toolEvidence(), now: '2026-09-17T01:10:00.000Z', currentAuthorization: { ...authorized(), policyAllowed: false } }],
     ['failed ToolCall', { evidence: { ...toolEvidence(), status: 'failed', executionStatus: 'failed' }, now: '2026-09-17T01:10:00.000Z', currentAuthorization: authorized() }],
     ['raw Tool data', { evidence: { ...toolEvidence(), rawResponse: { quantity: 999 } }, now: '2026-09-17T01:10:00.000Z', currentAuthorization: authorized() }],
+    ['nested raw Tool data', { evidence: { ...toolEvidence(), metadata: { rawResponse: { quantity: 999 } } }, now: '2026-09-17T01:10:00.000Z', currentAuthorization: authorized() }],
+    ['nested permission snapshot', { evidence: { ...toolEvidence(), nested: { permissionSnapshot: { allowed: true } } }, now: '2026-09-17T01:10:00.000Z', currentAuthorization: authorized() }],
+    ['nested pre-projection data', { evidence: { ...toolEvidence(), payload: { preProjectionData: { quantity: 999 } } }, now: '2026-09-17T01:10:00.000Z', currentAuthorization: authorized() }],
     ['malformed document', { evidence: { ...documentEvidence(), documentVersion: undefined }, currentDocument: validDocument() }],
     ['ungrounded evidence', { evidence: { ...documentEvidence(), groundingCovered: false }, currentDocument: validDocument() }],
     ['cross-Customer evidence', { evidence: { ...documentEvidence(), scope: { ...SCOPE, customerId: 'customer-b' } }, currentDocument: validDocument() }]
@@ -55,6 +60,6 @@ function service(): EligibilityService {
   return new Target();
 }
 function documentEvidence() { return { kind: 'DOCUMENT', evidenceRefId: 'evidence-document', needId: 'need-document', scope: SCOPE, documentId: 'document-1', chunkId: 'chunk-1', documentVersion: 'v3', groundingCovered: true }; }
-function toolEvidence() { return { kind: 'TOOL', evidenceRefId: 'evidence-tool', needId: 'need-tool', scope: SCOPE, status: 'success', executionStatus: 'executed', projectionStatus: 'succeeded', groundingCovered: true, observedAt: '2026-09-17T01:00:00.000Z' }; }
+function toolEvidence() { return { kind: 'TOOL', evidenceRefId: 'evidence-tool', needId: 'need-tool', scope: SCOPE, status: 'success', executionStatus: 'executed', projectionStatus: 'succeeded', evidenceAttached: true, projectedFacts: { quantity: 17 }, declaredFieldPaths: ['quantity'], groundingCovered: true, observedAt: '2026-09-17T01:00:00.000Z' }; }
 function authorized() { return { toolDefinitionActive: true, policyAllowed: true, permissionAllowed: true }; }
-function validDocument() { return { active: true, version: 'v3', visible: true, accessible: true, permissionAllowed: true }; }
+function validDocument() { return { active: true, chunkEnabled: true, version: 'v3', visible: true, accessible: true, permissionAllowed: true }; }

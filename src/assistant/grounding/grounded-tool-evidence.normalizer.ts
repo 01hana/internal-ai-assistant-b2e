@@ -3,8 +3,7 @@ import type { GroundedCitation, GroundedToolEvidence } from './grounded-context-
 
 const ALLOWED_KEYS = new Set([
   'needId', 'evidenceRefId', 'toolCallId', 'canonicalToolKey', 'status', 'executionStatus',
-  'projectionStatus', 'answerDecisionStatus', 'groundingCovered', 'groundingReason',
-  'evidenceAttached', 'projectedFacts', 'declaredFieldPaths', 'observedAt'
+  'projectionStatus', 'evidenceAttached', 'projectedFacts', 'declaredFieldPaths', 'observedAt'
 ]);
 
 export class GroundedToolEvidenceNormalizationError extends Error {
@@ -22,9 +21,6 @@ export interface GroundedToolEvidenceNormalizationInput {
   readonly status: string;
   readonly executionStatus: string;
   readonly projectionStatus: string;
-  readonly answerDecisionStatus: string;
-  readonly groundingCovered: boolean;
-  readonly groundingReason?: string;
   readonly evidenceAttached: boolean;
   readonly projectedFacts: Readonly<Record<string, unknown>>;
   readonly declaredFieldPaths: readonly string[];
@@ -40,9 +36,8 @@ export class GroundedToolEvidenceNormalizer {
     if (input.status !== 'success' || input.executionStatus !== 'executed') {
       throw rejected('TOOLCALL_NOT_SUCCESSFULLY_EXECUTED');
     }
-    if (input.projectionStatus !== 'succeeded' || input.answerDecisionStatus !== 'answered' ||
-      input.groundingCovered !== true || input.evidenceAttached !== true) {
-      throw rejected('TOOL_EVIDENCE_NOT_PROJECTED_ATTACHED_OR_GROUNDED');
+    if (input.projectionStatus !== 'succeeded' || input.evidenceAttached !== true) {
+      throw rejected('TOOL_EVIDENCE_NOT_PROJECTED_OR_ATTACHED');
     }
     const needId = text(input.needId, 128);
     const evidenceRefId = text(input.evidenceRefId, 256);
@@ -82,13 +77,24 @@ function cloneSafeFacts(value: Record<string, unknown>): Readonly<Record<string,
     if (!/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(key) || /token|credential|secret|permission|raw|connector|adapter/i.test(key)) {
       throw rejected('PROHIBITED_PROJECTED_FIELD');
     }
-    const item = value[key];
-    if (!(item === null || typeof item === 'string' || typeof item === 'boolean' || (typeof item === 'number' && Number.isFinite(item)))) {
-      throw rejected('INVALID_PROJECTED_VALUE');
-    }
-    result[key] = item;
+    result[key] = cloneProjectedValue(value[key], 0);
   }
   return deepFreeze(result);
+}
+
+function cloneProjectedValue(value: unknown, depth: number): unknown {
+  if (depth > 4) throw rejected('INVALID_PROJECTED_VALUE');
+  if (value === null || typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))) return value;
+  if (Array.isArray(value) && value.length <= 100) return Object.freeze(value.map((item) => cloneProjectedValue(item, depth + 1)));
+  if (isPlainObject(value) && Object.keys(value).length <= 32) {
+    const output: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) {
+      if (!/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(key) || /token|credential|secret|permission|raw|connector|adapter/i.test(key)) throw rejected('PROHIBITED_PROJECTED_FIELD');
+      output[key] = cloneProjectedValue(value[key], depth + 1);
+    }
+    return Object.freeze(output);
+  }
+  throw rejected('INVALID_PROJECTED_VALUE');
 }
 
 function text(value: unknown, max: number): string | undefined {

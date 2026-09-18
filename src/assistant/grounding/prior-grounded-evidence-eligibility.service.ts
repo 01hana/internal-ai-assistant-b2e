@@ -20,8 +20,8 @@ export class PriorGroundedEvidenceEligibilityService {
     if (evidence.groundingCovered !== true || hasProhibitedMaterial(evidence)) return denied('EVIDENCE_NOT_GROUNDED_OR_SAFE');
     if (evidence.kind === 'DOCUMENT') {
       const document = input.currentDocument;
-      if (!text(evidence.documentVersion) || !isRecord(document) || document.active !== true || document.visible !== true ||
-        document.accessible !== true || document.permissionAllowed !== true || document.version !== evidence.documentVersion) {
+      if (!text(evidence.documentVersion) || !isRecord(document) || document.active !== true || document.chunkEnabled !== true ||
+        document.visible !== true || document.accessible !== true || document.permissionAllowed !== true || document.version !== evidence.documentVersion) {
         return denied('DOCUMENT_CURRENT_ACCESS_OR_VERSION_INVALID');
       }
       return frozen({ eligible: true, kind: 'DOCUMENT', evidenceRefId: evidence.evidenceRefId, needId: evidence.needId });
@@ -29,6 +29,7 @@ export class PriorGroundedEvidenceEligibilityService {
     const authorization = input.currentAuthorization;
     const age = (Date.parse(input.now ?? '') - Date.parse(evidence.observedAt ?? '')) / 1000;
     if (evidence.status !== 'success' || evidence.executionStatus !== 'executed' || evidence.projectionStatus !== 'succeeded' ||
+      evidence.evidenceAttached !== true || !isRecord(evidence.projectedFacts) || !Array.isArray(evidence.declaredFieldPaths) ||
       !Number.isFinite(age) || age < 0 || age > MAX_TOOL_EVIDENCE_AGE_SECONDS || !isRecord(authorization) ||
       authorization.toolDefinitionActive !== true || authorization.policyAllowed !== true || authorization.permissionAllowed !== true) {
       return denied('TOOL_CURRENT_AUTHORITY_OR_FRESHNESS_INVALID');
@@ -41,8 +42,21 @@ function sameScope(left: unknown, right: unknown): boolean {
   if (!isRecord(left) || !isRecord(right)) return false;
   return ['customerId', 'sessionId', 'organizationId', 'hostApp', 'actorId'].every((key) => text(left[key]) && left[key] === right[key]);
 }
-function hasProhibitedMaterial(value: Record<string, unknown>): boolean {
-  return Object.keys(value).some((key) => /raw|preprojection|token|credential|secret|permissionSnapshot/i.test(key));
+function hasProhibitedMaterial(value: unknown, seen = new WeakSet<object>()): boolean {
+  if (value === null || ['string', 'boolean', 'number'].includes(typeof value)) return false;
+  if (!value || typeof value !== 'object' || seen.has(value)) return true;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    const rejected = value.some((item) => hasProhibitedMaterial(item, seen));
+    seen.delete(value);
+    return rejected;
+  }
+  if (!isRecord(value)) return true;
+  const rejected = Object.entries(value).some(([key, nested]) =>
+    /raw(?:response|connector|output)|pre[-_]?projection|token|credential|secret|password|authorization|permissionSnapshot|proof|jwt/i.test(key) ||
+    hasProhibitedMaterial(nested, seen));
+  seen.delete(value);
+  return rejected;
 }
 function denied(reasonCode: string): PriorEvidenceEligibilityResult { return frozen({ eligible: false, reasonCode }); }
 function text(value: unknown): value is string { return typeof value === 'string' && value.length > 0; }

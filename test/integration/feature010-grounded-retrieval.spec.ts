@@ -12,7 +12,7 @@ describe('Feature 010 unified grounded retrieval integration RED (T010)', () => 
   let app: INestApplication;
   let state: Us1TestState;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     ({ app, state } = await createUs1TestAppWithState());
     state.customerToolPolicies.push({
       customerId: 'customer-a', toolDefinitionId: 'tool-definition-inventory-001', enabled: true,
@@ -20,7 +20,7 @@ describe('Feature 010 unified grounded retrieval integration RED (T010)', () => 
     });
   });
 
-  afterAll(async () => app.close());
+  afterEach(async () => app.close());
 
   it('keeps existing document-only retrieval as a GREEN harness proof with zero ToolCalls', async () => {
     const before = counts();

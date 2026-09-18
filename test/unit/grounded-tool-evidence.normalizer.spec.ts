@@ -19,8 +19,6 @@ describe('Feature 010 grounded Tool evidence normalization RED (T007)', () => {
     ['blocked ToolCall', { status: 'blocked', executionStatus: 'not_started' }],
     ['pending ToolCall', { status: 'pending', executionStatus: 'not_started' }],
     ['successful but not executed ToolCall', { status: 'success', executionStatus: 'in_progress' }],
-    ['permission-denied decision', { status: 'blocked', executionStatus: 'not_started', answerDecisionStatus: 'permission_denied' }],
-    ['conflicted grounded result', { status: 'success', executionStatus: 'executed', groundingCovered: false, groundingReason: 'evidence_conflict' }],
     ['failed projection', { projectionStatus: 'failed' }],
     ['detached EvidenceRef', { evidenceAttached: false }]
   ])('rejects %s [FAIL_REASON=MISSING_FEATURE010_BEHAVIOR]', (_case, override) => {
@@ -53,7 +51,6 @@ function validInput() {
   return {
     needId: 'need-tool-1', evidenceRefId: 'evidence-tool-1', toolCallId: 'tool-call-1',
     canonicalToolKey: 'inventory.stock-on-hand', status: 'success', executionStatus: 'executed', projectionStatus: 'succeeded',
-    answerDecisionStatus: 'answered', groundingCovered: true,
     evidenceAttached: true, projectedFacts: { sku: 'SKU-001', quantity: 17 }, declaredFieldPaths: ['sku', 'quantity'],
     observedAt: '2026-09-17T01:00:00.000Z'
   };

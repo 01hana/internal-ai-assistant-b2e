@@ -11,6 +11,7 @@ import { EvidenceRefService } from '../../evidence/evidence-ref.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GroundedToolEvidenceNormalizer } from './grounded-tool-evidence.normalizer';
 import type { ToolPermissionDeniedReason } from '../../tools/tool-registry.types';
+import { createGroundedAnswerInput, GroundedAnswerInput } from '../runtime/grounded-answer-input.types';
 
 export interface GroundedToolRetrievalInput {
   readonly requestId: string;
@@ -35,6 +36,7 @@ export interface GroundedToolRetrievalResult {
   readonly toolLifecycle?: 'completed' | 'blocked' | 'failed';
   readonly deniedReason?: ToolPermissionDeniedReason;
   readonly errorCode?: string;
+  readonly groundedAnswerInput?: GroundedAnswerInput;
 }
 
 @Injectable()
@@ -77,14 +79,16 @@ export class GroundedToolRetrievalService {
       needId: input.need.id, evidenceRefId: attached.id, toolCallId: runtime.toolCallId,
       canonicalToolKey: runtime.projectedResult.canonicalToolKey,
       status: persisted?.status ?? '', executionStatus: persisted?.executionStatus ?? '',
-      projectionStatus: 'succeeded', answerDecisionStatus: 'answered', groundingCovered: true,
-      evidenceAttached: true, projectedFacts: runtime.projectedResult.facts,
+      projectionStatus: 'succeeded', evidenceAttached: true, projectedFacts: runtime.projectedResult.facts,
       declaredFieldPaths: runtime.projectedResult.fieldPaths,
       observedAt: attached.observedAt ?? new Date().toISOString()
     });
     return deepFreeze({
       needResult: needResult(input.need.id, 'COVERED', [attached.id]), evidence: Object.freeze([evidence]),
-      citations: Object.freeze([this.normalizer.createCitation(evidence)]), ...lifecycle
+      citations: Object.freeze([this.normalizer.createCitation(evidence)]),
+      groundedAnswerInput: createGroundedAnswerInput({ toolCallId: runtime.toolCallId, projectedResult: runtime.projectedResult,
+        evidenceRefs: [{ id: attached.id, sourceType: attached.sourceType, sourceId: attached.sourceId }] }),
+      ...lifecycle
     });
   }
 }

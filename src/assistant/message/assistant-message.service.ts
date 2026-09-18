@@ -28,7 +28,6 @@ import { HybridRetrievalCoordinatorService } from '../grounding/hybrid-retrieval
 import { GroundedContextBundleService } from '../grounding/grounded-context-bundle.service';
 import { PriorGroundedContextService } from '../grounding/prior-grounded-context.service';
 import type { GroundedContextBundleV1 } from '../grounding/grounded-context-bundle.types';
-import type { GroundedRetrievalPlan } from '../../retrieval/grounded-retrieval.types';
 import { GroundedRetrievalAuditService } from '../grounding/grounded-retrieval-audit.service';
 
 @Injectable()
@@ -108,7 +107,6 @@ export class AssistantMessageService {
     const preRuntimeGate = this.noAnswerGateService.evaluatePreRuntime(planningResult);
     if (
       preRuntimeGate?.kind === 'clarification' &&
-      !isGroundedRecallRequest(input.message, planningResult) &&
       shouldApplyPreRuntimeClarificationGate(planningResult.executionPlan.riskAssessment, input.pageContext, preRuntimeGate.clarificationReason)
     ) {
       const clarificationQuestion = await this.clarificationQuestionService.create({
@@ -977,12 +975,15 @@ export class AssistantMessageService {
   }): Promise<AssistantSseEventRecord[]> {
     const startedAt = Date.now();
     const { input, customerScope, sessionId, userMessageId, assistantMessageId, planningResult } = args;
-    const plan = effectiveRecallPlan(input.message, planningResult, planningResult.groundedRetrievalPlan!);
-    const prior = isGroundedRecallRequest(input.message, planningResult) ? await this.priorGroundedContext.resolve({
+    const plan = planningResult.groundedRetrievalPlan!;
+    await this.groundedAudit.recordPlan({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
+      plan, durationMs: Math.max(0, Date.now() - startedAt) });
+    const prior = (planningResult.priorConversationContext?.evidenceRefs.length ?? 0) > 0 ? await this.priorGroundedContext.resolve({
       plan, context: planningResult.priorConversationContext, customerScope, identityContext: input.identityContext,
       requestId: input.requestId, sessionId, sourceMessageId: userMessageId, responseMessageId: assistantMessageId
     }) : { complete: false, needResults: Object.freeze([]), evidence: Object.freeze([]), citations: Object.freeze([]) };
     await this.groundedAudit.recordReuse({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
+      candidateCount: planningResult.priorConversationContext?.evidenceRefs.length ?? 0,
       eligibleCount: prior.evidence.length, complete: prior.complete });
     const coordinated = prior.complete ? prior : await this.groundedCoordinator.execute({
       plan,
@@ -1004,10 +1005,31 @@ export class AssistantMessageService {
       boundedRecentTurns: planningResult.priorConversationContext?.exchanges ?? [], locale: 'zh-TW', mode,
       requestedNeeds: plan.needs, needResults: coordinated.needResults, evidence: coordinated.evidence, citations: coordinated.citations
     });
+    for (const result of coordinated.needResults) {
+      const need = plan.needs.find((candidate) => candidate.id === result.needId);
+      await this.groundedAudit.recordLane({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
+        result, kind: need?.kind ?? 'UNSUPPORTED' });
+    }
+    await this.groundedAudit.recordCoverage({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
+      coverage: bundle.retrieval.coverage, results: coordinated.needResults });
     const toolExecution = 'toolExecution' in coordinated ? coordinated.toolExecution : undefined;
     const evidenceIds = bundle.evidence.map((evidence) => evidence.evidenceRefId);
+    const toolFacts = bundle.evidence.flatMap((evidence) => evidence.kind === 'TOOL'
+      ? toNormalizedGroundedToolFacts(evidence) : []);
+    const conflict = this.evidenceConflictDetector.detect(toolFacts);
+    const conflictGate = this.noAnswerGateService.evaluateEvidenceConflict(conflict);
     const failedToolOnly = evidenceIds.length === 0 && (toolExecution?.toolLifecycle === 'failed' || toolExecution?.toolLifecycle === 'blocked');
-    const answerDecision = failedToolOnly
+    const answerDecision = conflictGate?.kind === 'no_answer'
+      ? await this.answerDecisionService.recordSafeDecision({
+          customerScope, requestId: input.requestId, messageId: assistantMessageId,
+          status: conflictGate.status, noAnswerReason: conflictGate.noAnswerReason,
+          answer: { text: conflictGate.answer, delta: conflictGate.delta },
+          metadata: toJsonInput({ ...toSafeBundleMetadata(bundle), conflictReason: conflictGate.conflictReason,
+            conflictFieldPaths: conflictGate.conflictFieldPaths ?? [], evidenceRefIds: conflict.evidenceRefIds }),
+          grounding: { covered: false, evidenceRefIds: conflict.evidenceRefIds,
+            checkedClaimCount: toolFacts.length, unsupportedClaimCount: conflict.conflictFieldPaths.length }
+        })
+      : failedToolOnly
       ? await this.answerDecisionService.recordSafeDecision({
           customerScope, requestId: input.requestId, messageId: assistantMessageId,
           status: toolExecution?.toolLifecycle === 'blocked' ? AnswerDecisionStatus.permission_denied : AnswerDecisionStatus.no_answer,
@@ -1018,6 +1040,12 @@ export class AssistantMessageService {
           metadata: toJsonInput({ ...toSafeBundleMetadata(bundle), ...(toolExecution?.errorCode ? { errorCode: toolExecution.errorCode } : {}) }),
           grounding: { covered: false, evidenceRefIds: [] }
         })
+      : toolExecution?.groundedAnswerInput && bundle.evidence.every((evidence) => evidence.kind === 'TOOL')
+      ? await this.answerDecisionService.decideGrounded({
+          customerScope, requestId: input.requestId, messageId: assistantMessageId, executionPlan: planningResult.executionPlan,
+          groundedAnswerInput: toolExecution.groundedAnswerInput, groundedContextBundle: bundle,
+          followUpResolution: planningResult.queryUnderstanding.followUpResolution, retrievalMode: bundle.retrieval.mode
+        })
       : await this.answerDecisionService.decide({
           customerScope, requestId: input.requestId, messageId: assistantMessageId, executionPlan: planningResult.executionPlan,
           evidenceRefs: bundle.evidence.map((evidence) => ({ id: evidence.evidenceRefId, summary: evidence.kind === 'DOCUMENT'
@@ -1027,22 +1055,43 @@ export class AssistantMessageService {
           followUpResolution: planningResult.queryUnderstanding.followUpResolution,
           retrievalMode: bundle.retrieval.mode
         });
+    const outcomeReason = conflictGate?.kind === 'no_answer' ? conflictGate.noAnswerReason
+      : failedToolOnly ? (toolExecution?.toolLifecycle === 'blocked' ? NoAnswerReason.permission_denied : NoAnswerReason.tool_failure)
+      : answerDecision.status === AnswerDecisionStatus.no_answer ? NoAnswerReason.no_evidence : undefined;
+    const reviewItem = outcomeReason ? await this.reviewItemService.createFromAssistantOutcome({
+      customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId, identityContext: input.identityContext,
+      answerDecisionId: answerDecision.answerDecisionId, answerDecision: answerDecision.status, noAnswerReason: outcomeReason,
+      toolName: toolExecution?.toolName, toolCallId: toolExecution?.toolCallId,
+      evidenceRefCount: conflictGate?.kind === 'no_answer' ? conflict.evidenceRefCount : 0,
+      permissionDeniedReason: toolExecution?.deniedReason,
+      toolFailureReason: outcomeReason === NoAnswerReason.tool_failure ? toolExecution?.errorCode ?? 'TOOL_EXECUTION_FAILED' : undefined,
+      conflictReason: conflictGate?.kind === 'no_answer' ? conflictGate.conflictReason : undefined,
+      conflictFieldPaths: conflictGate?.kind === 'no_answer' ? conflictGate.conflictFieldPaths : undefined,
+      evidenceRefIds: conflictGate?.kind === 'no_answer' ? conflict.evidenceRefIds : undefined
+    }) : undefined;
     await this.messageRepository.completeAssistantMessage({ customerScope, messageId: assistantMessageId, content: answerDecision.answer.text, answerDecision: answerDecision.status });
     await this.contextStateService.updateAfterMessageFlow({ customerScope, sessionId, pageContext: input.pageContext, planningResult,
       toolCallIds: toolExecution?.toolCallId ? [toolExecution.toolCallId] : [], evidenceRefIds: evidenceIds });
     await this.groundedAudit.recordBundle({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
       bundle, durationMs: Math.max(0, Date.now() - startedAt) });
-    const finalNoAnswerReason = failedToolOnly
-      ? (toolExecution?.toolLifecycle === 'blocked' ? NoAnswerReason.permission_denied : NoAnswerReason.tool_failure)
-      : answerDecision.status === AnswerDecisionStatus.no_answer ? NoAnswerReason.no_evidence : undefined;
+    await this.auditWriter.append({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
+      toolCallId: toolExecution?.toolCallId, eventType: 'answer_generated', decision: answerDecision.status,
+      evidenceRefIds: [], metadata: toJsonInput({ answerDecisionId: answerDecision.answerDecisionId,
+        groundingCheckId: answerDecision.groundingCheckId, noAnswerReason: outcomeReason ?? null,
+        reviewItemId: reviewItem?.id ?? null,
+        ...(conflictGate?.kind === 'no_answer' ? { conflictReason: conflictGate.conflictReason,
+          conflictFieldPaths: conflictGate.conflictFieldPaths ?? [], evidenceRefCount: conflict.evidenceRefCount,
+          evidenceRefIds: conflict.evidenceRefIds } : { evidenceRefIds: evidenceIds }) }) });
+    const finalNoAnswerReason = outcomeReason;
+    const releasedEvidenceIds = conflictGate?.kind === 'no_answer' ? [] : evidenceIds;
     const finalData = { answerDecision: answerDecision.status, answer: answerDecision.answer.text,
       ...(finalNoAnswerReason ? { noAnswerReason: finalNoAnswerReason } : {}),
-      ...(toolExecution?.errorCode ? { errorCode: toolExecution.errorCode } : {}), evidenceRefs: evidenceIds };
+      ...(toolExecution?.errorCode ? { errorCode: toolExecution.errorCode } : {}), evidenceRefs: releasedEvidenceIds };
     if (toolExecution?.toolLifecycle && toolExecution.toolName) {
       return this.sseEventBuilder.buildMessageEvents({ requestId: input.requestId, sessionId, messageId: assistantMessageId,
         toolCallId: toolExecution.toolCallId ?? 'not-executed', toolName: toolExecution.toolName,
         toolLifecycle: toolExecution.toolLifecycle, deniedReason: toolExecution.deniedReason, errorCode: toolExecution.errorCode,
-        evidenceRefIds: toolExecution.toolLifecycle === 'completed' ? evidenceIds.filter((id) => coordinated.evidence.some((evidence) => evidence.kind === 'TOOL' && evidence.evidenceRefId === id)) : [],
+        evidenceRefIds: toolExecution.toolLifecycle === 'completed' ? releasedEvidenceIds.filter((id) => coordinated.evidence.some((evidence) => evidence.kind === 'TOOL' && evidence.evidenceRefId === id)) : [],
         answerDelta: answerDecision.answer.delta, finalData });
     }
     return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId, sessionId, messageId: assistantMessageId,
@@ -1213,6 +1262,17 @@ function toNormalizedEvidenceFacts(evidence: {
   });
 }
 
+function toNormalizedGroundedToolFacts(evidence: import('../grounding/grounded-context-bundle.types').GroundedToolEvidence): NormalizedEvidenceFact[] {
+  const entityId = ['orderId', 'itemSku', 'sku', 'workOrderId', 'partnerId']
+    .map((field) => evidence.projectedFacts[field]).find((value) => typeof value === 'string') ?? evidence.toolCallId;
+  return Object.entries(evidence.projectedFacts).flatMap(([fieldPath, value]) =>
+    (Array.isArray(value) ? value : [value]).map((item) => ({
+      evidenceRefId: evidence.evidenceRefId, sourceType: 'structured_record' as const,
+      entityType: evidence.canonicalToolKey, entityId: String(entityId), fieldPath,
+      normalizedValue: normalizeEvidenceValue(item)
+    })));
+}
+
 function normalizeEvidenceValue(value: unknown): string {
   if (value === null || value === undefined) {
     return '';
@@ -1226,24 +1286,6 @@ function normalizeEvidenceValue(value: unknown): string {
 
 function requiresDocumentChunkEvidence(requiredEvidence: Prisma.JsonValue): boolean {
   return Array.isArray(requiredEvidence) && requiredEvidence.includes('document_chunk');
-}
-
-function isGroundedRecallRequest(message: string, planning: AssistantPlanningResult): boolean {
-  return /(剛才|剛剛|你剛|再列一次|引用的文件)/.test(message) && (planning.priorConversationContext?.evidenceRefs.length ?? 0) > 0;
-}
-
-function effectiveRecallPlan(message: string, planning: AssistantPlanningResult, original: GroundedRetrievalPlan): GroundedRetrievalPlan {
-  if (!isGroundedRecallRequest(message, planning)) return original;
-  const wantsDocument = /(文件|SOP|規定|政策)/i.test(message);
-  const wantsTool = /(庫存|工單|幾張|多少)/.test(message);
-  if (!wantsDocument && !wantsTool) return original;
-  const needs = [];
-  if (wantsTool) needs.push(Object.freeze({ id: `need-${needs.length + 1}`, kind: 'TOOL' as const, frame: original.resolvedFrame ?? Object.freeze({}) }));
-  if (wantsDocument) needs.push(Object.freeze({ id: `need-${needs.length + 1}`, kind: 'DOCUMENT' as const, query: message }));
-  return Object.freeze({
-    mode: wantsTool && wantsDocument ? 'HYBRID' : wantsTool ? 'TOOL' : 'RAG',
-    needs: Object.freeze(needs), resolvedFrame: original.resolvedFrame, reasonCode: 'PRIOR_GROUNDED_RECALL_REQUESTED'
-  });
 }
 
 function stringFromMetadata(value: unknown): string | undefined {

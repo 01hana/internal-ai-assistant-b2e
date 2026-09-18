@@ -51,6 +51,22 @@ describe('Feature 010 Grounded Context Bundle RED (T008)', () => {
     const target = service();
     expect(() => target.assemble(input)).toThrow(/prohibited|authority|unsafe|invalid/i);
   });
+
+  it.each([
+    ['missing evidence', citation('citation-bad', 'missing', 'need-document')],
+    ['wrong need', citation('citation-bad', 'evidence-document', 'need-tool')],
+    ['wrong kind', { ...citation('citation-bad', 'evidence-document', 'need-document'), sourceKind: 'TOOL' }]
+  ])('rejects citation mapping with %s', (_case, badCitation) => {
+    const input = bundleInput([result('need-document', 'COVERED'), result('need-tool', 'COVERED')]);
+    input.citations = [badCitation];
+    expect(() => service().assemble(input)).toThrow(/citation.*mapping/i);
+  });
+
+  it('rejects one EvidenceRef identity with conflicting provenance while deduplicating identical copies', () => {
+    const input = bundleInput([result('need-document', 'COVERED'), result('need-tool', 'COVERED')]);
+    input.evidence = [documentEvidence(), documentEvidence(), { ...documentEvidence(), needId: 'need-tool' }, toolEvidence()];
+    expect(() => service().assemble(input)).toThrow(/conflicting evidence provenance/i);
+  });
 });
 
 function service(): BundleService {
@@ -63,13 +79,15 @@ function service(): BundleService {
 }
 
 function bundleInput(needResults: readonly Record<string, unknown>[]): Record<string, any> {
+  const covered = new Set(needResults.filter((result) => result.status === 'COVERED').map((result) => result.needId));
   return {
     currentRequest: { messageId: 'message-1', normalizedQuestion: 'policy and inventory?' }, locale: 'zh-TW',
     mode: 'HYBRID', requestedNeeds: [
       { id: 'need-document', kind: 'DOCUMENT', query: 'policy' },
       { id: 'need-tool', kind: 'TOOL', frame: { resource: 'inventory', intent: 'read', entity: 'SKU-001' } }
-    ], needResults, evidence: [documentEvidence(), toolEvidence()],
+    ], needResults, evidence: [documentEvidence(), toolEvidence()].filter((item) => covered.has(item.needId)),
     citations: [citation('citation-document', 'evidence-document', 'need-document'), citation('citation-tool', 'evidence-tool', 'need-tool')]
+      .filter((item) => covered.has(item.needId))
   };
 }
 function result(needId: string, status: string) { return { needId, status, evidenceRefIds: status === 'COVERED' ? [`evidence-${needId.replace('need-', '')}`] : [] }; }

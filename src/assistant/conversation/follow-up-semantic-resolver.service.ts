@@ -12,7 +12,6 @@ export interface FollowUpSemanticResolutionInput {
   readonly currentFrame?: ConversationSemanticFrame;
   readonly priorFrames: readonly ConversationSemanticFrame[];
   readonly vagueReference?: boolean;
-  readonly preferLatest?: boolean;
 }
 
 @Injectable()
@@ -24,7 +23,7 @@ export class FollowUpSemanticResolverService {
 
     if (input.vagueReference === true) return clarify('VAGUE_DEIXIS');
     const compatible = priors.filter((prior) => isCompatible(current, prior));
-    if (compatible.length > 1 && input.preferLatest !== true) return clarify('MULTIPLE_COMPATIBLE_PRIOR_FRAMES');
+    if (compatible.length > 1) return clarify('MULTIPLE_COMPATIBLE_PRIOR_FRAMES');
 
     if (compatible.length === 0) {
       if (!hasDimensions(current)) return clarify(priors.length === 0 ? 'NO_PRIOR_SEMANTIC_FRAME' : 'NO_COMPATIBLE_PRIOR_FRAME');

@@ -27,6 +27,17 @@ describe('Feature 010 Tool-only grounded retrieval (T055)', () => {
       .toEqual(expect.objectContaining({ mode: 'TOOL', coverage: 'COMPLETE' }));
   });
 
+  it('keeps current policy denial out of successful normalization', async () => {
+    const policy = state.customerToolPolicies.find((item) => item.toolDefinitionId === 'tool-definition-inventory-001')!;
+    policy.enabled = false;
+    const before = { tools: state.toolCalls.length, evidence: state.evidenceRefs.length };
+    const response = await send('req-f010-tool-denied', '請查 SKU-DEMO-BLUE 目前庫存');
+    expect(state.evidenceRefs).toHaveLength(before.evidence);
+    expect(state.toolCalls.length).toBeLessThanOrEqual(before.tools + 1);
+    expect(parseSseResponse(response.text).some((event) => event.event === 'evidence_attached')).toBe(false);
+    policy.enabled = true;
+  });
+
   function send(requestId: string, message: string) {
     return request(app.getHttpServer()).post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {

@@ -7,7 +7,7 @@ import type { RequestIdentityContext } from '../../identity/identity-context.typ
 import type { BoundedConversationContext } from '../conversation/conversation.types';
 import type { GroundedRetrievalPlan, GroundedRetrievalNeedResult } from '../../retrieval/grounded-retrieval.types';
 import type { GroundedCitation, GroundedDocumentEvidence, GroundedToolEvidence } from './grounded-context-bundle.types';
-import { MAX_TOOL_EVIDENCE_AGE_SECONDS } from './prior-grounded-evidence-eligibility.service';
+import { PriorGroundedEvidenceEligibilityService } from './prior-grounded-evidence-eligibility.service';
 import { KnowledgeDocumentStatus, KnowledgeVisibility } from '../../generated/prisma/enums';
 
 export interface PriorGroundedContextInput {
@@ -33,7 +33,8 @@ export class PriorGroundedContextService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tools: ToolRegistryService,
-    private readonly permission: ToolPermissionPrecheckService
+    private readonly permission: ToolPermissionPrecheckService,
+    private readonly eligibility: PriorGroundedEvidenceEligibilityService
   ) {}
 
   async resolve(input: PriorGroundedContextInput): Promise<PriorGroundedContextResult> {
@@ -63,8 +64,11 @@ export class PriorGroundedContextService {
           where: { customerId: input.customerScope.customerId, messageId: persisted.messageId, covered: true, unsupportedClaimCount: 0 }
         });
         if (!decision || !grounding || !Array.isArray(grounding.evidenceRefIds) || !grounding.evidenceRefIds.includes(persisted.id)) continue;
+        const linkedExchange = input.context?.exchanges.find((exchange) => exchange.evidenceRefIds.includes(candidate.id));
+        const priorFrame = linkedExchange?.semanticFrame;
+        if (!semanticallyCompatible(need, persisted, priorFrame, Boolean(linkedExchange), input.plan.resolvedFrame)) continue;
         const normalized = need.kind === 'DOCUMENT'
-          ? await this.documentEvidence(need.id, persisted, input.customerScope)
+          ? await this.documentEvidence(need.id, persisted, input)
           : await this.toolEvidence(need.id, persisted, input, now);
         if (!normalized) continue;
         used.add(candidate.id); evidence.push(normalized);
@@ -76,11 +80,19 @@ export class PriorGroundedContextService {
     return deepFreeze({ complete: needResults.length === input.plan.needs.length && input.plan.needs.length > 0, needResults: Object.freeze(needResults), evidence: Object.freeze(evidence), citations: Object.freeze(citations) });
   }
 
-  private async documentEvidence(needId: string, ref: any, scope: CustomerScope): Promise<GroundedDocumentEvidence | undefined> {
+  private async documentEvidence(needId: string, ref: any, input: PriorGroundedContextInput): Promise<GroundedDocumentEvidence | undefined> {
     if (!ref.documentId || !ref.chunkId || !isRecord(ref.summary)) return undefined;
-    const document = await this.prisma.db.knowledgeDocument.findFirst({ where: { customerId: scope.customerId, id: ref.documentId, status: KnowledgeDocumentStatus.active } });
-    const chunk = await this.prisma.db.knowledgeChunk.findFirst({ where: { customerId: scope.customerId, id: ref.chunkId, documentId: ref.documentId, enabled: true } });
-    if (!document || !chunk || ref.summary.documentVersion !== document.version || !documentAccessible(document, scope)) return undefined;
+    const document = await this.prisma.db.knowledgeDocument.findFirst({ where: { customerId: input.customerScope.customerId, id: ref.documentId, status: KnowledgeDocumentStatus.active } });
+    const chunk = await this.prisma.db.knowledgeChunk.findFirst({ where: { customerId: input.customerScope.customerId, id: ref.chunkId, documentId: ref.documentId, enabled: true } });
+    const accessible = Boolean(document && documentAccessible(document, input.customerScope));
+    const eligibility = this.eligibility.evaluate({
+      evidence: { kind: 'DOCUMENT', evidenceRefId: ref.id, needId, scope: currentScope(input), documentId: ref.documentId,
+        chunkId: ref.chunkId, documentVersion: ref.summary.documentVersion, groundingCovered: true, metadata: ref.summary },
+      currentScope: currentScope(input),
+      currentDocument: document ? { active: document.status === KnowledgeDocumentStatus.active, chunkEnabled: chunk?.enabled === true,
+        version: document.version, visible: accessible, accessible, permissionAllowed: accessible } : undefined
+    });
+    if (!eligibility.eligible || !document || !chunk) return undefined;
     const required = ['sourceKey', 'documentTitle', 'snippet'];
     if (!required.every((key) => typeof ref.summary[key] === 'string')) return undefined;
     return deepFreeze({ kind: 'DOCUMENT', needId, evidenceRefId: ref.id, content: ref.summary.snippet, title: ref.summary.documentTitle,
@@ -91,19 +103,63 @@ export class PriorGroundedContextService {
   private async toolEvidence(needId: string, ref: any, input: PriorGroundedContextInput, now: Date): Promise<GroundedToolEvidence | undefined> {
     if (!ref.toolCallId || !ref.entityType || !isRecord(ref.summary) || !isRecord(ref.summary.fields)) return undefined;
     const call = await this.prisma.db.toolCall.findFirst({ where: { customerId: input.customerScope.customerId, id: ref.toolCallId, sessionId: input.sessionId, messageId: ref.messageId } });
-    if (!call || call.status !== 'success' || call.executionStatus !== 'executed') return undefined;
-    const age = (now.getTime() - ref.timestamp.getTime()) / 1000;
-    if (age < 0 || age > MAX_TOOL_EVIDENCE_AGE_SECONDS) return undefined;
+    if (!call) return undefined;
     const resolution = await this.tools.resolveToolForCustomer(ref.entityType, input.customerScope);
-    if (!resolution.resolved) return undefined;
-    const permission = await this.permission.checkResolvedCustomerTool({ requestId: input.requestId, sessionId: input.sessionId,
-      messageId: input.responseMessageId, identityContext: input.identityContext, customerScope: input.customerScope, resolvedTool: resolution.resolved });
-    if (!permission.allowed) return undefined;
+    const permission = resolution.resolved ? await this.permission.checkResolvedCustomerTool({ requestId: input.requestId, sessionId: input.sessionId,
+      messageId: input.responseMessageId, identityContext: input.identityContext, customerScope: input.customerScope, resolvedTool: resolution.resolved })
+      : undefined;
     const fieldPaths = [...ref.fieldPaths];
     if (Object.keys(ref.summary.fields).some((key) => !fieldPaths.includes(key))) return undefined;
+    const eligibility = this.eligibility.evaluate({
+      evidence: { kind: 'TOOL', evidenceRefId: ref.id, needId, scope: currentScope(input), status: call.status,
+        executionStatus: call.executionStatus, projectionStatus: 'succeeded', evidenceAttached: true,
+        projectedFacts: ref.summary.fields, declaredFieldPaths: fieldPaths, groundingCovered: true,
+        observedAt: ref.timestamp.toISOString(), metadata: ref.summary },
+      currentScope: currentScope(input), now: now.toISOString(), currentAuthorization: {
+        toolDefinitionActive: Boolean(resolution.resolved), policyAllowed: Boolean(resolution.resolved), permissionAllowed: permission?.allowed === true
+      }
+    });
+    if (!eligibility.eligible) return undefined;
     return deepFreeze({ kind: 'TOOL', needId, evidenceRefId: ref.id, toolCallId: call.id, canonicalToolKey: ref.entityType,
       projectedFacts: ref.summary.fields, fieldPaths: Object.freeze(fieldPaths), observedAt: ref.timestamp.toISOString() });
   }
+}
+
+function currentScope(input: PriorGroundedContextInput) {
+  return { customerId: input.customerScope.customerId, sessionId: input.sessionId,
+    organizationId: input.customerScope.organizationId, hostApp: input.customerScope.hostApp, actorId: input.customerScope.actorId };
+}
+
+function semanticallyCompatible(need: GroundedRetrievalPlan['needs'][number], ref: any, priorFrame: any, linkedExchange: boolean, resolvedFrame: any): boolean {
+  const referencesPrior = hasInheritedDimension(resolvedFrame) ||
+    (need.kind === 'DOCUMENT' && /(剛才|剛剛|前面|再列一次|引用的文件|文件證據)/.test(need.query));
+  if (!referencesPrior) return false;
+  if (need.kind === 'DOCUMENT') {
+    const requestedFamily = documentFamily([need.topicKey, need.query]);
+    const evidenceFamily = documentFamily([priorFrame?.resource?.value, priorFrame?.metricOrAspect?.value,
+      ref.summary?.sourceKey, ref.summary?.documentTitle, ref.summary?.heading]);
+    if (requestedFamily && evidenceFamily) return requestedFamily === evidenceFamily;
+    if (/(剛才|剛剛|前面|再列一次)/.test(need.query) && /SOP|文件|規定|政策/i.test(need.query)) return linkedExchange;
+    return Boolean(need.topicKey && priorFrame?.topicKey && need.topicKey === priorFrame.topicKey);
+  }
+  if (need.kind !== 'TOOL') return false;
+  if (!priorFrame) return false;
+  const current = need.frame;
+  if (current.resource?.value && priorFrame.resource?.value && current.resource.value !== priorFrame.resource.value) return false;
+  if (current.entity?.entityType && priorFrame.entity?.entityType && current.entity.entityType !== priorFrame.entity.entityType) return false;
+  if (current.entity?.value && priorFrame.entity?.value && current.entity.value !== priorFrame.entity.value) return false;
+  return Boolean(current.resource || current.entity || current.topicKey) && Boolean(priorFrame.resource || priorFrame.entity || priorFrame.topicKey);
+}
+
+function hasInheritedDimension(frame: any): boolean {
+  return ['resource', 'intent', 'metricOrAspect', 'timeRange', 'entity'].some((name) => frame?.[name]?.source === 'inherited');
+}
+
+function documentFamily(values: readonly unknown[]): string | undefined {
+  const text = values.filter((value): value is string => typeof value === 'string').join(' ').toLowerCase();
+  if (/travelsubsidy|旅遊|補助/.test(text)) return 'travel-subsidy';
+  if (/退貨|return|sop-return/.test(text)) return 'return-sop';
+  return undefined;
 }
 
 function documentAccessible(document: any, scope: CustomerScope): boolean {

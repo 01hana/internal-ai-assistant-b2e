@@ -77,6 +77,9 @@ export class AnswerDecisionService {
       requestId: input.requestId,
       messageId: input.messageId,
       executionPlan: input.executionPlan,
+      groundedContextBundle: input.groundedContextBundle,
+      followUpResolution: input.followUpResolution,
+      retrievalMode: input.retrievalMode,
       evidenceRefs:
         input.groundedAnswerInput?.evidence.map((evidence) => ({
           id: evidence.evidenceRefId,

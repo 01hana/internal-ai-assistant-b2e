@@ -25,6 +25,7 @@ import type { ConversationSemanticFrame, SemanticDimension } from '../assistant/
 
 const DEPENDENT_FOLLOW_UP = /(呢|那個|你剛|剛才|剛剛|前面|同樣|再列一次|這個(?!月))/;
 const VAGUE_DEIXIS = /^\s*那個(?:呢)?[？?。!！]?\s*$/;
+const EXPLICIT_DOCUMENT_EVIDENCE_RECALL = /(引用的文件|文件證據)/i;
 
 @Injectable()
 export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPipeline {
@@ -65,13 +66,12 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
       normalizedTerms, phrases, timeRanges: semanticTimeRanges, entityCandidates, resolvedReferences
     }, input.messageId);
     currentSemanticFrame = enrichInventoryAvailability(currentSemanticFrame, input.messageId);
-    const dependentFollowUp = DEPENDENT_FOLLOW_UP.test(normalizedText);
+    const dependentFollowUp = DEPENDENT_FOLLOW_UP.test(normalizedText) && !EXPLICIT_DOCUMENT_EVIDENCE_RECALL.test(normalizedText);
     const followUpResolution = dependentFollowUp
       ? this.followUpResolver.resolve({
           currentFrame: currentSemanticFrame,
           priorFrames: input.priorConversationContext?.semanticFrames ?? [],
-          vagueReference: VAGUE_DEIXIS.test(normalizedText),
-          preferLatest: !VAGUE_DEIXIS.test(normalizedText)
+          vagueReference: VAGUE_DEIXIS.test(normalizedText)
         })
       : undefined;
     const effectiveFrame = followUpResolution?.resolvedFrame ?? currentSemanticFrame;
@@ -129,7 +129,7 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
       candidateTools,
       allowNoToolCandidate: isDocumentTaskType(taskType) || mustClarifyFollowUp || unsupportedLastMonth
     })];
-    const confidence = scoreQueryUnderstandingConfidence({
+    const scoredConfidence = scoreQueryUnderstandingConfidence({
       text: normalizedText,
       entityCandidates,
       candidateTools,
@@ -139,6 +139,9 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
       , discoveryConfidence: discovery?.matchConfidence,
       hasResolvedSemanticFollowUp: followUpResolution !== undefined && followUpResolution.kind !== 'CLARIFY'
     });
+    const confidence = EXPLICIT_DOCUMENT_EVIDENCE_RECALL.test(normalizedText)
+      ? Math.max(0.7, scoredConfidence)
+      : scoredConfidence;
 
     return {
       taskType,

@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/010-conversational-context-grounded-retrieval`  
 **Input**: `spec.md`, `design.md`, and `plan.md` in `specs/010-conversational-context-grounded-retrieval/`  
-**Implementation Status**: Phase 5 T044–T054 complete; Phase 6 not started
+**Implementation Status**: Phase 6 T055–T074 complete; Phase 7 not started
 **Testing Rule**: For every changed runtime behavior, run the named focused test first and retain authentic RED evidence, then implement and retain GREEN evidence.
 
 ## Format
@@ -548,37 +548,125 @@ NEXT_TASK_AUTHORIZED=NO
 
 ### US3 — Tool-only grounded retrieval
 
-- [ ] T055 [P] [US3] Add current-discovery/policy/permission/one-ToolCall/projected-evidence RED cases in `test/integration/feature010-tool-retrieval.spec.ts`
-- [ ] T056 [P] [US3] Add success-without-projection, raw response, undeclared field, blocked, denied, failed, and conflicted cases in `test/unit/grounded-tool-evidence.normalizer.spec.ts`
-- [ ] T057 [US3] Implement projected EvidenceRef-only Tool normalization in `src/assistant/grounding/grounded-tool-evidence.normalizer.ts`
-- [ ] T058 [US3] Adapt one TOOL need to the existing generic discovery/read-only runtime path in `src/assistant/grounding/grounded-tool-retrieval.service.ts`
-- [ ] T059 [US3] Enforce one Tool need/ToolCall and current ToolDefinition/policy/permission checks in `src/assistant/grounding/grounded-tool-retrieval.service.ts`
+- [X] T055 [P] [US3] Add current-discovery/policy/permission/one-ToolCall/projected-evidence RED cases in `test/integration/feature010-tool-retrieval.spec.ts`
+- [X] T056 [P] [US3] Add success-without-projection, raw response, undeclared field, blocked, denied, failed, and conflicted cases in `test/unit/grounded-tool-evidence.normalizer.spec.ts`
+- [X] T057 [US3] Implement projected EvidenceRef-only Tool normalization in `src/assistant/grounding/grounded-tool-evidence.normalizer.ts`
+- [X] T058 [US3] Adapt one TOOL need to the existing generic discovery/read-only runtime path in `src/assistant/grounding/grounded-tool-retrieval.service.ts`
+- [X] T059 [US3] Enforce one Tool need/ToolCall and current ToolDefinition/policy/permission checks in `src/assistant/grounding/grounded-tool-retrieval.service.ts`
 
 ### US4 — Hybrid grounded retrieval and coverage
 
-- [ ] T060 [P] [US4] Add Tool+RAG COMPLETE, Tool-only PARTIAL, RAG-only PARTIAL, all-failed INSUFFICIENT, and multi-Tool rejection cases in `test/integration/feature010-hybrid-retrieval.spec.ts`
-- [ ] T061 [P] [US4] Add exact requested-need/result mapping, coverage, unsupported-need, deterministic merge, deduplication, citation-order, and immutability cases in `test/unit/grounded-context-bundle.service.spec.ts`
-- [ ] T062 [US4] Implement bounded declared-lane coordination with no retry/recursion in `src/assistant/grounding/hybrid-retrieval-coordinator.service.ts`
-- [ ] T063 [US4] Implement COMPLETE/PARTIAL/INSUFFICIENT/CLARIFY coverage evaluation in `src/assistant/grounding/retrieval-coverage.service.ts`
-- [ ] T064 [US4] Implement deterministic evidence merge, deduplication, citation mapping, and deep-freeze assembly in `src/assistant/grounding/grounded-context-bundle.service.ts`
+- [X] T060 [P] [US4] Add Tool+RAG COMPLETE, Tool-only PARTIAL, RAG-only PARTIAL, all-failed INSUFFICIENT, and multi-Tool rejection cases in `test/integration/feature010-hybrid-retrieval.spec.ts`
+- [X] T061 [P] [US4] Add exact requested-need/result mapping, coverage, unsupported-need, deterministic merge, deduplication, citation-order, and immutability cases in `test/unit/grounded-context-bundle.service.spec.ts`
+- [X] T062 [US4] Implement bounded declared-lane coordination with no retry/recursion in `src/assistant/grounding/hybrid-retrieval-coordinator.service.ts`
+- [X] T063 [US4] Implement COMPLETE/PARTIAL/INSUFFICIENT/CLARIFY coverage evaluation in `src/assistant/grounding/retrieval-coverage.service.ts`
+- [X] T064 [US4] Implement deterministic evidence merge, deduplication, citation mapping, and deep-freeze assembly in `src/assistant/grounding/grounded-context-bundle.service.ts`
 
 ### US5 — Eligible prior grounded-context reuse
 
-- [ ] T065 [P] [US5] Add document active/version/access, Tool 900-second/current-authority, Hybrid item-by-item, and same-scope eligibility cases in `test/unit/prior-grounded-evidence-eligibility.service.spec.ts`
-- [ ] T066 [P] [US5] Add zero-call document/Tool/Hybrid CONTEXT_ONLY recall and ineligible re-retrieval cases in `test/integration/feature010-prior-grounded-recall.spec.ts`
-- [ ] T067 [US5] Implement document source/version/access and Tool lifecycle/freshness/current-authorization eligibility in `src/assistant/grounding/prior-grounded-evidence-eligibility.service.ts`
-- [ ] T068 [US5] Implement CONTEXT_ONLY complete-coverage selection without Assistant-prose parsing in `src/assistant/grounding/prior-grounded-context.service.ts`
+- [X] T065 [P] [US5] Add document active/version/access, Tool 900-second/current-authority, Hybrid item-by-item, and same-scope eligibility cases in `test/unit/prior-grounded-evidence-eligibility.service.spec.ts`
+- [X] T066 [P] [US5] Add zero-call document/Tool/Hybrid CONTEXT_ONLY recall and ineligible re-retrieval cases in `test/integration/feature010-prior-grounded-recall.spec.ts`
+- [X] T067 [US5] Implement document source/version/access and Tool lifecycle/freshness/current-authorization eligibility in `src/assistant/grounding/prior-grounded-evidence-eligibility.service.ts`
+- [X] T068 [US5] Implement CONTEXT_ONLY complete-coverage selection without Assistant-prose parsing in `src/assistant/grounding/prior-grounded-context.service.ts`
 
 ### Shared orchestration
 
-- [ ] T069 [US4] Integrate context, router, prior reuse, canonical lanes, coverage, and bundle assembly in `src/assistant/message/assistant-message.service.ts`
-- [ ] T070 [US4] Persist only safe bundle version/mode/coverage/need/evidence metadata through existing decision/grounding records in `src/assistant/answer/answer-decision.service.ts`
-- [ ] T071 [US4] Register grounding services without adding a public controller or route in `src/assistant/assistant.module.ts`
-- [ ] T072 [US4] Preserve existing AnswerDecision text as a compatibility sink and prove LlmExecutionService is not invoked in `test/integration/feature010-no-llm-generation.spec.ts`
-- [ ] T073 [US4] Add safe route/lane/reuse/coverage/bundle audit events in `src/assistant/grounding/grounded-retrieval-audit.service.ts`
-- [ ] T074 [US4] Run T055–T066/T072 and Tool/evidence/permission regressions; record US3–US5 GREEN evidence in `specs/010-conversational-context-grounded-retrieval/tasks.md`
+- [X] T069 [US4] Integrate context, router, prior reuse, canonical lanes, coverage, and bundle assembly in `src/assistant/message/assistant-message.service.ts`
+- [X] T070 [US4] Persist only safe bundle version/mode/coverage/need/evidence metadata through existing decision/grounding records in `src/assistant/answer/answer-decision.service.ts`
+- [X] T071 [US4] Register grounding services without adding a public controller or route in `src/assistant/assistant.module.ts`
+- [X] T072 [US4] Preserve existing AnswerDecision text as a compatibility sink and prove LlmExecutionService is not invoked in `test/integration/feature010-no-llm-generation.spec.ts`
+- [X] T073 [US4] Add safe route/lane/reuse/coverage/bundle audit events in `src/assistant/grounding/grounded-retrieval-audit.service.ts`
+- [X] T074 [US4] Run T055–T066/T072 and Tool/evidence/permission regressions; record US3–US5 GREEN evidence in `specs/010-conversational-context-grounded-retrieval/tasks.md`
 
 **Checkpoint**: Tool-only, Hybrid, partial coverage, and prior reuse produce safe immutable bundles without a second runtime or LLM generation.
+
+### Phase 6 execution evidence — complete (2026-09-18)
+
+The interrupted partial implementation was preserved. Before reconciliation, the existing incomplete contracts passed 3 unit suites / 34 tests and 5 integration suites / 15 tests. The required corrections removed fabricated future AnswerDecision/GroundingCheck state from current Tool normalization, made `PriorGroundedEvidenceEligibilityService` the single item-eligibility authority, removed MessageService secondary routing, restored multi-frame ambiguity, pre-scanned invalid multi-Tool plans, strengthened semantic reuse and citation/provenance validation, completed the Hybrid/recall/no-LLM matrices, and restored all predecessor compatibility side effects.
+
+```text
+npx jest --runInBand --runTestsByPath <T007/T008/T009/follow-up unit files>
+exit=0; suites=4 passed; tests=50 passed
+
+npx jest --runInBand --runTestsByPath <T055/T060/T066/T010/T072 integration files>
+exit=0; suites=5 passed; tests=30 passed
+
+npx jest --runInBand --runTestsByPath <Phase 2-5 and T002 focused contracts/units>
+exit=0; suites=12 passed; tests=130 passed
+
+npm run test:unit -- --runInBand
+exit=0; suites=90 passed, 1 skipped; tests=663 passed, 3 skipped
+
+npm run test:contract -- --runInBand
+exit=0; suites=13 passed, 3 skipped; tests=75 passed, 39 skipped
+
+npm run test:integration -- --runInBand
+exit=0; suites=64 passed, 17 skipped; tests=238 passed, 131 skipped
+
+npm run test:eval -- --runInBand
+exit=0; suites=1 passed, 1 skipped; tests=10 passed, 3 skipped
+
+npm run build
+npm run typecheck
+git diff --check
+exit=0 for all commands
+
+npx eslint <all changed Phase 6 source/test paths>
+exit=0; no findings
+
+npm run lint
+exit=1 only for the four documented unrelated pre-existing findings in connector-runtime, Identity Bridge, and productized transport files
+```
+
+Focused execution proofs: Tool-only uses current discovery and the existing read-only runtime with exactly one normal ToolCall; blocked/denied/failed execution never reaches successful normalization. Hybrid covers COMPLETE, both PARTIAL directions, INSUFFICIENT, blocking CLARIFY, and invalid multi-Tool zero-lane execution. Document, Tool, and Hybrid CONTEXT_ONLY recalls execute zero new lanes; version/access/freshness/policy/permission/semantic/scope invalidation re-retrieves or rejects safely. The 900-second boundary remains eligible and values above it are stale. T010 is 10/10 GREEN. LLM execution remains zero for document, Tool, Hybrid COMPLETE/PARTIAL, CONTEXT_ONLY, INSUFFICIENT, and CLARIFY.
+
+```text
+T055_T074_STATUS=COMPLETE
+TOOL_RETRIEVAL=PASS
+CURRENT_TOOL_DISCOVERY=YES
+CURRENT_TOOLDEFINITION_AUTHORITY=YES
+CURRENT_CUSTOMER_TOOL_POLICY=YES
+CURRENT_PERMISSION_RECHECK=YES
+MAX_TOOL_NEEDS=1
+MAX_NORMAL_TOOLCALLS_PER_TURN=1
+CURRENT_TOOL_NORMALIZATION_USES_FUTURE_DECISION_STATE=NO
+TOOL_EVIDENCE_PROJECTED_ONLY=YES
+RAW_CONNECTOR_OUTPUT_IN_GROUNDED_BUNDLE=NO
+PRE_PROJECTION_TOOL_DATA_IN_GROUNDED_BUNDLE=NO
+HYBRID_RETRIEVAL=PASS
+MULTI_TOOL_INVALID_PLAN_TOOLCALL_COUNT=0
+HYBRID_DECLARED_LANES_ONLY=YES
+AUTONOMOUS_RETRIEVAL_LOOP=NO
+RETRIEVAL_COVERAGE=PASS
+PRIOR_ITEM_ELIGIBILITY_SINGLE_OWNER=YES
+PRIOR_NEED_EVIDENCE_SEMANTIC_COMPATIBILITY=PASS
+PRIOR_GROUNDED_CONTEXT_REUSE=PASS
+DOCUMENT_REUSE_CURRENT_ACCESS_REVALIDATED=YES
+DOCUMENT_REUSE_VERSION_REVALIDATED=YES
+TOOL_REUSE_CURRENT_AUTHORITY_REVALIDATED=YES
+TOOL_EVIDENCE_MAX_AGE_SECONDS=900
+ASSISTANT_PROSE_FACT_SOURCE=NO
+MESSAGE_SERVICE_SECONDARY_ROUTER=NO
+AMBIGUOUS_FOLLOWUP_CLARIFY=PASS
+CONTEXT_ONLY_ZERO_RETRIEVAL=PASS
+GROUNDED_CONTEXT_BUNDLE_V1=PASS
+GROUNDED_CONTEXT_BUNDLE_DEEPLY_IMMUTABLE=YES
+CITATION_EVIDENCE_MAPPING=PASS
+CONFLICTING_EVIDENCE_PROVENANCE_REJECTED=YES
+GROUNDED_CONTEXT_BUNDLE_SAFE_FOR_GENERATION=YES
+FEATURE010_FINAL_LLM_GENERATION=NO
+LLM_EXECUTION_COUNT=0
+PUBLIC_ASSISTANT_API_CHANGE=NO
+SSE_EVENT_OR_PAYLOAD_CHANGE=NO
+ASSISTANT_HISTORY_SHAPE_CHANGE=NO
+PRISMA_SCHEMA_CHANGE=NO
+FEATURE009_MANIFEST_CHANGED=NO
+FEATURE009_T126_T142_EXECUTED=NO
+PHASE_7_STARTED=NO
+HIGHEST_COMPLETED_TASK=T074
+NEXT_TASK=T075
+NEXT_TASK_AUTHORIZED=NO
+```
 
 ---
 

@@ -135,6 +135,8 @@ export function isDocumentKnowledgeQuery(text: string): boolean {
     text.includes('政策') ||
     text.includes('規定') ||
     text.includes('申請期限') ||
+    text.includes('引用的文件') ||
+    text.includes('文件證據') ||
     text.includes('規則') ||
     text.includes('手冊') ||
     text.includes('manual') ||
