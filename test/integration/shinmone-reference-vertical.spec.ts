@@ -19,7 +19,7 @@ import { BridgeConfigService } from '../../apps/identity-bridge/src/config/bridg
 import { BRIDGE_ENVIRONMENT } from '../../apps/identity-bridge/src/config/bridge-config.service';
 import { ConnectorBindingClient } from '../../apps/identity-bridge/src/connector-binding/connector-binding.client';
 import { bindingEnvironment } from '../../apps/identity-bridge/test/connector-binding/binding-fixtures';
-import { response as menuDetailResponse } from '../../apps/identity-bridge/test/fixtures/idx-semantic.vectors';
+import { menu, node, response as menuDetailResponse } from '../../apps/identity-bridge/test/fixtures/idx-semantic.vectors';
 import { MenuDetailTransport } from '../../apps/identity-bridge/src/idx/transport/menu-detail.transport';
 import { ProductizedBusinessConnectorTransportService } from '../../src/connectors/productized-business/productized-business-connector.module';
 import { createPrismaClient } from '../../src/prisma/prisma-client.factory';
@@ -134,7 +134,12 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
       .overrideProvider(MenuDetailTransport)
       .useValue({ execute: jest.fn(async (token: string) => {
         if (token !== nativeAccessToken) throw new Error('Unexpected synthetic native token.');
-        return { body: menuDetailResponse() };
+        return {
+          body: menuDetailResponse([
+            menu({ MenuID: 'SCM_DASHBOARD', Category: '首頁看板', MenuNode: [node({ MenuName: '首頁看板', ProgramPath: '/dashboard' })] }),
+            menu({ MenuID: 'SCM_ORDERS', Category: '工單總表', MenuNode: [node({ MenuName: '工單總表', ProgramPath: '/orders' })] })
+          ])
+        };
       }) })
       .overrideProvider(ConnectorBindingClient)
       .useValue(bridgeBindingClient)
@@ -255,7 +260,7 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
         ]);
         expect(toolCall).toMatchObject({
           toolName: 'work-orders.monthly-new-count', toolVersion: '1.0.0', status: 'success', executionStatus: 'executed',
-          permissionResult: { scopes: ['menu:ORDERS:read'] },
+          permissionResult: { scopes: ['menu:SCM_DASHBOARD:read', 'menu:SCM_ORDERS:read'] },
           outputSummary: {
             canonicalToolKey: 'work-orders.monthly-new-count', schemaVersion: '1.0.0',
             fieldPaths: ['count', 'metricKey', 'period'], fieldCount: 3,

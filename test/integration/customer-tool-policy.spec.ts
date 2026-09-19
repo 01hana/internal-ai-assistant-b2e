@@ -190,7 +190,7 @@ describe('Feature 008 ToolDefinition result-policy authority', () => {
       operation: 'read',
       connectorKey: 'business',
       timeoutMs: 5000,
-      requiredPermissionScopes: ['menu:ORDERS:read']
+      requiredPermissionScopes: ['menu:SCM_DASHBOARD:read']
     });
     expect(parseToolDiscoveryMetadataV1(resolution.resolved!.tool.inputSchema)).toEqual({
       version: '1',

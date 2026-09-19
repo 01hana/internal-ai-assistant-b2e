@@ -10,9 +10,22 @@ const CUSTOMER_A_ID = 'customer-a';
 const CUSTOMER_B_ID = 'customer-b';
 
 export async function seedCoreData(prisma: PrismaClient) {
+  const toolDefinitions = await seedProductOwnedData(prisma);
+  await seedDeterministicFixtureData(prisma, toolDefinitions);
+}
+
+/** Global product catalog data. Customer onboarding is intentionally not performed here. */
+export async function seedProductOwnedData(prisma: PrismaClient) {
+  return seedToolDefinitions(prisma);
+}
+
+/** Rebuildable customer-a/customer-b fixtures retained for existing development and test setup. */
+export async function seedDeterministicFixtureData(
+  prisma: PrismaClient,
+  toolDefinitions: Array<{ id: string; name: string; version: string }>
+) {
   await seedCustomers(prisma);
   await seedGatewayIntegrationBindings(prisma);
-  const toolDefinitions = await seedToolDefinitions(prisma);
   await seedCustomerToolPolicies(prisma, toolDefinitions);
   await seedKnowledgeDocuments(prisma);
 }
@@ -536,7 +549,7 @@ const SHINMONE_REFERENCE_TOOL_DEFINITION = {
       evidenceSafeProvenanceFields: ['metricKey', 'period']
     }
   },
-  requiredPermissions: ['menu:ORDERS:read'],
+  requiredPermissions: ['menu:SCM_DASHBOARD:read'],
   riskLevel: RiskLevel.low,
   hasSideEffect: false,
   requiresConfirmation: false,

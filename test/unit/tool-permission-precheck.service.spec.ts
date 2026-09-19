@@ -76,6 +76,42 @@ describe('ToolPermissionPrecheckService', () => {
       customerScope: createCustomerScopeFromIdentityContext(roleDeniedContext), resolvedTool
     })).resolves.toEqual({ allowed: false, reason: 'role_denied' });
   });
+
+  it('accepts the canonical Shinmone dashboard scope without aliasing the orders scope', async () => {
+    const appendCustomerToolEvent = jest.fn().mockResolvedValue({ id: 'audit-001' });
+    const service = new ToolPermissionPrecheckService({ append: jest.fn(), appendCustomerToolEvent } as unknown as AuditWriterService);
+    const resolvedTool = {
+      tool: {
+        id: 'tool-shinmone-dashboard', key: 'work-orders.monthly-new-count', name: 'work-orders.monthly-new-count',
+        version: '1.0.0', description: 'tool', operation: ToolOperation.read, riskLevel: RiskLevel.low,
+        active: true, connectorKey: 'business', timeoutMs: 5000,
+        requiredPermissionScopes: ['menu:SCM_DASHBOARD:read'], inputSchema: { required: [] }, outputSchema: { required: [] },
+        hasSideEffect: false, requiresConfirmation: false, requiresApproval: false
+      },
+      requiredRoles: [],
+      requiredPermissionScopes: []
+    };
+    const dashboardContext = identityContext(['menu:SCM_DASHBOARD:read', 'menu:SCM_ORDERS:read']);
+    await expect(service.checkResolvedCustomerTool({
+      requestId: 'req-shinmone-dashboard', sessionId: 'session-a', messageId: 'message-a',
+      identityContext: dashboardContext,
+      customerScope: createCustomerScopeFromIdentityContext(dashboardContext),
+      resolvedTool
+    })).resolves.toEqual({ allowed: true });
+
+    const ordersOnlyContext = identityContext(['menu:SCM_ORDERS:read']);
+    await expect(service.checkResolvedCustomerTool({
+      requestId: 'req-shinmone-orders-only', sessionId: 'session-a', messageId: 'message-a',
+      identityContext: ordersOnlyContext,
+      customerScope: createCustomerScopeFromIdentityContext(ordersOnlyContext),
+      resolvedTool
+    })).resolves.toEqual({
+      allowed: false,
+      reason: 'missing_scope',
+      missingScopes: ['menu:SCM_DASHBOARD:read']
+    });
+    expect(appendCustomerToolEvent).toHaveBeenCalledTimes(1);
+  });
 });
 
 function identityContext(permissionScopes: string[]) {

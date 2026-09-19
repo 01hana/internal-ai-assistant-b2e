@@ -2863,7 +2863,7 @@ function createShinmoneReferenceToolDefinition(baseDate: Date): ToolDefinitionRe
         evidenceSafeProvenanceFields: ['metricKey', 'period']
       }
     },
-    requiredPermissions: ['menu:ORDERS:read'], riskLevel: RiskLevel.low, hasSideEffect: false,
+    requiredPermissions: ['menu:SCM_DASHBOARD:read'], riskLevel: RiskLevel.low, hasSideEffect: false,
     requiresConfirmation: false, requiresApproval: false, connectorKey: 'business', timeoutMs: 5000,
     auditBehavior: { summarizeInput: true, summarizeOutput: true }, isActive: true,
     createdAt: new Date(baseDate), updatedAt: new Date(baseDate)

@@ -89,7 +89,7 @@ describe('Feature 010 semantic follow-up routing (T037-T042)', () => {
   function sendA(requestId: string, message: string, pageContext: Record<string, unknown>) {
     return request(app.getHttpServer()).post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
-        claims: { ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA, permission_scopes: ['menu:ORDERS:read', 'inventory:read'] }, requestId
+        claims: { ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA, permission_scopes: ['menu:SCM_DASHBOARD:read', 'inventory:read'] }, requestId
       })).send({ message, pageContext });
   }
   function sendB(requestId: string, message: string) {
