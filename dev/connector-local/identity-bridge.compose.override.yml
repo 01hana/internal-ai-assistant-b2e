@@ -1,0 +1,15 @@
+services:
+  identity-bridge:
+    env_file:
+      - path: ../../.local-secrets/connector-local/bridge.env
+    environment:
+      NODE_EXTRA_CA_CERTS: /run/secrets/connector-local-ca-bundle.pem
+    volumes:
+      - type: bind
+        source: ../../.local-secrets/connector-local/bridge/combined-local-ca.pem
+        target: /run/secrets/connector-local-ca-bundle.pem
+        read_only: true
+      - type: bind
+        source: ../../.local-secrets/connector-local/bridge/bridge-binding-private.pem
+        target: ${CONNECTOR_LOCAL_BRIDGE_PRIVATE_TARGET:?set from the generated bridge.env privateKeyReference}
+        read_only: true

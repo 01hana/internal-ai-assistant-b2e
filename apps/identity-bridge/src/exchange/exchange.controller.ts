@@ -21,7 +21,7 @@ export class ExchangeController {
     const requestId = normalizeExchangeRequestId(requestIdHeader);
     try {
       assertEmptyBody(body);
-      return await this.service.exchange(extractBearer(authorization));
+      return await this.service.exchange(extractBearer(authorization), requestId);
     } catch (error) {
       throw projectExchangeError(error, requestId);
     }

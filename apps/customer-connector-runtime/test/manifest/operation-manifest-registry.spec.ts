@@ -109,6 +109,60 @@ describe('OperationManifestRegistry', () => {
     });
   });
 
+  it('accepts exact declared-pointer trees with shared ancestors, multiple pointers, duplicates, and derived fields', () => {
+    const response = declaredResponse({
+      schema: {
+        type: 'object', properties: {
+          status: { type: 'integer' },
+          payload: {
+            type: 'object', properties: {
+              value: { type: 'integer', minimum: 0 }, secondary: { type: 'string' }
+            }, required: ['value', 'secondary'], additionalProperties: false
+          }
+        }, required: ['status', 'payload'], additionalProperties: false
+      },
+      extraction: [
+        { sourcePointer: '/payload/value', targetField: 'legacyValue', conversion: 'non_negative_integer' },
+        { source: 'response_pointer', sourcePointer: '/payload/value', targetField: 'duplicateValue', conversion: 'integer' },
+        { source: 'response_pointer', sourcePointer: '/payload/secondary', targetField: 'secondary', conversion: 'string' },
+        { source: 'operation_key', targetField: 'operation', conversion: 'string' },
+        { source: 'fixed_query', queryName: 'period', targetField: 'period', conversion: 'string' }
+      ]
+    });
+    const registry = new OperationManifestRegistry([parsedManifest('metrics', [getOperation({ response })])]);
+    expect(registry.isValid).toBe(true);
+  });
+
+  it.each([
+    ['missing application-code pointer', declaredResponse({ applicationCodePointer: undefined })],
+    ['unknown application-code node', declaredResponse({ applicationCodePointer: '/missing' })],
+    ['nullable application-code node', declaredResponse({ schema: declaredSchema({ status: { type: 'integer', nullable: true } }) })],
+    ['non-integer application-code node', declaredResponse({ schema: declaredSchema({ status: { type: 'string' } }) })],
+    ['missing extraction schema', declaredResponse({ extraction: [{ sourcePointer: '/payload/missing', targetField: 'value', conversion: 'integer' }] })],
+    ['optional corridor segment', declaredResponse({ schema: {
+      type: 'object', properties: {
+        status: { type: 'integer' },
+        payload: { type: 'object', properties: { value: { type: 'integer' } }, required: ['value'], additionalProperties: false }
+      }, required: ['status'], additionalProperties: false
+    } })],
+    ['nullable extraction leaf', declaredResponse({ schema: declaredSchema({ value: { type: 'integer', nullable: true } }) })],
+    ['incompatible extraction conversion', declaredResponse({
+      extraction: [{ sourcePointer: '/payload/value', targetField: 'value', conversion: 'string' }]
+    })],
+    ['unused schema branch', declaredResponse({ schema: declaredSchema({ unused: { type: 'string' } }, ['value', 'unused']) })]
+  ])('rejects invalid DECLARED_POINTERS_V1 configuration: %s', (_case, response) => {
+    expect(new OperationManifestRegistry([parsedManifest('metrics', [getOperation({ response })])]).isValid).toBe(false);
+  });
+
+  it('keeps explicit full validation equivalent to the omitted legacy profile at registry admission', () => {
+    const legacy = new OperationManifestRegistry([parsedManifest('metrics', [getOperation()])]);
+    const explicit = new OperationManifestRegistry([parsedManifest('metrics', [getOperation({
+      response: { ...(getOperation().response as object), validationProfile: 'FULL_CLOSED_SCHEMA_V1' }
+    })])]);
+    expect(legacy.isValid).toBe(true);
+    expect(explicit.isValid).toBe(true);
+  });
+
   it.each([
     ['unknown operation', 'inventory', 'missing', '1.0.0', { sku: 'SKU-7' }],
     ['wrong version', 'inventory', 'inventory.stock-on-hand', '2.0.0', { sku: 'SKU-7' }],
@@ -186,4 +240,31 @@ function operationWithOptionalArgument(profile: 'GET_QUERY_V1' | 'POST_QUERY_JSO
       ]
     }
   });
+}
+
+function declaredResponse(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    validationProfile: 'DECLARED_POINTERS_V1',
+    acceptedHttpStatuses: [200], acceptedApplicationCodes: [200], applicationCodePointer: '/status',
+    contentType: 'application/json', schema: declaredSchema(),
+    extraction: [{ sourcePointer: '/payload/value', targetField: 'value', conversion: 'integer' }],
+    ...overrides
+  };
+}
+
+function declaredSchema(
+  leafOverrides: Record<string, object> = {},
+  payloadRequired: readonly string[] = ['value']
+): Record<string, unknown> {
+  return {
+    type: 'object', properties: {
+      status: leafOverrides.status ?? { type: 'integer' },
+      payload: {
+        type: 'object', properties: {
+          value: leafOverrides.value ?? { type: 'integer' },
+          ...(leafOverrides.unused ? { unused: leafOverrides.unused } : {})
+        }, required: payloadRequired, additionalProperties: false
+      }
+    }, required: ['status', 'payload'], additionalProperties: false
+  };
 }

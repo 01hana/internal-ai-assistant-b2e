@@ -46,6 +46,7 @@ describe('Connector invocation V1 wire contract', () => {
     ['unknown root field', { destination: 'https://attacker.invalid' }],
     ['caller method', { method: 'GET' }],
     ['caller headers', { headers: { authorization: 'secret' } }],
+    ['caller response validation profile', { validationProfile: 'DECLARED_POINTERS_V1' }],
     ['credential', { credential: 'secret' }],
     ['service proof in body', { serviceProof: 'jwt' }],
     ['Feature 007 user token in body', { accessToken: 'native' }]

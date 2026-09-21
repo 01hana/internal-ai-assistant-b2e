@@ -51,4 +51,37 @@ describe('Phase 5 response declarations', () => {
       [parsedManifest('inventory', [customerBOperation()])], new RequestProfileRegistry(['POST_QUERY_JSON_V1'])
     ).isValid).toBe(false);
   });
+
+  it('requires application-code pointers to resolve to a non-nullable integer schema node', () => {
+    expect(new OperationManifestRegistry([parsedManifest('inventory', [withResponse({
+      applicationCodePointer: '/sku'
+    })])]).isValid).toBe(false);
+    expect(new OperationManifestRegistry([parsedManifest('inventory', [withResponse({
+      applicationCodePointer: '/missing'
+    })])]).isValid).toBe(false);
+  });
+
+  it('allows fixed-query derivation only from a manifest-owned fixed query entry', () => {
+    const accepted = withResponse({
+      extraction: [{ source: 'fixed_query', queryName: 'scope', targetField: 'scope', conversion: 'string' }]
+    });
+    expect(new OperationManifestRegistry([parsedManifest('inventory', [accepted])]).isValid).toBe(false);
+
+    const get = {
+      ...customerBOperation(),
+      request: {
+        profile: 'GET_QUERY_V1', path: '/inventory/stock/query', fixedQuery: { scope: 'available' },
+        argumentMappings: [{ argument: 'sku', target: 'query', name: 'sku', scalarType: 'string' }]
+      },
+      response: {
+        ...(customerBOperation().response as object),
+        extraction: [{ source: 'fixed_query', queryName: 'scope', targetField: 'scope', conversion: 'string' }]
+      }
+    };
+    expect(new OperationManifestRegistry([parsedManifest('inventory', [get])]).isValid).toBe(true);
+    (get.response as Record<string, unknown>).extraction = [
+      { source: 'fixed_query', queryName: 'sku', targetField: 'scope', conversion: 'string' }
+    ];
+    expect(new OperationManifestRegistry([parsedManifest('inventory', [get])]).isValid).toBe(false);
+  });
 });

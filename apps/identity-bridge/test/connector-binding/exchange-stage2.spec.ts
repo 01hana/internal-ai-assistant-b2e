@@ -33,7 +33,7 @@ describe('connector-enabled exchange Stage 2 composition', () => {
     expect(order).toEqual([
       `menu:${nativeAccessToken}`, 'validate', `admit:${nativeAccessToken}`, 'normalize', 'project', 'binding', 'issuer'
     ]);
-    expect(binding.bootstrap).toHaveBeenCalledWith({ nativeAccessToken, acceptedIdentity: identity });
+    expect(binding.bootstrap).toHaveBeenCalledWith({ nativeAccessToken, acceptedIdentity: identity }, undefined);
     expect(binding.bootstrap).toHaveBeenCalledTimes(1);
   });
 

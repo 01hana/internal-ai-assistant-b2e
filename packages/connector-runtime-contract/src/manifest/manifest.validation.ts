@@ -6,11 +6,12 @@ import type {
   ClosedJsonSchemaV1,
   ConnectorOperationManifestEntryV1,
   ConnectorOperationManifestV1,
-  JsonPointerExtractionV1,
+  DeclarativeExtractionV1,
   ReadRequestProfileV1,
   FixedJsonBodyV1,
   FixedQueryValuesV1,
-  NormalizedRelativePath
+  NormalizedRelativePath,
+  ResponseValidationProfileV1
 } from './manifest.types';
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
@@ -19,6 +20,7 @@ const RELATIVE_PATH = /^\/(?!\/)(?!.*[?#\\:])[A-Za-z0-9._~!$&'()*+,;=@%/-]*$/;
 const JSON_POINTER = /^(?:\/(?:[^~/]|~0|~1)*)+$/;
 const SCALAR_TYPES = new Set(['string', 'integer', 'number', 'boolean']);
 const CONVERSIONS = new Set(['string', 'integer', 'number', 'boolean', 'non_negative_integer']);
+const RESPONSE_VALIDATION_PROFILES: ReadonlySet<ResponseValidationProfileV1> = new Set(['FULL_CLOSED_SCHEMA_V1', 'DECLARED_POINTERS_V1']);
 
 export function parseConnectorOperationManifestV1(input: unknown): ConnectorContractParseResult<ConnectorOperationManifestV1> {
   if (!isExactObject(input, ['version', 'connectorKey', 'operations']) || input.version !== '1' ||
@@ -95,28 +97,43 @@ function parseMappings(value: unknown, target: 'query' | 'body', schema: ClosedJ
 }
 
 function parseResponse(value: unknown): ConnectorOperationManifestEntryV1['response'] | undefined {
-  if (!isExactObject(value, ['acceptedHttpStatuses', 'acceptedApplicationCodes', 'contentType', 'schema', 'extraction']) ||
+  if (!isPlainJsonObject(value) || !hasOnlyKeys(value, ['validationProfile', 'acceptedHttpStatuses', 'acceptedApplicationCodes', 'applicationCodePointer', 'contentType', 'schema', 'extraction']) ||
+      !['acceptedHttpStatuses', 'acceptedApplicationCodes', 'contentType', 'schema', 'extraction'].every((key) => key in value) ||
       value.contentType !== 'application/json' || !isIntegerArray(value.acceptedHttpStatuses, 100, 599) ||
-      !isIntegerArray(value.acceptedApplicationCodes, 0, 999_999)) return undefined;
+      !isIntegerArray(value.acceptedApplicationCodes, 0, 999_999) ||
+      value.validationProfile !== undefined && !isResponseValidationProfile(value.validationProfile) ||
+      value.applicationCodePointer !== undefined && (typeof value.applicationCodePointer !== 'string' || !JSON_POINTER.test(value.applicationCodePointer))) return undefined;
   const schema = parseSchema(value.schema);
   const extraction = parseExtractions(value.extraction);
   if (!schema || !extraction) return undefined;
   return deepFreeze({
+    ...(value.validationProfile === undefined ? {} : { validationProfile: value.validationProfile }),
     acceptedHttpStatuses: value.acceptedHttpStatuses,
     acceptedApplicationCodes: value.acceptedApplicationCodes,
+    ...(value.applicationCodePointer === undefined ? {} : { applicationCodePointer: value.applicationCodePointer }),
     contentType: 'application/json', schema, extraction
   });
 }
 
-function parseExtractions(value: unknown): readonly JsonPointerExtractionV1[] | undefined {
+function parseExtractions(value: unknown): readonly DeclarativeExtractionV1[] | undefined {
   if (!Array.isArray(value) || value.length < 1 || value.length > 64) return undefined;
   const targets = new Set<string>();
-  const result: JsonPointerExtractionV1[] = [];
+  const result: DeclarativeExtractionV1[] = [];
   for (const item of value) {
-    if (!isExactObject(item, ['sourcePointer', 'targetField', 'conversion']) || typeof item.sourcePointer !== 'string' || !JSON_POINTER.test(item.sourcePointer) ||
-        !isIdentifier(item.targetField) || typeof item.conversion !== 'string' || !CONVERSIONS.has(item.conversion) || targets.has(item.targetField)) return undefined;
+    if (!isPlainJsonObject(item) || !isIdentifier(item.targetField) || targets.has(item.targetField)) return undefined;
+    if (item.source === undefined || item.source === 'response_pointer') {
+      const keys = item.source === undefined ? ['sourcePointer', 'targetField', 'conversion'] : ['source', 'sourcePointer', 'targetField', 'conversion'];
+      if (!isExactObject(item, keys) || typeof item.sourcePointer !== 'string' || !JSON_POINTER.test(item.sourcePointer) ||
+          typeof item.conversion !== 'string' || !CONVERSIONS.has(item.conversion)) return undefined;
+    } else if (item.source === 'operation_key') {
+      if (!isExactObject(item, ['source', 'targetField', 'conversion']) || item.conversion !== 'string') return undefined;
+    } else if (item.source === 'fixed_query') {
+      if (!isExactObject(item, ['source', 'queryName', 'targetField', 'conversion']) || !isIdentifier(item.queryName) || item.conversion !== 'string') return undefined;
+    } else {
+      return undefined;
+    }
     targets.add(item.targetField);
-    result.push(item as unknown as JsonPointerExtractionV1);
+    result.push(item as unknown as DeclarativeExtractionV1);
   }
   return deepFreeze(result);
 }
@@ -156,17 +173,17 @@ function parseSchema(value: unknown, depth = 0): ClosedJsonSchemaV1 | undefined 
     return deepFreeze({ type: 'object', properties, required: value.required, additionalProperties: false });
   }
   if (value.type === 'string') {
-    if (!hasOnlyKeys(value, ['type', 'minLength', 'maxLength']) || !validOptionalInteger(value.minLength, 0, CONNECTOR_LIMITS_V1.maximumStringLength) ||
+    if (!hasOnlyKeys(value, ['type', 'minLength', 'maxLength', 'nullable']) || !validOptionalNullable(value.nullable) || !validOptionalInteger(value.minLength, 0, CONNECTOR_LIMITS_V1.maximumStringLength) ||
         !validOptionalInteger(value.maxLength, 1, CONNECTOR_LIMITS_V1.maximumStringLength) ||
         typeof value.minLength === 'number' && typeof value.maxLength === 'number' && value.minLength > value.maxLength) return undefined;
     return deepFreeze(value) as unknown as ClosedJsonSchemaV1;
   }
   if (value.type === 'integer' || value.type === 'number') {
-    if (!hasOnlyKeys(value, ['type', 'minimum', 'maximum']) || !validOptionalNumber(value.minimum) || !validOptionalNumber(value.maximum) ||
+    if (!hasOnlyKeys(value, ['type', 'minimum', 'maximum', 'nullable']) || !validOptionalNullable(value.nullable) || !validOptionalNumber(value.minimum) || !validOptionalNumber(value.maximum) ||
         typeof value.minimum === 'number' && typeof value.maximum === 'number' && value.minimum > value.maximum) return undefined;
     return deepFreeze(value) as unknown as ClosedJsonSchemaV1;
   }
-  if (value.type === 'boolean') return isExactObject(value, ['type']) ? deepFreeze(value) as unknown as ClosedJsonSchemaV1 : undefined;
+  if (value.type === 'boolean') return hasOnlyKeys(value, ['type', 'nullable']) && validOptionalNullable(value.nullable) ? deepFreeze(value) as unknown as ClosedJsonSchemaV1 : undefined;
   if (value.type === 'array') {
     if (!isExactObject(value, ['type', 'items', 'maxItems']) || !Number.isInteger(value.maxItems) || (value.maxItems as number) < 1 ||
         (value.maxItems as number) > CONNECTOR_LIMITS_V1.maximumArrayItems) return undefined;
@@ -193,6 +210,10 @@ function validOptionalInteger(value: unknown, minimum: number, maximum: number):
   return value === undefined || Number.isInteger(value) && (value as number) >= minimum && (value as number) <= maximum;
 }
 function validOptionalNumber(value: unknown): boolean { return value === undefined || typeof value === 'number' && Number.isFinite(value); }
+function validOptionalNullable(value: unknown): boolean { return value === undefined || value === true; }
+function isResponseValidationProfile(value: unknown): value is ResponseValidationProfileV1 {
+  return typeof value === 'string' && RESPONSE_VALIDATION_PROFILES.has(value as ResponseValidationProfileV1);
+}
 function isNormalizedRelativePath(value: string): boolean {
   if (!RELATIVE_PATH.test(value) || value.includes('//') || /%(?:2f|5c)/i.test(value)) return false;
   try {

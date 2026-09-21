@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { readFileSync } from 'node:fs';
 import { createServer, request as nativeHttpsRequest } from 'node:https';
 import type { AddressInfo } from 'node:net';
 import { BridgeConfigService } from '../../src/config/bridge-config.service';
@@ -10,9 +9,15 @@ import { createCustomerConnectorRuntimeApplication } from '../../../customer-con
 import { opaqueCredentialHandle, type BindingBootstrapProvider } from '../../../customer-connector-runtime/src/bindings/binding-bootstrap-provider';
 import { ConnectorBindingService } from '../../../customer-connector-runtime/src/bindings/connector-binding.service';
 import { validRuntimeEnvironment } from '../../../customer-connector-runtime/test/fixtures/runtime-environment';
+import { createEphemeralTlsTestFixture, type EphemeralTlsTestFixture } from '../../../customer-connector-runtime/test/fixtures/ephemeral-tls-test-fixture';
 import { bindingEnvironment } from './binding-fixtures';
 
+let tlsFixture: EphemeralTlsTestFixture;
+
 describe('HTTPS-only ConnectorBindingClient', () => {
+  beforeAll(async () => { tlsFixture = await createEphemeralTlsTestFixture(); });
+  afterAll(async () => { await tlsFixture.dispose(); });
+
   it('sends one exact signed request through the real Phase 4 route and accepts only the bounded reference response', async () => {
     const baseEnvironment = bindingEnvironment();
     const fixture = await startRuntime(baseEnvironment);
@@ -26,14 +31,13 @@ describe('HTTPS-only ConnectorBindingClient', () => {
       acceptedIdentity: { subject: 'user-a', organization: 'company-a', entry: 'configured-entry' }
     });
     if (!signed.ok) throw new Error('Expected signed binding request.');
-    const certificate = readFileSync('../customer-connector-runtime/test/fixtures/phase6-upstream.crt');
     const requests: Array<Record<string, unknown>> = [];
     const client = new ConnectorBindingClient(config, {
       allowTestLoopbackTls: true,
       resolver: async () => [{ address: '127.0.0.1', family: 4 }],
       requestFactory: (options, callback) => {
         requests.push(options as Record<string, unknown>);
-        return nativeHttpsRequest({ ...options, ca: certificate }, callback);
+        return nativeHttpsRequest({ ...options, ca: tlsFixture.certificate }, callback);
       }
     });
     try {
@@ -80,11 +84,10 @@ describe('HTTPS-only ConnectorBindingClient', () => {
       BRIDGE_CONNECTOR_BINDING_URI: `https://phase6-upstream.test:${fixture.port}/v1/internal/connector-bindings`
     });
     const signer = new ConnectorBindingServiceAuthSigner(config);
-    const certificate = readFileSync('../customer-connector-runtime/test/fixtures/phase6-upstream.crt');
     const client = new ConnectorBindingClient(config, {
       allowTestLoopbackTls: true,
       resolver: async () => [{ address: '127.0.0.1', family: 4 }],
-      requestFactory: (options, callback) => nativeHttpsRequest({ ...options, ca: certificate }, callback)
+      requestFactory: (options, callback) => nativeHttpsRequest({ ...options, ca: tlsFixture.certificate }, callback)
     });
     const identities = [
       { subject: 'user-a', organization: 'company-a', entry: 'entry-a' },
@@ -135,12 +138,11 @@ describe('HTTPS-only ConnectorBindingClient', () => {
       acceptedIdentity: { subject: 'user-a', organization: 'company-a', entry: 'configured-entry' }
     });
     if (!signed.ok) throw new Error('Expected signed binding request.');
-    const certificate = readFileSync('../customer-connector-runtime/test/fixtures/phase6-upstream.crt');
     const client = new ConnectorBindingClient(config, {
       allowTestLoopbackTls: true,
       resolver: async () => [{ address: '127.0.0.1', family: 4 }],
       requestFactory: (options, callback) => nativeHttpsRequest(
-        { ...options, ...(trustCertificate ? { ca: certificate } : {}) }, callback
+        { ...options, ...(trustCertificate ? { ca: tlsFixture.certificate } : {}) }, callback
       )
     });
     try {
@@ -225,8 +227,8 @@ async function startRuntime(bridgeEnvironment: Record<string, unknown>) {
   await app.init();
   const bindings = app.get(ConnectorBindingService);
   const server = createServer({
-    cert: readFileSync('../customer-connector-runtime/test/fixtures/phase6-upstream.crt'),
-    key: readFileSync('../customer-connector-runtime/test/fixtures/phase6-upstream.key')
+    cert: tlsFixture.certificate,
+    key: tlsFixture.privateKey
   }, app.getHttpAdapter().getInstance());
   await new Promise<void>((resolve, reject) => server.listen(0, '127.0.0.1', resolve).once('error', reject));
   return {

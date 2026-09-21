@@ -11,6 +11,7 @@ import { ConnectorInvocationController } from './connector-invocation.controller
 import { ConnectorInvocationService } from './connector-invocation.service';
 import { InvocationReadinessInitializer } from './invocation-readiness.initializer';
 import { InvocationMonotonicClock } from './invocation-deadline';
+import { LocalConnectorDiagnostics } from '../diagnostics/local-connector-diagnostics';
 
 @Module({})
 export class ConnectorInvocationModule {
@@ -23,9 +24,12 @@ export class ConnectorInvocationModule {
         InvocationMonotonicClock,
         { provide: ConnectorInvocationService, useFactory: (
           authenticator: ExactRawBodyAuthenticator, readiness: RuntimeReadinessService, bindings: ConnectorBindingService, manifests: OperationManifestRegistry,
-          credentials: CredentialExecutionBoundary, upstream: UpstreamExecutionService, clock: InvocationMonotonicClock
-        ) => new ConnectorInvocationService(authenticator, readiness, bindings, manifests, credentials, upstream, () => clock.nowMilliseconds()),
-        inject: [ExactRawBodyAuthenticator, RuntimeReadinessService, ConnectorBindingService, OperationManifestRegistry, CredentialExecutionBoundary, UpstreamExecutionService, InvocationMonotonicClock] },
+          credentials: CredentialExecutionBoundary, upstream: UpstreamExecutionService, clock: InvocationMonotonicClock,
+          diagnostics: LocalConnectorDiagnostics
+        ) => new ConnectorInvocationService(
+          authenticator, readiness, bindings, manifests, credentials, upstream, () => clock.nowMilliseconds(), diagnostics
+        ),
+        inject: [ExactRawBodyAuthenticator, RuntimeReadinessService, ConnectorBindingService, OperationManifestRegistry, CredentialExecutionBoundary, UpstreamExecutionService, InvocationMonotonicClock, LocalConnectorDiagnostics] },
         InvocationReadinessInitializer
       ]
     };

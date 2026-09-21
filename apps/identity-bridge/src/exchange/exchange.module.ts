@@ -18,6 +18,7 @@ import { ExchangeController } from './exchange.controller';
 import { ExchangeService } from './exchange.service';
 import { ConnectorBindingModule } from '../connector-binding/connector-binding.module';
 import { ConnectorBindingCoordinator } from '../connector-binding/connector-binding.coordinator';
+import { LocalConnectorDiagnostics, LocalConnectorDiagnosticsModule } from '../diagnostics/local-connector-diagnostics';
 
 @Injectable()
 export class ExchangeReadinessInitializer implements OnModuleInit {
@@ -61,7 +62,7 @@ export class ExchangeReadinessInitializer implements OnModuleInit {
 }
 
 @Module({
-  imports: [ConfigurationModule, BridgeHealthModule, IdxTransportModule, JwksModule, ConnectorBindingModule],
+  imports: [ConfigurationModule, BridgeHealthModule, IdxTransportModule, JwksModule, ConnectorBindingModule, LocalConnectorDiagnosticsModule],
   controllers: [ExchangeController],
   providers: [
     IdxMenuDetailValidator, IdentityAdmissionService, IdxPermissionNormalizer, ScopeProjector,
@@ -72,10 +73,10 @@ export class ExchangeReadinessInitializer implements OnModuleInit {
       useFactory: (
         transport: MenuDetailTransport, validator: IdxMenuDetailValidator, admission: IdentityAdmissionService,
         normalizer: IdxPermissionNormalizer, projector: ScopeProjector, issuer: CanonicalTokenIssuer,
-        connectorBinding: ConnectorBindingCoordinator
-      ) => new ExchangeService(transport, validator, admission, normalizer, projector, issuer, connectorBinding),
+        connectorBinding: ConnectorBindingCoordinator, diagnostics: LocalConnectorDiagnostics
+      ) => new ExchangeService(transport, validator, admission, normalizer, projector, issuer, connectorBinding, diagnostics),
       inject: [MenuDetailTransport, IdxMenuDetailValidator, IdentityAdmissionService, IdxPermissionNormalizer,
-        ScopeProjector, CanonicalTokenIssuer, ConnectorBindingCoordinator]
+        ScopeProjector, CanonicalTokenIssuer, ConnectorBindingCoordinator, LocalConnectorDiagnostics]
     },
     ExchangeReadinessInitializer
   ],

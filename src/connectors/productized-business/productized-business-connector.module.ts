@@ -4,6 +4,7 @@ import { ConnectorDeploymentRegistry } from './connector-deployment.registry';
 import { ConnectorNetworkPolicy, type CentralDnsResolver } from './connector-network-policy';
 import { ConnectorServiceAuthSigner } from './connector-service-auth.signer';
 import { ConnectorTransportClient, type ConnectorRequestFactory } from './connector-transport.client';
+import { LocalProductizedConnectorDiagnostics } from './local-productized-connector.diagnostics';
 
 export type ProductizedConnectorModuleOptions=Readonly<{
   environment?:Record<string,unknown>;
@@ -18,14 +19,17 @@ export class ProductizedBusinessConnectorTransportService {
   private readonly signer?:ConnectorServiceAuthSigner;
   private readonly client?:ConnectorTransportClient;
   private readonly configured:boolean;
-  constructor(private readonly options:ProductizedConnectorModuleOptions){
+  constructor(
+    private readonly options:ProductizedConnectorModuleOptions,
+    private readonly diagnostics=new LocalProductizedConnectorDiagnostics(options.environment??process.env)
+  ){
     try{
       const env=options.environment??process.env;
       if(typeof env.ASSISTANT_CONNECTOR_DEPLOYMENTS_JSON!=='string'||typeof env.ASSISTANT_CONNECTOR_SERVICE_KEYS_JSON!=='string'||typeof env.ASSISTANT_CONNECTOR_SERVICE_ISSUER!=='string')throw new Error('invalid');
       this.registry=ConnectorDeploymentRegistry.fromJson(env.ASSISTANT_CONNECTOR_DEPLOYMENTS_JSON);
       this.signer=ConnectorServiceAuthSigner.fromConfiguration(env.ASSISTANT_CONNECTOR_SERVICE_KEYS_JSON,env.ASSISTANT_CONNECTOR_SERVICE_ISSUER);
       if(this.registry.activeCount===0||this.registry.serviceAuthProfileRefs().some((profileKey)=>!this.signer!.hasProfile(profileKey)))throw new Error('invalid');
-      this.client=new ConnectorTransportClient(new ConnectorNetworkPolicy(options.resolver,options.allowTestLoopbackTls===true),options.requestFactory);
+      this.client=new ConnectorTransportClient(new ConnectorNetworkPolicy(options.resolver,options.allowTestLoopbackTls===true),options.requestFactory,this.diagnostics);
       this.configured=true;
     }catch{this.configured=false;}
   }
@@ -41,7 +45,11 @@ export class ProductizedBusinessConnectorTransportService {
     if(!this.configured||!this.registry||!this.signer||!this.client)return unavailable();
     try{
       const c=request.trustedContext;const found=this.registry.resolve({customerId:c.customerId,integrationId:c.integrationId,hostApp:c.hostApp,connectorKey:c.connectorKey,connectorInstanceId:c.connectorInstanceId});
-      if(!found.ok)return found;const signed=await this.signer.sign(request,found.value);if(!signed.ok)return signed;
+      if(!found.ok)return found;
+      const metadata={requestId:request.requestId,customerId:c.customerId,integrationId:c.integrationId,hostApp:c.hostApp,connectorKey:c.connectorKey,connectorInstanceId:c.connectorInstanceId,operationKey:request.operation.key,operationVersion:request.operation.version};
+      this.diagnostics.emit('CONNECTOR_DEPLOYMENT_RESOLVED','SUCCEEDED',metadata);
+      const signed=await this.signer.sign(request,found.value);if(!signed.ok)return signed;
+      this.diagnostics.emit('CONNECTOR_SERVICE_PROOF_CREATED','SUCCEEDED',metadata);
       return this.client.exchange(found.value,signed.value,signal,remainingMs);
     }catch{return unavailable();}
   }

@@ -3,9 +3,9 @@ import type { ConnectorErrorCode } from '../errors';
 
 export type ClosedJsonSchemaV1 =
   | Readonly<{ type: 'object'; properties: readonly ClosedJsonSchemaPropertyV1[]; required: readonly string[]; additionalProperties: false }>
-  | Readonly<{ type: 'string'; minLength?: number; maxLength?: number }>
-  | Readonly<{ type: 'integer' | 'number'; minimum?: number; maximum?: number }>
-  | Readonly<{ type: 'boolean' }>
+  | Readonly<{ type: 'string'; minLength?: number; maxLength?: number; nullable?: true }>
+  | Readonly<{ type: 'integer' | 'number'; minimum?: number; maximum?: number; nullable?: true }>
+  | Readonly<{ type: 'boolean'; nullable?: true }>
   | Readonly<{ type: 'array'; items: ClosedJsonSchemaV1; maxItems: number }>;
 
 export interface ClosedJsonSchemaPropertyV1 { readonly name: string; readonly schema: ClosedJsonSchemaV1 }
@@ -44,10 +44,24 @@ export type FixedQueryValuesV1 = readonly FixedQueryEntryV1[] & { readonly [fixe
 export type FixedJsonBodyV1 = readonly FixedJsonBodyEntryV1[] & { readonly [fixedJsonBody]: true };
 export type JsonPointerConversionV1 = 'string' | 'integer' | 'number' | 'boolean' | 'non_negative_integer';
 export interface JsonPointerExtractionV1 {
+  readonly source?: 'response_pointer';
   readonly sourcePointer: string;
   readonly targetField: string;
   readonly conversion: JsonPointerConversionV1;
 }
+export interface OperationKeyExtractionV1 {
+  readonly source: 'operation_key';
+  readonly targetField: string;
+  readonly conversion: 'string';
+}
+export interface FixedQueryExtractionV1 {
+  readonly source: 'fixed_query';
+  readonly queryName: string;
+  readonly targetField: string;
+  readonly conversion: 'string';
+}
+export type DeclarativeExtractionV1 = JsonPointerExtractionV1 | OperationKeyExtractionV1 | FixedQueryExtractionV1;
+export type ResponseValidationProfileV1 = 'FULL_CLOSED_SCHEMA_V1' | 'DECLARED_POINTERS_V1';
 
 export interface ConnectorOperationManifestEntryV1 {
   readonly operationKey: string;
@@ -58,11 +72,13 @@ export interface ConnectorOperationManifestEntryV1 {
   readonly credentialProfileRef: string;
   readonly readOnly: true;
   readonly response: Readonly<{
+    readonly validationProfile?: ResponseValidationProfileV1;
     acceptedHttpStatuses: readonly number[];
     acceptedApplicationCodes: readonly number[];
+    applicationCodePointer?: string;
     contentType: 'application/json';
     schema: ClosedJsonSchemaV1;
-    extraction: readonly JsonPointerExtractionV1[];
+    extraction: readonly DeclarativeExtractionV1[];
   }>;
   readonly limits: Readonly<{
     maxRequestBytes: number;

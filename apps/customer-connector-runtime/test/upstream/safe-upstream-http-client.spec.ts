@@ -1,11 +1,15 @@
 import { EventEmitter } from 'node:events';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { createServer, request as nativeHttpsRequest } from 'node:https';
 import { appliedCredentialRequest } from '../../src/credentials/credential.types';
 import { SafeUpstreamHttpClient, UpstreamResponseCancelledError } from '../../src/upstream/safe-upstream-http-client';
+import { createEphemeralTlsTestFixture, type EphemeralTlsTestFixture } from '../fixtures/ephemeral-tls-test-fixture';
 
 describe('Phase 6 one-shot safe HTTPS shell', () => {
+  let tlsFixture: EphemeralTlsTestFixture;
+
+  beforeAll(async () => { tlsFixture = await createEphemeralTlsTestFixture(); });
+  afterAll(async () => { await tlsFixture.dispose(); });
+
   const request = Object.freeze({
     service: Object.freeze({ upstreamServiceRef: 'inventory-api', origin: 'https://inventory.test:8443', basePath: '/v1', addressMode: 'public_only' as const, allowedCidrs: Object.freeze([]), hostname: 'inventory.test', port: 8443 }),
     method: 'POST' as const, path: '/v1/stock', body: '{"sku":"SKU-1"}'
@@ -51,16 +55,14 @@ describe('Phase 6 one-shot safe HTTPS shell', () => {
   });
 
   it('uses native TLS hostname verification with a pinned deterministic loopback fixture', async () => {
-    const certificate = readFileSync(join(__dirname, '../fixtures/phase6-upstream.crt'));
-    const privateKey = readFileSync(join(__dirname, '../fixtures/phase6-upstream.key'));
-    const server = createServer({ cert: certificate, key: privateKey }, (_request, response) => {
+    const server = createServer({ cert: tlsFixture.certificate, key: tlsFixture.privateKey }, (_request, response) => {
       response.writeHead(200, { 'Content-Type': 'application/json' }); response.end('{}');
     });
     await new Promise<void>((resolve, reject) => server.listen(0, '127.0.0.1', () => resolve()).once('error', reject));
     try {
       const address = server.address(); if (!address || typeof address === 'string') throw new Error('fixture');
       const fixed = { ...request, service: { ...request.service, hostname: 'phase6-upstream.test', port: address.port } };
-      const factory = ((options: object, callback: (response: unknown) => void) => nativeHttpsRequest({ ...options, ca: certificate }, callback as never)) as never;
+      const factory = ((options: object, callback: (response: unknown) => void) => nativeHttpsRequest({ ...options, ca: tlsFixture.certificate }, callback as never)) as never;
       const lookup = (_host: string, options: { all?: boolean }, callback: Function) => options.all
         ? callback(null, [{ address: '127.0.0.1', family: 4 }]) : callback(null, '127.0.0.1', 4);
       const result = await new SafeUpstreamHttpClient(factory).execute(fixed, appliedCredentialRequest({ request }), lookup as never, new AbortController().signal);

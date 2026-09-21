@@ -28,19 +28,22 @@ import { createGatewayBackendTrustChainHarness } from '../support/gateway-backen
 import { createGatewayUpstreamTestAuthority } from '../support/gateway-upstream-test-authority';
 import { parseSseResponse } from '../support/us1-test-app.helper';
 import { shinmoneAdapterBinding, shinmoneConnectorDeployment } from '../support/shinmone-reference.fixture';
+import { createEphemeralTlsTestFixture, type EphemeralTlsTestFixture } from '../../apps/customer-connector-runtime/test/fixtures/ephemeral-tls-test-fixture';
 
 const TLS_HOST = 'phase6-upstream.test';
-const CERTIFICATE = readFileSync('apps/customer-connector-runtime/test/fixtures/phase6-upstream.crt');
-const PRIVATE_KEY = readFileSync('apps/customer-connector-runtime/test/fixtures/phase6-upstream.key');
+let tlsFixture: EphemeralTlsTestFixture;
 
 describe('Feature 009 Shinmone reference fixture vertical slice', () => {
+  beforeAll(async () => { tlsFixture = await createEphemeralTlsTestFixture(); });
+  afterAll(async () => { await tlsFixture.dispose(); });
+
   it('answers the real question through Bridge admission, generic discovery, exact signed transports, projection, evidence, and existing SSE', async () => {
     const upstreamRequests: Array<Readonly<{ method?: string; url?: string; authorization?: string }>> = [];
     const nativeAccessToken = unsignedNativeJwt({
       exp: 4_102_444_800,
       sub: 'actor-shared', UUID_User: 'actor-shared', UUID_Company: 'org-shared', UUID_Entry: 'configured-entry'
     });
-    const upstream = createServer({ cert: CERTIFICATE, key: PRIVATE_KEY }, (incoming, response) => {
+    const upstream = createServer({ cert: tlsFixture.certificate, key: tlsFixture.privateKey }, (incoming, response) => {
       upstreamRequests.push(Object.freeze({
         method: incoming.method,
         url: incoming.url,
@@ -48,10 +51,8 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
       }));
       response.writeHead(200, { 'content-type': 'application/json', 'content-encoding': 'identity' });
       response.end(JSON.stringify({
-        code: 200,
-        metricKey: 'work-orders.monthly-new-count',
-        period: 'thisMonth',
-        data: { newOrders: { current: 17 } }
+        Code: 200,
+        Data: { NewOrders: { Current: 17 } }
       }));
     });
     await listen(upstream);
@@ -99,7 +100,7 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
       .overrideProvider(UpstreamExecutionService)
       .useValue(new UpstreamExecutionService(
         new ConnectorDestinationPolicy(JSON.parse(String(runtimeEnvironment.CONNECTOR_UPSTREAMS_JSON)), 'test'),
-        new SafeUpstreamHttpClient((options, callback) => httpsRequest({ ...options, ca: CERTIFICATE }, callback)),
+        new SafeUpstreamHttpClient((options, callback) => httpsRequest({ ...options, ca: tlsFixture.certificate }, callback)),
         async () => [{ address: '127.0.0.1', family: 4 }]
       ))
       .compile();
@@ -108,7 +109,7 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
     const runtimeReadiness = runtimeModule.get(RuntimeReadinessRegistry);
     runtimeReadiness.setReady('upstream', true);
     runtimeReadiness.setReady('invocationRoute', true);
-    const runtimeServer = createServer({ cert: CERTIFICATE, key: PRIVATE_KEY }, runtimeApp.getHttpAdapter().getInstance());
+    const runtimeServer = createServer({ cert: tlsFixture.certificate, key: tlsFixture.privateKey }, runtimeApp.getHttpAdapter().getInstance());
     await listen(runtimeServer);
 
     const bridgeEnvironment = {
@@ -126,7 +127,7 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
     const bridgeBindingClient = new ConnectorBindingClient(bridgeConfig, {
       allowTestLoopbackTls: true,
       resolver: async () => [{ address: '127.0.0.1', family: 4 }],
-      requestFactory: (options, callback) => httpsRequest({ ...options, ca: CERTIFICATE }, callback)
+      requestFactory: (options, callback) => httpsRequest({ ...options, ca: tlsFixture.certificate }, callback)
     });
     const bridgeModule = await Test.createTestingModule({ imports: [BridgeModule] })
       .overrideProvider(BRIDGE_ENVIRONMENT)
@@ -153,7 +154,7 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
       environment: centralEnvironment(privateKeyPath, centralJwk, (runtimeServer.address() as AddressInfo).port),
       allowTestLoopbackTls: true,
       resolver: async () => [{ address: '127.0.0.1', family: 4 }],
-      requestFactory: (options, callback) => httpsRequest({ ...options, ca: CERTIFICATE }, callback)
+      requestFactory: (options, callback) => httpsRequest({ ...options, ca: tlsFixture.certificate }, callback)
     });
     const gateway = await createGatewayBackendTrustChainHarness({
       label: 'shinmone-local-product-rehearsal',

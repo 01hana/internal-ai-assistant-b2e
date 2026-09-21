@@ -44,4 +44,32 @@ describe('Phase 6 declarative response extraction', () => {
     if (!operation.ok) throw new Error('reference count fixture');
     expect(new ManifestResponseExtractor().extract(response, operation.value, {}).ok).toBe(accepted);
   });
+
+  it('does not allow caller arguments to supply or spoof derived metadata', () => {
+    const manifest = parsedManifest('metrics', [getOperation({
+      response: {
+        acceptedHttpStatuses: [200], acceptedApplicationCodes: [200], contentType: 'application/json',
+        schema: {
+          type: 'object', properties: { value: { type: 'integer', minimum: 0 } }, required: ['value'], additionalProperties: false
+        },
+        extraction: [
+          { source: 'operation_key', targetField: 'metricKey', conversion: 'string' },
+          { source: 'fixed_query', queryName: 'period', targetField: 'period', conversion: 'string' },
+          { source: 'response_pointer', sourcePointer: '/value', targetField: 'count', conversion: 'non_negative_integer' }
+        ]
+      }
+    })]);
+    const operation = new OperationManifestRegistry([manifest]).prepare('metrics', 'metrics.current', '1.0.0', boundedArguments({ region: 'TW' }));
+    if (!operation.ok) throw new Error('derived metadata fixture');
+    const extractor = new ManifestResponseExtractor();
+    expect(extractor.extract({ value: 7 }, operation.value, {})).toEqual({
+      ok: true, value: { metricKey: 'metrics.current', period: 'month', count: 7 }
+    });
+    expect(extractor.extract({ value: 7 }, operation.value, { metricKey: 'attacker.operation' })).toEqual({
+      ok: false, code: 'CONNECTOR_RESPONSE_INVALID'
+    });
+    expect(extractor.extract({ value: 7 }, operation.value, { period: 'attacker-period' })).toEqual({
+      ok: false, code: 'CONNECTOR_RESPONSE_INVALID'
+    });
+  });
 });

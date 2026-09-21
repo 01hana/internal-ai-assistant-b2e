@@ -41,7 +41,7 @@ if (!image) fail('Identity Bridge image is unavailable');
 const inspection = run('docker', ['image', 'inspect', image]).stdout;
 const history = run('docker', ['image', 'history', '--no-trunc', image]).stdout;
 if (/-----BEGIN PRIVATE KEY-----|bridge-private-key\.pem/.test(`${inspection}\n${history}`)) fail('private signing material appears in image metadata');
-const imageFiles = run('docker', ['run', '--rm', '--entrypoint', 'sh', image, '-c', "find /app -type f -print"]).stdout;
+const imageFiles = run('docker', ['run', '--rm', '--entrypoint', 'sh', image, '-c', "find /repo/apps/identity-bridge /repo/packages/connector-runtime-contract -type f -print"]).stdout;
 if (/\.pem$|\.key$|\.crt$|bridge-signing\.env$/m.test(imageFiles)) fail('secret or certificate file appears in the image filesystem');
 
 await reportEntryState(join(bridgeRoot, 'env/local.env.example'));

@@ -2,6 +2,7 @@ import { request as httpsRequest, type RequestOptions } from 'node:https';
 import type { AppliedCredentialRequest } from '../credentials/credential.types';
 import type { FixedUpstreamRequest } from './connector-destination-policy';
 import type { PinnedLookup } from './pinned-lookup.adapter';
+import type { LocalConnectorDiagnostics, RuntimeDiagnosticMetadata } from '../diagnostics/local-connector-diagnostics';
 
 export interface UpstreamWireResponse {
   readonly statusCode: number;
@@ -11,6 +12,10 @@ export interface UpstreamWireResponse {
 }
 export type UpstreamTransportResult = Readonly<{ ok: true; value: UpstreamWireResponse }> | Readonly<{ ok: false; code: 'CONNECTOR_DESTINATION_REJECTED' | 'CONNECTOR_UPSTREAM_AUTH_FAILED' | 'CONNECTOR_UPSTREAM_FAILED' | 'CONNECTOR_TIMEOUT' }>;
 type RequestFactory = (options: RequestOptions, callback: (response: any) => void) => any;
+export type UpstreamDiagnosticContext = Readonly<{
+  diagnostics: Pick<LocalConnectorDiagnostics, 'emit'>;
+  metadata: RuntimeDiagnosticMetadata;
+}>;
 
 export class UpstreamResponseCancelledError extends Error {
   constructor() { super('Upstream response cancelled.'); }
@@ -19,7 +24,13 @@ export class UpstreamResponseCancelledError extends Error {
 export class SafeUpstreamHttpClient {
   constructor(private readonly requestFactory: RequestFactory = httpsRequest as RequestFactory) {}
 
-  execute(fixed: FixedUpstreamRequest, applied: AppliedCredentialRequest, lookup: PinnedLookup, signal: AbortSignal): Promise<UpstreamTransportResult> {
+  execute(
+    fixed: FixedUpstreamRequest,
+    applied: AppliedCredentialRequest,
+    lookup: PinnedLookup,
+    signal: AbortSignal,
+    diagnostic?: UpstreamDiagnosticContext
+  ): Promise<UpstreamTransportResult> {
     if (signal.aborted) return Promise.resolve(failure('CONNECTOR_TIMEOUT'));
     const credentialHeaders = extractCredentialHeaders(applied);
     if (!credentialHeaders) return Promise.resolve(failure('CONNECTOR_UPSTREAM_AUTH_FAILED'));
@@ -39,6 +50,11 @@ export class SafeUpstreamHttpClient {
         outgoing = this.requestFactory(options, (response) => {
           const status = Number(response.statusCode ?? 0);
           const encoding = singleHeader(response.headers?.['content-encoding']);
+          diagnostic?.diagnostics.emit('UPSTREAM_RESPONSE_RECEIVED', 'RECEIVED', {
+            ...diagnostic.metadata,
+            httpStatusCategory: httpStatusCategory(status),
+            contentTypeCategory: contentTypeCategory(singleHeader(response.headers?.['content-type']))
+          });
           if ((status >= 300 && status < 400) || (encoding !== undefined && encoding.toLowerCase() !== 'identity')) {
             response.destroy?.(); finish(failure('CONNECTOR_DESTINATION_REJECTED')); return;
           }
@@ -77,5 +93,18 @@ function extractCredentialHeaders(value: AppliedCredentialRequest): Record<strin
   return headers;
 }
 function singleHeader(value: unknown): string | undefined { return typeof value === 'string' ? value : undefined; }
+function httpStatusCategory(status: number): string {
+  if (status >= 200 && status < 300) return 'HTTP_2XX';
+  if (status >= 300 && status < 400) return 'HTTP_3XX';
+  if (status >= 400 && status < 500) return 'HTTP_4XX';
+  if (status >= 500 && status < 600) return 'HTTP_5XX';
+  return 'HTTP_OTHER';
+}
+function contentTypeCategory(value: string | undefined): string {
+  if (!value) return 'CONTENT_TYPE_MISSING';
+  return value.split(';', 1)[0]!.trim().toLowerCase() === 'application/json'
+    ? 'APPLICATION_JSON'
+    : 'CONTENT_TYPE_OTHER';
+}
 function isTlsError(value: unknown): boolean { const code = value && typeof value === 'object' ? (value as { code?: unknown }).code : undefined; return typeof code === 'string' && (code.includes('CERT') || code.startsWith('ERR_TLS') || code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE'); }
 function failure(code: UpstreamTransportResult extends infer _ ? 'CONNECTOR_DESTINATION_REJECTED' | 'CONNECTOR_UPSTREAM_AUTH_FAILED' | 'CONNECTOR_UPSTREAM_FAILED' | 'CONNECTOR_TIMEOUT' : never): UpstreamTransportResult { return Object.freeze({ ok: false, code }); }

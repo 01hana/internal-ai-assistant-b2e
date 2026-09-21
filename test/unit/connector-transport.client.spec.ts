@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { ConnectorTransportClient } from '../../src/connectors/productized-business/connector-transport.client';
 import { ConnectorNetworkPolicy } from '../../src/connectors/productized-business/connector-network-policy';
+import { LocalProductizedConnectorDiagnostics, type ProductizedConnectorDiagnosticEvent } from '../../src/connectors/productized-business/local-productized-connector.diagnostics';
 
 const deployment:any={invocationUri:'https://runtime.test/v1/connector/invocations',destinationPolicy:{mode:'public_only',allowedCidrs:[]},maxRequestBytes:16384,maxResponseBytes:16384,maxTransportMs:4500};
 const signed={bytes:Buffer.from('{"version":"1"}'),proof:'signed-proof',requestId:'req-central-0001'};
@@ -14,9 +15,14 @@ function requestFactory(responseBody:unknown,statusCode=200,headers:Record<strin
 describe('ConnectorTransportClient',()=>{
   it('sends one exact bounded request with fixed safe headers and validates correlation',async()=>{
     const io=requestFactory({version:'1',requestId:signed.requestId,status:'failed',error:{code:'CONNECTOR_BINDING_INVALID'}});
-    const client=new ConnectorTransportClient({resolve:async()=>({ok:true,value:{addresses:['8.8.8.8'],lookup:jest.fn()}})} as any,io.factory);
+    const events:ProductizedConnectorDiagnosticEvent[]=[];
+    const diagnostics=new LocalProductizedConnectorDiagnostics({LOCAL_DEVELOPMENT:'1',LOCAL_CONNECTOR_DIAGNOSTICS:'1'},event=>events.push(event));
+    const client=new ConnectorTransportClient({resolve:async()=>({ok:true,value:{addresses:['8.8.8.8'],lookup:jest.fn()}})} as any,io.factory,diagnostics);
     expect(await client.exchange(deployment,signed,new AbortController().signal,4500)).toEqual({ok:true,value:{version:'1',requestId:signed.requestId,status:'failed',error:{code:'CONNECTOR_BINDING_INVALID'}}});
     expect(io.calls).toHaveLength(1);expect(io.calls[0]).toMatchObject({method:'POST',hostname:'runtime.test',path:'/v1/connector/invocations',rejectUnauthorized:true,agent:false,headers:{authorization:'Bearer signed-proof','content-type':'application/json','accept-encoding':'identity','x-request-id':signed.requestId,'content-length':signed.bytes.length}});expect(io.calls[0].headers).not.toHaveProperty('content-encoding');
+    expect(events.map(event=>event.stage)).toEqual(['CONNECTOR_REQUEST_SENT','CONNECTOR_RESPONSE_RECEIVED','CONNECTOR_RESPONSE_VALIDATED']);
+    expect(new Set(events.map(event=>event.requestId))).toEqual(new Set([signed.requestId]));
+    expect(JSON.stringify(events)).not.toContain(signed.proof);
   });
   it.each([
     ['redirect',302,{'content-type':'application/json'},{}],

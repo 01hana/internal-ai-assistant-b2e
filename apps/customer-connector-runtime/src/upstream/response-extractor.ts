@@ -8,10 +8,18 @@ export class ManifestResponseExtractor {
   extract(raw: unknown, operation: PreparedManifestOperation, invocationArguments: Readonly<Record<string, unknown>>): ExtractionResult {
     const output: Record<string, string | number | boolean> = {};
     for (const declaration of operation.response.extraction) {
-      const source = pointer(raw, declaration.sourcePointer);
+      const derived = declaration.source === 'operation_key' || declaration.source === 'fixed_query';
+      if (derived && Object.prototype.hasOwnProperty.call(invocationArguments, declaration.targetField)) return failure();
+      const source = declaration.source === 'operation_key'
+        ? operation.operationKey
+        : declaration.source === 'fixed_query'
+          ? operation.request.profile === 'GET_QUERY_V1'
+            ? operation.request.query.find((entry) => entry.name === declaration.queryName)?.value
+            : undefined
+          : pointer(raw, declaration.sourcePointer);
       const converted = convert(source, declaration.conversion);
       if (converted === undefined) return failure();
-      if (Object.prototype.hasOwnProperty.call(invocationArguments, declaration.targetField) && invocationArguments[declaration.targetField] !== converted) return failure();
+      if (!derived && Object.prototype.hasOwnProperty.call(invocationArguments, declaration.targetField) && invocationArguments[declaration.targetField] !== converted) return failure();
       output[declaration.targetField] = converted;
     }
     return Object.freeze({ ok: true, value: Object.freeze(output) });

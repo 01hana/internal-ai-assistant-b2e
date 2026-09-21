@@ -7,6 +7,7 @@ import { OperationManifestModule } from './manifest/operation-manifest.module';
 import type { CredentialApplicationStrategy, CredentialProvider } from './credentials/credential.types';
 import { UpstreamModule } from './upstream/upstream.module';
 import { ConnectorInvocationModule } from './invocation/connector-invocation.module';
+import { LocalConnectorDiagnostics } from './diagnostics/local-connector-diagnostics';
 
 export interface Phase5RuntimeRegistrations {
   readonly credentialProviders?: readonly CredentialProvider[];
@@ -20,7 +21,7 @@ export class CustomerConnectorRuntimeModule {
     providers: readonly BindingBootstrapProvider[] = [],
     phase5: Phase5RuntimeRegistrations = {}
   ): DynamicModule {
-    const bindingModule = ConnectorBindingModule.register(providers);
+    const bindingModule = ConnectorBindingModule.register(providers, new LocalConnectorDiagnostics(environment));
     const manifestModule = OperationManifestModule.register(phase5.credentialProviders, phase5.credentialStrategies);
     const upstreamModule = UpstreamModule.register(manifestModule);
     return {

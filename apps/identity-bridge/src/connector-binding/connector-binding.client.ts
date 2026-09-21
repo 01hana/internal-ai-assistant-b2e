@@ -10,6 +10,7 @@ import {
 import { BridgeConfigService } from '../config/bridge-config.service';
 import { ConnectorBindingDestinationPolicy } from './connector-binding-destination.policy';
 import type { SignedConnectorBindingRequest } from './connector-binding-service-auth.signer';
+import type { BridgeDiagnosticMetadata, LocalConnectorDiagnostics } from '../diagnostics/local-connector-diagnostics';
 
 type DnsAnswer = Readonly<{ address: string; family: number }>;
 export type ConnectorBindingResolver = (hostname: string, signal: AbortSignal) => Promise<readonly DnsAnswer[]>;
@@ -34,7 +35,11 @@ export class ConnectorBindingClient {
   private readonly resolver: ConnectorBindingResolver;
   private readonly requestFactory: ConnectorBindingRequestFactory;
 
-  constructor(private readonly bridgeConfig: BridgeConfigService, private readonly options: ClientOptions = {}) {
+  constructor(
+    private readonly bridgeConfig: BridgeConfigService,
+    private readonly options: ClientOptions = {},
+    private readonly diagnostics?: Pick<LocalConnectorDiagnostics, 'emit'>
+  ) {
     this.resolver = options.resolver ?? defaultResolver;
     this.requestFactory = options.requestFactory ?? httpsRequest as unknown as ConnectorBindingRequestFactory;
   }
@@ -44,7 +49,11 @@ export class ConnectorBindingClient {
     return !!config && new ConnectorBindingDestinationPolicy(config.destination, !!this.options.allowTestLoopbackTls).productionReady;
   }
 
-  async exchange(signed: SignedConnectorBindingRequest, callerSignal?: AbortSignal): Promise<ConnectorBindingClientResult> {
+  async exchange(
+    signed: SignedConnectorBindingRequest,
+    callerSignal?: AbortSignal,
+    diagnosticMetadata: BridgeDiagnosticMetadata = {}
+  ): Promise<ConnectorBindingClientResult> {
     const config = this.bridgeConfig.configuration.connectorBinding;
     if (!config || signed.bytes.byteLength < 1 || signed.bytes.byteLength > CONNECTOR_BINDING_MAX_REQUEST_BYTES) return failure('CONNECTOR_REQUEST_INVALID');
     const uri = new URL(config.uri);
@@ -69,7 +78,7 @@ export class ConnectorBindingClient {
         if (typeof lookupOptions === 'object' && lookupOptions.all) callback(null, [{ address: pinnedAddress, family }]);
         else callback(null, pinnedAddress, family);
       };
-      return await this.send(uri, signed, lookup, controller);
+      return await this.send(uri, signed, lookup, controller, diagnosticMetadata);
     } catch {
       return controller.signal.aborted ? failure('CONNECTOR_TIMEOUT') : failure('CONNECTOR_DESTINATION_REJECTED');
     } finally {
@@ -82,7 +91,8 @@ export class ConnectorBindingClient {
     uri: URL,
     signed: SignedConnectorBindingRequest,
     lookup: NonNullable<RequestOptions['lookup']>,
-    controller: AbortController
+    controller: AbortController,
+    diagnosticMetadata: BridgeDiagnosticMetadata
   ): Promise<ConnectorBindingClientResult> {
     return new Promise((resolve) => {
       let settled = false;
@@ -113,6 +123,9 @@ export class ConnectorBindingClient {
         }, (incoming) => {
           response = incoming;
           const status = Number(incoming.statusCode);
+          this.diagnostics?.emit('BINDING_HTTP_RESPONSE_RECEIVED', 'RECEIVED', {
+            ...diagnosticMetadata, httpStatusCategory: httpStatusCategory(status)
+          });
           const contentType = String(incoming.headers?.['content-type'] ?? '').split(';')[0]!.trim().toLowerCase();
           const contentEncoding = incoming.headers?.['content-encoding'];
           if (status >= 300 && status < 400) {
@@ -144,10 +157,16 @@ export class ConnectorBindingClient {
             if (settled) return;
             const parsed = parseConnectorBindingBootstrapResponseV1(Buffer.concat(chunks), signed.requestId);
             if (!parsed.ok) finish(failure('CONNECTOR_RESPONSE_INVALID'));
-            else if (status === 200 || ('status' in parsed.value && parsed.value.status === 'failed')) finish(Object.freeze({ ok: true, value: parsed.value }));
+            else if (status === 200 || ('status' in parsed.value && parsed.value.status === 'failed')) {
+              this.diagnostics?.emit('BINDING_RESPONSE_VALIDATED', 'SUCCEEDED', diagnosticMetadata);
+              finish(Object.freeze({ ok: true, value: parsed.value }));
+            }
             else finish(failure('CONNECTOR_UPSTREAM_FAILED'));
           });
           incoming.on('error', () => finish(controller.signal.aborted ? failure('CONNECTOR_TIMEOUT') : failure('CONNECTOR_UPSTREAM_FAILED')));
+        });
+        request.once('socket', (socket) => {
+          socket.once('secureConnect', () => this.diagnostics?.emit('BINDING_TLS_CONNECTED', 'SUCCEEDED', diagnosticMetadata));
         });
         controller.signal.addEventListener('abort', onAbort, { once: true });
         request.on('error', () => finish(controller.signal.aborted ? failure('CONNECTOR_TIMEOUT') : failure('CONNECTOR_UPSTREAM_FAILED')));
@@ -176,4 +195,8 @@ async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal): Promise<T
 
 function failure(code: Extract<ConnectorBindingClientResult, { ok: false }>['code']): ConnectorBindingClientResult {
   return Object.freeze({ ok: false, code });
+}
+
+function httpStatusCategory(status: number): string {
+  return Number.isInteger(status) && status >= 100 && status <= 599 ? `HTTP_${Math.floor(status / 100)}XX` : 'HTTP_UNKNOWN';
 }

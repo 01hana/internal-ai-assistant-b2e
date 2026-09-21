@@ -11,6 +11,7 @@ import type { ProtectedBindingView } from '../../src/bindings/binding.types';
 import type { PreparedManifestOperation } from '../../src/manifest/operation-manifest.registry';
 import type { AppliedCredentialRequest } from '../../src/credentials/credential.types';
 import { binding, credentialFixtures, profileConfigurations } from '../fixtures/phase5-credentials';
+import { LocalConnectorDiagnostics, type RuntimeDiagnosticEvent } from '../../src/diagnostics/local-connector-diagnostics';
 
 describe('Phase 6 central-only invocation route', () => {
   it('is active, POST-only, and rejects an invalid proof without exposing request data', async () => {
@@ -28,6 +29,11 @@ describe('Phase 6 central-only invocation route', () => {
 
   it('composes the bounded business path in authority order and releases only the envelope', async () => {
     const events: string[] = [];
+    const diagnosticEvents: RuntimeDiagnosticEvent[] = [];
+    const diagnostics = new LocalConnectorDiagnostics(
+      { LOCAL_DEVELOPMENT: '1', LOCAL_CONNECTOR_DIAGNOSTICS: '1' },
+      (event) => diagnosticEvents.push(event)
+    );
     const rawBody = invocationBody();
     const parsed = parseConnectorInvocationRequestV1(rawBody);
     if (!parsed.ok) throw new Error('fixture');
@@ -51,11 +57,21 @@ describe('Phase 6 central-only invocation route', () => {
       },
       { prepare: jest.fn((...args: Parameters<OperationManifestRegistry['prepare']>) => { events.push('manifest'); return realManifests.prepare(...args); }) },
       credentialBoundary,
-      { execute: jest.fn(async () => { events.push('upstream'); return { ok: true as const, value: { sku: 'SKU-1', quantity: 9 } }; }) }
+      { execute: jest.fn(async () => { events.push('upstream'); return { ok: true as const, value: { sku: 'SKU-1', quantity: 9 } }; }) },
+      undefined,
+      diagnostics
     );
     const result = await service.handle({ method: 'POST', contentType: 'application/json', authorization: 'Bearer a.b.c', requestIdHeader: 'req-phase6-0001', rawBody });
     expect(events).toEqual(['authenticate', 'readiness', 'binding', 'manifest', 'credential', 'upstream', 'release']);
     expect(result).toEqual({ statusCode: 200, body: { version: '1', requestId: 'req-phase6-0001', status: 'succeeded', result: { sku: 'SKU-1', quantity: 9 } } });
+    expect(diagnosticEvents.map((event) => event.stage)).toEqual([
+      'INVOCATION_SERVICE_AUTH_SUCCEEDED',
+      'INVOCATION_CONTEXT_VALIDATED',
+      'BINDING_LOOKUP_SUCCEEDED',
+      'MANIFEST_RESOLVED',
+      'CREDENTIAL_RESOLUTION_SUCCEEDED'
+    ]);
+    expect(new Set(diagnosticEvents.map((event) => event.requestId))).toEqual(new Set(['req-phase6-0001']));
     expect(JSON.stringify(result)).not.toMatch(/api-key-secret|customer-b-handle|ccr_/);
   });
 

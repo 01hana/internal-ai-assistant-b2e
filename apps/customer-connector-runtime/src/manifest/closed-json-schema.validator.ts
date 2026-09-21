@@ -1,6 +1,7 @@
 import type { ClosedJsonSchemaV1 } from '@internal-ai-assistant/connector-runtime-contract';
 
 export function validateClosedJsonSchema(schema: ClosedJsonSchemaV1, value: unknown): boolean {
+  if (value === null) return 'nullable' in schema && schema.nullable === true;
   if (schema.type === 'string') return typeof value === 'string' &&
     (schema.minLength === undefined || value.length >= schema.minLength) && (schema.maxLength === undefined || value.length <= schema.maxLength);
   if (schema.type === 'integer') return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) &&

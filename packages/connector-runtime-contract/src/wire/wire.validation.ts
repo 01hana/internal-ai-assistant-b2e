@@ -59,7 +59,7 @@ export function parseConnectorBindingBootstrapRequestV1<TProfileKey extends stri
   const context = parseBindingContext(value.trustedContext);
   if (value.version !== '1' || !isIdentifier(value.requestId) || value.bootstrapProfileKey !== profile.profileKey || !context) return FAILURE;
   if (!isValidBindingProviderPayloadLimit(profile.maxProviderPayloadBytes)) return FAILURE;
-  if (!validateBoundedJsonValue(value.providerPayload) || boundedJsonByteLength(value.providerPayload) > profile.maxProviderPayloadBytes) return FAILURE;
+  if (!validateProviderPayloadStructure(value.providerPayload) || boundedJsonByteLength(value.providerPayload) > profile.maxProviderPayloadBytes) return FAILURE;
   try {
     const payload = profile.parseProviderPayload(value.providerPayload);
     if (!payload.ok) return FAILURE;
@@ -148,6 +148,19 @@ function isExactObject(value: unknown, keys: readonly string[]): value is { read
 
 function isBoundedJsonObject(value: unknown): value is { readonly [key: string]: unknown } {
   return isPlainObject(value) && validateBoundedJsonValue(value);
+}
+
+function validateProviderPayloadStructure(value: unknown, depth = 0): boolean {
+  if (depth > CONNECTOR_LIMITS_V1.maximumJsonDepth) return false;
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (Array.isArray(value)) {
+    return value.length <= CONNECTOR_LIMITS_V1.maximumArrayItems &&
+      value.every((item) => validateProviderPayloadStructure(item, depth + 1));
+  }
+  if (!isPlainObject(value) || Object.keys(value).length > CONNECTOR_LIMITS_V1.maximumObjectKeys) return false;
+  return Object.entries(value).every(([key, item]) => key.length > 0 && key.length <= 128 &&
+    validateProviderPayloadStructure(item, depth + 1));
 }
 
 function deepFreeze<T>(value: T): T {

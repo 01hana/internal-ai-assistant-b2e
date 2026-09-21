@@ -6,6 +6,7 @@ import type {
 } from '@internal-ai-assistant/connector-runtime-contract';
 import { RequestProfileRegistry, type MappedReadRequest } from './request-profile.registry';
 import { validateClosedJsonSchema } from './closed-json-schema.validator';
+import { jsonPointerSegments, schemaAtJsonPointer } from './json-pointer';
 
 declare const preparedManifestOperationBrand: unique symbol;
 
@@ -101,31 +102,69 @@ function validOperation(operation: ConnectorOperationManifestEntryV1, profiles: 
 }
 
 function validResponse(operation: ConnectorOperationManifestEntryV1): boolean {
-  return operation.response.extraction.every((extraction) => {
-    const source = schemaAtPointer(operation.response.schema, extraction.sourcePointer);
-    if (!source) return false;
+  const declaredPointers = operation.response.validationProfile === 'DECLARED_POINTERS_V1';
+  if (declaredPointers && !operation.response.applicationCodePointer) return false;
+  if (operation.response.applicationCodePointer) {
+    const applicationCode = schemaAtJsonPointer(operation.response.schema, operation.response.applicationCodePointer);
+    if (!applicationCode || applicationCode.type !== 'integer' || applicationCode.nullable === true) return false;
+  }
+  const extractionsValid = operation.response.extraction.every((extraction) => {
+    if (extraction.source === 'operation_key') return extraction.conversion === 'string';
+    if (extraction.source === 'fixed_query') {
+      return extraction.conversion === 'string' && operation.request.profile === 'GET_QUERY_V1' &&
+        operation.request.fixedQuery.some((entry) => entry.name === extraction.queryName);
+    }
+    const source = schemaAtJsonPointer(operation.response.schema, extraction.sourcePointer);
+    if (!source || declaredPointers && 'nullable' in source && source.nullable === true) return false;
     if (extraction.conversion === 'string') return source.type === 'string';
     if (extraction.conversion === 'boolean') return source.type === 'boolean';
     if (extraction.conversion === 'number') return source.type === 'number' || source.type === 'integer';
     if (extraction.conversion === 'integer') return source.type === 'integer';
     return source.type === 'integer' && source.minimum !== undefined && source.minimum >= 0;
   });
+  if (!extractionsValid || !declaredPointers) return extractionsValid;
+  const pointers = [
+    operation.response.applicationCodePointer!,
+    ...operation.response.extraction.flatMap((extraction) =>
+      extraction.source === 'operation_key' || extraction.source === 'fixed_query' ? [] : [extraction.sourcePointer])
+  ];
+  return schemaExactlyMatchesPointerTree(operation.response.schema, pointers);
 }
 
-function schemaAtPointer(schema: ClosedJsonSchemaV1, pointer: string): ClosedJsonSchemaV1 | undefined {
-  let current: ClosedJsonSchemaV1 | undefined = schema;
-  for (const encoded of pointer.split('/').slice(1)) {
-    const segment = encoded.replace(/~1/g, '/').replace(/~0/g, '~');
-    if (!current) return undefined;
-    if (current.type === 'object' && 'properties' in current) {
-      current = current.properties.find((property) => property.name === segment)?.schema;
-    } else if (current.type === 'array' && /^(?:0|[1-9][0-9]*)$/.test(segment)) {
-      current = current.items;
-    } else {
-      return undefined;
+interface PointerTree { terminal: boolean; readonly children: Map<string, PointerTree> }
+
+function schemaExactlyMatchesPointerTree(schema: ClosedJsonSchemaV1, pointers: readonly string[]): boolean {
+  const root: PointerTree = { terminal: false, children: new Map() };
+  for (const pointer of new Set(pointers)) {
+    let node = root;
+    for (const segment of jsonPointerSegments(pointer)) {
+      let child = node.children.get(segment);
+      if (!child) {
+        child = { terminal: false, children: new Map() };
+        node.children.set(segment, child);
+      }
+      node = child;
     }
+    node.terminal = true;
   }
-  return current;
+  return schemaMatchesPointerTreeNode(schema, root);
+}
+
+function schemaMatchesPointerTreeNode(schema: ClosedJsonSchemaV1, node: PointerTree): boolean {
+  if (node.terminal) return node.children.size === 0;
+  if (schema.type === 'object') {
+    const required = new Set(schema.required);
+    if (schema.properties.length !== node.children.size || required.size !== node.children.size) return false;
+    return schema.properties.every((property) => {
+      const child = node.children.get(property.name);
+      return required.has(property.name) && child !== undefined && schemaMatchesPointerTreeNode(property.schema, child);
+    });
+  }
+  if (schema.type === 'array') {
+    return node.children.size > 0 && [...node.children.entries()].every(([segment, child]) =>
+      /^(?:0|[1-9][0-9]*)$/.test(segment) && schemaMatchesPointerTreeNode(schema.items, child));
+  }
+  return false;
 }
 
 function plainObject(value: unknown): value is Readonly<Record<string, unknown>> {

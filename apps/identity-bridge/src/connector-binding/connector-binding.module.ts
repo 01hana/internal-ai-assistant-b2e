@@ -6,6 +6,7 @@ import { BridgeReadinessRegistry } from '../health/readiness.service';
 import { ConnectorBindingClient } from './connector-binding.client';
 import { ConnectorBindingCoordinator } from './connector-binding.coordinator';
 import { ConnectorBindingServiceAuthSigner } from './connector-binding-service-auth.signer';
+import { LocalConnectorDiagnostics, LocalConnectorDiagnosticsModule } from '../diagnostics/local-connector-diagnostics';
 
 @Injectable()
 export class ConnectorBindingReadinessInitializer implements OnModuleInit {
@@ -28,15 +29,19 @@ export class ConnectorBindingReadinessInitializer implements OnModuleInit {
 }
 
 @Module({
-  imports: [ConfigurationModule, BridgeHealthModule],
+  imports: [ConfigurationModule, BridgeHealthModule, LocalConnectorDiagnosticsModule],
   providers: [
     { provide: ConnectorBindingServiceAuthSigner, useFactory: (config: BridgeConfigService) => new ConnectorBindingServiceAuthSigner(config), inject: [BridgeConfigService] },
-    { provide: ConnectorBindingClient, useFactory: (config: BridgeConfigService) => new ConnectorBindingClient(config), inject: [BridgeConfigService] },
+    {
+      provide: ConnectorBindingClient,
+      useFactory: (config: BridgeConfigService, diagnostics: LocalConnectorDiagnostics) => new ConnectorBindingClient(config, {}, diagnostics),
+      inject: [BridgeConfigService, LocalConnectorDiagnostics]
+    },
     {
       provide: ConnectorBindingCoordinator,
-      useFactory: (config: BridgeConfigService, signer: ConnectorBindingServiceAuthSigner, client: ConnectorBindingClient) =>
-        new ConnectorBindingCoordinator(config, signer, client),
-      inject: [BridgeConfigService, ConnectorBindingServiceAuthSigner, ConnectorBindingClient]
+      useFactory: (config: BridgeConfigService, signer: ConnectorBindingServiceAuthSigner, client: ConnectorBindingClient,
+        diagnostics: LocalConnectorDiagnostics) => new ConnectorBindingCoordinator(config, signer, client, undefined, diagnostics),
+      inject: [BridgeConfigService, ConnectorBindingServiceAuthSigner, ConnectorBindingClient, LocalConnectorDiagnostics]
     },
     ConnectorBindingReadinessInitializer
   ],

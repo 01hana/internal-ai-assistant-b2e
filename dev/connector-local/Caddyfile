@@ -1,0 +1,27 @@
+{
+	admin off
+	auto_https off
+}
+
+https://connector-runtime.local.test:3443 {
+	tls /certs/local-facades.crt /certs/local-facades.key
+
+	@runtime_routes path /health /ready /v1/connector/invocations /v1/internal/connector-bindings
+	handle @runtime_routes {
+		reverse_proxy http://host-local:{$CONNECTOR_RUNTIME_HTTP_PORT:3100}
+	}
+
+	respond "Not Found" 404
+}
+https://shinmone-upstream.local.test:3444 {
+	tls /certs/local-facades.crt /certs/local-facades.key
+
+	@shinmone_scm_routes path /APIs/SCM /APIs/SCM/*
+	handle @shinmone_scm_routes {
+		reverse_proxy http://59.125.138.139 {
+			header_up Host 59.125.138.139
+		}
+	}
+
+	respond "Not Found" 404
+}

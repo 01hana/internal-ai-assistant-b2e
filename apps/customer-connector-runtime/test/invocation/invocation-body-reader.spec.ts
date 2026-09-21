@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import { readBoundedInvocationBody } from '../../src/invocation/invocation-body.reader';
 import { ConnectorInvocationController } from '../../src/invocation/connector-invocation.controller';
 import { CONNECTOR_INVOCATION_MAX_REQUEST_BYTES } from '@internal-ai-assistant/connector-runtime-contract';
+import { LocalConnectorDiagnostics, type RuntimeDiagnosticEvent } from '../../src/diagnostics/local-connector-diagnostics';
 
 describe('Phase 6 fail-fast invocation body intake', () => {
   it('rejects an oversized declared content length without reading a byte', async () => {
@@ -112,7 +113,12 @@ describe('Phase 6 fail-fast invocation body intake', () => {
       observedSignal = input.requestSignal;
       return { statusCode: 200, body: { version: '1', requestId: 'request-success', status: 'succeeded', result: { count: 1 } } };
     });
-    const controller = new ConnectorInvocationController({ handle } as never, { nowMilliseconds: () => 0 });
+    const events: RuntimeDiagnosticEvent[] = [];
+    const diagnostics = new LocalConnectorDiagnostics(
+      { LOCAL_DEVELOPMENT: '1', LOCAL_CONNECTOR_DIAGNOSTICS: '1' },
+      (event) => events.push(event)
+    );
+    const controller = new ConnectorInvocationController({ handle } as never, { nowMilliseconds: () => 0 }, diagnostics);
     const request = routeRequest(Buffer.from('{}'));
     const response = routeResponse(true);
     const pending = controller.invoke(request as never, response as never);
@@ -122,13 +128,15 @@ describe('Phase 6 fail-fast invocation body intake', () => {
     expect(observedSignal?.aborted).toBe(false);
     expect(request.listenerCount('aborted')).toBe(0);
     expect(response.listenerCount('close')).toBe(0);
+    expect(events.map((event) => event.stage)).toEqual(['INVOCATION_ROUTE_RECEIVED', 'INVOCATION_RESPONSE_SENT']);
+    expect(events[1]).toMatchObject({ requestId: 'request-success', httpStatusCategory: 'HTTP_2XX' });
   });
 });
 
 function routeRequest(body: Buffer) {
   return Object.assign(new EventEmitter(), {
     method: 'POST', pause: jest.fn(), socket: { destroy: jest.fn() },
-    headers: { 'content-type': 'application/json', 'content-length': String(body.byteLength) }
+    headers: { 'content-type': 'application/json', 'content-length': String(body.byteLength), 'x-request-id': 'request-success' }
   });
 }
 

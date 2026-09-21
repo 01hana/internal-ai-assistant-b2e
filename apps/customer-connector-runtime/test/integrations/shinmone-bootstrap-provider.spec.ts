@@ -1,5 +1,8 @@
 import { executionScopedCredentialMaterial } from '../../src/credentials/credential.types';
-import type { ConnectorBindingTrustedContextV1 } from '@internal-ai-assistant/connector-runtime-contract';
+import {
+  parseConnectorBindingBootstrapRequestV1,
+  type ConnectorBindingTrustedContextV1
+} from '@internal-ai-assistant/connector-runtime-contract';
 import {
   SHINMONE_BOOTSTRAP_PROVIDER_KEY,
   SHINMONE_BOOTSTRAP_PROFILE_KEY,
@@ -41,6 +44,21 @@ describe('removable Shinmone IDX bootstrap and credential provider', () => {
     expect(JSON.stringify(material)).not.toContain('entry-shared');
     await provider.revoke(created.opaqueCredentialHandle, 'provider_rejected');
     await expect(provider.resolve(created.opaqueCredentialHandle, context, created.credentialGeneration)).rejects.toThrow('credential unavailable');
+  });
+
+  it.each([1_024, 1_025, 4_096, 8_192, 12_000])(
+    'admits a %i-character native token through the wire parser and real provider contract',
+    (length) => {
+      const provider = new ShinmoneIdxCredentialProvider();
+      const parsed = parseConnectorBindingBootstrapRequestV1(bindingRequest('x'.repeat(length)), provider.contract);
+      expect(parsed.ok).toBe(true);
+    }
+  );
+
+  it('rejects an over-limit token and additional provider fields through the wire parser', () => {
+    const provider = new ShinmoneIdxCredentialProvider();
+    expect(parseConnectorBindingBootstrapRequestV1(bindingRequest('x'.repeat(12_001)), provider.contract).ok).toBe(false);
+    expect(parseConnectorBindingBootstrapRequestV1(bindingRequest('token', { unexpected: 'value' }), provider.contract).ok).toBe(false);
   });
 
   it('rejects payload/context mismatch and omits a cap when the accepted token has no numeric exp', async () => {
@@ -121,4 +139,20 @@ describe('removable Shinmone IDX bootstrap and credential provider', () => {
 
 function nativeJwt(payload: Record<string, unknown>): string {
   return `${Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url')}.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.fixture-signature`;
+}
+
+function bindingRequest(nativeAccessToken: string, additions: object = {}): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify({
+    version: '1',
+    requestId: '76439084-9a9e-4981-9cd7-2e71e822fe28',
+    bootstrapProfileKey: SHINMONE_BOOTSTRAP_PROFILE_KEY,
+    trustedContext: {
+      customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp',
+      connectorInstanceId: 'shinmone-scm-connector-1', organizationId: 'org-shared', actorId: 'actor-shared'
+    },
+    providerPayload: {
+      nativeAccessToken, acceptedSubject: 'actor-shared',
+      acceptedOrganization: 'org-shared', acceptedEntry: 'entry-shared', ...additions
+    }
+  }));
 }

@@ -37,10 +37,10 @@ import {
   parseSseResponse
 } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
+import { createEphemeralTlsTestFixture, type EphemeralTlsTestFixture } from '../../apps/customer-connector-runtime/test/fixtures/ephemeral-tls-test-fixture';
 
 const TLS_HOST = 'phase6-upstream.test';
-const CERTIFICATE = readFileSync('apps/customer-connector-runtime/test/fixtures/phase6-upstream.crt');
-const PRIVATE_KEY = readFileSync('apps/customer-connector-runtime/test/fixtures/phase6-upstream.key');
+let tlsFixture: EphemeralTlsTestFixture;
 const CONTEXT: ConnectorBindingTrustedContextV1 = Object.freeze({
   customerId: 'customer-b', integrationId: 'inventory-b', hostApp: 'customer-b-inventory',
   connectorInstanceId: 'customer-b-inventory-connector-1', organizationId: 'org-shared', actorId: 'actor-shared'
@@ -48,11 +48,14 @@ const CONTEXT: ConnectorBindingTrustedContextV1 = Object.freeze({
 const API_KEY = 'customer-b-api-key-sentinel';
 
 describe('Feature 009 Synthetic Customer B portability', () => {
+  beforeAll(async () => { tlsFixture = await createEphemeralTlsTestFixture(); });
+  afterAll(async () => { await tlsFixture.dispose(); });
+
   it('executes the natural-language POST-query vertical with no Shinmone registration in the topology', async () => {
     const upstreamRequests: Array<Readonly<{
       method?: string; url?: string; apiKey?: string; authorization?: string; body: string
     }>> = [];
-    const upstream = createServer({ cert: CERTIFICATE, key: PRIVATE_KEY }, (incoming, response) => {
+    const upstream = createServer({ cert: tlsFixture.certificate, key: tlsFixture.privateKey }, (incoming, response) => {
       const chunks: Buffer[] = [];
       incoming.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
       incoming.on('end', () => {
@@ -90,7 +93,7 @@ describe('Feature 009 Synthetic Customer B portability', () => {
       .overrideProvider(UpstreamExecutionService)
       .useValue(new UpstreamExecutionService(
         new ConnectorDestinationPolicy(JSON.parse(String(runtimeEnvironment.CONNECTOR_UPSTREAMS_JSON)), 'test'),
-        new SafeUpstreamHttpClient((options, callback) => httpsRequest({ ...options, ca: CERTIFICATE }, callback)),
+        new SafeUpstreamHttpClient((options, callback) => httpsRequest({ ...options, ca: tlsFixture.certificate }, callback)),
         async () => [{ address: '127.0.0.1', family: 4 }]
       ))
       .compile();
@@ -99,7 +102,7 @@ describe('Feature 009 Synthetic Customer B portability', () => {
     const runtimeReadiness = runtimeModule.get(RuntimeReadinessRegistry);
     runtimeReadiness.setReady('upstream', true);
     runtimeReadiness.setReady('invocationRoute', true);
-    const runtimeServer = createServer({ cert: CERTIFICATE, key: PRIVATE_KEY }, runtimeApp.getHttpAdapter().getInstance());
+    const runtimeServer = createServer({ cert: tlsFixture.certificate, key: tlsFixture.privateKey }, runtimeApp.getHttpAdapter().getInstance());
     await listen(runtimeServer);
 
     const binding = await mintBinding(
@@ -114,7 +117,7 @@ describe('Feature 009 Synthetic Customer B portability', () => {
       environment: centralEnvironment(privateKeyPath, centralJwk, (runtimeServer.address() as AddressInfo).port),
       allowTestLoopbackTls: true,
       resolver: async () => [{ address: '127.0.0.1', family: 4 }],
-      requestFactory: (options, callback) => httpsRequest({ ...options, ca: CERTIFICATE }, callback)
+      requestFactory: (options, callback) => httpsRequest({ ...options, ca: tlsFixture.certificate }, callback)
     });
     const assistant = await createUs1TestAppWithState({
       dataAdapterRegistrationsFactory: ({ toolRegistry, mockRegistrations }) => Object.freeze([
@@ -339,7 +342,7 @@ async function mintBinding(runtimePort: number, privateKey: KeyObject, kid: stri
   return new Promise<{ connectorContextRef: string; expiresIn: number }>((resolve, reject) => {
     const outgoing = httpsRequest({
       hostname: TLS_HOST, port: runtimePort, path: '/v1/internal/connector-bindings', method: 'POST',
-      ca: CERTIFICATE, rejectUnauthorized: true, servername: TLS_HOST, agent: false,
+      ca: tlsFixture.certificate, rejectUnauthorized: true, servername: TLS_HOST, agent: false,
       lookup: (_hostname: string, options: { all?: boolean }, callback: (...values: any[]) => void) => {
         if (options?.all) callback(null, [{ address: '127.0.0.1', family: 4 }]);
         else callback(null, '127.0.0.1', 4);

@@ -20,7 +20,7 @@ describe('Identity Bridge exchange controller', () => {
     await expect(controller.exchange('Bearer native-token', requestId, {})).resolves.toEqual({
       accessToken: 'canonical-token', tokenType: 'Bearer', expiresIn: 300
     });
-    expect(service.exchange).toHaveBeenCalledWith('native-token');
+    expect(service.exchange).toHaveBeenCalledWith('native-token', '123e4567-e89b-42d3-a456-426614174000');
   });
 
   it.each([

@@ -1,0 +1,30 @@
+name: internal-ai-assistant-connector-local
+
+services:
+  connector-local-tls:
+    image: caddy:2.10.2-alpine
+    environment:
+      CONNECTOR_RUNTIME_HTTP_PORT: ${CONNECTOR_RUNTIME_HTTP_PORT:-3100}
+    extra_hosts:
+      - "host-local:host-gateway"
+    ports:
+      - "${LOCAL_LAN_IP:?Set LOCAL_LAN_IP in dev/connector-local/.env}:${LOCAL_CONNECTOR_RUNTIME_HTTPS_PORT:-3443}:3443"
+      - "${LOCAL_LAN_IP:?Set LOCAL_LAN_IP in dev/connector-local/.env}:${LOCAL_SHINMONE_HTTPS_PORT:-3444}:3444"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../.local-secrets/connector-local/tls:/certs:ro
+    read_only: true
+    tmpfs:
+      - /config:size=1m,noexec,nosuid,nodev
+      - /data:size=1m,noexec,nosuid,nodev
+      - /tmp:size=8m,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: [CMD, caddy, validate, --config, /etc/caddy/Caddyfile, --adapter, caddyfile]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    restart: unless-stopped

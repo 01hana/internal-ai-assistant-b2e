@@ -90,6 +90,78 @@ describe('Connector operation manifest V1', () => {
     expect(JSON.stringify(operation)).not.toMatch(/X-Inventory-Key|apiKey|authorization/i);
   });
 
+  it('accepts closed application-code and normalized extraction sources', () => {
+    const operation = {
+      ...getOperation,
+      response: {
+        ...getOperation.response,
+        applicationCodePointer: '/Code',
+        schema: {
+          type: 'object',
+          properties: {
+            Code: { type: 'integer' },
+            Data: { type: 'object', properties: { Count: { type: 'integer', minimum: 0 } }, required: ['Count'], additionalProperties: false }
+          },
+          required: ['Code', 'Data'], additionalProperties: false
+        },
+        extraction: [
+          { source: 'operation_key', targetField: 'metricKey', conversion: 'string' },
+          { source: 'fixed_query', queryName: 'TimeRange', targetField: 'period', conversion: 'string' },
+          { source: 'response_pointer', sourcePointer: '/Data/Count', targetField: 'count', conversion: 'non_negative_integer' }
+        ]
+      }
+    };
+    expect(parseConnectorOperationManifestV1(manifest([operation])).ok).toBe(true);
+  });
+
+  it.each(['FULL_CLOSED_SCHEMA_V1', 'DECLARED_POINTERS_V1'])(
+    'accepts the versioned response validation profile %s without changing the invocation contract',
+    (validationProfile) => {
+      const operation = {
+        ...getOperation,
+        response: {
+          ...getOperation.response,
+          validationProfile,
+          applicationCodePointer: '/Code',
+          schema: {
+            type: 'object',
+            properties: {
+              Code: { type: 'integer' },
+              data: getOperation.response.schema.properties.data
+            },
+            required: ['Code', 'data'],
+            additionalProperties: false
+          }
+        }
+      };
+      const parsed = parseConnectorOperationManifestV1(manifest([operation]));
+      expect(parsed.ok).toBe(true);
+      if (parsed.ok) expect(parsed.value.operations[0]?.response.validationProfile).toBe(validationProfile);
+    }
+  );
+
+  it('preserves omission and rejects unknown response validation profiles', () => {
+    const legacy = parseConnectorOperationManifestV1(manifest([getOperation]));
+    expect(legacy.ok).toBe(true);
+    if (legacy.ok) expect(legacy.value.operations[0]?.response.validationProfile).toBeUndefined();
+    expect(parseConnectorOperationManifestV1(manifest([{
+      ...getOperation,
+      response: { ...getOperation.response, validationProfile: 'CALLER_SELECTED_SCHEMA' }
+    }])).ok).toBe(false);
+  });
+
+  it.each([
+    ['unknown source', { source: 'script', targetField: 'count', conversion: 'integer' }],
+    ['operation source override', { source: 'operation_key', operationKey: 'attacker.operation', targetField: 'metricKey', conversion: 'string' }],
+    ['fixed query expression', { source: 'fixed_query', queryName: 'TimeRange', expression: '${value}', targetField: 'period', conversion: 'string' }],
+    ['escaping application pointer', undefined]
+  ])('rejects non-closed normalized source: %s', (label, extraction) => {
+    const response = label === 'escaping application pointer'
+      ? { ...getOperation.response, applicationCodePointer: 'Code' }
+      : { ...getOperation.response, extraction: [extraction] };
+    expect(parseConnectorOperationManifestV1(manifest([{ ...getOperation, response }])).ok).toBe(false);
+  });
+
   it.each([
     ['version', { ...customerBOperation, contractVersion: '*' }],
     ['side effects', { ...customerBOperation, readOnly: false }],

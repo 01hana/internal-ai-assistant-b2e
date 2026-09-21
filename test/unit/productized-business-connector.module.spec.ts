@@ -6,6 +6,8 @@ import { generateKeyPairSync } from 'node:crypto';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { EventEmitter } from 'node:events';
+import { parseConnectorInvocationRequestV1 } from '@internal-ai-assistant/connector-runtime-contract';
 
 const pair=generateKeyPairSync('rsa',{modulusLength:2048});
 const keyDirectory=mkdtempSync(join(tmpdir(),'phase7-readiness-'));
@@ -40,5 +42,20 @@ describe('ProductizedBusinessConnectorModule dark composition',()=>{
   it('is ready for a complete multi-instance deployment/signer graph',async()=>{
     const env=environment([deployment(),deployment({connectorInstanceId:'instance-b',invocationUri:'https://runtime-b.customer.test/v1/connector/invocations'})]);
     const module=await Test.createTestingModule({imports:[ProductizedBusinessConnectorModule.register({environment:env})]}).compile();expect(module.get(ProductizedBusinessConnectorTransportService).readiness()).toEqual({status:'ready',productionReady:true});
+  });
+  it('correlates deployment, proof creation, transport, and validated response without logging protected material',async()=>{
+    const logs:string[]=[];const info=jest.spyOn(console,'info').mockImplementation((value)=>logs.push(String(value)));
+    const env={...environment([deployment()]),LOCAL_DEVELOPMENT:'1',LOCAL_CONNECTOR_DIAGNOSTICS:'1'};
+    const requestFactory:any=(_options:any,callback:any)=>{const req=new EventEmitter() as any;req.destroy=jest.fn();req.end=()=>{const res=new EventEmitter() as any;res.statusCode=403;res.headers={'content-type':'application/json'};callback(res);queueMicrotask(()=>{res.emit('data',Buffer.from(JSON.stringify({version:'1',requestId:'request-central-events',status:'failed',error:{code:'CONNECTOR_BINDING_INVALID'}})));res.emit('end');});};return req;};
+    const module=await Test.createTestingModule({imports:[ProductizedBusinessConnectorModule.register({environment:env,resolver:async()=>[{address:'8.8.8.8',family:4}],requestFactory})]}).compile();
+    const parsed=parseConnectorInvocationRequestV1(Buffer.from(JSON.stringify({version:'1',requestId:'request-central-events',remainingBudgetMs:4500,trustedContext:{customerId:'customer-a',integrationId:'integration-a',hostApp:'host-a',organizationId:'organization-a',actorId:'actor-a',connectorKey:'business',connectorInstanceId:'instance-a'},operation:{key:'work-orders.monthly-new-count',version:'1.0.0',arguments:{}},connectorContextRef:`ccr_${'A'.repeat(43)}`})));
+    if(!parsed.ok)throw new Error('fixture');
+    try{
+      await expect(module.get(ProductizedBusinessConnectorTransportService).invoke(parsed.value,new AbortController().signal,4500)).resolves.toEqual({ok:true,value:{version:'1',requestId:'request-central-events',status:'failed',error:{code:'CONNECTOR_BINDING_INVALID'}}});
+      const events=logs.map(line=>JSON.parse(line));
+      expect(events.map(event=>event.stage)).toEqual(['CONNECTOR_DEPLOYMENT_RESOLVED','CONNECTOR_SERVICE_PROOF_CREATED','CONNECTOR_REQUEST_SENT','CONNECTOR_RESPONSE_RECEIVED','CONNECTOR_RESPONSE_VALIDATED']);
+      expect(new Set(events.map(event=>event.requestId))).toEqual(new Set(['request-central-events']));
+      expect(JSON.stringify(events)).not.toMatch(/ccr_|authorization|bearer|private.?key|raw.*body|eyJ[A-Za-z0-9_-]+\./i);
+    }finally{info.mockRestore();}
   });
 });

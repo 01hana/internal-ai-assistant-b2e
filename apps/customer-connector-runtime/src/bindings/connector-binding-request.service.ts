@@ -8,6 +8,7 @@ import type { ExactRawBodyAuthenticator } from '../service-auth/exact-raw-body.a
 import type { BindingBootstrapProviderRegistry } from './binding-bootstrap-provider.registry';
 import type { BindingBootstrapProviderResult } from './binding-bootstrap-provider';
 import type { ConnectorBindingService } from './connector-binding.service';
+import type { LocalConnectorDiagnostics } from '../diagnostics/local-connector-diagnostics';
 
 export type ConnectorBindingRequestInput = Readonly<{
   method: string;
@@ -15,6 +16,7 @@ export type ConnectorBindingRequestInput = Readonly<{
   contentEncoding?: string;
   authorization?: string;
   rawBody: Uint8Array;
+  diagnosticRequestId?: string;
 }>;
 
 export type ConnectorBindingRequestResult = Readonly<{
@@ -28,7 +30,8 @@ export class ConnectorBindingRequestService {
   constructor(
     private readonly authenticator: Pick<ExactRawBodyAuthenticator, 'authenticateRegisteredBootstrap'>,
     private readonly providers: Pick<BindingBootstrapProviderRegistry, 'resolve'>,
-    private readonly bindings: Pick<ConnectorBindingService, 'mint' | 'revoke'>
+    private readonly bindings: Pick<ConnectorBindingService, 'mint' | 'revoke'>,
+    private readonly diagnostics?: Pick<LocalConnectorDiagnostics, 'emit'>
   ) {}
 
   async handle(input: ConnectorBindingRequestInput): Promise<ConnectorBindingRequestResult> {
@@ -36,15 +39,31 @@ export class ConnectorBindingRequestService {
       routeClass: 'binding-bootstrap', method: input.method, contentType: input.contentType,
       contentEncoding: input.contentEncoding, authorization: input.authorization, rawBody: input.rawBody
     });
-    if (!authenticated.ok) return response(authenticated.code, REJECTED_REQUEST_ID);
+    if (!authenticated.ok) {
+      this.diagnostics?.emit('BINDING_SERVICE_AUTH_FAILED', 'FAILED', {
+        internalBindingRequestId: input.diagnosticRequestId, failureCategory: authenticated.code
+      });
+      return response(authenticated.code, REJECTED_REQUEST_ID);
+    }
     const proof = authenticated.value.proof;
+    const metadata = { internalBindingRequestId: proof.requestId };
+    this.diagnostics?.emit('BINDING_SERVICE_AUTH_SUCCEEDED', 'SUCCEEDED', metadata);
+    this.diagnostics?.emit('BOOTSTRAP_PROFILE_RESOLVED', 'SUCCEEDED', metadata);
     const provider = proof.providerKey === undefined ? undefined : this.providers.resolve(proof.profileKey, proof.providerKey);
-    if (!provider) return response('CONNECTOR_UNAVAILABLE', proof.requestId);
+    if (!provider) {
+      this.diagnostics?.emit('BOOTSTRAP_PROVIDER_FAILED', 'FAILED', { ...metadata, failureCategory: 'PROVIDER_UNRESOLVED' });
+      return response('CONNECTOR_UNAVAILABLE', proof.requestId);
+    }
+    this.diagnostics?.emit('BOOTSTRAP_PROVIDER_RESOLVED', 'SUCCEEDED', metadata);
     const parsed = parseConnectorBindingBootstrapRequestV1(input.rawBody, provider.contract);
     if (!parsed.ok || parsed.value.requestId !== proof.requestId || parsed.value.bootstrapProfileKey !== proof.profileKey) {
       return response('CONNECTOR_REQUEST_INVALID', proof.requestId);
     }
-    if (!contextsEqual(parsed.value.trustedContext, proof.trustedContext)) return response('CONNECTOR_BINDING_INVALID', proof.requestId);
+    if (!contextsEqual(parsed.value.trustedContext, proof.trustedContext)) {
+      this.diagnostics?.emit('BINDING_CONTEXT_REJECTED', 'FAILED', { ...metadata, failureCategory: 'TRUSTED_CONTEXT_MISMATCH' });
+      return response('CONNECTOR_BINDING_INVALID', proof.requestId);
+    }
+    this.diagnostics?.emit('BINDING_CONTEXT_VALIDATED', 'SUCCEEDED', metadata);
 
     let created: BindingBootstrapProviderResult | undefined;
     let ownershipTransferred = false;
@@ -57,6 +76,7 @@ export class ConnectorBindingRequestService {
 
     try {
       created = await provider.create(parsed.value.providerPayload, proof.trustedContext!);
+      this.diagnostics?.emit('CREDENTIAL_CREATE_SUCCEEDED', 'SUCCEEDED', metadata);
       const minted = await this.bindings.mint({
         trustedContext: proof.trustedContext!, bootstrapProviderKey: provider.bootstrapProviderKey,
         credentialProviderKey: created.credentialProviderKey, opaqueCredentialHandle: created.opaqueCredentialHandle,
@@ -64,10 +84,12 @@ export class ConnectorBindingRequestService {
         providerMetadata: created.providerMetadata
       });
       if (!minted.ok) {
+        this.diagnostics?.emit('BINDING_MINT_FAILED', 'FAILED', { ...metadata, failureCategory: minted.code });
         await cleanupBeforeTransfer();
         return response(minted.code === 'CONNECTOR_UNAVAILABLE' ? minted.code : 'CONNECTOR_UNAVAILABLE', proof.requestId);
       }
       ownershipTransferred = true;
+      this.diagnostics?.emit('BINDING_MINT_SUCCEEDED', 'SUCCEEDED', metadata);
       const body = Object.freeze({
         version: '1' as const, requestId: proof.requestId,
         connectorContextRef: minted.value.connectorContextRef, expiresIn: minted.value.expiresIn
@@ -78,6 +100,9 @@ export class ConnectorBindingRequestService {
       }
       return Object.freeze({ statusCode: 200, body });
     } catch {
+      this.diagnostics?.emit(created ? 'BINDING_MINT_FAILED' : 'CREDENTIAL_CREATE_FAILED', 'FAILED', {
+        ...metadata, failureCategory: created ? 'UNEXPECTED_MINT_FAILURE' : 'PROVIDER_CREATE_FAILED'
+      });
       await cleanupBeforeTransfer();
       return response('CONNECTOR_UNAVAILABLE', proof.requestId);
     }

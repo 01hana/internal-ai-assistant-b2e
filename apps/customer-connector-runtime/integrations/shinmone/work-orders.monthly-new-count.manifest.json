@@ -21,36 +21,38 @@
       "credentialProfileRef": "shinmone-idx-bearer-v1",
       "readOnly": true,
       "response": {
+        "validationProfile": "DECLARED_POINTERS_V1",
         "acceptedHttpStatuses": [200],
         "acceptedApplicationCodes": [200],
+        "applicationCodePointer": "/Code",
         "contentType": "application/json",
         "schema": {
           "type": "object",
           "properties": {
-            "code": { "type": "integer" },
-            "metricKey": { "type": "string", "maxLength": 64 },
-            "period": { "type": "string", "maxLength": 32 },
-            "data": {
+            "Code": { "type": "integer" },
+            "Data": {
               "type": "object",
               "properties": {
-                "newOrders": {
+                "NewOrders": {
                   "type": "object",
-                  "properties": { "current": { "type": "integer", "minimum": 0 } },
-                  "required": ["current"],
+                  "properties": {
+                    "Current": { "type": "integer", "minimum": 0 }
+                  },
+                  "required": ["Current"],
                   "additionalProperties": false
                 }
               },
-              "required": ["newOrders"],
+              "required": ["NewOrders"],
               "additionalProperties": false
             }
           },
-          "required": ["code", "metricKey", "period", "data"],
+          "required": ["Code", "Data"],
           "additionalProperties": false
         },
         "extraction": [
-          { "sourcePointer": "/metricKey", "targetField": "metricKey", "conversion": "string" },
-          { "sourcePointer": "/period", "targetField": "period", "conversion": "string" },
-          { "sourcePointer": "/data/newOrders/current", "targetField": "count", "conversion": "non_negative_integer" }
+          { "source": "operation_key", "targetField": "metricKey", "conversion": "string" },
+          { "source": "fixed_query", "queryName": "TimeRange", "targetField": "period", "conversion": "string" },
+          { "source": "response_pointer", "sourcePointer": "/Data/NewOrders/Current", "targetField": "count", "conversion": "non_negative_integer" }
         ]
       },
       "limits": {

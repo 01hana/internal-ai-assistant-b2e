@@ -11,18 +11,23 @@ import { ConnectorBindingController } from './connector-binding.controller';
 import { ConnectorBindingRequestService } from './connector-binding-request.service';
 import { ConnectorBindingService } from './connector-binding.service';
 import { InMemoryConnectorBindingStore } from './in-memory-connector-binding.store';
+import { LocalConnectorDiagnostics } from '../diagnostics/local-connector-diagnostics';
 
 const BINDING_BOOTSTRAP_PROVIDERS = Symbol('BINDING_BOOTSTRAP_PROVIDERS');
 
 @Module({})
 export class ConnectorBindingModule {
-  static register(providers: readonly BindingBootstrapProvider[] = []): DynamicModule {
+  static register(
+    providers: readonly BindingBootstrapProvider[] = [],
+    diagnostics = new LocalConnectorDiagnostics()
+  ): DynamicModule {
     return {
       module: ConnectorBindingModule,
       imports: [ServiceAuthModule, RuntimeHealthModule],
       controllers: [ConnectorBindingController],
       providers: [
         { provide: BINDING_BOOTSTRAP_PROVIDERS, useValue: Object.freeze([...providers]) },
+        { provide: LocalConnectorDiagnostics, useValue: diagnostics },
         {
           provide: BindingBootstrapProviderRegistry,
           useFactory: (config: ConnectorRuntimeConfigService, values: readonly BindingBootstrapProvider[]) =>
@@ -48,14 +53,15 @@ export class ConnectorBindingModule {
         },
         {
           provide: ConnectorBindingRequestService,
-          useFactory: (authenticator: ExactRawBodyAuthenticator, registry: BindingBootstrapProviderRegistry, bindings: ConnectorBindingService) =>
-            new ConnectorBindingRequestService(authenticator, registry, bindings),
-          inject: [ExactRawBodyAuthenticator, BindingBootstrapProviderRegistry, ConnectorBindingService]
+          useFactory: (authenticator: ExactRawBodyAuthenticator, registry: BindingBootstrapProviderRegistry,
+            bindings: ConnectorBindingService, localDiagnostics: LocalConnectorDiagnostics) =>
+            new ConnectorBindingRequestService(authenticator, registry, bindings, localDiagnostics),
+          inject: [ExactRawBodyAuthenticator, BindingBootstrapProviderRegistry, ConnectorBindingService, LocalConnectorDiagnostics]
         },
         BindingLifecycleManager,
         BindingReadinessInitializer
       ],
-      exports: [ConnectorBindingService]
+      exports: [ConnectorBindingService, LocalConnectorDiagnostics]
     };
   }
 }
