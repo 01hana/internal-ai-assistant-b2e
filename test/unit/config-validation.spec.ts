@@ -56,6 +56,34 @@ describe('validateEnvironment', () => {
     );
   });
 
+  it('defaults missing capability-pack path configuration to an empty JSON array', () => {
+    expect(validateEnvironment(validEnv)).toMatchObject({
+      ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]'
+    });
+  });
+
+  it.each([
+    ['malformed JSON', '['],
+    ['non-array JSON', '{"path":"/packs/a.json"}'],
+    ['non-string array element', '["/packs/a.json",1]'],
+    ['non-string value', ['/packs/a.json']]
+  ])('rejects %s for capability-pack path configuration', (_case, value) => {
+    expect(() => validateEnvironment({
+      ...validEnv,
+      ASSISTANT_CAPABILITY_PACK_PATHS_JSON: value
+    })).toThrow(/Invalid environment configuration/);
+  });
+
+  it.each([
+    ['empty list', '[]'],
+    ['ordered string list', '["relative-is-loader-owned","/packs/a.json"]']
+  ])('admits a valid capability-pack path JSON %s without applying path semantics', (_case, value) => {
+    expect(validateEnvironment({
+      ...validEnv,
+      ASSISTANT_CAPABILITY_PACK_PATHS_JSON: value
+    })).toMatchObject({ ASSISTANT_CAPABILITY_PACK_PATHS_JSON: value });
+  });
+
   it('parses swagger docs settings from environment variables', () => {
     expect(
       validateEnvironment({

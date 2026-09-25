@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/011-customer-capability-semantic-discovery`
 **Input**: Approved `spec.md`, `design.md`, and `plan.md` in this directory
-**Implementation Status**: Not authorized; every task is unexecuted
+**Implementation Status**: Phases A–B complete; further implementation is not currently authorized.
 **Testing Rule**: For each runtime behavior, add the named focused test first, retain authentic RED evidence, then implement and retain GREEN evidence. A failing gate is a hard stop.
 
 ## Format and execution boundary
@@ -10,7 +10,7 @@
 - Every task uses `- [ ] TNNN [P?] [US?] Description with exact path`.
 - Task IDs are local to Feature 011 and execute sequentially unless a task explicitly says otherwise.
 - Story labels map to the five approved user stories; shared foundation, migration, retirement, and final-acceptance tasks have no story label.
-- Creating this file authorizes no task. Do not change any checkbox until separate human authorization begins with T001.
+- Task execution requires separate human authorization. Phases A–B are complete; the next authorization would begin with T025.
 - Git branch management is human-owned and is not inspected or performed by these tasks.
 
 ## Canonical implementation order
@@ -32,18 +32,27 @@
 
 **Goal**: Establish exact V1 contracts and fail-closed structural parsing without querying ToolRegistry.
 
-- [ ] T001 Add authentic RED closed-contract fixtures for valid V1 packs, unknown keys, unknown versions, non-plain objects, and whole-pack rejection in `test/contract/feature011-capability-pack.contract.spec.ts`
-- [ ] T002 Add authentic RED parser cases for every approved collection/text/byte bound and deterministic rejection in `test/unit/capability-pack.parser.spec.ts`
-- [ ] T003 Define the closed immutable pack, capability, semantic profile, parameter, binding, mapping, scoped-catalog, and `CapabilityResolutionResultV1` types in new `src/capabilities/capability-pack.types.ts`
-- [ ] T004 Implement plain-object, exact-key, version-discriminant, finite-number, and whole-pack failure primitives in new `src/capabilities/capability-pack.parser.ts` until T001 passes
-- [ ] T005 Implement approved collection, text, example, identifier, bounded-string, candidate, and `MAX_PACK_BYTES=262144` constants and enforcement in `src/capabilities/capability-pack.parser.ts` until T002 bounds cases pass
-- [ ] T006 Add RED safe-identifier, no-wildcard, BCP-47-shaped locale, and semantic-version cases in `test/unit/capability-pack.parser.spec.ts`, then implement those validations in `src/capabilities/capability-pack.parser.ts`
-- [ ] T007 Add RED enum and `bounded_string` parameter cases for canonical values, aliases, required flags, `SAFE_IDENTIFIER`, literal prefixes, and maximum length in `test/unit/capability-pack.parser.spec.ts`, then implement them in `src/capabilities/capability-pack.parser.ts`
-- [ ] T008 Add RED semantic-profile cases for exact locale identity, required signal groups, non-empty required terms, and bounded aliases/examples/resource/intent/metric lists in `test/unit/capability-pack.parser.spec.ts`, then implement them in `src/capabilities/capability-pack.parser.ts`
-- [ ] T009 Add RED structural binding cases for permitted target/mapping/constraint discriminants, scalar constants, empty Shinmone mappings, and empty Customer B constraints in `test/unit/capability-pack.parser.spec.ts`, then implement structural parsing without ToolRegistry access in `src/capabilities/capability-pack.parser.ts`
-- [ ] T010 Add RED forbidden-field cases covering identity authority, permissions, credentials, routes, pointers, SQL, scripts, prompts, callbacks, regexes, templates, expressions, functions, and executable content in `test/contract/feature011-capability-pack.contract.spec.ts`, then reject them recursively in `src/capabilities/capability-pack.parser.ts`
-- [ ] T011 Add RED normalized-duplicate cases for HostApps, capability keys, binding identities/versions, locales, aliases/terms, enum aliases with conflicting values, mapping sources, constraint sources, and target assignments in `test/unit/capability-pack.parser.spec.ts`, then implement deterministic duplicate rejection in `src/capabilities/capability-pack.parser.ts`
-- [ ] T012 Run the Phase A contract/unit suites and record `FEATURE011_GATE_A=PASS`, including proof that unknown fields/versions reject the complete pack and structural parsing never queries ToolRegistry, in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
+- [X] T001 Add authentic RED closed-contract fixtures for valid V1 packs, unknown keys, unknown versions, non-plain objects, and whole-pack rejection in `test/contract/feature011-capability-pack.contract.spec.ts`
+- [X] T002 Add authentic RED parser cases for every approved collection/text/byte bound and deterministic rejection in `test/unit/capability-pack.parser.spec.ts`
+- [X] T003 Define the closed immutable pack, capability, semantic profile, parameter, binding, mapping, scoped-catalog, and `CapabilityResolutionResultV1` types in new `src/capabilities/capability-pack.types.ts`
+- [X] T004 Implement plain-object, exact-key, version-discriminant, finite-number, and whole-pack failure primitives in new `src/capabilities/capability-pack.parser.ts` until T001 passes
+- [X] T005 Implement approved collection, text, example, identifier, bounded-string, candidate, and `MAX_PACK_BYTES=262144` constants and enforcement in `src/capabilities/capability-pack.parser.ts` until T002 bounds cases pass
+- [X] T006 Add RED safe-identifier, no-wildcard, BCP-47-shaped locale, and semantic-version cases in `test/unit/capability-pack.parser.spec.ts`, then implement those validations in `src/capabilities/capability-pack.parser.ts`
+- [X] T007 Add RED enum and `bounded_string` parameter cases for canonical values, aliases, required flags, `SAFE_IDENTIFIER`, literal prefixes, and maximum length in `test/unit/capability-pack.parser.spec.ts`, then implement them in `src/capabilities/capability-pack.parser.ts`
+- [X] T008 Add RED semantic-profile cases for exact locale identity, required signal groups, non-empty required terms, and bounded aliases/examples/resource/intent/metric lists in `test/unit/capability-pack.parser.spec.ts`, then implement them in `src/capabilities/capability-pack.parser.ts`
+- [X] T009 Add RED structural binding cases for permitted target/mapping/constraint discriminants, scalar constants, empty Shinmone mappings, and empty Customer B constraints in `test/unit/capability-pack.parser.spec.ts`, then implement structural parsing without ToolRegistry access in `src/capabilities/capability-pack.parser.ts`
+- [X] T010 Add RED forbidden-field cases covering identity authority, permissions, credentials, routes, pointers, SQL, scripts, prompts, callbacks, regexes, templates, expressions, functions, and executable content in `test/contract/feature011-capability-pack.contract.spec.ts`, then reject them recursively in `src/capabilities/capability-pack.parser.ts`
+- [X] T011 Add RED normalized-duplicate cases for HostApps, capability keys, binding identities/versions, locales, aliases/terms, enum aliases with conflicting values, mapping sources, constraint sources, and target assignments in `test/unit/capability-pack.parser.spec.ts`, then implement deterministic duplicate rejection in `src/capabilities/capability-pack.parser.ts`
+- [X] T012 Run the Phase A contract/unit suites and record `FEATURE011_GATE_A=PASS`, including proof that unknown fields/versions reject the complete pack and structural parsing never queries ToolRegistry, in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
+
+**Phase A evidence (2026-09-25)**:
+
+- Authentic RED: both focused commands initially failed with `TS2307` because `capability-pack.parser` did not exist. Subsequent focused RED runs failed only on the newly introduced token-syntax, signal-group, binding-discriminant, prohibited-content, and duplicate-rejection assertions before their respective implementations.
+- SemVer correction RED: the focused unit suite failed only on the five newly valid prerelease/build forms before the shared exact-version validator was corrected; the same matrix covers `packVersion`, `bindingVersion`, and `target.toolVersion`, while version ranges remain rejected.
+- GREEN after SemVer correction: contract suite `40 passed`; unit suite `85 passed`; root `npm run typecheck` passed.
+- Closed parsing rejects unknown fields/versions as `CAPABILITY_PACK_INVALID`, enforces approved bounds and forbidden-content rules, and contains no ToolRegistry import, injection, mock, or call.
+- `FEATURE011_GATE_A=PASS`
+- `NEXT_UNEXECUTED_TASK=T013`
 
 **Gate A**: `FEATURE011_GATE_A=PASS`
 
@@ -55,18 +64,28 @@
 
 **Goal**: Load one complete immutable release before readiness and expose only verified-scope catalog lookup.
 
-- [ ] T013 Add RED environment cases for missing, malformed, non-array, non-string, and valid `ASSISTANT_CAPABILITY_PACK_PATHS_JSON` JSON text in `test/unit/config-validation.spec.ts`
-- [ ] T014 Admit only the bounded JSON-text environment value in `src/common/config/env.validation.ts`, leaving path and pack semantics to the loader, until T013 passes
-- [ ] T015 Add RED filesystem-loader cases for relative paths, symlinks, non-regular files, unreadable files, repeated paths, over-262144-byte files, and read-once behavior in new `test/unit/capability-pack.loader.spec.ts`
-- [ ] T016 Add RED complete-release cases for parse failure, duplicate active scopes, duplicate scoped capability/binding identities, inactive packs, HostApp expansion, and no partial installation in `test/unit/capability-pack.loader.spec.ts`
-- [ ] T017 Add RED scoped-registry cases for exact `(customerId,integrationId,hostApp)` lookup, empty registry, no `listAll`/global iterator/key-only lookup, immutable catalogs, and Customer A never reading or materializing Customer B in new `test/unit/capability-catalog.registry.spec.ts`
-- [ ] T018 Implement exact scoped keys, immutable catalog results, `NO_ACTIVE_CAPABILITY_PACK`, and atomic release replacement in new `src/capabilities/capability-catalog.registry.ts` until T017 passes
-- [ ] T019 Implement ordered path parsing, absolute-path enforcement, `lstat` symlink/non-file rejection, bounded read-once loading, and temporary complete-release parsing in new `src/capabilities/capability-pack.loader.ts` until T015 passes
-- [ ] T020 Implement HostApp allowlist expansion, duplicate scoped identity rejection, active-pack selection, recursive deep freeze, and install-only-after-all-files-pass behavior in `src/capabilities/capability-pack.loader.ts` until T016 passes
-- [ ] T021 Add RED exact existing active read-only Tool contract and invalid/stale/side-effect target provisioning cases to `test/unit/capability-pack.loader.spec.ts`, then compose the approved existing ToolRegistry exact lookup from `src/capabilities/capability-pack.loader.ts` without semantic Tool-name inference
-- [ ] T022 Add RED bootstrap/readiness cases proving invalid configured releases prevent application readiness, valid/empty releases preserve the current health response shape, and no partial registry is request-visible in `test/contract/health-readiness.contract.spec.ts`
-- [ ] T023 Register the loader/registry bootstrap lifecycle after Prisma and ToolRegistry initialization in new `src/capabilities/capabilities.module.ts`, `src/app.module.ts`, and `src/observability/health-readiness.service.ts` until T022 passes
-- [ ] T024 Run the Phase B loader/registry/config/readiness suites and record `FEATURE011_GATE_B=PASS`, including zero foreign-catalog reads/materialization and absence of global enumeration APIs, in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
+- [X] T013 Add RED environment cases for missing, malformed, non-array, non-string, and valid `ASSISTANT_CAPABILITY_PACK_PATHS_JSON` JSON text in `test/unit/config-validation.spec.ts`
+- [X] T014 Admit only the bounded JSON-text environment value in `src/common/config/env.validation.ts`, leaving path and pack semantics to the loader, until T013 passes
+- [X] T015 Add RED filesystem-loader cases for relative paths, symlinks, non-regular files, unreadable files, repeated paths, over-262144-byte files, and read-once behavior in new `test/unit/capability-pack.loader.spec.ts`
+- [X] T016 Add RED complete-release cases for parse failure, duplicate active scopes, duplicate scoped capability/binding identities, inactive packs, HostApp expansion, and no partial installation in `test/unit/capability-pack.loader.spec.ts`
+- [X] T017 Add RED scoped-registry cases for exact `(customerId,integrationId,hostApp)` lookup, empty registry, no `listAll`/global iterator/key-only lookup, immutable catalogs, and Customer A never reading or materializing Customer B in new `test/unit/capability-catalog.registry.spec.ts`
+- [X] T018 Implement exact scoped keys, immutable catalog results, `NO_ACTIVE_CAPABILITY_PACK`, and atomic release replacement in new `src/capabilities/capability-catalog.registry.ts` until T017 passes
+- [X] T019 Implement ordered path parsing, absolute-path enforcement, `lstat` symlink/non-file rejection, bounded read-once loading, and temporary complete-release parsing in new `src/capabilities/capability-pack.loader.ts` until T015 passes
+- [X] T020 Implement HostApp allowlist expansion, duplicate scoped identity rejection, active-pack selection, recursive deep freeze, and install-only-after-all-files-pass behavior in `src/capabilities/capability-pack.loader.ts` until T016 passes
+- [X] T021 Add RED exact existing active read-only Tool contract and invalid/stale/side-effect target provisioning cases to `test/unit/capability-pack.loader.spec.ts`, then compose the approved existing ToolRegistry exact lookup from `src/capabilities/capability-pack.loader.ts` without semantic Tool-name inference
+- [X] T022 Add RED bootstrap/readiness cases proving invalid configured releases prevent application readiness, valid/empty releases preserve the current health response shape, and no partial registry is request-visible in `test/contract/health-readiness.contract.spec.ts`
+- [X] T023 Register the loader/registry bootstrap lifecycle after Prisma and ToolRegistry initialization in new `src/capabilities/capabilities.module.ts`, `src/app.module.ts`, and `src/observability/health-readiness.service.ts` until T022 passes
+- [X] T024 Run the Phase B loader/registry/config/readiness suites and record `FEATURE011_GATE_B=PASS`, including zero foreign-catalog reads/materialization and absence of global enumeration APIs, in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
+
+**Phase B evidence (2026-09-25)**:
+
+- Authentic RED: config admission failed seven new assertions; loader/registry suites initially failed on missing modules; exact Tool provisioning failed six focused assertions; bootstrap/readiness failed three focused assertions before production wiring.
+- GREEN after file-mode correction: Phase A/B unit gate `133 passed`; readiness contract `7 passed`; Phase A contract `40 passed`; root `npm run typecheck` and `git diff --check` passed.
+- File-mode correction RED/GREEN: the new conventional `0644` regular-file case failed against the invented write-bit check, then the focused loader suite passed `18 tests` after removing only that check.
+- Loader admission tests prove absolute unique paths, lstat regular/non-symlink checks, byte bounds, actual read success, one read per accepted file, inactive filtering, HostApp expansion, distinct scope/capability/binding duplicate rejection, recursive immutability, and preservation of the prior release after candidate failure. Production pack files/directories remain read-only deployment mounts; the loader does not infer mount state from Unix permission bits.
+- Scoped lookup performs one exact key access with zero foreign-catalog reads/materialization and exposes no global enumeration API. Active targets use only `resolveExactExecutableTool`; no semantic inference or ToolRegistry change was introduced.
+- `FEATURE011_GATE_B=PASS`
+- `NEXT_UNEXECUTED_TASK=T025`
 
 **Gate B**: `FEATURE011_GATE_B=PASS`
 
@@ -296,8 +315,11 @@ This feature has no deployable partial MVP before the atomic cutover. Gates A–
 
 ```text
 FEATURE011_IMPLEMENTATION_AUTHORIZED=NO
-ALL_TASKS_INITIAL_STATE=UNEXECUTED
-FIRST_UNEXECUTED_TASK=T001
+COMPLETED_TASK_RANGE=T001-T024
+FEATURE011_GATE_A=PASS
+FEATURE011_GATE_B=PASS
+FIRST_UNEXECUTED_TASK=T025
+NEXT_PHASE_AUTHORIZED=NO
 IMPLEMENTATION_REQUIRES_SEPARATE_HUMAN_AUTHORIZATION=YES
 REAL_TOOL_INVOCATION_EXECUTED=NO
 CUSTOMER_BUSINESS_ENDPOINT_CALLED=NO

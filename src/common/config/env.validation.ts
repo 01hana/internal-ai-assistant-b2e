@@ -87,6 +87,10 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   @Matches(/^[A-Za-z0-9][A-Za-z0-9/_-]*$/)
   SWAGGER_PATH = 'docs';
+
+  @IsOptional()
+  @IsString()
+  ASSISTANT_CAPABILITY_PACK_PATHS_JSON = '[]';
 }
 
 export function validateEnvironment(config: Record<string, unknown>) {
@@ -103,5 +107,18 @@ export function validateEnvironment(config: Record<string, unknown>) {
     throw new Error(`Invalid environment configuration. Check required fields: ${fields}`);
   }
 
+  if (!isJsonStringArray(validatedConfig.ASSISTANT_CAPABILITY_PACK_PATHS_JSON)) {
+    throw new Error('Invalid environment configuration. Check required fields: ASSISTANT_CAPABILITY_PACK_PATHS_JSON');
+  }
+
   return validatedConfig;
+}
+
+function isJsonStringArray(value: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.every((entry) => typeof entry === 'string');
+  } catch {
+    return false;
+  }
 }
