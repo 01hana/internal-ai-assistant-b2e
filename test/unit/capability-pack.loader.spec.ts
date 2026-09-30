@@ -134,6 +134,31 @@ describe('CapabilityPackLoader filesystem and complete-release boundary', () => 
     expect(harness.registry.resolveCatalog(scope('customer-b'))).toEqual(unavailable());
   });
 
+  it('rejects an incompatible binding before atomically replacing the prior release', async () => {
+    const harness = await createHarness();
+    await harness.loader.loadAndInstall(JSON.stringify([harness.validPath]));
+    const incompatible = validPack({ customerId: 'customer-b' });
+    incompatible.bindings[0].semanticConstraints = [];
+    const path = await writePack(harness.directory, 'incompatible-binding.json', incompatible);
+
+    await expect(harness.loader.loadAndInstall(JSON.stringify([path]))).rejects.toThrow('CAPABILITY_PACK_INVALID');
+    expect(harness.registry.resolveCatalog(scope('customer-a'))).toEqual({ available: true, catalog: expect.objectContaining({ customerId: 'customer-a' }) });
+    expect(harness.registry.resolveCatalog(scope('customer-b'))).toEqual(unavailable());
+  });
+
+  it('rejects a complete release when the exact Customer Tool policy denies its binding', async () => {
+    const harness = await createHarness();
+    const tools = {
+      resolveExactExecutableTool: executableTools().resolveExactExecutableTool,
+      resolveExactToolForCustomer: jest.fn(async () => ({ deniedReason: 'customer_policy_denied' }))
+    } as unknown as ToolRegistryService;
+    const loader = new CapabilityPackLoader(harness.registry, tools, nodeFiles());
+
+    await expect(loader.loadAndInstall(JSON.stringify([harness.validPath]))).rejects.toThrow('CAPABILITY_PACK_INVALID');
+    expect(tools.resolveExactToolForCustomer).toHaveBeenCalledWith('orders.monthly', '1.0.0', 'customer-a');
+    expect(harness.registry.resolveCatalog(scope('customer-a'))).toEqual(unavailable());
+  });
+
   it('accepts an empty configured path list as an empty ready registry', async () => {
     const harness = await createHarness();
     await harness.loader.loadAndInstall('[]');
@@ -147,7 +172,7 @@ describe('CapabilityPackLoader filesystem and complete-release boundary', () => 
     }));
     const loader = new CapabilityPackLoader(
       harness.registry,
-      { resolveExactExecutableTool } as unknown as ToolRegistryService,
+      { resolveExactExecutableTool, resolveExactToolForCustomer: executableTools().resolveExactToolForCustomer } as unknown as ToolRegistryService,
       nodeFiles()
     );
 
@@ -229,7 +254,8 @@ async function writePack(directory: string, name: string, pack: unknown, mode = 
 
 function executableTools(): ToolRegistryService {
   return {
-    resolveExactExecutableTool: jest.fn(async () => ({ tool: { key: 'orders.monthly', version: '1.0.0' } }))
+    resolveExactExecutableTool: jest.fn(async () => ({ tool: { key: 'orders.monthly', version: '1.0.0' } })),
+    resolveExactToolForCustomer: jest.fn(async () => ({ resolved: { tool: { key: 'orders.monthly', version: '1.0.0', active: true, operation: 'read', hasSideEffect: false, inputSchema: { type: 'object', required: [], properties: {} } }, requiredRoles: [], requiredPermissionScopes: [] } }))
   } as unknown as ToolRegistryService;
 }
 
@@ -279,6 +305,6 @@ function capability(capabilityKey: string, active: boolean) {
 function binding(bindingId: string, active: boolean) {
   return {
     version: '1', bindingId, bindingVersion: '1.0.0', active, capabilityKey: 'orders.count',
-    semanticConstraints: [], target: { kind: 'TOOL', toolKey: 'orders.monthly', toolVersion: '1.0.0' }, mappings: []
+    semanticConstraints: [{ version: '1', parameterName: 'timeRange', operator: 'ENUM_VALUE_IN', allowedValues: ['this_month'] }], target: { kind: 'TOOL', toolKey: 'orders.monthly', toolVersion: '1.0.0' }, mappings: []
   };
 }

@@ -54,6 +54,48 @@ describe('ToolRegistryService', () => {
     });
   });
 
+  it('resolves Customer policy for the exact ToolDefinition version, never the latest version', async () => {
+    const tools = [
+      toolDefinition({ id: 'v1', name: 'inventory.stock-on-hand', version: '1.0.0' }),
+      toolDefinition({ id: 'v2', name: 'inventory.stock-on-hand', version: '2.0.0' })
+    ];
+    const policy = {
+      resolve: jest.fn(async ({ customerId, toolDefinitionId }: { customerId: string; toolDefinitionId: string }) =>
+        customerId === 'customer-a' && toolDefinitionId === 'v1'
+          ? { allowed: true, policy: { requiredRoles: ['reader'], requiredPermissionScopes: ['inventory:read'] } }
+          : { allowed: false }
+      )
+    };
+    const service = new ToolRegistryService(createPrismaServiceMock(tools), policy as never);
+
+    await expect(service.resolveExactToolForCustomer('inventory.stock-on-hand', '1.0.0', 'customer-a')).resolves.toEqual({
+      resolved: {
+        tool: expect.objectContaining({ id: 'v1', version: '1.0.0' }),
+        requiredRoles: ['reader'],
+        requiredPermissionScopes: ['inventory:read']
+      }
+    });
+    await expect(service.resolveExactToolForCustomer('inventory.stock-on-hand', '2.0.0', 'customer-a')).resolves.toEqual({ deniedReason: 'customer_policy_denied' });
+    await expect(service.resolveExactToolForCustomer('inventory.stock-on-hand', '3.0.0', 'customer-a')).resolves.toEqual({ deniedReason: 'tool_not_registered' });
+    expect(policy.resolve).toHaveBeenCalledTimes(2);
+    expect(policy.resolve).toHaveBeenNthCalledWith(1, { customerId: 'customer-a', toolDefinitionId: 'v1' });
+    expect(policy.resolve).toHaveBeenNthCalledWith(2, { customerId: 'customer-a', toolDefinitionId: 'v2' });
+  });
+
+  it.each([
+    ['inactive', { isActive: false }, 'tool_inactive'],
+    ['write', { operation: ToolOperation.update }, 'operation_denied'],
+    ['side effect', { hasSideEffect: true }, 'operation_denied']
+  ])('denies exact Customer resolution for %s Tool before policy lookup', async (_label, override, deniedReason) => {
+    const policy = { resolve: jest.fn() };
+    const service = new ToolRegistryService(
+      createPrismaServiceMock([toolDefinition({ name: 'inventory.stock-on-hand', ...override } as never)]),
+      policy as never
+    );
+    await expect(service.resolveExactToolForCustomer('inventory.stock-on-hand', '1.0.0', 'customer-a')).resolves.toEqual({ deniedReason });
+    expect(policy.resolve).not.toHaveBeenCalled();
+  });
+
   it('lists only active read-only no-side-effect tools allowed by the exact Customer policy', async () => {
     const tools = [
       toolDefinition({ id: 'allowed', name: 'allowed.read' }),

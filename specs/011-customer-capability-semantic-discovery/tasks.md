@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/011-customer-capability-semantic-discovery`
 **Input**: Approved `spec.md`, `design.md`, and `plan.md` in this directory
-**Implementation Status**: Phases A–C complete; further implementation is not currently authorized.
+**Implementation Status**: Phases A–D complete; further implementation is not currently authorized.
 **Testing Rule**: For each runtime behavior, add the named focused test first, retain authentic RED evidence, then implement and retain GREEN evidence. A failing gate is a hard stop.
 
 ## Format and execution boundary
@@ -10,7 +10,7 @@
 - Every task uses `- [ ] TNNN [P?] [US?] Description with exact path`.
 - Task IDs are local to Feature 011 and execute sequentially unless a task explicitly says otherwise.
 - Story labels map to the five approved user stories; shared foundation, migration, retirement, and final-acceptance tasks have no story label.
-- Task execution requires separate human authorization. Phases A–C are complete; T040 is the first unexecuted task and is not currently authorized.
+- Task execution requires separate human authorization. Phases A–D are complete; T051 is the first unexecuted task and is not currently authorized.
 - Git branch management is human-owned and is not inspected or performed by these tasks.
 
 ## Canonical implementation order
@@ -142,17 +142,36 @@
 
 **Goal**: Release no Tool candidate unless every supplied canonical parameter is consumed exactly once and exact Tool validation passes.
 
-- [ ] T040 [US3] Neutrally inspect the actual current exact-version and Customer-policy lookup APIs and tests in `src/tools/tool-registry.service.ts` and `test/unit/tool-registry.service.spec.ts`, then record exactly one evidence-backed result—`TOOL_REGISTRY_EXISTING_API=SUFFICIENT` or `TOOL_REGISTRY_EXISTING_API=MINIMAL_EXTENSION_REQUIRED`—in `specs/011-customer-capability-semantic-discovery/tasks.md` without assuming the planning snapshot
-- [ ] T041 [US3] Branch only on T040's evidence: when `SUFFICIENT`, make zero production changes, record `TOOL_REGISTRY_EXTENSION_REQUIRED=NO` and `T041_EXECUTION=NOT_REQUIRED_BY_REPOSITORY_EVIDENCE` in `specs/011-customer-capability-semantic-discovery/tasks.md`, and continue to T042; when `MINIMAL_EXTENSION_REQUIRED`, add RED exact-version Customer-policy cases and only the smallest generic extension in `test/unit/tool-registry.service.spec.ts` and `src/tools/tool-registry.service.ts`; never create a parallel registry
-- [ ] T042 [US3] Add authentic RED startup compatibility cases for unknown mapping/constraint parameters, unknown enum constraint values, required static consumption, optional unconsumed declarations, duplicate mapping sources, duplicate constraints, dual consumption, implicit fixed semantics, and duplicate Tool targets in new `test/unit/capability-binding-resolver.spec.ts`
-- [ ] T043 [US3] Add RED Tool-contract cases for bounded scalar constants, unknown/non-top-level target fields, static type/enum incompatibility, unsatisfied required Tool inputs, stale/inactive/non-read-only versions, and Customer-policy denial in `test/unit/capability-binding-resolver.spec.ts`
-- [ ] T044 [US3] Add RED runtime accounting cases for all-mapped, all-constrained, optional-unsupplied, optional-supplied, unaccounted, multiply consumed, constraint-rejected, zero-compatible, and multiple-compatible bindings in `test/unit/capability-binding-resolver.spec.ts`
-- [ ] T045 [US3] Implement static capability/binding compatibility and exactly-one consumption-declaration validation in new `src/capabilities/capability-binding-resolver.service.ts` until T042 passes
-- [ ] T046 [US3] Implement exact Tool/customer-policy resolution, top-level target validation, scalar constant checks, type compatibility, and required-input satisfiability in `src/capabilities/capability-binding-resolver.service.ts` until T043 passes
-- [ ] T047 [US3] Implement runtime `MAPPED_PARAMETER` and `BINDING_SEMANTIC_CONSTRAINT` accounting, exact constraint matching, zero/multiple-binding fail-closed outcomes, and no silent parameter removal in `src/capabilities/capability-binding-resolver.service.ts` until T044 passes
-- [ ] T048 [US3] Add RED final argument-object cases for canonical-to-Tool renaming, constants, empty Shinmone mappings, and full current Tool input-schema rejection in `test/unit/capability-binding-resolver.spec.ts`, then call existing `validateNamedOperation` on the complete mapped object from `src/capabilities/capability-binding-resolver.service.ts`
-- [ ] T049 [US3] Add exact-version runtime drift cases proving a missing, changed, inactive, side-effecting, or newly policy-denied Tool releases no candidate in `test/unit/capability-binding-resolver.spec.ts`
-- [ ] T050 [US3] Run Phase D binding and ToolRegistry suites and record `FEATURE011_GATE_D=PASS`, `EVERY_RESOLVED_PARAMETER_ACCOUNTED_FOR=YES`, and `SILENT_CANONICAL_PARAMETER_DROP=FORBIDDEN` in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
+- [x] T040 [US3] Neutrally inspect the actual current exact-version and Customer-policy lookup APIs and tests in `src/tools/tool-registry.service.ts` and `test/unit/tool-registry.service.spec.ts`, then record exactly one evidence-backed result—`TOOL_REGISTRY_EXISTING_API=SUFFICIENT` or `TOOL_REGISTRY_EXISTING_API=MINIMAL_EXTENSION_REQUIRED`—in `specs/011-customer-capability-semantic-discovery/tasks.md` without assuming the planning snapshot
+- [x] T041 [US3] Branch only on T040's evidence: when `SUFFICIENT`, make zero production changes, record `TOOL_REGISTRY_EXTENSION_REQUIRED=NO` and `T041_EXECUTION=NOT_REQUIRED_BY_REPOSITORY_EVIDENCE` in `specs/011-customer-capability-semantic-discovery/tasks.md`, and continue to T042; when `MINIMAL_EXTENSION_REQUIRED`, add RED exact-version Customer-policy cases and only the smallest generic extension in `test/unit/tool-registry.service.spec.ts` and `src/tools/tool-registry.service.ts`; never create a parallel registry
+
+T040–T041 evidence: `TOOL_REGISTRY_EXISTING_API=MINIMAL_EXTENSION_REQUIRED`. `resolveExactExecutableTool` resolved one active, read-only version, while `resolveToolForCustomer` attached policy only to the latest Tool; `validateNamedOperation` already validates complete arguments. The exact-version Customer-policy RED suite failed with TS2551 (missing API), then `resolveExactToolForCustomer` composed the existing exact lookup and policy service by the same ToolDefinition ID; `test/unit/tool-registry.service.spec.ts` passed 39/39. No parallel registry or semantic inference was added.
+- [x] T042 [US3] Add authentic RED startup compatibility cases for unknown mapping/constraint parameters, unknown enum constraint values, required static consumption, optional unconsumed declarations, duplicate mapping sources, duplicate constraints, dual consumption, implicit fixed semantics, and duplicate Tool targets in new `test/unit/capability-binding-resolver.spec.ts`
+- [x] T043 [US3] Add RED Tool-contract cases for bounded scalar constants, unknown/non-top-level target fields, static type/enum incompatibility, unsatisfied required Tool inputs, stale/inactive/non-read-only versions, and Customer-policy denial in `test/unit/capability-binding-resolver.spec.ts`
+- [x] T044 [US3] Add RED runtime accounting cases for all-mapped, all-constrained, optional-unsupplied, optional-supplied, unaccounted, multiply consumed, constraint-rejected, zero-compatible, and multiple-compatible bindings in `test/unit/capability-binding-resolver.spec.ts`
+- [x] T045 [US3] Implement static capability/binding compatibility and exactly-one consumption-declaration validation in new `src/capabilities/capability-binding-resolver.service.ts` until T042 passes
+- [x] T046 [US3] Implement exact Tool/customer-policy resolution, top-level target validation, scalar constant checks, type compatibility, and required-input satisfiability in `src/capabilities/capability-binding-resolver.service.ts` until T043 passes
+- [x] T047 [US3] Implement runtime `MAPPED_PARAMETER` and `BINDING_SEMANTIC_CONSTRAINT` accounting, exact constraint matching, zero/multiple-binding fail-closed outcomes, and no silent parameter removal in `src/capabilities/capability-binding-resolver.service.ts` until T044 passes
+- [x] T048 [US3] Add RED final argument-object cases for canonical-to-Tool renaming, constants, empty Shinmone mappings, and full current Tool input-schema rejection in `test/unit/capability-binding-resolver.spec.ts`, then call existing `validateNamedOperation` on the complete mapped object from `src/capabilities/capability-binding-resolver.service.ts`
+- [x] T049 [US3] Add exact-version runtime drift cases proving a missing, changed, inactive, side-effecting, or newly policy-denied Tool releases no candidate in `test/unit/capability-binding-resolver.spec.ts`
+- [x] T050 [US3] Run Phase D binding and ToolRegistry suites and record `FEATURE011_GATE_D=PASS`, `EVERY_RESOLVED_PARAMETER_ACCOUNTED_FOR=YES`, and `SILENT_CANONICAL_PARAMETER_DROP=FORBIDDEN` in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
+
+**T042–T049 evidence reconciliation (2026-09-30)**:
+
+- T042: `capability-binding-resolver.spec.ts` directly rejects unknown mapping/constraint parameters, unknown enum values, missing required consumption, duplicate mapping/constraint sources, dual consumption, implicit constant-as-parameter semantics, and duplicate Tool targets; optional unconsumed declarations are accepted only when unsupplied. The initial missing-resolver TS2307 was authentic RED for the new suite, but not isolated RED for every individual behavior. Newly added isolated declaration cases were GREEN against the existing implementation (`EXISTING_IMPLEMENTATION_ALREADY_SATISFIED_CASE`).
+- T043: direct tests cover bounded constants, unknown/non-top-level fields, mapped and constant type/enum mismatch, required Tool inputs, wrong/missing exact versions, inactive/write/side-effect targets, and Customer policy denial. Bounded-string-vs-Tool maxLength was authentic RED (`2 failed, 31 passed` together with the policy-exception case), then GREEN after a generic correction. Other reconciled cases were already GREEN.
+- T044: direct tests cover all-mapped and all-constrained bindings, optional supplied/unsupplied, unaccounted and multiply consumed inputs, rejected exact enum constraints, zero and multiple compatible bindings. Reconciled cases already satisfied by the existing implementation are recorded as `EXISTING_IMPLEMENTATION_ALREADY_SATISFIED_CASE`, not retroactive RED.
+- T045–T047: `validateDeclaration`, `validateToolContract`, and `isCompatible` in `capability-binding-resolver.service.ts` enforce static exactly-one required consumption, exact Tool/customer-policy and top-level schema checks, runtime exactly-once supplied-value accounting, and fail-closed zero/multiple selection. `capability-pack.loader.ts` validates each scoped candidate catalog before atomic registry installation; loader tests cover incompatible bindings and exact Customer-policy denial without partial release.
+- T048: rename, scalar constant, and `mappings=[]` tests prove complete arguments are passed to the existing `ToolRegistryService.validateNamedOperation`; a test using the real validator rejects a full-object pattern mismatch. Existing implementation already satisfied the added cases; no historical behavior-specific RED is claimed.
+- T049: missing/version-changed/inactive/non-read-only/side-effecting/newly policy-denied runtime cases all release no candidate. A policy lookup exception was authentic RED because its arbitrary message escaped; it was corrected to stable `CAPABILITY_BINDING_INVALID`. Other added drift cases were GREEN against the existing implementation. Focused binding suite: 44/44 GREEN.
+- The health-readiness fixture now consumes `timeRange=this_month` through `ENUM_VALUE_IN` with `mappings=[]`, and its exact-version policy mock returns the same read-only Tool contract. Focused health-readiness contract: 7/7 GREEN. No production invariant was relaxed.
+
+**T050 Gate D finalization (2026-09-30)**:
+
+- Local focused evidence: health-readiness 7/7, binding 44/44, Phase D/related Phase A–C unit suites 317/317, contracts 82/82, direct eval 5/5, root `npm run typecheck` PASS, and `git diff --check` PASS.
+- The Codex integration rerun failed before assertions because the execution environment denied Supertest's ephemeral listener (`listen EPERM 0.0.0.0`), not because of a product assertion. The human then ran the exact same command in a normal macOS Terminal from the repository root: `RUN_CUSTOMER_US3_TESTS=true npm run test:integration -- --runInBand --runTestsByPath test/integration/customer-tool-policy.spec.ts test/integration/query-understanding-persistence.spec.ts test/integration/feature010-followup-routing.spec.ts test/integration/tool-discovery-mock-equivalence.spec.ts`; human-provided result: 4/4 suites and 22/22 tests PASS.
+- Read-only changed-file inspection found the same Phase D source/test path set as the preceding Gate D execution; the intervening diagnostic rerun made no source/test edits. The production request path still injects `ToolDiscoveryService`; no Feature 011 request-time cutover, real Tool invocation, or Customer endpoint call occurred.
+- `FEATURE011_GATE_D=PASS`; `EVERY_RESOLVED_PARAMETER_ACCOUNTED_FOR=YES`; `SILENT_CANONICAL_PARAMETER_DROP=FORBIDDEN`; `COMPLETED_TASK_RANGE=T001-T050`; `FIRST_UNEXECUTED_TASK=T051`; `NEXT_PHASE_AUTHORIZED=NO`.
 
 **Gate D**: `FEATURE011_GATE_D=PASS`
 
@@ -334,15 +353,18 @@ This feature has no deployable partial MVP before the atomic cutover. Gates A–
 
 ```text
 FEATURE011_IMPLEMENTATION_AUTHORIZED=NO
-COMPLETED_TASK_RANGE=T001-T039
+COMPLETED_TASK_RANGE=T001-T050
 FEATURE011_GATE_A=PASS
 FEATURE011_GATE_B=PASS
 FEATURE011_GATE_C=PASS
+FEATURE011_GATE_D=PASS
+EVERY_RESOLVED_PARAMETER_ACCOUNTED_FOR=YES
+SILENT_CANONICAL_PARAMETER_DROP=FORBIDDEN
 CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO
 FEATURE010_BEHAVIOR_PRESERVED=YES
 FEATURE010_BOUNDARY_CONTRACT=5/6
 FEATURE010_BOUNDARY_HASH_MISMATCH=PRE_EXISTING_MANIFEST
-FIRST_UNEXECUTED_TASK=T040
+FIRST_UNEXECUTED_TASK=T051
 NEXT_PHASE_AUTHORIZED=NO
 IMPLEMENTATION_REQUIRES_SEPARATE_HUMAN_AUTHORIZATION=YES
 REAL_TOOL_INVOCATION_EXECUTED=NO

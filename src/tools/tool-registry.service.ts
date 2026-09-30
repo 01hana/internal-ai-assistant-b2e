@@ -175,6 +175,22 @@ export class ToolRegistryService {
     };
   }
 
+  async resolveExactToolForCustomer(toolKey: string, version: string, customerId: string): Promise<CustomerToolRegistryResolveResult> {
+    const global = await this.resolveExactExecutableTool(toolKey, version);
+    if (!global.tool) return { deniedReason: global.deniedReason };
+
+    const policy = await this.customerToolPolicy.resolve({ customerId, toolDefinitionId: global.tool.id });
+    if (!policy.allowed) return { deniedReason: 'customer_policy_denied' };
+
+    return {
+      resolved: {
+        tool: global.tool,
+        requiredRoles: Object.freeze([...policy.policy.requiredRoles]),
+        requiredPermissionScopes: Object.freeze([...policy.policy.requiredPermissionScopes])
+      }
+    };
+  }
+
   isExecutableReadOnly(tool: RegisteredToolDefinition): boolean {
     return tool.operation === ToolOperation.read && !tool.hasSideEffect;
   }

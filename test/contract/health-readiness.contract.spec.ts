@@ -91,6 +91,9 @@ describe('health and readiness contract', () => {
       available: true,
       catalog: expect.objectContaining({ packId: 'customer-a.pack' })
     });
+    const tools = capabilityApp.get(ToolRegistryService);
+    expect(tools.resolveExactExecutableTool).toHaveBeenCalledWith('work-orders.monthly-new-count', '1.0.0');
+    expect(tools.resolveExactToolForCustomer).toHaveBeenCalledWith('work-orders.monthly-new-count', '1.0.0', 'customer-a');
     await capabilityApp.close();
   });
 
@@ -182,13 +185,20 @@ function validCapabilityPack(): Record<string, unknown> {
     }],
     bindings: [{
       version: '1', bindingId: 'work-orders.monthly', bindingVersion: '1.0.0', active: true,
-      capabilityKey: 'work-orders.count', semanticConstraints: [],
+      capabilityKey: 'work-orders.count', semanticConstraints: [{
+        version: '1', parameterName: 'timeRange', operator: 'ENUM_VALUE_IN', allowedValues: ['this_month']
+      }],
       target: { kind: 'TOOL', toolKey: 'work-orders.monthly-new-count', toolVersion: '1.0.0' }, mappings: []
     }]
   };
 }
 
 async function createCapabilityBootstrapApp(pathsJson: string): Promise<INestApplication> {
+  const tool = {
+    key: 'work-orders.monthly-new-count', version: '1.0.0', active: true,
+    operation: 'read', hasSideEffect: false,
+    inputSchema: { type: 'object', properties: {}, required: [] }
+  };
   const moduleRef = await Test.createTestingModule({ imports: [CapabilitiesModule] })
     .overrideProvider(ConfigService)
     .useValue({ get: jest.fn(() => pathsJson) })
@@ -196,8 +206,9 @@ async function createCapabilityBootstrapApp(pathsJson: string): Promise<INestApp
     .useValue({ onModuleInit: jest.fn(), onModuleDestroy: jest.fn(), db: {} })
     .overrideProvider(ToolRegistryService)
     .useValue({
-      resolveExactExecutableTool: jest.fn(async () => ({
-        tool: { key: 'work-orders.monthly-new-count', version: '1.0.0' }
+      resolveExactExecutableTool: jest.fn(async () => ({ tool })),
+      resolveExactToolForCustomer: jest.fn(async () => ({
+        resolved: { tool, requiredRoles: [], requiredPermissionScopes: [] }
       }))
     })
     .compile();

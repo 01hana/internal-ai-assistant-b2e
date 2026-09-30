@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { EnvironmentVariables } from '../common/config/env.validation';
 import { ToolsModule } from '../tools/tools.module';
 import { CapabilityCatalogRegistry } from './capability-catalog.registry';
+import { CapabilityBindingResolverService } from './capability-binding-resolver.service';
 import {
   CAPABILITY_PACK_FILE_ACCESS,
   CapabilityPackLoader,
@@ -26,10 +27,11 @@ class CapabilityPackBootstrapInitializer implements OnApplicationBootstrap {
   imports: [ConfigModule, ToolsModule],
   providers: [
     CapabilityCatalogRegistry,
+    CapabilityBindingResolverService,
     CapabilityPackLoader,
     CapabilityPackBootstrapInitializer,
     { provide: CAPABILITY_PACK_FILE_ACCESS, useValue: NODE_CAPABILITY_PACK_FILE_ACCESS }
   ],
-  exports: [CapabilityCatalogRegistry]
+  exports: [CapabilityCatalogRegistry, CapabilityBindingResolverService]
 })
 export class CapabilitiesModule {}

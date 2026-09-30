@@ -3,6 +3,7 @@ import { lstat, readFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { ToolRegistryService } from '../tools/tool-registry.service';
 import { CapabilityCatalogRegistry } from './capability-catalog.registry';
+import { CapabilityBindingResolverService } from './capability-binding-resolver.service';
 import { MAX_PACK_BYTES, parseCustomerCapabilityPackJsonV1 } from './capability-pack.parser';
 import type { CustomerCapabilityPackV1, ScopedCapabilityCatalogV1 } from './capability-pack.types';
 
@@ -45,6 +46,8 @@ export class CapabilityPackLoader {
       const packs = await this.loadPacks(paths);
       await this.validateActiveToolTargets(packs);
       const catalogs = buildScopedCatalogs(packs);
+      const bindings = new CapabilityBindingResolverService(this.tools);
+      for (const catalog of catalogs) await bindings.validateCatalog(catalog);
       this.registry.installRelease(catalogs);
     } catch {
       invalid();
