@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import {
+  CapabilityFollowUpFrameV1,
   ConversationSemanticFrame,
   SemanticDimension
 } from './conversation.types';
 import { MAX_SEMANTIC_VALUE_LENGTH } from './conversation-limits';
+import type { ScopedCapabilityCatalogV1 } from '../../capabilities/capability-pack.types';
+import { validateCapabilityCanonicalValue } from '../../capabilities/capability-parameter-resolver.service';
 
 @Injectable()
 export class ConversationSemanticReconstructorService {
@@ -44,6 +47,55 @@ export class ConversationSemanticReconstructorService {
     const topicKey = [resource?.value, entity?.entityType, entity?.value].filter(Boolean).join(':') || undefined;
     return Object.freeze({ resource, intent, metricOrAspect, timeRange, entity, topicKey });
   }
+
+  reconstructCapabilityFrame(input: unknown, catalog?: ScopedCapabilityCatalogV1): CapabilityFollowUpFrameV1 | undefined {
+    if (!isExactRecord(input, ['version', 'scope', 'packId', 'packVersion', 'capabilityKey', 'sourceMessageId', 'parameters']) || input.version !== '1') return undefined;
+    const scope = input.scope;
+    if (!isExactRecord(scope, ['customerId', 'integrationId', 'hostApp'])) return undefined;
+    if (![scope.customerId, scope.integrationId, scope.hostApp, input.packId, input.packVersion, input.capabilityKey, input.sourceMessageId]
+      .every(boundedIdentifier)) return undefined;
+    if (catalog && (scope.customerId !== catalog.customerId || scope.integrationId !== catalog.integrationId || scope.hostApp !== catalog.hostApp ||
+      input.packId !== catalog.packId || input.packVersion !== catalog.packVersion)) return undefined;
+    const capability = catalog && typeof input.capabilityKey === 'string'
+      ? catalog.capabilities.find((entry) => entry.active && entry.capabilityKey === input.capabilityKey)
+      : undefined;
+    if (catalog && !capability) return undefined;
+    if (!Array.isArray(input.parameters) || input.parameters.length > (capability?.parameters.length ?? 16)) return undefined;
+    const seen = new Set<string>();
+    const parameters = [];
+    for (const candidate of input.parameters) {
+      if (!isExactRecord(candidate, ['parameterName', 'value', 'source', 'sourceMessageId']) ||
+        !boundedIdentifier(candidate.parameterName) || !boundedIdentifier(candidate.sourceMessageId) ||
+        (candidate.source !== 'current_explicit' && candidate.source !== 'inherited') || seen.has(candidate.parameterName)) return undefined;
+      const definition = capability?.parameters.find((entry) => entry.parameterName === candidate.parameterName);
+      const value = definition ? validateCapabilityCanonicalValue(definition, candidate.value) : safeCanonicalScalar(candidate.value);
+      if (value === undefined) return undefined;
+      seen.add(candidate.parameterName);
+      parameters.push(Object.freeze({ parameterName: candidate.parameterName, value, source: candidate.source, sourceMessageId: candidate.sourceMessageId }));
+    }
+    return Object.freeze({
+      version: '1', scope: Object.freeze({ customerId: scope.customerId as string, integrationId: scope.integrationId as string, hostApp: scope.hostApp as string }),
+      packId: input.packId as string, packVersion: input.packVersion as string, capabilityKey: input.capabilityKey as string,
+      sourceMessageId: input.sourceMessageId as string,
+      parameters: Object.freeze(parameters.sort((a, b) => a.parameterName.localeCompare(b.parameterName, 'en-US')))
+    });
+  }
+}
+
+function safeCanonicalScalar(value: unknown): string | number | boolean | undefined {
+  if (typeof value === 'string') return value.length > 0 && value.length <= 256 ? value : undefined;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+function isExactRecord(value: unknown, keys: readonly string[]): value is Record<string, unknown> {
+  if (!isRecord(value)) return false;
+  const actual = Object.keys(value);
+  return actual.length === keys.length && actual.every((key) => keys.includes(key));
+}
+
+function boundedIdentifier(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= MAX_SEMANTIC_VALUE_LENGTH;
 }
 
 function dimension(value: string | undefined, sourceMessageId: string, score = 1): SemanticDimension | undefined {
@@ -89,4 +141,3 @@ function confidence(value: unknown): number {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
-

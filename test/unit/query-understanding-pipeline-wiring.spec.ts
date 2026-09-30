@@ -6,6 +6,7 @@ import { QueryUnderstandingPipeline } from '../../src/query-understanding/query-
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 import { ToolDiscoveryService } from '../../src/tools/tool-discovery.service';
 import { ConversationSemanticReconstructorService } from '../../src/assistant/conversation/conversation-semantic-reconstructor.service';
+import { CapabilitySemanticResolverService } from '../../src/capabilities/capability-semantic-resolver.service';
 
 describe('QueryUnderstandingModule wiring', () => {
   it('binds QueryUnderstandingPipeline token to the rule-based default pipeline', async () => {
@@ -33,5 +34,6 @@ describe('QueryUnderstandingModule wiring', () => {
     expect(moduleRef.get(RuleBasedQueryUnderstandingPipeline)).toBe(pipeline);
     expect(moduleRef.get(ToolDiscoveryService)).toBeInstanceOf(ToolDiscoveryService);
     expect(moduleRef.get(ConversationSemanticReconstructorService)).toBeInstanceOf(ConversationSemanticReconstructorService);
+    expect(() => moduleRef.get(CapabilitySemanticResolverService)).toThrow();
   });
 });

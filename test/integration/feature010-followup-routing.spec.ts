@@ -34,6 +34,7 @@ describe('Feature 010 semantic follow-up routing (T037-T042)', () => {
     await sendA('req-f010-p4-doc-seed', '公司員工旅遊補助規定是什麼？', { module: 'hr', visibleColumns: [] });
     const context = await loadAContext();
     expect(context.semanticFrames.at(-1)).toMatchObject({ resource: { value: 'travelSubsidyPolicy' }, metricOrAspect: { value: 'policyOverview' } });
+    expect(context.capabilityFrames).toEqual([]);
     const before = counts();
     await sendA('req-f010-p4-doc-followup', '那申請期限呢？', { module: 'hr', visibleColumns: [] });
     expect(state.retrievalRuns).toHaveLength(before.retrievalRuns + 1);

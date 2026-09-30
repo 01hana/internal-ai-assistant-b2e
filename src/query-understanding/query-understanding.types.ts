@@ -3,7 +3,12 @@ import { RiskLevel } from '../generated/prisma/enums';
 import { HostIntegrationContext } from '../host-integration/host-integration.types';
 import { NormalizedPageContext } from '../assistant/page-context/page-context.types';
 import type { BoundedConversationContext } from '../assistant/conversation/conversation.types';
-import type { ConversationSemanticFrame, FollowUpResolutionDecision } from '../assistant/conversation/conversation.types';
+import type {
+  CapabilityFollowUpFrameV1,
+  CapabilityFollowUpResolutionDecisionV1,
+  ConversationSemanticFrame,
+  FollowUpResolutionDecision
+} from '../assistant/conversation/conversation.types';
 
 export interface QueryUnderstandingInput {
   requestId: string;
@@ -110,6 +115,8 @@ export interface QueryUnderstandingOutput {
   requiredEvidence: string[];
   readonly currentSemanticFrame?: ConversationSemanticFrame;
   readonly followUpResolution?: FollowUpResolutionDecision;
+  readonly currentCapabilityFrame?: CapabilityFollowUpFrameV1;
+  readonly capabilityFollowUpResolution?: CapabilityFollowUpResolutionDecisionV1;
 }
 
 export interface PersistedQueryUnderstandingResult {

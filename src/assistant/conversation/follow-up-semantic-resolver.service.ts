@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import {
+  CapabilityFollowUpFrameV1,
+  CapabilityFollowUpResolutionDecisionV1,
+  CapabilityFrameParameterV1,
   ConversationSemanticFrame,
   FollowUpResolutionDecision,
   SemanticDimension
 } from './conversation.types';
+import type { ScopedCapabilityCatalogV1 } from '../../capabilities/capability-pack.types';
+import { validateCapabilityCanonicalValue } from '../../capabilities/capability-parameter-resolver.service';
 
 const DIMENSIONS = ['resource', 'intent', 'metricOrAspect', 'timeRange', 'entity'] as const;
 type DimensionName = (typeof DIMENSIONS)[number];
@@ -63,6 +68,125 @@ export class FollowUpSemanticResolverService {
       replaced
     );
   }
+
+  resolveCapability(input: {
+    readonly currentFrame: CapabilityFollowUpFrameV1;
+    readonly priorFrames: readonly CapabilityFollowUpFrameV1[];
+    readonly catalog: ScopedCapabilityCatalogV1;
+  }): CapabilityFollowUpResolutionDecisionV1 {
+    const currentCapability = input.catalog.capabilities.find((entry) =>
+      entry.active && entry.capabilityKey === input.currentFrame.capabilityKey);
+    if (!currentCapability || !frameMatchesCatalog(input.currentFrame, input.catalog)) {
+      return capabilityClarify('CURRENT_CAPABILITY_NOT_ACTIVE', []);
+    }
+
+    const currentValidation = validateFrameParameters(input.currentFrame, currentCapability.parameters);
+    if (currentValidation.invalidated.length > 0) {
+      return capabilityClarify('CURRENT_PARAMETER_INVALID', currentValidation.invalidated);
+    }
+    const compatible = input.priorFrames.filter((frame) => frameMatchesCatalog(frame, input.catalog)
+      && frame.capabilityKey === input.currentFrame.capabilityKey);
+    if (compatible.length > 1) return capabilityClarify('MULTIPLE_COMPATIBLE_PRIOR_CAPABILITY_FRAMES', []);
+    if (compatible.length === 0) {
+      if (currentValidation.parameters.length === 0) return capabilityClarify('NO_COMPATIBLE_PRIOR_CAPABILITY_FRAME', []);
+      return capabilityDecision('NEW_TOPIC', 'CURRENT_CAPABILITY_FRAME_ONLY', input.currentFrame, [], [], []);
+    }
+
+    const priorValidation = validateFrameParameters(compatible[0], currentCapability.parameters);
+    if (priorValidation.invalidated.length > 0) {
+      return capabilityClarify('INHERITED_PARAMETER_INVALID', priorValidation.invalidated);
+    }
+    const priorByName = new Map(priorValidation.parameters.map((entry) => [entry.parameterName, entry]));
+    const currentByName = new Map(currentValidation.parameters.map((entry) => [entry.parameterName, entry]));
+    const inherited: string[] = [];
+    const replaced: string[] = [];
+    const merged: CapabilityFrameParameterV1[] = [];
+    for (const definition of currentCapability.parameters) {
+      const current = currentByName.get(definition.parameterName);
+      const prior = priorByName.get(definition.parameterName);
+      if (current) {
+        if (prior && current.value !== prior.value) replaced.push(definition.parameterName);
+        merged.push({ ...current, source: 'current_explicit' });
+        continue;
+      }
+      if (!prior) continue;
+      inherited.push(definition.parameterName);
+      merged.push({ ...prior, source: 'inherited' });
+    }
+    merged.sort((left, right) => left.parameterName.localeCompare(right.parameterName, 'en-US'));
+    const frame = freezeCapabilityFrame({ ...input.currentFrame, parameters: merged });
+    return capabilityDecision(
+      replaced.length > 0 ? 'REPLACE' : 'INHERIT',
+      replaced.length > 0 ? 'EXPLICIT_CAPABILITY_PARAMETER_REPLACED' : 'OMITTED_CAPABILITY_PARAMETERS_INHERITED',
+      frame,
+      inherited,
+      replaced,
+      []
+    );
+  }
+}
+
+function frameMatchesCatalog(frame: CapabilityFollowUpFrameV1, catalog: ScopedCapabilityCatalogV1): boolean {
+  return frame.scope.customerId === catalog.customerId
+    && frame.scope.integrationId === catalog.integrationId
+    && frame.scope.hostApp === catalog.hostApp
+    && frame.packId === catalog.packId
+    && frame.packVersion === catalog.packVersion;
+}
+
+function validateFrameParameters(
+  frame: CapabilityFollowUpFrameV1,
+  definitions: ScopedCapabilityCatalogV1['capabilities'][number]['parameters']
+): { parameters: CapabilityFollowUpFrameV1['parameters']; invalidated: string[] } {
+  const definitionByName = new Map(definitions.map((entry) => [entry.parameterName, entry]));
+  const invalidated: string[] = [];
+  const parameters = frame.parameters.flatMap((entry) => {
+    const definition = definitionByName.get(entry.parameterName);
+    const value = definition ? validateCapabilityCanonicalValue(definition, entry.value) : undefined;
+    if (value === undefined) {
+      invalidated.push(entry.parameterName);
+      return [];
+    }
+    return [{ ...entry, value }];
+  });
+  return {
+    parameters: Object.freeze(parameters.sort((a, b) => a.parameterName.localeCompare(b.parameterName, 'en-US'))),
+    invalidated: [...new Set(invalidated)].sort((a, b) => a.localeCompare(b, 'en-US'))
+  };
+}
+
+function capabilityDecision(
+  kind: CapabilityFollowUpResolutionDecisionV1['kind'],
+  reasonCode: string,
+  resolvedFrame: CapabilityFollowUpFrameV1,
+  inheritedParameters: readonly string[],
+  replacedParameters: readonly string[],
+  invalidatedParameters: readonly string[]
+): CapabilityFollowUpResolutionDecisionV1 {
+  return Object.freeze({
+    kind, reasonCode, resolvedFrame,
+    inheritedParameters: Object.freeze([...inheritedParameters].sort()),
+    replacedParameters: Object.freeze([...replacedParameters].sort()),
+    invalidatedParameters: Object.freeze([...invalidatedParameters].sort())
+  });
+}
+
+function capabilityClarify(reasonCode: string, invalidatedParameters: readonly string[]): CapabilityFollowUpResolutionDecisionV1 {
+  return Object.freeze({
+    kind: 'CLARIFY' as const,
+    reasonCode,
+    inheritedParameters: Object.freeze([]),
+    replacedParameters: Object.freeze([]),
+    invalidatedParameters: Object.freeze([...invalidatedParameters].sort())
+  });
+}
+
+function freezeCapabilityFrame(frame: CapabilityFollowUpFrameV1): CapabilityFollowUpFrameV1 {
+  return Object.freeze({
+    ...frame,
+    scope: Object.freeze({ ...frame.scope }),
+    parameters: Object.freeze(frame.parameters.map((entry) => Object.freeze({ ...entry })))
+  });
 }
 
 type MutableFrame = Partial<Record<DimensionName, SemanticDimension & { entityType?: string }>>;

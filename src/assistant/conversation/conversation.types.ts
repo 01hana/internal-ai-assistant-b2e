@@ -19,6 +19,32 @@ export interface ConversationSemanticFrame {
   readonly topicKey?: string;
 }
 
+export interface CapabilityFrameParameterV1 {
+  readonly parameterName: string;
+  readonly value: string | number | boolean;
+  readonly source: SemanticDimensionSource;
+  readonly sourceMessageId: string;
+}
+
+export interface CapabilityFollowUpFrameV1 {
+  readonly version: '1';
+  readonly scope: Readonly<{ customerId: string; integrationId: string; hostApp: string }>;
+  readonly packId: string;
+  readonly packVersion: string;
+  readonly capabilityKey: string;
+  readonly sourceMessageId: string;
+  readonly parameters: readonly CapabilityFrameParameterV1[];
+}
+
+export interface CapabilityFollowUpResolutionDecisionV1 {
+  readonly kind: FollowUpResolutionKind;
+  readonly reasonCode: string;
+  readonly resolvedFrame?: CapabilityFollowUpFrameV1;
+  readonly inheritedParameters: readonly string[];
+  readonly replacedParameters: readonly string[];
+  readonly invalidatedParameters: readonly string[];
+}
+
 export type FollowUpResolutionKind = 'INHERIT' | 'REPLACE' | 'NEW_TOPIC' | 'CLARIFY';
 
 export interface FollowUpResolutionDecision {
@@ -70,6 +96,7 @@ export interface SafeCompletedConversationExchange {
   readonly userText?: string;
   readonly createdAt: string;
   readonly semanticFrame?: ConversationSemanticFrame;
+  readonly capabilityFrame?: CapabilityFollowUpFrameV1;
   readonly evidenceRefIds: readonly string[];
 }
 
@@ -79,8 +106,8 @@ export interface BoundedConversationContext {
   readonly chronologicalExchangeIds: readonly string[];
   readonly exchanges: readonly SafeCompletedConversationExchange[];
   readonly semanticFrames: readonly ConversationSemanticFrame[];
+  readonly capabilityFrames?: readonly CapabilityFollowUpFrameV1[];
   readonly evidenceRefs: readonly SafePriorEvidenceRefCandidate[];
   readonly evidenceRefIds: readonly string[];
   readonly rejectedReasonCodes: readonly ConversationSourceRejectionReason[];
 }
-

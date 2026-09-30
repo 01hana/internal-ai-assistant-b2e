@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/011-customer-capability-semantic-discovery`
 **Input**: Approved `spec.md`, `design.md`, and `plan.md` in this directory
-**Implementation Status**: Phases A–B complete; further implementation is not currently authorized.
+**Implementation Status**: Phases A–C complete; further implementation is not currently authorized.
 **Testing Rule**: For each runtime behavior, add the named focused test first, retain authentic RED evidence, then implement and retain GREEN evidence. A failing gate is a hard stop.
 
 ## Format and execution boundary
@@ -10,7 +10,7 @@
 - Every task uses `- [ ] TNNN [P?] [US?] Description with exact path`.
 - Task IDs are local to Feature 011 and execute sequentially unless a task explicitly says otherwise.
 - Story labels map to the five approved user stories; shared foundation, migration, retirement, and final-acceptance tasks have no story label.
-- Task execution requires separate human authorization. Phases A–B are complete; the next authorization would begin with T025.
+- Task execution requires separate human authorization. Phases A–C are complete; T040 is the first unexecuted task and is not currently authorized.
 - Git branch management is human-owned and is not inspected or performed by these tasks.
 
 ## Canonical implementation order
@@ -97,23 +97,42 @@
 
 **Goal**: Resolve scoped `zh-TW` semantics and typed canonical parameters directly while the active request path remains unchanged.
 
-- [ ] T025 [US1] Add authentic RED normalization and semantic-resolution cases for Unicode NFKC, Latin case folding, punctuation/whitespace handling, exact `zh-TW`, no locale fallback, scoped materialization, and deterministic ordering in new `test/unit/capability-semantic-resolver.service.spec.ts`
-- [ ] T026 [US1] Add RED scoring cases for required signal groups, weights `0.35/0.35/0.10/0.10/0.10`, threshold `0.70`, ambiguity delta `0.05`, 32-candidate cap, five safe ambiguity references, and candidate-overflow failure in `test/unit/capability-semantic-resolver.service.spec.ts`
-- [ ] T027 [US1] Add RED example-overlap cases proving bounded token/character-bigram composition resolves unseen paraphrases without an exact-question equality branch in `test/unit/capability-semantic-resolver.service.spec.ts`
-- [ ] T028 [US1] Implement generic normalization reuse, exact `zh-TW` profile selection after scoped lookup, required-group eligibility, bounded scoring, deterministic ties, and safe ambiguity references in new `src/capabilities/capability-semantic-resolver.service.ts` until T025–T027 pass; do not remove Customer vocabulary from the active legacy path yet
-- [ ] T029 [US2] Add authentic RED enum cases for alias-to-canonical normalization, same-value deduplication, distinct-value conflict, unknown-value invalidity, required-value missing status, and precedence `conflicting → invalid → missing → binding` in new `test/unit/capability-parameter-resolver.service.spec.ts`
-- [ ] T030 [US2] Add RED `bounded_string` cases for Core-owned `SAFE_IDENTIFIER`, maximum length, literal-prefix admission, distinct-value conflict, invalid capture, and no arbitrary regex/value creation in `test/unit/capability-parameter-resolver.service.spec.ts`
-- [ ] T031 [US2] Implement typed current/inherited enum and bounded-string resolution with canonical names and no raw invalid/conflicting values in new `src/capabilities/capability-parameter-resolver.service.ts` until T029–T030 pass
-- [ ] T032 [US2] Add RED closed-result cases for `RESOLVED`, `NEEDS_CLARIFICATION`, `CAPABILITY_UNAVAILABLE`, and `AMBIGUOUS`, including `CAPABILITY_NOT_RECOGNIZED`, bounded safe references, no prose, and no authority/connector/raw-value fields in `test/unit/capability-parameter-resolver.service.spec.ts`
-- [ ] T033 [US1] Add RED companion-frame cases for current values, inheritance, `REPLACE`, removed/stale capability, invalidated parameter, scope change, and cross-scope rejection in new `test/unit/capability-follow-up-frame.spec.ts`
-- [ ] T034 [US1] Define the bounded capability follow-up frame separately from `ConversationSemanticFrame` and its safe persisted projection in `src/assistant/conversation/conversation.types.ts` and `src/query-understanding/query-understanding.types.ts`, explicitly excluding it from `src/retrieval/grounded-retrieval.types.ts`
-- [ ] T035 [US1] Extend canonical-name follow-up inheritance/replacement and active-pack revalidation in `src/assistant/conversation/follow-up-semantic-resolver.service.ts` and `src/assistant/conversation/conversation-semantic-reconstructor.service.ts` until T033 passes, without wiring capability resolution as request-time authority
-- [ ] T036 [US1] Persist and reconstruct only the bounded safe companion-frame projection through existing JSON query-understanding storage in `src/query-understanding/query-understanding.repository.ts` and `src/assistant/conversation/conversation-context.repository.ts`, with RED/GREEN coverage in `test/integration/query-understanding-persistence.spec.ts`
-- [ ] T037 [US1] Add a direct deterministic paraphrase/unknown/ambiguity/missing/invalid/conflict eval suite in new `test/eval/feature011-capability-resolution.eval.spec.ts`, asserting zero ToolCalls and zero model calls for non-resolved outcomes
-- [ ] T038 Add focused pre-cutover regressions proving the legacy request path, existing Tool discovery, Feature 010 follow-up behavior, and `GroundedContextBundleV1` remain unchanged in `test/integration/feature010-followup-routing.spec.ts` and `test/unit/query-understanding-pipeline-wiring.spec.ts`
-- [ ] T039 Run Phase C direct semantic/parameter/frame/eval suites plus the focused Feature 010 regressions and record `FEATURE011_GATE_C=PASS` and `CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO` in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
+- [X] T025 [US1] Add authentic RED normalization and semantic-resolution cases for Unicode NFKC, Latin case folding, punctuation/whitespace handling, exact `zh-TW`, no locale fallback, scoped materialization, and deterministic ordering in new `test/unit/capability-semantic-resolver.service.spec.ts`
+- [X] T026 [US1] Add RED scoring cases for required signal groups, weights `0.35/0.35/0.10/0.10/0.10`, threshold `0.70`, ambiguity delta `0.05`, 32-candidate cap, five safe ambiguity references, and candidate-overflow failure in `test/unit/capability-semantic-resolver.service.spec.ts`
+- [X] T027 [US1] Add RED example-overlap cases proving bounded token/character-bigram composition resolves unseen paraphrases without an exact-question equality branch in `test/unit/capability-semantic-resolver.service.spec.ts`
+- [X] T028 [US1] Implement generic normalization reuse, exact `zh-TW` profile selection after scoped lookup, required-group eligibility, bounded scoring, deterministic ties, and safe ambiguity references in new `src/capabilities/capability-semantic-resolver.service.ts` until T025–T027 pass; do not remove Customer vocabulary from the active legacy path yet
+- [X] T029 [US2] Add authentic RED enum cases for alias-to-canonical normalization, same-value deduplication, distinct-value conflict, unknown-value invalidity, required-value missing status, and precedence `conflicting → invalid → missing → binding` in new `test/unit/capability-parameter-resolver.service.spec.ts`
+- [X] T030 [US2] Add RED `bounded_string` cases for Core-owned `SAFE_IDENTIFIER`, maximum length, literal-prefix admission, distinct-value conflict, invalid capture, and no arbitrary regex/value creation in `test/unit/capability-parameter-resolver.service.spec.ts`
+- [X] T031 [US2] Implement typed current/inherited enum and bounded-string resolution with canonical names and no raw invalid/conflicting values in new `src/capabilities/capability-parameter-resolver.service.ts` until T029–T030 pass
+- [X] T032 [US2] Add RED closed-result cases for `RESOLVED`, `NEEDS_CLARIFICATION`, `CAPABILITY_UNAVAILABLE`, and `AMBIGUOUS`, including `CAPABILITY_NOT_RECOGNIZED`, bounded safe references, no prose, and no authority/connector/raw-value fields in `test/unit/capability-parameter-resolver.service.spec.ts`
+- [X] T033 [US1] Add RED companion-frame cases for current values, inheritance, `REPLACE`, removed/stale capability, invalidated parameter, scope change, and cross-scope rejection in new `test/unit/capability-follow-up-frame.spec.ts`
+- [X] T034 [US1] Define the bounded capability follow-up frame separately from `ConversationSemanticFrame` and its safe persisted projection in `src/assistant/conversation/conversation.types.ts` and `src/query-understanding/query-understanding.types.ts`, explicitly excluding it from `src/retrieval/grounded-retrieval.types.ts`
+- [X] T035 [US1] Extend canonical-name follow-up inheritance/replacement and active-pack revalidation in `src/assistant/conversation/follow-up-semantic-resolver.service.ts` and `src/assistant/conversation/conversation-semantic-reconstructor.service.ts` until T033 passes, without wiring capability resolution as request-time authority
+- [X] T036 [US1] Persist and reconstruct only the bounded safe companion-frame projection through existing JSON query-understanding storage in `src/query-understanding/query-understanding.repository.ts` and `src/assistant/conversation/conversation-context.repository.ts`, with RED/GREEN coverage in `test/integration/query-understanding-persistence.spec.ts`
+- [X] T037 [US1] Add a direct deterministic paraphrase/unknown/ambiguity/missing/invalid/conflict eval suite in new `test/eval/feature011-capability-resolution.eval.spec.ts`, asserting zero ToolCalls and zero model calls for non-resolved outcomes
+- [X] T038 Add focused pre-cutover regressions proving the legacy request path, existing Tool discovery, Feature 010 follow-up behavior, and `GroundedContextBundleV1` remain unchanged in `test/integration/feature010-followup-routing.spec.ts` and `test/unit/query-understanding-pipeline-wiring.spec.ts`
+- [X] T039 Run Phase C direct semantic/parameter/frame/eval suites plus the focused Feature 010 regressions and record `FEATURE011_GATE_C=PASS` and `CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO` in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
 
 **Gate C**: `FEATURE011_GATE_C=PASS` and `CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO`
+
+**Phase C partial evidence (2026-09-25)**:
+
+- Authentic RED: semantic, parameter, and companion-frame suites each failed on their intended missing module/type/method; persistence failed on the absent envelope write and unwrap behavior.
+- GREEN through T037: Phase C units `28 passed`; persistence/Feature 010/legacy-discovery integrations `11 passed`; direct eval `5 passed`; legacy discovery/grounding units `62 passed`; Feature 011 and GroundedContextBundle contracts `75 passed`; Phase A/B units `133 passed`; readiness `7 passed`; root typecheck passed.
+- T030/T031 narrow correction (2026-09-30): authentic focused RED was `2 failed, 16 passed`, proving repeated empty-prefix semantic-term captures did not conflict and normalized Latin case matching still fell back to a case-sensitive raw locator. After the generic capture correction, the focused parameter suite passed `18/18` without source precedence or Customer-specific behavior.
+- Correction regression GREEN: semantic/follow-up units `16 passed`; query-understanding persistence `3 passed`; direct capability eval `5 passed`; Phase A/B units `133 passed`; Feature 011/readiness/GroundedContextBundle contracts `82 passed`; GroundedContextBundle unit `13 passed`; root typecheck passed. The production pipeline, Tool discovery, and grounding contracts were not modified.
+- Gateway provenance diagnostic (2026-09-30): expected hash `0354af851312a8fb65bfd4c0ffe3b81e199267f3086fb06bb57f84871387dde3`; current raw filesystem hash `b8276a38f8b16146b24fbe2dbca1db00d30365fef052377440cf29eafb705aa6`; current hash excluding six ignored `.DS_Store` files `d7801cd79c92ad4badcc99f77f5fc1481edde965c74ac94708dc63a75cb3fe81`. The same tracked hash exists immediately before and at the contract commit `c6768750f1c8612916a7c2883a7a3372a418de98` and at current `HEAD`, with no tracked Gateway diff between that commit and `HEAD`; Git cannot reconstruct the expected hash, so provenance remains `UNRESOLVED`.
+- Focused Gateway health evidence: canonical identity, internal token issuance, Backend client/trust-chain, and Assistant controller suites passed `110/110`; Gateway build passed. This proves current health only and does not accept or rewrite the Feature 010 baseline.
+- Human-approved boundary correction (2026-09-30): the unreproducible Gateway and Identity Bridge whole-tree hash assertions were removed while Prisma, Feature 009, frozen Feature 010 planning, public Assistant, worktree/submodule, private-material, and task-sequencing guards remain. The diagnostic boundary is exactly `5/6`; its sole failure is the pre-existing Shinmone manifest hash mismatch.
+- Trusted-boundary replacement evidence: Gateway and Identity Bridge unstaged, staged, and non-ignored untracked path checks were all empty. Gateway focused behavior passed `110/110` and build passed. Identity Bridge identity admission, permission projection, canonical issuance, exchange/fail-closed, two-deployment isolation, Gateway seam, security/package, and binding suites passed `126/126`; Bridge typecheck and build passed.
+- T038 GREEN: legacy follow-up/Tool/RAG/Hybrid/discovery integrations passed `37/37`; legacy discovery/pipeline/grounding units passed `78/78`; GroundedContextBundle shape/leak contract passed `35/35`. `ToolDiscoveryService` remains the production semantic path and the Feature 011 resolver remains outside request-time wiring.
+- T039 GREEN: Phase C units passed `34/34`; persistence and focused Feature 010 integrations passed `40/40`; direct eval passed `5/5`; Phase A/B units passed `133/133`; legacy/pipeline/grounding units passed `78/78`; Feature 011/readiness/GroundedContextBundle contracts passed `82/82`; root typecheck and `git diff --check` passed.
+- `FEATURE011_GATE_C=PASS`
+- `CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO`
+- `FEATURE010_BEHAVIOR_PRESERVED=YES`
+- `FEATURE010_BOUNDARY_CONTRACT=5/6`
+- `FEATURE010_BOUNDARY_HASH_MISMATCH=PRE_EXISTING_MANIFEST`
+- `FIRST_UNEXECUTED_TASK=T040`
 
 ---
 
@@ -315,10 +334,15 @@ This feature has no deployable partial MVP before the atomic cutover. Gates A–
 
 ```text
 FEATURE011_IMPLEMENTATION_AUTHORIZED=NO
-COMPLETED_TASK_RANGE=T001-T024
+COMPLETED_TASK_RANGE=T001-T039
 FEATURE011_GATE_A=PASS
 FEATURE011_GATE_B=PASS
-FIRST_UNEXECUTED_TASK=T025
+FEATURE011_GATE_C=PASS
+CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO
+FEATURE010_BEHAVIOR_PRESERVED=YES
+FEATURE010_BOUNDARY_CONTRACT=5/6
+FEATURE010_BOUNDARY_HASH_MISMATCH=PRE_EXISTING_MANIFEST
+FIRST_UNEXECUTED_TASK=T040
 NEXT_PHASE_AUTHORIZED=NO
 IMPLEMENTATION_REQUIRES_SEPARATE_HUMAN_AUTHORIZATION=YES
 REAL_TOOL_INVOCATION_EXECUTED=NO

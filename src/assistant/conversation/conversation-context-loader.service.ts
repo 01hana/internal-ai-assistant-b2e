@@ -56,10 +56,13 @@ export class ConversationContextLoaderService {
       const assistant = asRecord(record.assistantMessage)!;
       const queryUnderstanding = record.queryUnderstanding;
       let semanticFrame;
+      let capabilityFrame;
       if (queryUnderstanding !== undefined) {
         const guarded = this.guard.guard(queryUnderstanding);
         if (guarded.accepted) {
           semanticFrame = this.reconstructor.reconstruct(guarded.value, text(user.id)!);
+          const guardedRecord = isRecord(guarded.value) ? guarded.value : undefined;
+          capabilityFrame = this.reconstructor.reconstructCapabilityFrame(guardedRecord?.capabilityFollowUpFrame);
         } else {
           reasons.add(guarded.reasonCode);
         }
@@ -94,6 +97,7 @@ export class ConversationContextLoaderService {
         userText: guardedUser?.accepted && typeof guardedUser.value === 'string' ? guardedUser.value : undefined,
         createdAt: isoText(record.createdAt),
         semanticFrame,
+        capabilityFrame,
         evidenceRefIds: Object.freeze(exchangeEvidenceIds)
       }));
     }
@@ -105,6 +109,7 @@ export class ConversationContextLoaderService {
       chronologicalExchangeIds: chronological.map((exchange) => exchange.exchangeId),
       exchanges: chronological,
       semanticFrames: chronological.flatMap((exchange) => exchange.semanticFrame ? [exchange.semanticFrame] : []),
+      capabilityFrames: chronological.flatMap((exchange) => exchange.capabilityFrame ? [exchange.capabilityFrame] : []),
       evidenceRefs,
       evidenceRefIds: evidenceRefs.map((evidence) => evidence.id),
       rejectedReasonCodes: [...reasons].sort()

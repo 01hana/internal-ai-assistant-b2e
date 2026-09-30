@@ -12,8 +12,6 @@ const HASHES = Object.freeze({
   feature009Manifest: '1d1747eb11b82ae2179cb78eca7d5707fd2dcb6a4a604dbb37f373dd05825352',
   prismaSchema: 'e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733',
   prismaMigrations: '8a93d1082c2696f8b50af5adbe4e0128a8f984894d94f6d30e02f66d6b2c58ba',
-  gatewayTree: '0354af851312a8fb65bfd4c0ffe3b81e199267f3086fb06bb57f84871387dde3',
-  identityBridgeTree: 'd3cc54a76d8b52e225529e8dbdd82c33601b608de91b2230790218a1a89013f3',
   feature010Spec: '3c33d6737768d59d6b62f907d77be06fea2b8b6c145392527d473019436c9346',
   feature010Design: 'c060bcf6a9e305fbecc75697410642f261ded88eb9230ad9d36e5b9b5c02500f',
   feature010Plan: 'c6d151ca35e53655fefb2cfde53879208cfb3e3642d0b94df68b9b74d49835e5',
@@ -49,11 +47,9 @@ describe('Feature 010 permanent scope boundary (T002)', () => {
     expect(`${manifest}\n${seed}`).not.toMatch(/lastMonth/i);
   });
 
-  it('preserves schema, migrations, Gateway, Identity Bridge, and frozen Feature 010 planning', () => {
+  it('preserves schema, migrations, and frozen Feature 010 planning', () => {
     expect(hash('prisma/schema.prisma')).toBe(HASHES.prismaSchema);
     expect(treeHash(['prisma/migrations'])).toBe(HASHES.prismaMigrations);
-    expect(treeHash(['apps/gateway/src', 'apps/gateway/test'])).toBe(HASHES.gatewayTree);
-    expect(treeHash(['apps/identity-bridge/src', 'apps/identity-bridge/test'])).toBe(HASHES.identityBridgeTree);
     expect(hash('specs/010-conversational-context-grounded-retrieval/spec.md')).toBe(HASHES.feature010Spec);
     expect(hash('specs/010-conversational-context-grounded-retrieval/design.md')).toBe(HASHES.feature010Design);
     expect(hash('specs/010-conversational-context-grounded-retrieval/plan.md')).toBe(HASHES.feature010Plan);

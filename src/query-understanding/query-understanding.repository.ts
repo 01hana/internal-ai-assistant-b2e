@@ -44,13 +44,24 @@ function toQueryUnderstandingPersistence(
     phrases: toJsonInput(output.phrases),
     normalizedTerms: toJsonInput(output.normalizedTerms),
     timeRanges: output.timeRanges.length > 0 ? toJsonInput(output.timeRanges) : Prisma.JsonNull,
-    resolvedReferences:
-      output.resolvedReferences.length > 0 ? toJsonInput(output.resolvedReferences) : Prisma.JsonNull,
+    resolvedReferences: toPersistedResolvedReferences(output),
     entityCandidates: toJsonInput(output.entityCandidates),
     subTasks: output.subTasks.length > 0 ? toJsonInput(output.subTasks) : Prisma.JsonNull,
     confidence: output.confidence,
     clarificationNeeds: output.clarificationNeeds.length > 0 ? toJsonInput(output.clarificationNeeds) : Prisma.JsonNull
   };
+}
+
+function toPersistedResolvedReferences(output: QueryUnderstandingOutput): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+  if (output.currentCapabilityFrame) {
+    return toJsonInput({
+      version: '1',
+      kind: 'CAPABILITY_FOLLOW_UP_FRAME_ENVELOPE',
+      references: output.resolvedReferences,
+      capabilityFrame: output.currentCapabilityFrame
+    });
+  }
+  return output.resolvedReferences.length > 0 ? toJsonInput(output.resolvedReferences) : Prisma.JsonNull;
 }
 
 function mapPersistedQueryUnderstandingResult(result: QueryUnderstandingResult): PersistedQueryUnderstandingResult {

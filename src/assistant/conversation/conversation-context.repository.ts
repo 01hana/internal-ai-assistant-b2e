@@ -96,15 +96,26 @@ export class ConversationContextRepository {
 function toSafeQueryUnderstandingSource(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
+  const envelope = asCapabilityEnvelope(record.resolvedReferences);
   return {
     phrases: record.phrases,
     normalizedTerms: record.normalizedTerms,
     timeRanges: record.timeRanges,
-    resolvedReferences: record.resolvedReferences,
+    resolvedReferences: envelope?.references ?? record.resolvedReferences,
+    ...(envelope ? { capabilityFollowUpFrame: envelope.capabilityFrame } : {}),
     entityCandidates: record.entityCandidates,
     subTasks: record.subTasks,
     confidence: record.confidence
   };
+}
+
+function asCapabilityEnvelope(value: unknown): { references: unknown; capabilityFrame: unknown } | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (keys.length !== 4 || !keys.every((key) => ['version', 'kind', 'references', 'capabilityFrame'].includes(key))) return undefined;
+  if (record.version !== '1' || record.kind !== 'CAPABILITY_FOLLOW_UP_FRAME_ENVELOPE' || !Array.isArray(record.references)) return undefined;
+  return { references: record.references, capabilityFrame: record.capabilityFrame };
 }
 
 interface MessageWithContext {
