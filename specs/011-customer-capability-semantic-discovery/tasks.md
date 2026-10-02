@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/011-customer-capability-semantic-discovery`
 **Input**: Approved `spec.md`, `design.md`, and `plan.md` in this directory
-**Implementation Status**: Phases A–D complete; further implementation is not currently authorized.
+**Implementation Status**: Phases A–E and pre-cutover T061–T065 complete; the pre-cutover gate passed for the reviewed 2026-10-01 deployment snapshot. Phase F / T066+ is not authorized.
 **Testing Rule**: For each runtime behavior, add the named focused test first, retain authentic RED evidence, then implement and retain GREEN evidence. A failing gate is a hard stop.
 
 ## Format and execution boundary
@@ -10,7 +10,7 @@
 - Every task uses `- [ ] TNNN [P?] [US?] Description with exact path`.
 - Task IDs are local to Feature 011 and execute sequentially unless a task explicitly says otherwise.
 - Story labels map to the five approved user stories; shared foundation, migration, retirement, and final-acceptance tasks have no story label.
-- Task execution requires separate human authorization. Phases A–D are complete; T051 is the first unexecuted task and is not currently authorized.
+- Task execution requires separate human authorization. Phases A–E and T061–T065 are complete; T066 is the first unexecuted task and is not currently authorized.
 - Git branch management is human-owned and is not inspected or performed by these tasks.
 
 ## Canonical implementation order
@@ -183,16 +183,26 @@ T040–T041 evidence: `TOOL_REGISTRY_EXISTING_API=MINIMAL_EXTENSION_REQUIRED`. `
 
 **Goal**: Establish pack-backed reference coverage through direct subsystem tests before any production request-path cutover.
 
-- [ ] T051 [US1] Add the product-owned Shinmone V1 pack with `work-orders.count`, enum values `this_month`/`today`, monthly-only semantic constraint, exact `work-orders.monthly-new-count@1.0.0` target, and `mappings=[]` in new `customer-capability-packs/shinmone-scm-local/1.0.0.json`, containing no Connector/API/permission/credential details
-- [ ] T052 [US4] Add the distinct Customer B inventory fixture pack with bounded `itemRef`, no semantic constraint for it, and `itemRef → sku` mapping to `inventory.stock-on-hand@1.0.0` in new `test/fixtures/capability-packs/customer-b-inventory.v1.json`
-- [ ] T053 [US4] Inventory repository-evidenced current Customer A semantic fixtures and add only the required predecessor-compatible pack in new `test/fixtures/capability-packs/customer-a-reference.v1.json`; do not assume unsupported fixture behavior is a supported semantic path
-- [ ] T054 Add immutable pack-path deployment configuration without secrets or hot reload in `.env.example`, `Dockerfile`, `docker-compose.yml`, `dev/connector-local/generate-local-authority.mjs`, and `dev/connector-local/README.md`, mounting checked-in packs read-only and leaving Connector manifests unchanged
-- [ ] T055 [US1] Add authentic RED direct orchestration cases for at least three Shinmone monthly paraphrases, exact `timeRange=this_month`, missing time, `today` unavailable, empty mapped arguments, and exact monthly Tool candidate in new `test/integration/feature011-capability-resolution.spec.ts`
-- [ ] T056 [US4] Add RED direct Customer B and isolation cases for distinct vocabulary, `itemRef → sku`, same generic resolver, and colliding capability/alias/HostApp/organization/actor values with zero foreign reads in `test/integration/feature011-customer-b-portability.spec.ts`
-- [ ] T057 [US2] Add RED direct non-resolved cases proving unknown, missing, invalid, conflicting, unavailable, and ambiguous outcomes create zero ToolCalls and zero Customer requests in `test/integration/feature011-capability-resolution.spec.ts`
-- [ ] T058 [US1] Implement scoped semantic → parameter → binding orchestration behind new `src/capabilities/capability-resolution.service.ts`, composing it in T055–T057 only with a TEST-ONLY bounded audit port/stub that is never registered as a production Nest provider, and return only the approved typed union
-- [ ] T059 Register only pre-cutover capability providers whose real production dependencies already exist in `src/capabilities/capabilities.module.ts` and `src/query-understanding/query-understanding.module.ts`; do not register the test audit stub, do not install a no-op audit provider, do not make `CapabilityResolutionService` request-time authority, and do not require unresolved production audit wiring during bootstrap; record `PRODUCTION_TEST_AUDIT_STUB_REGISTERED=NO` in `specs/011-customer-capability-semantic-discovery/tasks.md`
-- [ ] T060 Run all direct pack/orchestration acceptance plus the active legacy request regressions and record `FEATURE011_GATE_E=PASS`, `PACK_BACKED_REFERENCE_COVERAGE=PASS`, and `CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO` in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
+- [x] T051 [US1] Add the product-owned Shinmone V1 pack with `work-orders.count`, enum values `this_month`/`today`, monthly-only semantic constraint, exact `work-orders.monthly-new-count@1.0.0` target, and `mappings=[]` in new `customer-capability-packs/shinmone-scm-local/1.0.0.json`, containing no Connector/API/permission/credential details
+- [x] T052 [US4] Add the distinct Customer B inventory fixture pack with bounded `itemRef`, no semantic constraint for it, and `itemRef → sku` mapping to `inventory.stock-on-hand@1.0.0` in new `test/fixtures/capability-packs/customer-b-inventory.v1.json`
+- [x] T053 [US4] Inventory repository-evidenced current Customer A semantic fixtures and add only the required predecessor-compatible pack in new `test/fixtures/capability-packs/customer-a-reference.v1.json`; do not assume unsupported fixture behavior is a supported semantic path
+- [x] T054 Add immutable pack-path deployment configuration without secrets or hot reload in `.env.example`, `Dockerfile`, `docker-compose.yml`, `dev/connector-local/generate-local-authority.mjs`, and `dev/connector-local/README.md`, mounting checked-in packs read-only and leaving Connector manifests unchanged
+- [x] T055 [US1] Add authentic RED direct orchestration cases for at least three Shinmone monthly paraphrases, exact `timeRange=this_month`, missing time, `today` unavailable, empty mapped arguments, and exact monthly Tool candidate in new `test/integration/feature011-capability-resolution.spec.ts`
+- [x] T056 [US4] Add RED direct Customer B and isolation cases for distinct vocabulary, `itemRef → sku`, same generic resolver, and colliding capability/alias/HostApp/organization/actor values with zero foreign reads in `test/integration/feature011-customer-b-portability.spec.ts`
+- [x] T057 [US2] Add RED direct non-resolved cases proving unknown, missing, invalid, conflicting, unavailable, and ambiguous outcomes create zero ToolCalls and zero Customer requests in `test/integration/feature011-capability-resolution.spec.ts`
+- [x] T058 [US1] Implement scoped semantic → parameter → binding orchestration behind new `src/capabilities/capability-resolution.service.ts`, composing it in T055–T057 only with a TEST-ONLY bounded audit port/stub that is never registered as a production Nest provider, and return only the approved typed union
+- [x] T059 Register only pre-cutover capability providers whose real production dependencies already exist in `src/capabilities/capabilities.module.ts` and `src/query-understanding/query-understanding.module.ts`; do not register the test audit stub, do not install a no-op audit provider, do not make `CapabilityResolutionService` request-time authority, and do not require unresolved production audit wiring during bootstrap; record `PRODUCTION_TEST_AUDIT_STUB_REGISTERED=NO` in `specs/011-customer-capability-semantic-discovery/tasks.md`
+- [x] T060 Run all direct pack/orchestration acceptance plus the active legacy request regressions and record `FEATURE011_GATE_E=PASS`, `PACK_BACKED_REFERENCE_COVERAGE=PASS`, and `CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO` in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
+
+**Phase E evidence (2026-09-30)**:
+
+- T051–T053: all three checked-in packs passed the closed V1 parser. The Customer A fixture is limited to the four read-only paths evidenced by `test/integration/tool-discovery-mock-equivalence.spec.ts`; exhaustive migration inventory remains T061–T065.
+- T054: checked-in pack is available in the image and through a Compose read-only mount; the local authority generator writes only its absolute path into ignored `backend.env`. `docker compose config --no-interpolate --quiet` and `node --check dev/connector-local/generate-local-authority.mjs` passed; the generator was not executed.
+- T055–T057 authentic RED: each new direct integration suite failed with `TS2307` solely because `capability-resolution.service.ts` did not exist. A later four-path Customer A test exposed insufficient fixture aliases, and the exact monthly user phrasing exposed insufficient Shinmone pack vocabulary; only the respective Customer-owned packs changed before focused GREEN.
+- T058 GREEN: direct Feature 011 integration `17/17` passed, including four Shinmone monthly phrasings, missing and unavailable time ranges, all four evidenced Customer A read paths, Customer B mapping, scoped collision, typed non-resolved outcomes, bounded audit metadata, and fail-closed audit failure. No ToolCall or Customer request was made.
+- T059: semantic and parameter providers are importable before cutover; `CapabilityResolutionService` and the test audit stub are not production Nest providers. Pipeline wiring still proves `ToolDiscoveryService` is the request-time semantic authority. `PRODUCTION_TEST_AUDIT_STUB_REGISTERED=NO`.
+- T060 GREEN: focused unit suites `314/314`, contracts `82/82`, eval `5/5`, direct integration `17/17`, legacy Feature 010/Tool-discovery integrations `50 passed, 6 previously skipped`, root typecheck, Backend build, changed-file lint, and `git diff --check` passed. No listener `EPERM` occurred. The pre-existing Feature 010 scope-boundary state remains `5/6` with only the Shinmone manifest caveat; full formal Feature 010 acceptance is not claimed.
+- `FEATURE011_GATE_E=PASS`; `PACK_BACKED_REFERENCE_COVERAGE=PASS`; `CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO`; `COMPLETED_TASK_RANGE=T001-T060`; `FIRST_UNEXECUTED_TASK=T061`; `NEXT_PHASE_AUTHORIZED=NO`.
 
 **Gate E**: `FEATURE011_GATE_E=PASS`, `PACK_BACKED_REFERENCE_COVERAGE=PASS`, and `CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO`
 
@@ -204,13 +214,33 @@ T040–T041 evidence: `TOOL_REGISTRY_EXISTING_API=MINIMAL_EXTENSION_REQUIRED`. `
 
 **Goal**: Prove every currently supported Tool-backed semantic path is migrated or explicitly unsupported before changing production authority.
 
-- [ ] T061 Exhaustively trace every production/test/fixture/seed/config dependency on `ToolDiscoveryService`, `x-assistant-discovery-v1`, global Tool-backed vocabulary, Tool-name/description discovery, legacy argument binding, and Customer-specific query-understanding branches, recording paths and repository evidence in new `specs/011-customer-capability-semantic-discovery/legacy-semantic-dependency-inventory.md`
-- [ ] T062 Classify every discovered Tool-backed semantic capability exactly once as `MIGRATED_TO_CUSTOMER_CAPABILITY_PACK`, `EXPLICITLY_NOT_A_CURRENT_SUPPORTED_SEMANTIC_PATH`, or `BLOCKER_REQUIRES_PACK_BEFORE_CUTOVER`, with evidence and pack/test references, in `specs/011-customer-capability-semantic-discovery/legacy-semantic-dependency-inventory.md`
-- [ ] T063 Add a fail-closed architecture contract that compares the discovered legacy dependency surface with the evidence-backed classification inventory and rejects unclassified supported paths in new `test/architecture/feature011-legacy-semantic-inventory.guard.spec.ts`
-- [ ] T064 If T061–T063 find any `BLOCKER_REQUIRES_PACK_BEFORE_CUTOVER`, STOP before Phase F and make no pack, semantic capability, or speculative production change; report every blocker with repository paths, existing supported semantic behavior, the current Tool target when safely identifiable, and why Gate E coverage is insufficient in `specs/011-customer-capability-semantic-discovery/legacy-semantic-dependency-inventory.md`, record `PRE_CUTOVER_BLOCKER_FOUND=YES` and `FEATURE011_TASK_AMENDMENT_REQUIRED=YES` in `specs/011-customer-capability-semantic-discovery/tasks.md`, and wait for separate human review/authorization of explicit amended pack and acceptance tasks
-- [ ] T065 Run the inventory guard and direct reference gate again, then record `LEGACY_TOOL_SEMANTIC_DEPENDENCY_INVENTORY=PASS` and `UNMIGRATED_SUPPORTED_TOOL_SEMANTIC_PATHS=0` in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on any nonzero or unsupported classification
+- [x] T061 Exhaustively trace every production/test/fixture/seed/config dependency on `ToolDiscoveryService`, `x-assistant-discovery-v1`, global Tool-backed vocabulary, Tool-name/description discovery, legacy argument binding, and Customer-specific query-understanding branches, recording paths and repository evidence in new `specs/011-customer-capability-semantic-discovery/legacy-semantic-dependency-inventory.md`
+- [x] T062 Classify every discovered Tool-backed semantic capability exactly once as `MIGRATED_TO_CUSTOMER_CAPABILITY_PACK`, `EXPLICITLY_NOT_A_CURRENT_SUPPORTED_SEMANTIC_PATH`, or `BLOCKER_REQUIRES_PACK_BEFORE_CUTOVER`, with evidence and pack/test references, in `specs/011-customer-capability-semantic-discovery/legacy-semantic-dependency-inventory.md`
+- [x] T063 Add a fail-closed architecture contract that compares the discovered legacy dependency surface with the evidence-backed classification inventory and rejects unclassified supported paths in new `test/architecture/feature011-legacy-semantic-inventory.guard.spec.ts`
+- [x] T064 If T061–T063 find any `BLOCKER_REQUIRES_PACK_BEFORE_CUTOVER`, STOP before Phase F and make no pack, semantic capability, or speculative production change; report every blocker with repository paths, existing supported semantic behavior, the current Tool target when safely identifiable, and why Gate E coverage is insufficient in `specs/011-customer-capability-semantic-discovery/legacy-semantic-dependency-inventory.md`, record `PRE_CUTOVER_BLOCKER_FOUND=YES` and `FEATURE011_TASK_AMENDMENT_REQUIRED=YES` in `specs/011-customer-capability-semantic-discovery/tasks.md`, and wait for separate human review/authorization of explicit amended pack and acceptance tasks
+- [x] T065 Run the inventory guard and direct reference gate again, then record `LEGACY_TOOL_SEMANTIC_DEPENDENCY_INVENTORY=PASS` and `UNMIGRATED_SUPPORTED_TOOL_SEMANTIC_PATHS=0` in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on any nonzero or unsupported classification
 
 **Pre-cutover gate**: `LEGACY_TOOL_SEMANTIC_DEPENDENCY_INVENTORY=PASS` and `UNMIGRATED_SUPPORTED_TOOL_SEMANTIC_PATHS=0`
+
+**T061–T064 evidence (2026-10-01)**:
+
+- Traced Assistant → query understanding → legacy discovery metadata → candidate → planning/runtime, with reverse seed, policy and test-fixture evidence. The inventory records stable scoped behavior IDs and 30 concrete dependency-file anchors; architecture guard passed 3/3 focused checks, including rejection of an injected dependency, duplicate anchor and wildcard.
+- Direct, non-executing semantic checks against Phase E packs showed legacy Customer A order and inventory wordings, Customer B inventory seed wording, and Customer A monthly seed wording are not recognized. Existing request-path tests prove Tool execution for Customer A order/inventory and Customer B inventory; the monthly follow-up test proves context-seed use but does not assert seed Tool execution, so support requires human adjudication.
+- `PRE_CUTOVER_BLOCKER_FOUND=YES`; `FEATURE011_TASK_AMENDMENT_REQUIRED=YES`; `LEGACY_TOOL_SEMANTIC_DEPENDENCY_INVENTORY=BLOCKED`; T065 remains unchecked. No pack, production authority, ToolCall or Customer endpoint was changed/invoked.
+
+**T065 prior pending resolution evidence (2026-10-01)**:
+
+- Human product-scope decision defines Customer A/B as `SYNTHETIC_TEST_ONLY_SCOPE`, not deployed support. P02–P10 retain their repository observations and evidence but are now classified as test-only; all Customer A/B packs, fixtures and tests remain unchanged. P01 remains the Shinmone migrated path. The T061–T064 historical blocker observation above is not rewritten.
+- Guard correction authentic RED: a complete in-memory synthetic-scope reclassification failed only on the old fixed `5`-blocker assertion (`1 failed, 3 passed`). After removing only that assertion, focused guard tests passed `4/4`; all path, duplicate, wildcard, evidence and migrated-acceptance guards remain.
+- The confirmed Shinmone local `.env` DB could not be queried safely from this execution environment (`DB_METADATA_QUERY_STATUS=FAILED_SAFE`; local PostgreSQL readiness unavailable). Deployment Tool/policy metadata, including whether an extra request-time semantic path exists, is `NOT_VERIFIED`. T065 gate suites were not run and T065 remains unchecked pending a safe manual metadata result.
+- `SYNTHETIC_CUSTOMER_A_B_TEST_COVERAGE_RETAINED=YES`; `DEPLOYMENT_TOOL_POLICY_METADATA_REVIEWED=NO`; `LEGACY_TOOL_SEMANTIC_DEPENDENCY_INVENTORY=BLOCKED`; `FIRST_UNEXECUTED_TASK=T065`; `NEXT_PHASE_AUTHORIZED=NO`.
+
+**T065 final resolution evidence (2026-10-01)**:
+
+- The human ran the prescribed read-only metadata command against the confirmed current Shinmone Backend DB and supplied `status=PASS`, `customerScopePresent=true`, and one policy row. That row is the sole policy-allowed active read-only, side-effect-free, discoverable Tool: `work-orders.monthly-new-count@1.0.0`. Its discovery metadata is present and valid. This is a reviewed deployment snapshot, not a permanent DB invariant. The exact scope, Tool version, `timeRange=this_month` semantic constraint and empty arguments match P01's Shinmone pack and direct acceptance; `DEPLOYMENT_POLICY_ROW_COUNT=1` and `EXTRA_DEPLOYMENT_SEMANTIC_PATHS=0`.
+- Human product-scope adjudication, followed by this deployment metadata review, resolves the historical T061–T064 blockers without changing or weakening synthetic Customer A/B packs, fixtures or regressions. P01 remains migrated; P02–P12 are explicitly not current deployed read-only semantic paths; the current inventory has zero `BLOCKER_REQUIRES_PACK_BEFORE_CUTOVER` rows. Historical blocker and unavailable-DB evidence above remains intact.
+- T065 gate GREEN: inventory architecture guard `4/4`; Phase E Shinmone/Customer A/B direct integration `17/17`; Customer B portability/isolation plus legacy Tool discovery and Feature 010 follow-up integration `13/13`; pack parser/loader/registry and legacy Tool discovery units `158/158`; capability-pack contract `40/40`; root typecheck, changed-file lint and `git diff --check` PASS. No listener `EPERM` occurred. The Shinmone direct acceptance suite is synthetic and performed no real Customer endpoint call.
+- `LEGACY_TOOL_SEMANTIC_DEPENDENCY_INVENTORY=PASS`; `UNMIGRATED_SUPPORTED_TOOL_SEMANTIC_PATHS=0`; `SYNTHETIC_CUSTOMER_A_B_TEST_COVERAGE_RETAINED=YES`; `DEPLOYMENT_TOOL_POLICY_METADATA_REVIEWED=YES`; `DEPLOYMENT_SEMANTIC_COVERAGE=COMPLETE_FOR_CURRENT_SNAPSHOT`; `PRE_CUTOVER_BLOCKER_FOUND=NO`; `COMPLETED_TASK_RANGE=T001-T065`; `FIRST_UNEXECUTED_TASK=T066`; `NEXT_PHASE_AUTHORIZED=NO`.
 
 ---
 
@@ -353,18 +383,30 @@ This feature has no deployable partial MVP before the atomic cutover. Gates A–
 
 ```text
 FEATURE011_IMPLEMENTATION_AUTHORIZED=NO
-COMPLETED_TASK_RANGE=T001-T050
+COMPLETED_TASK_RANGE=T001-T065
 FEATURE011_GATE_A=PASS
 FEATURE011_GATE_B=PASS
 FEATURE011_GATE_C=PASS
 FEATURE011_GATE_D=PASS
+FEATURE011_GATE_E=PASS
+PACK_BACKED_REFERENCE_COVERAGE=PASS
+PRODUCTION_TEST_AUDIT_STUB_REGISTERED=NO
 EVERY_RESOLVED_PARAMETER_ACCOUNTED_FOR=YES
 SILENT_CANONICAL_PARAMETER_DROP=FORBIDDEN
 CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO
 FEATURE010_BEHAVIOR_PRESERVED=YES
 FEATURE010_BOUNDARY_CONTRACT=5/6
 FEATURE010_BOUNDARY_HASH_MISMATCH=PRE_EXISTING_MANIFEST
-FIRST_UNEXECUTED_TASK=T051
+PRE_CUTOVER_BLOCKER_FOUND=NO
+FEATURE011_TASK_AMENDMENT_REQUIRED=NO_AFTER_HUMAN_SCOPE_DECISION
+LEGACY_TOOL_SEMANTIC_DEPENDENCY_INVENTORY=PASS
+UNMIGRATED_SUPPORTED_TOOL_SEMANTIC_PATHS=0
+SYNTHETIC_CUSTOMER_A_B_TEST_COVERAGE_RETAINED=YES
+DEPLOYMENT_TOOL_POLICY_METADATA_REVIEWED=YES
+DEPLOYMENT_POLICY_ROW_COUNT=1
+EXTRA_DEPLOYMENT_SEMANTIC_PATHS=0
+DEPLOYMENT_SEMANTIC_COVERAGE=COMPLETE_FOR_CURRENT_SNAPSHOT
+FIRST_UNEXECUTED_TASK=T066
 NEXT_PHASE_AUTHORIZED=NO
 IMPLEMENTATION_REQUIRES_SEPARATE_HUMAN_AUTHORIZATION=YES
 REAL_TOOL_INVOCATION_EXECUTED=NO

@@ -1,0 +1,65 @@
+{
+  "version": "1",
+  "packId": "customer-b-inventory",
+  "packVersion": "1.0.0",
+  "customerId": "customer-b",
+  "integrationId": "integration-erp",
+  "hostApps": ["erp"],
+  "active": true,
+  "capabilities": [
+    {
+      "version": "1",
+      "capabilityKey": "inventory.stock",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "庫存現量",
+      "semanticProfiles": [
+        {
+          "version": "1",
+          "locale": "zh-TW",
+          "aliases": ["查詢庫存現量", "料件現量"],
+          "examples": ["查詢料件的庫存現量"],
+          "resourceTerms": ["庫存", "料件"],
+          "intentTerms": ["查詢"],
+          "metricTerms": ["現量", "可用量"],
+          "requiredSignalGroups": ["resource", "metric"]
+        }
+      ],
+      "parameters": [
+        {
+          "version": "1",
+          "parameterName": "itemRef",
+          "type": "bounded_string",
+          "required": true,
+          "semanticTerms": ["料號", "item"],
+          "maxLength": 64,
+          "tokenSyntax": "SAFE_IDENTIFIER",
+          "prefixes": []
+        }
+      ]
+    }
+  ],
+  "bindings": [
+    {
+      "version": "1",
+      "bindingId": "inventory.stock-on-hand",
+      "bindingVersion": "1.0.0",
+      "active": true,
+      "capabilityKey": "inventory.stock",
+      "semanticConstraints": [],
+      "target": {
+        "kind": "TOOL",
+        "toolKey": "inventory.stock-on-hand",
+        "toolVersion": "1.0.0"
+      },
+      "mappings": [
+        {
+          "version": "1",
+          "targetArgument": "sku",
+          "source": "CANONICAL_PARAMETER",
+          "parameterName": "itemRef"
+        }
+      ]
+    }
+  ]
+}

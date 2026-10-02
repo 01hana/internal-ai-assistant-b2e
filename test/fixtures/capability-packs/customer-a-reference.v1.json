@@ -1,0 +1,113 @@
+{
+  "version": "1",
+  "packId": "customer-a-reference",
+  "packVersion": "1.0.0",
+  "customerId": "customer-a",
+  "integrationId": "integration-erp",
+  "hostApps": ["erp"],
+  "active": true,
+  "capabilities": [
+    {
+      "version": "1",
+      "capabilityKey": "orders.status",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "訂單狀態",
+      "semanticProfiles": [{
+        "version": "1", "locale": "zh-TW",
+        "aliases": ["查詢訂單目前狀態"],
+        "examples": ["請幫我查訂單目前狀態"],
+        "resourceTerms": ["訂單"], "intentTerms": ["查詢"], "metricTerms": ["狀態"],
+        "requiredSignalGroups": ["resource", "metric"]
+      }],
+      "parameters": [{
+        "version": "1", "parameterName": "entityRef", "type": "bounded_string",
+        "required": true, "semanticTerms": ["訂單號"], "maxLength": 64,
+        "tokenSyntax": "SAFE_IDENTIFIER", "prefixes": ["SO-"]
+      }]
+    },
+    {
+      "version": "1",
+      "capabilityKey": "work-orders.progress",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "工單進度",
+      "semanticProfiles": [{
+        "version": "1", "locale": "zh-TW",
+        "aliases": ["查詢工單進度", "工單進度"],
+        "examples": ["請查工單進度"],
+        "resourceTerms": ["工單"], "intentTerms": ["查詢"], "metricTerms": ["進度"],
+        "requiredSignalGroups": ["resource", "metric"]
+      }],
+      "parameters": [{
+        "version": "1", "parameterName": "entityRef", "type": "bounded_string",
+        "required": true, "semanticTerms": ["工單號"], "maxLength": 64,
+        "tokenSyntax": "SAFE_IDENTIFIER", "prefixes": ["WO-"]
+      }]
+    },
+    {
+      "version": "1",
+      "capabilityKey": "inventory.availability",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "庫存可用量",
+      "semanticProfiles": [{
+        "version": "1", "locale": "zh-TW",
+        "aliases": ["查詢庫存可用量", "庫存可用量"],
+        "examples": ["請查庫存可用量"],
+        "resourceTerms": ["庫存"], "intentTerms": ["查詢"], "metricTerms": ["可用量"],
+        "requiredSignalGroups": ["resource", "metric"]
+      }],
+      "parameters": [{
+        "version": "1", "parameterName": "entityRef", "type": "bounded_string",
+        "required": true, "semanticTerms": ["料號"], "maxLength": 64,
+        "tokenSyntax": "SAFE_IDENTIFIER", "prefixes": ["SKU-"]
+      }]
+    },
+    {
+      "version": "1",
+      "capabilityKey": "business-partners.history",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "往來對象歷史",
+      "semanticProfiles": [{
+        "version": "1", "locale": "zh-TW",
+        "aliases": ["查詢這筆客戶歷史", "客戶歷史"],
+        "examples": ["請查這筆客戶歷史"],
+        "resourceTerms": ["客戶", "供應商"], "intentTerms": ["查詢"], "metricTerms": ["歷史"],
+        "requiredSignalGroups": ["resource", "metric"]
+      }],
+      "parameters": [{
+        "version": "1", "parameterName": "entityRef", "type": "bounded_string",
+        "required": true, "semanticTerms": ["對象編號"], "maxLength": 64,
+        "tokenSyntax": "SAFE_IDENTIFIER", "prefixes": ["BP-", "CUST-"]
+      }]
+    }
+  ],
+  "bindings": [
+    {
+      "version": "1", "bindingId": "orders.status", "bindingVersion": "1.0.0", "active": true,
+      "capabilityKey": "orders.status", "semanticConstraints": [],
+      "target": { "kind": "TOOL", "toolKey": "mock.orders.status.lookup", "toolVersion": "1.0.0" },
+      "mappings": [{ "version": "1", "targetArgument": "entityId", "source": "CANONICAL_PARAMETER", "parameterName": "entityRef" }]
+    },
+    {
+      "version": "1", "bindingId": "work-orders.progress", "bindingVersion": "1.0.0", "active": true,
+      "capabilityKey": "work-orders.progress", "semanticConstraints": [],
+      "target": { "kind": "TOOL", "toolKey": "mock.work-orders.progress.lookup", "toolVersion": "1.0.0" },
+      "mappings": [{ "version": "1", "targetArgument": "entityId", "source": "CANONICAL_PARAMETER", "parameterName": "entityRef" }]
+    },
+    {
+      "version": "1", "bindingId": "inventory.availability", "bindingVersion": "1.0.0", "active": true,
+      "capabilityKey": "inventory.availability", "semanticConstraints": [],
+      "target": { "kind": "TOOL", "toolKey": "mock.inventory.availability.lookup", "toolVersion": "1.0.0" },
+      "mappings": [{ "version": "1", "targetArgument": "entityId", "source": "CANONICAL_PARAMETER", "parameterName": "entityRef" }]
+    },
+    {
+      "version": "1", "bindingId": "business-partners.history", "bindingVersion": "1.0.0", "active": true,
+      "capabilityKey": "business-partners.history", "semanticConstraints": [],
+      "target": { "kind": "TOOL", "toolKey": "mock.business-partner.history.lookup", "toolVersion": "1.0.0" },
+      "mappings": [{ "version": "1", "targetArgument": "entityId", "source": "CANONICAL_PARAMETER", "parameterName": "entityRef" }]
+    }
+  ]
+}

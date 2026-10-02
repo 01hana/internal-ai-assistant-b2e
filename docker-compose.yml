@@ -13,12 +13,15 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       LLM_MODEL: ${LLM_MODEL}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '${ASSISTANT_CAPABILITY_PACK_PATHS_JSON:-["/app/customer-capability-packs/shinmone-scm-local/1.0.0.json"]}'
       ENABLE_RUNTIME_DEBUG: ${ENABLE_RUNTIME_DEBUG:-false}
       ENABLE_REDIS: ${ENABLE_REDIS:-false}
       ENABLE_SWAGGER_DOCS: ${ENABLE_SWAGGER_DOCS:-false}
       SWAGGER_PATH: ${SWAGGER_PATH:-docs}
     ports:
       - "3000:3000"
+    volumes:
+      - ./customer-capability-packs:/app/customer-capability-packs:ro
     depends_on:
       postgres:
         condition: service_healthy

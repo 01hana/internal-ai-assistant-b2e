@@ -11,6 +11,7 @@ const centralKeyPath = join(localRoot, 'central/central-service-private.pem');
 const bridgeKeyPath = join(localRoot, 'bridge/bridge-binding-private.pem');
 const manifestSource = join(root, 'apps/customer-connector-runtime/integrations/shinmone/work-orders.monthly-new-count.manifest.json');
 const manifestPath = join(localRoot, 'runtime/work-orders.monthly-new-count.manifest.json');
+const capabilityPackPath = join(root, 'customer-capability-packs/shinmone-scm-local/1.0.0.json');
 const overlayEnvironment = readEnvironment(join(root, 'dev/connector-local/.env'));
 const localLanIp = overlayEnvironment.LOCAL_LAN_IP;
 const runtimeFacadePort = overlayEnvironment.LOCAL_CONNECTOR_RUNTIME_HTTPS_PORT;
@@ -108,6 +109,7 @@ const runtimeEnvironment = {
 };
 
 const backendEnvironment = {
+  ASSISTANT_CAPABILITY_PACK_PATHS_JSON: json([capabilityPackPath]),
   ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON: json([{
     version: '1', active: true, ...context, connectorKey,
     operations: [{ key: 'work-orders.monthly-new-count', version: '1.0.0' }]

@@ -5,6 +5,8 @@ import { EnvironmentVariables } from '../common/config/env.validation';
 import { ToolsModule } from '../tools/tools.module';
 import { CapabilityCatalogRegistry } from './capability-catalog.registry';
 import { CapabilityBindingResolverService } from './capability-binding-resolver.service';
+import { CapabilityParameterResolverService } from './capability-parameter-resolver.service';
+import { CapabilitySemanticResolverService } from './capability-semantic-resolver.service';
 import {
   CAPABILITY_PACK_FILE_ACCESS,
   CapabilityPackLoader,
@@ -28,10 +30,12 @@ class CapabilityPackBootstrapInitializer implements OnApplicationBootstrap {
   providers: [
     CapabilityCatalogRegistry,
     CapabilityBindingResolverService,
+    CapabilityParameterResolverService,
+    CapabilitySemanticResolverService,
     CapabilityPackLoader,
     CapabilityPackBootstrapInitializer,
     { provide: CAPABILITY_PACK_FILE_ACCESS, useValue: NODE_CAPABILITY_PACK_FILE_ACCESS }
   ],
-  exports: [CapabilityCatalogRegistry, CapabilityBindingResolverService]
+  exports: [CapabilityCatalogRegistry, CapabilityBindingResolverService, CapabilityParameterResolverService, CapabilitySemanticResolverService]
 })
 export class CapabilitiesModule {}

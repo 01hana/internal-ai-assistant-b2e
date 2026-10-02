@@ -75,6 +75,8 @@ Generated material is stored under ignored `.local-secrets/connector-local`. The
 
 The generated `backend.env` and `bridge.env` are configuration inputs for later local service restarts. Generating them does not activate a Tool or mint a Shinmone credential. A real executable binding must still come from the logged-in Bridge/IDX flow.
 
+The generated `backend.env` also points `ASSISTANT_CAPABILITY_PACK_PATHS_JSON` at the absolute path of the checked-in Shinmone capability pack. Keep the checked-in pack immutable for the Backend process. The Docker image includes it and Compose mounts the directory read-only; a local Node process uses the absolute checkout path. Pack loading at startup does not switch the Assistant request path from its current Tool discovery authority. To start with an empty ready catalog instead, configure `ASSISTANT_CAPABILITY_PACK_PATHS_JSON=[]`.
+
 ## 4. Start and verify the overlay
 
 Build the existing Connector Runtime, start it with the production Shinmone registration and project-scoped CA, then start the overlay:

@@ -8,9 +8,10 @@ import { RuleBasedQueryUnderstandingPipeline } from './rule-based-query-understa
 import { ToolsModule } from '../tools/tools.module';
 import { ConversationSemanticReconstructorService } from '../assistant/conversation/conversation-semantic-reconstructor.service';
 import { FollowUpSemanticResolverService } from '../assistant/conversation/follow-up-semantic-resolver.service';
+import { CapabilitiesModule } from '../capabilities/capabilities.module';
 
 @Module({
-  imports: [PrismaModule, AuditModule, ToolsModule],
+  imports: [PrismaModule, AuditModule, ToolsModule, CapabilitiesModule],
   providers: [
     QueryUnderstandingRepository,
     QueryUnderstandingService,
