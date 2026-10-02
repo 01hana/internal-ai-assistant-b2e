@@ -14,7 +14,7 @@ describe('Feature 010 Tool-only grounded retrieval (T055)', () => {
 
   it('uses current discovery and authority for exactly one projected Tool evidence item', async () => {
     const before = { tools: state.toolCalls.length, retrievals: state.retrievalRuns.length };
-    const response = await send('req-f010-tool-lane', '請查 SKU-DEMO-RED 目前庫存');
+    const response = await send('req-f010-tool-lane', '查詢庫存可用量 料號 SKU-DEMO-RED');
     expect(parseSseResponse(response.text).map((event) => event.event)).toEqual([
       'tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final'
     ]);
@@ -31,7 +31,7 @@ describe('Feature 010 Tool-only grounded retrieval (T055)', () => {
     const policy = state.customerToolPolicies.find((item) => item.toolDefinitionId === 'tool-definition-inventory-001')!;
     policy.enabled = false;
     const before = { tools: state.toolCalls.length, evidence: state.evidenceRefs.length };
-    const response = await send('req-f010-tool-denied', '請查 SKU-DEMO-BLUE 目前庫存');
+    const response = await send('req-f010-tool-denied', '查詢庫存可用量 料號 SKU-DEMO-BLUE');
     expect(state.evidenceRefs).toHaveLength(before.evidence);
     expect(state.toolCalls.length).toBeLessThanOrEqual(before.tools + 1);
     expect(parseSseResponse(response.text).some((event) => event.event === 'evidence_attached')).toBe(false);

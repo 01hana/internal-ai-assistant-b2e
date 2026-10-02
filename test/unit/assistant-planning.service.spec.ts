@@ -30,10 +30,9 @@ describe('AssistantPlanningService', () => {
         candidateTools: [
           {
             key: 'mock.inventory.availability.lookup',
+            version: '1.0.0',
             arguments: {
-              entityId: 'SKU-DEMO-RED',
-              sql: 'SELECT phase3_planner_secret',
-              connectorContextRef: 'ccr_phase3_planner_secret'
+              entityId: 'SKU-DEMO-RED'
             },
             reason: 'inventory availability query',
             operation: 'delete',
@@ -112,6 +111,7 @@ describe('AssistantPlanningService', () => {
           candidateTools: [
             {
               key: 'mock.inventory.availability.lookup',
+              version: '1.0.0',
               arguments: { entityId: 'SKU-DEMO-RED' },
               reason: 'inventory availability query'
             }
@@ -294,5 +294,18 @@ describe('AssistantPlanningService', () => {
         requiredEvidence: []
       })
     ).toBe(ExecutionDecision.clarify);
+  });
+
+  it('does not let lane-local capability unavailability bypass an independent blocking clarification', () => {
+    expect(determinePlanningDecision({
+      taskType: 'general_lookup', sentences: [], tokens: [], phrases: [], normalizedTerms: [],
+      timeRanges: [], resolvedReferences: [], entityCandidates: [], subTasks: [], candidateTools: [],
+      riskLevel: RiskLevel.low, confidence: 0.8, requiredEvidence: [],
+      clarificationNeeds: [{ type: 'follow_up', reason: 'AMBIGUOUS_REFERENCE', question: '請補充查詢目標。', blocking: true }],
+      capabilityResolution: { version: '1', outcome: 'CAPABILITY_UNAVAILABLE',
+        reasonCode: 'NO_COMPATIBLE_ACTIVE_BINDING',
+        capability: { packId: 'pack-a', packVersion: '1.0.0', capabilityKey: 'orders.count', safeLabel: '訂單' },
+        parameters: {} }
+    })).toBe(ExecutionDecision.clarify);
   });
 });

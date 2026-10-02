@@ -1,6 +1,7 @@
 import { Prisma } from '../generated/prisma/client';
 import { RiskLevel } from '../generated/prisma/enums';
 import { HostIntegrationContext } from '../host-integration/host-integration.types';
+import type { CapabilityResolutionResultV1 } from '../capabilities/capability-pack.types';
 import { NormalizedPageContext } from '../assistant/page-context/page-context.types';
 import type { BoundedConversationContext } from '../assistant/conversation/conversation.types';
 import type {
@@ -94,6 +95,7 @@ export interface QueryUnderstandingClarificationNeed {
 
 export interface QueryUnderstandingToolCandidate {
   readonly key: string;
+  readonly version?: string;
   readonly arguments: Readonly<Record<string, unknown>>;
   readonly reason: string;
 }
@@ -117,6 +119,7 @@ export interface QueryUnderstandingOutput {
   readonly followUpResolution?: FollowUpResolutionDecision;
   readonly currentCapabilityFrame?: CapabilityFollowUpFrameV1;
   readonly capabilityFollowUpResolution?: CapabilityFollowUpResolutionDecisionV1;
+  readonly capabilityResolution?: CapabilityResolutionResultV1;
 }
 
 export interface PersistedQueryUnderstandingResult {

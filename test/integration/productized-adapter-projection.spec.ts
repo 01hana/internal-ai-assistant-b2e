@@ -149,6 +149,9 @@ function runtimeToolRegistry(tool: ReturnType<typeof definition>) {
     resolveToolForCustomer: jest.fn().mockResolvedValue({
       resolved: { tool, requiredRoles: [], requiredPermissionScopes: [] }
     }),
+    resolveExactToolForCustomer: jest.fn().mockResolvedValue({
+      resolved: { tool, requiredRoles: [], requiredPermissionScopes: [] }
+    }),
     resolveExactExecutableTool: jest.fn().mockResolvedValue({ tool }),
     isExecutableReadOnly: jest.fn().mockReturnValue(true),
     validateNamedOperation: jest.fn().mockReturnValue({
@@ -192,7 +195,7 @@ function runtimeInput(): AssistantReadonlyRuntimeInput {
     executionPlan: {
       id: 'plan-b', customerId: 'customer-b', sessionId: 'session-b', messageId: 'message-user-b',
       taskType: 'inventory_lookup', requiredEvidence: [],
-      candidateTools: [{ key: 'inventory.stock-on-hand', arguments: { sku: 'SKU-001' }, reason: 'stock lookup' }],
+      candidateTools: [{ key: 'inventory.stock-on-hand', version: '1.0.0', arguments: { sku: 'SKU-001' }, reason: 'stock lookup' }],
       permissionChecks: [], riskAssessment: RiskLevel.low, clarificationNeeds: null,
       expectedAnswerShape: {}, requiresMultiStepToolUse: false,
       decision: ExecutionDecision.continue, createdAt: new Date()

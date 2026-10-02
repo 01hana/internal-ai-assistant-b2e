@@ -23,7 +23,7 @@ describe('Feature 010 public compatibility contract (T075)', () => {
 
   it.each([
     ['document', 'req-f010-public-doc', '退貨流程 SOP 怎麼說？', { module: 'orders', visibleColumns: ['status'] }, ['answer_delta', 'final']],
-    ['tool', 'req-f010-public-tool', '請查 SKU-DEMO-RED 目前庫存', inventoryPage(),
+    ['tool', 'req-f010-public-tool', '查詢庫存可用量 料號 SKU-DEMO-RED', inventoryPage(),
       ['tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final']],
     ['clarification', 'req-f010-public-clarify', '那個呢？', { module: 'orders', visibleColumns: [] }, ['answer_delta', 'final']]
   ])('preserves the %s SSE event order and envelope without publishing internal bundle fields', async (_name, requestId, message, pageContext, expectedEvents) => {

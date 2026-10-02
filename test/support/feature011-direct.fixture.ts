@@ -32,8 +32,12 @@ function referenceTool(key: string, customerId: string, argument?: string): read
   }];
 }
 
-export async function createFeature011DirectHarness(relativePaths: readonly string[]) {
+export async function createFeature011DirectHarness(
+  relativePaths: readonly string[],
+  options: Readonly<{ additionalMonthlyToolPolicyCustomerIds?: readonly string[] }> = {}
+) {
   const validator = new ToolRegistryService({} as never, {} as never);
+  const additionalMonthlyPolicyCustomers = new Set(options.additionalMonthlyToolPolicyCustomerIds ?? []);
   const tools = {
     resolveExactExecutableTool: jest.fn(async (key: string, version: string) => {
       const tool = definitions[key];
@@ -42,7 +46,9 @@ export async function createFeature011DirectHarness(relativePaths: readonly stri
     resolveExactToolForCustomer: jest.fn(async (key: string, version: string, customerId: string) => {
       const tool = definitions[key];
       const owner = (tool as RegisteredToolDefinition & { fixtureCustomerId?: string } | undefined)?.fixtureCustomerId;
-      return tool && tool.version === version && owner === customerId
+      return tool && tool.version === version && (
+        owner === customerId || (key === 'work-orders.monthly-new-count' && additionalMonthlyPolicyCustomers.has(customerId))
+      )
         ? { resolved: { tool, requiredRoles: [], requiredPermissionScopes: [] } }
         : { deniedReason: 'customer_policy_denied' };
     }),

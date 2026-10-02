@@ -6,8 +6,12 @@ import {
   freezeCapabilityResolutionResultV1
 } from './capability-parameter-resolver.service';
 import { CapabilitySemanticResolverService } from './capability-semantic-resolver.service';
+import { Inject, Injectable } from '@nestjs/common';
+import type { CustomerScope } from '../identity/customer-scope.types';
+import type { CapabilityFollowUpFrameV1 } from '../assistant/conversation/conversation.types';
 
 export interface CapabilityResolutionAuditMetadataV1 {
+  readonly auditContext?: Readonly<{ customerScope: CustomerScope; requestId: string; sessionId: string; messageId: string }>;
   readonly scope: CapabilityCatalogScope;
   readonly packId?: string;
   readonly packVersion?: string;
@@ -25,6 +29,8 @@ export interface CapabilityResolutionAuditPort {
 }
 
 export interface CapabilityResolutionInput {
+  readonly auditContext?: CapabilityResolutionAuditMetadataV1['auditContext'];
+  readonly followUpFrame?: CapabilityFollowUpFrameV1;
   readonly scope: CapabilityCatalogScope;
   readonly text: string;
   readonly currentValues?: Readonly<Record<string, unknown>>;
@@ -32,13 +38,14 @@ export interface CapabilityResolutionInput {
   readonly inheritedValues?: Readonly<Record<string, unknown>>;
 }
 
+@Injectable()
 export class CapabilityResolutionService {
   constructor(
     private readonly registry: CapabilityCatalogRegistry,
     private readonly semantic: CapabilitySemanticResolverService,
     private readonly parameters: CapabilityParameterResolverService,
     private readonly bindings: CapabilityBindingResolverService,
-    private readonly audit: CapabilityResolutionAuditPort
+    @Inject('CapabilityResolutionAuditPort') private readonly audit: CapabilityResolutionAuditPort
   ) {}
 
   async resolve(input: CapabilityResolutionInput): Promise<CapabilityResolutionResultV1> {
@@ -55,7 +62,8 @@ export class CapabilityResolutionService {
       : notRecognized();
     const closed = freezeCapabilityResolutionResultV1(result);
     try {
-      await this.audit.record(auditMetadata(scope, catalog, closed, Date.now() - started));
+      await this.audit.record({ ...auditMetadata(scope, catalog, closed, Date.now() - started),
+        ...(input.auditContext ? { auditContext: input.auditContext } : {}) });
     } catch {
       throw new Error('CAPABILITY_RESOLUTION_AUDIT_FAILED');
     }
@@ -66,6 +74,28 @@ export class CapabilityResolutionService {
     catalog: ScopedCapabilityCatalogV1,
     input: CapabilityResolutionInput
   ): Promise<CapabilityResolutionResultV1> {
+    if (input.followUpFrame) {
+      const frame = input.followUpFrame;
+      if (frame.scope.customerId !== catalog.customerId || frame.scope.integrationId !== catalog.integrationId ||
+        frame.scope.hostApp !== catalog.hostApp || frame.packId !== catalog.packId || frame.packVersion !== catalog.packVersion) {
+        return notRecognized();
+      }
+      const hinted = catalog.capabilities.find((entry) => entry.active && entry.capabilityKey === frame.capabilityKey);
+      if (!hinted) return notRecognized();
+      const frameNames = frame.parameters.map((entry) => entry.parameterName);
+      if (new Set(frameNames).size !== frameNames.length ||
+        frameNames.some((name) => !hinted.parameters.some((parameter) => parameter.parameterName === name))) {
+        return notRecognized();
+      }
+      const reference = { packId: catalog.packId, packVersion: catalog.packVersion,
+        capabilityKey: hinted.capabilityKey, safeLabel: hinted.safeLabel };
+      const frameValues = Object.fromEntries(frame.parameters.map((entry) => [entry.parameterName, entry.value]));
+      const selectedParameters = this.parameters.resolve({ capability: hinted, capabilityRef: reference,
+        text: input.text, currentValues: frameValues,
+        pageContextValues: input.pageContextValues, inheritedValues: input.inheritedValues });
+      return selectedParameters.status === 'ISSUES' ? selectedParameters.result
+        : this.bindings.resolve(catalog, hinted.capabilityKey, selectedParameters.parameters);
+    }
     const signals: Record<string, readonly string[]> = {};
     for (const capability of catalog.capabilities) {
       if (!capability.active) continue;

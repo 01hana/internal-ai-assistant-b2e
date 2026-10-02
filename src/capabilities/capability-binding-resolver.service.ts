@@ -25,9 +25,9 @@ export class CapabilityBindingResolverService {
       const capability = capabilities.get(binding.capabilityKey);
       if (!capability) invalid();
       validateDeclaration(capability, binding);
-      const resolved = await this.resolveExactTool(binding, catalog.customerId);
-      if (!resolved.resolved) invalid();
-      validateToolContract(capability, binding, resolved.resolved.tool);
+      const resolved = await this.resolveExactTool(binding);
+      if (!resolved.tool) invalid();
+      validateToolContract(capability, binding, resolved.tool);
     }
     for (let left = 0; left < activeBindings.length; left++) {
       for (let right = left + 1; right < activeBindings.length; right++) {
@@ -63,9 +63,9 @@ export class CapabilityBindingResolverService {
     }
     if (compatible.length !== 1) invalid();
     const binding = compatible[0];
-    const resolved = await this.resolveExactTool(binding, catalog.customerId);
-    if (!resolved.resolved) invalid();
-    validateToolContract(capability, binding, resolved.resolved.tool);
+    const resolved = await this.resolveExactTool(binding);
+    if (!resolved.tool) invalid();
+    validateToolContract(capability, binding, resolved.tool);
     const args: Record<string, CanonicalParameterValueV1> = {};
     for (const mapping of binding.mappings) {
       if (mapping.source === 'BOUND_CONSTANT') args[mapping.targetArgument] = mapping.value;
@@ -73,7 +73,7 @@ export class CapabilityBindingResolverService {
     }
     let validation: ReturnType<ToolRegistryService['validateNamedOperation']>;
     try {
-      validation = this.tools.validateNamedOperation(resolved.resolved.tool, { arguments: args });
+      validation = this.tools.validateNamedOperation(resolved.tool, { arguments: args });
     } catch {
       invalid();
     }
@@ -81,13 +81,13 @@ export class CapabilityBindingResolverService {
     return Object.freeze({
       version: '1', outcome: 'RESOLVED', capability: reference, parameters: Object.freeze({ ...parameters }),
       bindingRef: Object.freeze({ bindingId: binding.bindingId, bindingVersion: binding.bindingVersion }),
-      toolCandidate: Object.freeze({ key: resolved.resolved.tool.key, version: resolved.resolved.tool.version, arguments: validation.operation.arguments, reason: 'customer_capability_binding' })
+      toolCandidate: Object.freeze({ key: resolved.tool.key, version: resolved.tool.version, arguments: validation.operation.arguments, reason: 'customer_capability_binding' })
     });
   }
 
-  private async resolveExactTool(binding: CapabilityBindingV1, customerId: string) {
+  private async resolveExactTool(binding: CapabilityBindingV1) {
     try {
-      return await this.tools.resolveExactToolForCustomer(binding.target.toolKey, binding.target.toolVersion, customerId);
+      return await this.tools.resolveExactExecutableTool(binding.target.toolKey, binding.target.toolVersion);
     } catch {
       invalid();
     }

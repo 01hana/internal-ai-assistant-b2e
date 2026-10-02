@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { resolve } from 'node:path';
 import { Test } from '@nestjs/testing';
 import {
   AssistantMessageRole,
@@ -432,6 +433,7 @@ export type Us1TestState = MockState;
 export type { InternalIdentityTestConfig } from './internal-identity-test-module.helper';
 
 export type Us1TestAppOptions = {
+  capabilityPackPaths?: readonly string[];
   internalIdentity?: InternalIdentityTestConfig;
   /** Retains the production remote-JWKS verifier for transport-level identity tests. */
   internalIdentityVerifierMode?: 'static' | 'remote';
@@ -458,6 +460,12 @@ export async function createUs1TestAppWithState(
   process.env.INTERNAL_IDENTITY_JWKS_URI = options.internalIdentity?.jwksUri ?? 'https://gateway.test.internal/.well-known/jwks.json';
   process.env.ENABLE_SWAGGER_DOCS = 'false';
   process.env.SWAGGER_PATH = 'docs';
+  process.env.ASSISTANT_CAPABILITY_PACK_PATHS_JSON = JSON.stringify(
+    (options.capabilityPackPaths ?? [
+      'test/fixtures/capability-packs/customer-a-reference.v1.json',
+      'test/fixtures/capability-packs/customer-b-inventory.v1.json'
+    ]).map((path) => resolve(path))
+  );
 
   const state = createInitialState();
   const prismaMock = createPrismaMock(state);

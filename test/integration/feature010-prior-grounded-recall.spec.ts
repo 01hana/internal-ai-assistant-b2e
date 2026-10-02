@@ -4,6 +4,7 @@ import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, Us1
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 import { AssistantPlanningService } from '../../src/assistant/planning/assistant-planning.service';
 import { PriorGroundedContextService } from '../../src/assistant/grounding/prior-grounded-context.service';
+import { ConversationContextLoaderService } from '../../src/assistant/conversation/conversation-context-loader.service';
 import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
 import { CUSTOMER_SCOPE_FIXTURES, createCustomerScopeFixtureIdentityContext } from '../support/customer-scope-fixtures';
 
@@ -17,7 +18,7 @@ describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
   afterEach(async () => app.close());
 
   it('reuses a complete Hybrid evidence set with zero new lane calls', async () => {
-    await send('req-f010-recall-seed', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式');
+    await send('req-f010-recall-seed', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式');
     const ids = evidenceIds('req-f010-recall-seed');
     const before = counts();
     const planning = app.get(AssistantPlanningService);
@@ -39,7 +40,15 @@ describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
     expect(counts()).toEqual(before);
     expect(metadata('req-f010-doc-recall')).toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY', coverage: 'COMPLETE' }));
 
-    await send('req-f010-tool-seed', '請查 SKU-DEMO-RED 目前庫存');
+    await send('req-f010-tool-seed', '查詢庫存可用量 料號 SKU-DEMO-RED');
+    expect(state.queryUnderstandingResults.find((item) => item.requestId === 'req-f010-tool-seed')?.resolvedReferences)
+      .toMatchObject({ kind: 'CAPABILITY_FOLLOW_UP_FRAME_ENVELOPE' });
+    const loaded = await app.get(ConversationContextLoaderService).load({ scope: {
+      customerId: 'customer-a', sessionId: 'session-owned-001', organizationId: 'org-shared',
+      hostApp: 'erp', actorId: 'actor-shared'
+    } });
+    expect({ exchanges: loaded.exchanges.length, rejectionCodes: loaded.rejectedReasonCodes,
+      capabilityFrames: loaded.capabilityFrames?.length }).toEqual({ exchanges: 3, rejectionCodes: [], capabilityFrames: 1 });
     before = counts();
     await send('req-f010-tool-recall', '你剛說庫存是多少？');
     expect(counts()).toEqual(before);
@@ -63,7 +72,7 @@ describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
   });
 
   it('does not reuse stale or currently unauthorized Tool evidence', async () => {
-    await send('req-f010-tool-stale-seed', '請查 SKU-DEMO-RED 目前庫存');
+    await send('req-f010-tool-stale-seed', '查詢庫存可用量 料號 SKU-DEMO-RED');
     const stale = state.evidenceRefs.find((item) => item.requestId === 'req-f010-tool-stale-seed')!;
     stale.timestamp = new Date('2020-01-01T00:00:00.000Z');
     let before = counts();
@@ -71,11 +80,13 @@ describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
     expect(counts().tools).toBe(before.tools + 1);
     expect(metadata('req-f010-tool-stale')).not.toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
 
-    await send('req-f010-tool-policy-seed', '請查 SKU-DEMO-RED 目前庫存');
+    await send('req-f010-tool-policy-seed', '查詢庫存可用量 料號 SKU-DEMO-RED');
     state.customerToolPolicies.find((item) => item.toolDefinitionId === 'tool-definition-inventory-001')!.enabled = false;
     before = counts();
     await send('req-f010-tool-policy', '你剛說庫存是多少？');
-    expect(counts().tools).toBe(before.tools);
+    expect(counts().tools).toBe(before.tools + 1);
+    expect(state.toolCalls.at(-1)).toMatchObject({ status: 'blocked', executionStatus: 'not_started' });
+    expect(evidenceIds('req-f010-tool-policy')).toEqual([]);
     expect(metadata('req-f010-tool-policy')).not.toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
   });
 

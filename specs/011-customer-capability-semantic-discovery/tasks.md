@@ -2,7 +2,7 @@
 
 **Canonical Feature Path**: `specs/011-customer-capability-semantic-discovery`
 **Input**: Approved `spec.md`, `design.md`, and `plan.md` in this directory
-**Implementation Status**: Phases A–E and pre-cutover T061–T065 complete; the pre-cutover gate passed for the reviewed 2026-10-01 deployment snapshot. Phase F / T066+ is not authorized.
+**Implementation Status**: Phases A–F and pre-cutover T061–T065 complete; Gate F passed its focused checkpoint. T078 is the first incomplete task and further implementation requires separate human authorization.
 **Testing Rule**: For each runtime behavior, add the named focused test first, retain authentic RED evidence, then implement and retain GREEN evidence. A failing gate is a hard stop.
 
 ## Format and execution boundary
@@ -10,7 +10,7 @@
 - Every task uses `- [ ] TNNN [P?] [US?] Description with exact path`.
 - Task IDs are local to Feature 011 and execute sequentially unless a task explicitly says otherwise.
 - Story labels map to the five approved user stories; shared foundation, migration, retirement, and final-acceptance tasks have no story label.
-- Task execution requires separate human authorization. Phases A–E and T061–T065 are complete; T066 is the first unexecuted task and is not currently authorized.
+- Task execution requires separate human authorization. Phases A–F and T061–T065 are complete; T078 is the first incomplete task. No further phase execution is currently authorized.
 - Git branch management is human-owned and is not inspected or performed by these tasks.
 
 ## Canonical implementation order
@@ -244,26 +244,52 @@ T040–T041 evidence: `TOOL_REGISTRY_EXISTING_API=MINIMAL_EXTENSION_REQUIRED`. `
 
 ---
 
+### Human-approved Phase F policy/Hybrid amendment
+
+The first Phase F cutover attempt stopped at its hard-stop boundary: current binding resolution treated dynamic CustomerToolPolicy denial as preventing semantic candidate release. That authentic conflict would pre-empt Feature 010's existing Hybrid rule where a denied Tool lane plus a covered Document lane yields `PARTIAL`. All unaccepted production/test changes from that attempt were reverted; the prior baseline was restored, and T066 remains the first unexecuted task. Gate D's historical `PASS` and T040–T050 evidence above remain accurate for the then-approved contract; the attempt exposed a cross-feature ownership conflict not represented by that contract, not a retroactive Gate D failure.
+
+The approved forward correction keeps four capability outcomes. Static pack/binding validity uses exact active read-only side-effect-free ToolDefinition and schema compatibility, not dynamic policy enablement. A semantically compatible binding can release a version-pinned `RESOLVED` planning candidate despite later policy denial; candidate release never authorizes execution. `CAPABILITY_UNAVAILABLE` means only no semantically/parameter-compatible active scoped binding and projects to a lane-local unsupported Tool need. The existing Tool lane retains current CustomerToolPolicy, permission, roles/scopes, exact-version and schema authority; Feature 010 alone computes Hybrid `PARTIAL` or `INSUFFICIENT`. Phase F must first prove the corrected RED/GREEN cases below, then switch authority atomically. No Phase F task is marked complete by this documentation amendment.
+
+### Human-approved Phase F test-migration amendment (2026-10-02)
+
+- `test/integration/tool-discovery-mock-equivalence.spec.ts` is a `LEGACY_AUTHORITY_COUPLED_INTEGRATION`. Its `metadata_discovery` candidate reason and request-time key-only `resolveToolForCustomer` assertion describe legacy implementation, not permanent Gate F product invariants. Do not skip or delete the test in this reconciliation. T066/T071/T075 must provide `PACK_BACKED_TOOL_EQUIVALENCE` successor coverage for scoped capability selection, a version-pinned Tool candidate, exact Tool key and mapped arguments, permission enforcement, ToolCall lifecycle, projection, EvidenceRef, final answer decision, Customer isolation, and zero request-time `ToolDiscoveryService` calls. Retain isolated `test/unit/tool-discovery.service.spec.ts` until Phase H; it does not prove request-time authority.
+- `test/integration/feature010-followup-routing.spec.ts` is a Feature 010 `REPLACE(timeRange)`/unsupported/zero-execution/`INSUFFICIENT` regression, not a deployed Customer A monthly capability promise. Its test-only `customer-a/integration-erp/erp` monthly catalog declares `this_month` and, by explicit human decision, valid canonical `last_month`; only `this_month` has a binding to `work-orders.monthly-new-count@1.0.0` with `{}` arguments. This resolves the observed frame-to-parameter contract gap without changing the production Shinmone enum or adding a `last_month` binding. The request-path assertions remain unchanged until Phase F.
+- `test/integration/shinmone-reference-vertical.spec.ts` keeps its synthetic Bridge/Gateway/Connector identity and trust-chain scope. A separate test-only catalog for exact `customer-a/integration-a/admin` contains only monthly `work-orders.count`, canonical `this_month`, and the same pinned monthly Tool with `{}` arguments. Neither synthetic catalog is a production deployment pack; no cross-scope alias or fallback is permitted. The vertical request-path test is unchanged until Phase F.
+- Reconciliation evidence: the two test-only packs parse and load independently and together as distinct immutable scoped catalogs; Customer A monthly Tool-policy setup is an explicit direct-harness opt-in, with default fail-closed behavior. Direct resolution covers the ERP seed and admin question as `RESOLVED` with exact Tool version/empty arguments; a valid ERP `last_month` replacement produces `CAPABILITY_UNAVAILABLE(NO_COMPATIBLE_ACTIVE_BINDING)` with no candidate. Negative lookups cover both cross-integration/HostApp directions and the real Shinmone scope, with one exact lookup and no binding access. New fixture plus unchanged legacy request-path focused suites passed `15/15`; parser/loader/registry passed `110/110`; companion follow-up frame passed `9/9`; root typecheck, changed-file lint, and `git diff --check` passed. The production Shinmone pack matches the staged index; no `src/**` file or production request path changed in this reconciliation.
+- `FEATURE011_TEST_MIGRATION_AMENDMENT=READY_FOR_HUMAN_REVIEW`; `TOOL_DISCOVERY_MOCK_EQUIVALENCE_ROLE=LEGACY_AUTHORITY_COUPLED_INTEGRATION`; `PACK_BACKED_TOOL_EQUIVALENCE_REQUIRED=YES`; `CUSTOMER_A_MONTHLY_FOLLOWUP_FIXTURE=SYNTHETIC_TEST_ONLY`; `FEATURE009_VERTICAL_CAPABILITY_FIXTURE=SYNTHETIC_TEST_ONLY_EXACT_SCOPE`; `PRODUCTION_SHINMONE_PACK_CHANGED=NO`; `PHASE_F_IMPLEMENTATION_STATUS=NOT_RESUMED`; `FIRST_UNEXECUTED_TASK=T066`; `NEXT_PHASE_AUTHORIZED=NO`.
+
+---
+
 ## Phase F — Atomic Feature 010 request-path cutover and audit
+
+The authorized RED/test-fixture reconciliation attempt stopped before the indivisible T071–T074 switch could be accepted. Partial RED evidence confirms that dynamic CustomerToolPolicy denial still prevents a binding candidate, request-time Tool discovery remains active, planning drops a pinned version, runtime selects latest, and the real capability audit is not registered. During the trial cutover, the unchanged Customer A pack did not resolve an existing order fixture phrase, while the Feature 009 Shinmone vertical fixture used `customer-a/integration-a/admin` instead of the checked-in Shinmone pack scope. The trial production and fixture edits were withdrawn; no pack was changed. T066–T077 remain unchecked. The test-only scope/fixture reconciliation needs human review before another atomic cutover attempt.
 
 **Prerequisite**: Gate E and the mandatory pre-cutover inventory gate.
 
 **Goal**: Make the scoped capability path the sole Tool-backed semantic authority in one change while preserving Feature 010 routing.
 
-- [ ] T066 [US3] Add authentic RED request-path integration cases for scoped catalog selection, current-message signals, follow-up revalidation, version-pinned candidate projection, and absence of any `ToolDiscoveryService` call in new `test/integration/feature011-feature010-cutover.spec.ts`
-- [ ] T067 [US2] Add RED planning cases projecting `NEEDS_CLARIFICATION`/`AMBIGUOUS` to existing `CLARIFY` and `CAPABILITY_UNAVAILABLE` to existing `INSUFFICIENT`, with zero ToolCalls and Customer requests, in `test/integration/feature011-feature010-cutover.spec.ts`
-- [ ] T068 [US3] Add RED planning/runtime cases proving `RESOLVED` produces exactly one version-pinned Tool need, multiple Tool needs remain unsupported, and exact-version drift fails with `tool_contract_mismatch` before ToolCall start in `test/unit/assistant-planning.service.spec.ts` and `test/unit/assistant-readonly-runtime.service.spec.ts`
-- [ ] T069 [US3] Add RED bounded audit, fail-closed persistence, and production-wiring cases for `capability_resolution_completed` in new `test/unit/capability-resolution-audit.service.spec.ts`, covering allowed scope/correlation/references/status metadata, forbidden query/value/argument/token/Connector/business data, and proof that no test/no-op audit stub is registered in production
-- [ ] T070 [US3] Implement the real bounded append-only `capability_resolution_completed` dependency and fail-closed candidate release in new `src/capabilities/capability-resolution-audit.service.ts` and `src/capabilities/capability-resolution.service.ts` using existing `src/audit/audit-writer.interface.ts`
-- [ ] T071 [US1] As one atomic cutover, register the real production capability audit and `CapabilityResolutionService` dependencies in `src/capabilities/capabilities.module.ts` and `src/query-understanding/query-understanding.module.ts`, replace request-time Tool discovery in `src/query-understanding/rule-based-query-understanding.pipeline.ts`, and remove the old call with no test/no-op provider, feature flag, fallback, dual authority, or second coordinator
-- [ ] T072 [US2] Project the four typed outcomes into existing clarification/unsupported planning inputs without adding user-facing prose in `src/query-understanding/query-understanding.types.ts`, `src/query-understanding/clarification-need.generator.ts`, and `src/assistant/planning/assistant-planning.service.ts` until T067 passes
-- [ ] T073 [US3] Carry exact Tool version and validated mapped arguments through internal planning/persistence types in `src/assistant/planning/assistant-planning.types.ts`, `src/assistant/planning/assistant-planning.service.ts`, and `src/query-understanding/query-understanding.repository.ts` without public contract changes
-- [ ] T074 [US3] Re-resolve the pinned Tool/customer policy immediately before ToolCall creation and fail on drift in `src/assistant/runtime/assistant-readonly-runtime.service.ts` until T068 passes
-- [ ] T075 [US5] Add follow-up and prior-context cutover cases proving inherited values are revalidated under the current pack while existing Tool/RAG/Hybrid routing and prior evidence rules remain authoritative in `test/integration/feature010-followup-routing.spec.ts` and `test/integration/feature010-prior-grounded-recall.spec.ts`
-- [ ] T076 Add a negative request-path regression proving legacy discovery metadata with no scoped pack capability cannot resolve or execute in `test/integration/feature011-feature010-cutover.spec.ts`
-- [ ] T077 Run Phase F cutover/audit/planning/runtime suites and record `FEATURE011_GATE_F=PASS`, `FEATURE011_ONLY_TOOL_SEMANTIC_AUTHORITY=CAPABILITY_PACK`, `REQUEST_TIME_TOOL_DISCOVERY_USED=NO`, `LEGACY_RUNTIME_FALLBACK=NO`, and `DUAL_SEMANTIC_AUTHORITY=NO` in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
+- [x] T066 [US3] Add authentic RED request-path and binding cases for verified scoped catalog selection, current-message/follow-up revalidation, a `RESOLVED` version-pinned candidate despite dynamic policy denial, unchanged semantic meaning, no unauthorized Tool execution, and no `ToolDiscoveryService` call or fallback in `test/integration/feature011-feature010-cutover.spec.ts` and `test/unit/capability-binding-resolver.spec.ts`
+- [x] T067 [US2] Add RED planning/coverage cases: `NEEDS_CLARIFICATION`/`AMBIGUOUS` remain blocking `CLARIFY`; `CAPABILITY_UNAVAILABLE` becomes a lane-local unsupported Tool need; Tool-only unavailable yields `INSUFFICIENT`; unavailable Tool plus covered Document yields `PARTIAL`; the unavailable Tool lane executes zero Tools or Customer business API requests, in `test/integration/feature011-feature010-cutover.spec.ts`
+- [x] T068 [US3] Add RED planning/runtime cases proving one exact-version Tool need, no multiple Tool needs, exact-version contract drift fails as `tool_contract_mismatch` before ToolCall start, and current CustomerToolPolicy/permission denial stays in Tool execution authority with zero factual Tool evidence in `test/unit/assistant-planning.service.spec.ts` and `test/unit/assistant-readonly-runtime.service.spec.ts`
+- [x] T069 [US3] Add RED bounded audit, fail-closed persistence, and production-wiring cases for `capability_resolution_completed` in new `test/unit/capability-resolution-audit.service.spec.ts`, covering allowed scope/correlation/references/status metadata, forbidden query/value/argument/token/Connector/business data and raw policy or permission details, and proof that no test/no-op audit stub is registered in production
+- [x] T070 [US3] Implement the real bounded append-only `capability_resolution_completed` dependency and fail-closed candidate release in new `src/capabilities/capability-resolution-audit.service.ts` and `src/capabilities/capability-resolution.service.ts` using existing `src/audit/audit-writer.interface.ts`; never audit raw policy/permission details
+- [x] T071 [US1] First make the minimal GREEN binding/policy ownership correction so semantic compatibility and pack startup validity ignore dynamic policy denial while the downstream Tool lane retains authoritative policy checks; then, as one atomic cutover, register real production capability audit and `CapabilityResolutionService` dependencies in `src/capabilities/capabilities.module.ts` and `src/query-understanding/query-understanding.module.ts`, replace request-time Tool discovery in `src/query-understanding/rule-based-query-understanding.pipeline.ts`, and remove the old call with no test/no-op provider, feature flag, fallback, dual authority, or second coordinator
+- [x] T072 [US2] Project the four typed outcomes into existing planning inputs: `CAPABILITY_UNAVAILABLE` is a lane-local unsupported Tool need with no whole-plan shortcut, while `NEEDS_CLARIFICATION`/`AMBIGUOUS` remain blocking; Feature 010 coverage alone decides `PARTIAL`/`INSUFFICIENT`, without user-facing prose, in `src/query-understanding/query-understanding.types.ts`, `src/query-understanding/clarification-need.generator.ts`, and `src/assistant/planning/assistant-planning.service.ts` until T067 passes
+- [x] T073 [US3] Carry exact Tool key, version, and validated mapped arguments through internal planning/persistence types in `src/assistant/planning/assistant-planning.types.ts`, `src/assistant/planning/assistant-planning.service.ts`, and `src/query-understanding/query-understanding.repository.ts` without public contract changes or latest-version substitution
+- [x] T074 [US3] Re-resolve the pinned exact Tool key/version, current CustomerToolPolicy, roles/scopes, permissions, schema, and mapped arguments before ToolCall creation; fail closed on Tool contract drift without fallback and preserve existing policy-denied Tool-lane semantics in `src/assistant/runtime/assistant-readonly-runtime.service.ts` until T068 passes
+- [x] T075 [US5] Add follow-up, prior-context, and Hybrid cutover regressions: inherited values revalidate under the current pack; Tool policy denied plus covered Document yields `PARTIAL`; unavailable Tool plus covered Document yields `PARTIAL`; no covered lane yields `INSUFFICIENT`; existing Tool/RAG/Hybrid routing and prior evidence rules remain authoritative in `test/integration/feature010-followup-routing.spec.ts` and `test/integration/feature010-prior-grounded-recall.spec.ts`
+- [x] T076 Add a negative request-path regression proving legacy discovery metadata with no scoped pack capability cannot resolve or execute in `test/integration/feature011-feature010-cutover.spec.ts`
+- [x] T077 Run Phase F cutover/audit/planning/runtime and Hybrid coverage suites; only on PASS record `FEATURE011_GATE_F=PASS`, `POLICY_DENIAL_CHANGES_CAPABILITY_MEANING=NO`, `POLICY_DENIED_TOOL_BLOCKS_OTHER_HYBRID_LANES=NO`, `HYBRID_PARTIAL_SEMANTICS_PRESERVED=YES`, `FEATURE011_ONLY_TOOL_SEMANTIC_AUTHORITY=CAPABILITY_PACK`, `REQUEST_TIME_TOOL_DISCOVERY_USED=NO`, `LEGACY_RUNTIME_FALLBACK=NO`, and `DUAL_SEMANTIC_AUTHORITY=NO` in `specs/011-customer-capability-semantic-discovery/tasks.md`; STOP on failure
 
 **Gate F**: `FEATURE011_GATE_F=PASS` with exactly one Tool semantic authority.
+
+#### Phase F focused checkpoint evidence (2026-10-02)
+
+- The earlier stopped attempt and the present interrupted working tree supplied authentic RED evidence for dynamic-policy filtering of a semantic binding, request-time legacy discovery, lost pinned versions, latest-version runtime lookup, and missing production audit. The present attempt re-ran the initial focused unit group with four failing suites and the cutover integration with four failing assertions before the corresponding GREEN changes. Some individual T067–T069 cases were already GREEN or their historical RED output is unavailable; `RED_HISTORY_NOT_RECOVERABLE` applies to those individual cases. No correct implementation was broken to manufacture RED.
+- T070–T074 atomic cutover: production resolves only an exact verified-scope catalog; binding validity uses exact executable ToolDefinition/schema, while current CustomerToolPolicy and permission remain in the Tool lane. Real `AuditWriter.append` is awaited before release, with bounded safe metadata and fail-closed errors. Planning retains exact key/version/arguments; runtime refuses missing or drifted contracts before ToolCall start. No request-time `ToolDiscoveryService.discover()` reference, fallback, dual run, or global candidate lookup remains.
+- T075–T076: bounded companion capability frames revalidate inherited/replaced values under the current pack; vague deixis remains blocking. Direct and request-path tests prove `last_month` unavailable without Tool execution, covered Document plus unavailable/denied Tool produces `PARTIAL`, prior evidence freshness and current authorization remain authoritative, and foreign/no-catalog scope never falls back to matching legacy metadata.
+- Focused GREEN commands: `npm run test:unit -- --runInBand --runTestsByPath test/unit/capability-binding-resolver.spec.ts test/unit/capability-resolution-audit.service.spec.ts test/unit/query-understanding-pipeline-wiring.spec.ts test/unit/assistant-planning.service.spec.ts test/unit/assistant-readonly-runtime.service.spec.ts test/unit/capability-follow-up-frame.spec.ts` → 6 suites, 91/91; the ten focused cutover/follow-up/Hybrid/prior-evidence/policy/permission/Tool runtime integration suites → 10 suites, 60/60; Feature 011 direct resolution, persistence and synthetic vertical suites → 3 suites, 11/11; public compatibility, conversation and grounding, and pack contracts → 4 suites, 101/101; Feature 011 direct eval → 5/5. Additional focused Tool lifecycle, no-LLM, history evidence and grounding leak tests passed. Root `npm run typecheck`, `npm run build`, changed-file ESLint, and `git diff --check` passed; no `listen EPERM` occurred.
+- This is Gate F focused acceptance, not Phase I or whole-repository acceptance. An exploratory exhaustive run encountered legacy-authority-coupled synthetic tests outside this checkpoint; those are not represented as GREEN. The existing Feature 010 scope-boundary `5/6` manifest-hash caveat remains unchanged. No real Tool or Customer endpoint was called, and no Phase G/H/I task was executed.
 
 ---
 
@@ -383,17 +409,18 @@ This feature has no deployable partial MVP before the atomic cutover. Gates A–
 
 ```text
 FEATURE011_IMPLEMENTATION_AUTHORIZED=NO
-COMPLETED_TASK_RANGE=T001-T065
+COMPLETED_TASK_RANGE=T001-T077
 FEATURE011_GATE_A=PASS
 FEATURE011_GATE_B=PASS
 FEATURE011_GATE_C=PASS
 FEATURE011_GATE_D=PASS
 FEATURE011_GATE_E=PASS
+FEATURE011_GATE_F=PASS
 PACK_BACKED_REFERENCE_COVERAGE=PASS
 PRODUCTION_TEST_AUDIT_STUB_REGISTERED=NO
 EVERY_RESOLVED_PARAMETER_ACCOUNTED_FOR=YES
 SILENT_CANONICAL_PARAMETER_DROP=FORBIDDEN
-CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=NO
+CURRENT_REQUEST_PATH_BEHAVIOR_CHANGED=YES_AT_FEATURE011_TOOL_SEMANTIC_AUTHORITY
 FEATURE010_BEHAVIOR_PRESERVED=YES
 FEATURE010_BOUNDARY_CONTRACT=5/6
 FEATURE010_BOUNDARY_HASH_MISMATCH=PRE_EXISTING_MANIFEST
@@ -406,7 +433,22 @@ DEPLOYMENT_TOOL_POLICY_METADATA_REVIEWED=YES
 DEPLOYMENT_POLICY_ROW_COUNT=1
 EXTRA_DEPLOYMENT_SEMANTIC_PATHS=0
 DEPLOYMENT_SEMANTIC_COVERAGE=COMPLETE_FOR_CURRENT_SNAPSHOT
-FIRST_UNEXECUTED_TASK=T066
+FEATURE011_POLICY_HYBRID_DESIGN_AMENDMENT=READY_FOR_HUMAN_REVIEW
+FEATURE011_TEST_MIGRATION_AMENDMENT=READY_FOR_HUMAN_REVIEW
+TOOL_DISCOVERY_MOCK_EQUIVALENCE_ROLE=LEGACY_AUTHORITY_COUPLED_INTEGRATION
+PACK_BACKED_TOOL_EQUIVALENCE_REQUIRED=YES
+CUSTOMER_A_MONTHLY_FOLLOWUP_FIXTURE=SYNTHETIC_TEST_ONLY
+FEATURE009_VERTICAL_CAPABILITY_FIXTURE=SYNTHETIC_TEST_ONLY_EXACT_SCOPE
+PRODUCTION_SHINMONE_PACK_CHANGED=NO
+PHASE_F_IMPLEMENTATION_STATUS=FOCUSED_GATE_PASSED
+POLICY_DENIAL_CHANGES_CAPABILITY_MEANING=NO
+POLICY_DENIED_TOOL_BLOCKS_OTHER_HYBRID_LANES=NO
+HYBRID_PARTIAL_SEMANTICS_PRESERVED=YES
+FEATURE011_ONLY_TOOL_SEMANTIC_AUTHORITY=CAPABILITY_PACK
+REQUEST_TIME_TOOL_DISCOVERY_USED=NO
+LEGACY_RUNTIME_FALLBACK=NO
+DUAL_SEMANTIC_AUTHORITY=NO
+FIRST_UNEXECUTED_TASK=T078
 NEXT_PHASE_AUTHORIZED=NO
 IMPLEMENTATION_REQUIRES_SEPARATE_HUMAN_AUTHORIZATION=YES
 REAL_TOOL_INVOCATION_EXECUTED=NO

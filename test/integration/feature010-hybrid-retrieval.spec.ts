@@ -17,7 +17,7 @@ describe('Feature 010 explicit Hybrid coordination (T060)', () => {
 
   it('executes one declared Tool lane and one RAG lane with COMPLETE coverage', async () => {
     const before = counts();
-    await send('req-f010-hybrid-complete', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式');
+    await send('req-f010-hybrid-complete', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式');
     expect(counts()).toEqual({ tools: before.tools + 1, retrievals: before.retrievals + 1 });
     expect(state.evidenceRefs.filter((item) => item.requestId === 'req-f010-hybrid-complete').map((item) => item.sourceType).sort())
       .toEqual(['document_chunk', 'structured_record']);
@@ -34,7 +34,7 @@ describe('Feature 010 explicit Hybrid coordination (T060)', () => {
   it('keeps document evidence and reports PARTIAL when the Tool lane is denied', async () => {
     state.customerToolPolicies.find((item) => item.toolDefinitionId === 'tool-definition-inventory-001')!.enabled = false;
     const before = counts();
-    await send('req-f010-hybrid-tool-denied', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式');
+    await send('req-f010-hybrid-tool-denied', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式');
     expect(state.retrievalRuns).toHaveLength(before.retrievals + 1);
     expect(state.toolCalls.length).toBeLessThanOrEqual(before.tools + 1);
     expect(state.answerDecisions.find((item) => item.requestId === 'req-f010-hybrid-tool-denied')?.metadata)
@@ -45,7 +45,7 @@ describe('Feature 010 explicit Hybrid coordination (T060)', () => {
   it('reports INSUFFICIENT when all declared lanes are unsupported', async () => {
     state.knowledgeDocuments.splice(0); state.knowledgeChunks.splice(0);
     state.customerToolPolicies.find((item) => item.toolDefinitionId === 'tool-definition-inventory-001')!.enabled = false;
-    await send('req-f010-hybrid-none', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式');
+    await send('req-f010-hybrid-none', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式');
     expect(state.answerDecisions.find((item) => item.requestId === 'req-f010-hybrid-none')?.metadata)
       .toEqual(expect.objectContaining({ coverage: 'INSUFFICIENT', evidenceIds: [] }));
   });
@@ -78,7 +78,7 @@ describe('Feature 010 explicit Hybrid coordination (T060)', () => {
 
   it('keeps Tool evidence and reports PARTIAL when the document lane has no evidence', async () => {
     state.knowledgeDocuments.splice(0); state.knowledgeChunks.splice(0);
-    await send('req-f010-hybrid-partial', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式');
+    await send('req-f010-hybrid-partial', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式');
     const metadata = state.answerDecisions.find((item) => item.requestId === 'req-f010-hybrid-partial')?.metadata;
     expect(metadata).toEqual(expect.objectContaining({ mode: 'HYBRID', coverage: 'PARTIAL' }));
     expect(state.evidenceRefs.filter((item) => item.requestId === 'req-f010-hybrid-partial').map((item) => item.sourceType)).toEqual(['structured_record']);

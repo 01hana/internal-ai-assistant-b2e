@@ -37,7 +37,7 @@ describe('US2 authorized mock connector tool execution', () => {
         }
       )
       .send({
-        message: '請查 SKU-DEMO-RED 目前庫存',
+        message: '查詢庫存可用量 料號 SKU-DEMO-RED',
         pageContext: {
           module: 'inventory',
           entityType: 'item',

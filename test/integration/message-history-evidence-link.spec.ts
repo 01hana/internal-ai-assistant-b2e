@@ -21,7 +21,7 @@ describe('message history evidence link integration', () => {
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(createIdentityHeaders({ 'x-request-id': 'req-us1-history-link-send' }))
       .send({
-        message: '請幫我查 SO-10001 訂單目前狀態',
+        message: '查詢訂單目前狀態 訂單號 SO-10001',
         pageContext: {
           module: 'orders',
           entityType: 'order',

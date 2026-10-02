@@ -85,13 +85,13 @@ export class AssistantPlanningService {
       });
     }
     const routingFrame = output.followUpResolution?.resolvedFrame ?? output.currentSemanticFrame;
-    const shouldBuildGroundedPlan = Boolean(output.followUpResolution) || output.requiredEvidence.includes('document_chunk') || output.candidateTools.length > 0;
+    const shouldBuildGroundedPlan = Boolean(output.followUpResolution || output.capabilityResolution) || output.requiredEvidence.includes('document_chunk') || output.candidateTools.length > 0;
     const groundedRetrievalPlan = this.groundedRetrievalRouter && shouldBuildGroundedPlan
       ? this.groundedRetrievalRouter.route({
           requestId: input.requestId,
           decomposedNeeds: toRetrievalNeedCandidates(input.text, output),
           resolvedFrame: routingFrame,
-          followUpResolution: output.followUpResolution
+          followUpResolution: output.capabilityFollowUpResolution?.resolvedFrame ? undefined : output.followUpResolution
         })
       : undefined;
     const executionPlan = await this.prisma.db.executionPlan.create({
@@ -132,13 +132,24 @@ export class AssistantPlanningService {
 }
 
 function toRetrievalNeedCandidates(text: string, output: QueryUnderstandingOutput): readonly RetrievalNeedCandidate[] {
+  if (output.capabilityResolution?.outcome === 'NEEDS_CLARIFICATION' || output.capabilityResolution?.outcome === 'AMBIGUOUS') {
+    return [{ kind: 'AMBIGUOUS', reasonCode: output.capabilityResolution.reasonCode }];
+  }
+  if (output.capabilityResolution?.outcome === 'CAPABILITY_UNAVAILABLE') {
+    const unsupported = { kind: 'UNSUPPORTED' as const, reasonCode: 'NO_COMPATIBLE_ACTIVE_BINDING' };
+    const documents = output.subTasks.filter((task) => isDocumentNeed(task.type))
+      .map((task) => ({ kind: 'DOCUMENT' as const, query: task.text }));
+    return [unsupported, ...documents];
+  }
+  if (output.capabilityResolution?.outcome === 'RESOLVED') {
+    const documents = output.subTasks.filter((task) => isDocumentNeed(task.type))
+      .map((task) => ({ kind: 'DOCUMENT' as const, query: task.text }));
+    return [{ kind: 'TOOL' }, ...documents];
+  }
   if (output.followUpResolution?.kind === 'CLARIFY') {
     return [{ kind: 'AMBIGUOUS', reasonCode: output.followUpResolution.reasonCode }];
   }
   const frame = output.followUpResolution?.resolvedFrame ?? output.currentSemanticFrame;
-  if (frame?.timeRange?.value === 'last_month' && output.candidateTools.length === 0) {
-    return [{ kind: 'UNSUPPORTED', reasonCode: 'UNSUPPORTED_TIME_RANGE' }];
-  }
   if (output.subTasks.length > 1) {
     const decomposed = decomposeRetrievalNeeds(output.subTasks, output.subTasks.map(() => frame ?? Object.freeze({})));
     return decomposed.needs.map((need) => {
@@ -159,10 +170,16 @@ function toRetrievalNeedCandidates(text: string, output: QueryUnderstandingOutpu
   return [{ kind: 'UNSUPPORTED', reasonCode: 'NO_CURRENT_RETRIEVAL_CAPABILITY' }];
 }
 
+function isDocumentNeed(type: string): boolean {
+  return ['document_knowledge_lookup', 'field_explanation_lookup', 'policy_lookup', 'error_code_lookup'].includes(type);
+}
+
 export function determinePlanningDecision(output: QueryUnderstandingOutput): ExecutionDecision {
+  if (output.capabilityResolution?.outcome === 'NEEDS_CLARIFICATION' || output.capabilityResolution?.outcome === 'AMBIGUOUS') return ExecutionDecision.clarify;
   if (output.clarificationNeeds.length > 0 || output.confidence < 0.7) {
     return ExecutionDecision.clarify;
   }
+  if (output.capabilityResolution?.outcome === 'CAPABILITY_UNAVAILABLE') return ExecutionDecision.continue;
 
   if (output.taskType === 'unsupported_scope') {
     return ExecutionDecision.no_answer;
@@ -242,10 +259,17 @@ function normalizePlannedCandidates(value: unknown): PlannedOperationCandidate[]
       return [];
     }
 
+    const version = candidate.version === undefined ? undefined : boundedText(candidate.version);
+    if (candidate.version !== undefined && !version) throw new Error('TOOL_CONTRACT_MISMATCH');
+    const normalizedArguments = normalizePlannedArguments(candidate.arguments);
+    if (version && JSON.stringify(normalizedArguments) !== JSON.stringify(candidate.arguments)) {
+      throw new Error('TOOL_CONTRACT_MISMATCH');
+    }
     return [
       {
         key,
-        arguments: normalizePlannedArguments(candidate.arguments),
+        ...(version ? { version } : {}),
+        arguments: normalizedArguments,
         reason
       }
     ];

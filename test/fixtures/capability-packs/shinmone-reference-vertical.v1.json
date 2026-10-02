@@ -1,0 +1,65 @@
+{
+  "version": "1",
+  "packId": "shinmone-reference-vertical",
+  "packVersion": "1.0.0",
+  "customerId": "customer-a",
+  "integrationId": "integration-a",
+  "hostApps": ["admin"],
+  "active": true,
+  "capabilities": [
+    {
+      "version": "1",
+      "capabilityKey": "work-orders.count",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "工單新增數量",
+      "semanticProfiles": [
+        {
+          "version": "1",
+          "locale": "zh-TW",
+          "aliases": ["工單新增數量", "新增幾張"],
+          "examples": ["查詢本月新開立的維修工單總數"],
+          "resourceTerms": ["工單", "維修工單"],
+          "intentTerms": ["查詢"],
+          "metricTerms": ["新增數量", "新增", "數量"],
+          "requiredSignalGroups": ["resource", "metric"]
+        }
+      ],
+      "parameters": [
+        {
+          "version": "1",
+          "parameterName": "timeRange",
+          "type": "enum",
+          "required": true,
+          "semanticTerms": ["期間"],
+          "values": [
+            { "value": "this_month", "aliases": ["本月", "這個月"] }
+          ]
+        }
+      ]
+    }
+  ],
+  "bindings": [
+    {
+      "version": "1",
+      "bindingId": "work-orders.monthly-new-count",
+      "bindingVersion": "1.0.0",
+      "active": true,
+      "capabilityKey": "work-orders.count",
+      "semanticConstraints": [
+        {
+          "version": "1",
+          "parameterName": "timeRange",
+          "operator": "ENUM_VALUE_IN",
+          "allowedValues": ["this_month"]
+        }
+      ],
+      "target": {
+        "kind": "TOOL",
+        "toolKey": "work-orders.monthly-new-count",
+        "toolVersion": "1.0.0"
+      },
+      "mappings": []
+    }
+  ]
+}

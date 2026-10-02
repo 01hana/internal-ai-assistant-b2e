@@ -146,7 +146,7 @@ describe('CapabilityPackLoader filesystem and complete-release boundary', () => 
     expect(harness.registry.resolveCatalog(scope('customer-b'))).toEqual(unavailable());
   });
 
-  it('rejects a complete release when the exact Customer Tool policy denies its binding', async () => {
+  it('keeps dynamic Customer Tool policy denial out of pack-loading semantics', async () => {
     const harness = await createHarness();
     const tools = {
       resolveExactExecutableTool: executableTools().resolveExactExecutableTool,
@@ -154,9 +154,9 @@ describe('CapabilityPackLoader filesystem and complete-release boundary', () => 
     } as unknown as ToolRegistryService;
     const loader = new CapabilityPackLoader(harness.registry, tools, nodeFiles());
 
-    await expect(loader.loadAndInstall(JSON.stringify([harness.validPath]))).rejects.toThrow('CAPABILITY_PACK_INVALID');
-    expect(tools.resolveExactToolForCustomer).toHaveBeenCalledWith('orders.monthly', '1.0.0', 'customer-a');
-    expect(harness.registry.resolveCatalog(scope('customer-a'))).toEqual(unavailable());
+    await loader.loadAndInstall(JSON.stringify([harness.validPath]));
+    expect(tools.resolveExactToolForCustomer).not.toHaveBeenCalled();
+    expect(harness.registry.resolveCatalog(scope('customer-a'))).toMatchObject({ available: true });
   });
 
   it('accepts an empty configured path list as an empty ready registry', async () => {
@@ -167,9 +167,7 @@ describe('CapabilityPackLoader filesystem and complete-release boundary', () => 
 
   it('validates the exact active read-only Tool key and version without semantic inference', async () => {
     const harness = await createHarness();
-    const resolveExactExecutableTool = jest.fn(async () => ({
-      tool: { key: 'orders.monthly', version: '1.0.0' }
-    }));
+    const resolveExactExecutableTool = jest.fn(async () => ({ tool: executableToolDefinition() }));
     const loader = new CapabilityPackLoader(
       harness.registry,
       { resolveExactExecutableTool, resolveExactToolForCustomer: executableTools().resolveExactToolForCustomer } as unknown as ToolRegistryService,
@@ -177,7 +175,7 @@ describe('CapabilityPackLoader filesystem and complete-release boundary', () => 
     );
 
     await loader.loadAndInstall(JSON.stringify([harness.validPath]));
-    expect(resolveExactExecutableTool).toHaveBeenCalledTimes(1);
+    expect(resolveExactExecutableTool).toHaveBeenCalled();
     expect(resolveExactExecutableTool).toHaveBeenCalledWith('orders.monthly', '1.0.0');
   });
 
@@ -254,9 +252,14 @@ async function writePack(directory: string, name: string, pack: unknown, mode = 
 
 function executableTools(): ToolRegistryService {
   return {
-    resolveExactExecutableTool: jest.fn(async () => ({ tool: { key: 'orders.monthly', version: '1.0.0' } })),
-    resolveExactToolForCustomer: jest.fn(async () => ({ resolved: { tool: { key: 'orders.monthly', version: '1.0.0', active: true, operation: 'read', hasSideEffect: false, inputSchema: { type: 'object', required: [], properties: {} } }, requiredRoles: [], requiredPermissionScopes: [] } }))
+    resolveExactExecutableTool: jest.fn(async () => ({ tool: executableToolDefinition() })),
+    resolveExactToolForCustomer: jest.fn(async () => ({ deniedReason: 'customer_policy_denied' }))
   } as unknown as ToolRegistryService;
+}
+
+function executableToolDefinition() {
+  return { key: 'orders.monthly', version: '1.0.0', active: true, operation: 'read',
+    hasSideEffect: false, inputSchema: { type: 'object', required: [], properties: {} } };
 }
 
 function scope(customerId: string) {

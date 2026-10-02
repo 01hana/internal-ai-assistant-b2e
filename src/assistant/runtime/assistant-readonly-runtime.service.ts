@@ -29,10 +29,19 @@ export class AssistantReadonlyRuntimeService {
     const visibleFields = getVisibleColumns(input.pageContext);
     const candidate = firstPlannedCandidate(input.executionPlan.candidateTools);
     const toolName = candidate.key;
-    const toolResolution = await this.toolRegistry.resolveToolForCustomer(toolName, input.customerScope);
+    const pinnedVersion = typeof candidate.version === 'string' ? candidate.version : undefined;
+    if (!toolName || !pinnedVersion) {
+      return { toolName, toolVersion: pinnedVersion ?? 'unknown', toolLifecycle: 'failed', riskLevel: RiskLevel.high,
+        entityRef, visibleFields, deniedReason: 'tool_contract_mismatch' };
+    }
+    const toolResolution = await this.toolRegistry.resolveExactToolForCustomer(toolName, pinnedVersion, input.customerScope.customerId);
     const resolvedTool = toolResolution.resolved;
 
     if (!resolvedTool) {
+      if (toolResolution.deniedReason !== 'customer_policy_denied') {
+        return { toolName, toolVersion: pinnedVersion, toolLifecycle: 'failed', riskLevel: RiskLevel.high,
+          entityRef, visibleFields, deniedReason: 'tool_contract_mismatch' };
+      }
       await this.permissionPrecheck.recordRuntimeCustomerToolDenied({
         customerScope: input.customerScope,
         requestId: input.requestId,
@@ -49,7 +58,7 @@ export class AssistantReadonlyRuntimeService {
         messageId: input.responseMessageId,
         identityContext: input.identityContext,
         toolName,
-        toolVersion: 'unknown',
+        toolVersion: pinnedVersion,
         riskLevel: RiskLevel.high,
         entityId: entityRef.entityId,
         visibleFields,
@@ -58,7 +67,7 @@ export class AssistantReadonlyRuntimeService {
 
       return {
         toolName,
-        toolVersion: 'unknown',
+        toolVersion: pinnedVersion,
         toolCallId: toolCall.id,
         toolLifecycle: 'blocked',
         riskLevel: RiskLevel.high,
@@ -69,6 +78,10 @@ export class AssistantReadonlyRuntimeService {
     }
 
     const tool = resolvedTool.tool;
+    if (tool.key !== toolName || tool.version !== pinnedVersion || !tool.active || !this.toolRegistry.isExecutableReadOnly(tool)) {
+      return { toolName, toolVersion: pinnedVersion, toolLifecycle: 'failed', riskLevel: RiskLevel.high,
+        entityRef, visibleFields, deniedReason: 'tool_contract_mismatch' };
+    }
 
     const permission = await this.permissionPrecheck.checkResolvedCustomerTool({
       requestId: input.requestId,
@@ -143,39 +156,14 @@ export class AssistantReadonlyRuntimeService {
 
     const validation = this.toolRegistry.validateNamedOperation(tool, candidate);
     if (!validation.valid) {
-      await this.permissionPrecheck.recordRuntimeCustomerToolDenied({
-        customerScope: input.customerScope,
-        requestId: input.requestId,
-        sessionId: input.sessionId,
-        messageId: input.responseMessageId,
-        toolName: tool.key,
-        operation: tool.operation,
-        deniedReason: validation.deniedReason,
-        schemaErrorReason: validation.schemaErrorReason
-      });
-      const { toolCall } = await this.toolCallService.blockToolCall({
-        customerScope: input.customerScope,
-        requestId: input.requestId,
-        sessionId: input.sessionId,
-        messageId: input.responseMessageId,
-        identityContext: input.identityContext,
-        toolName: tool.key,
-        toolVersion: tool.version,
-        riskLevel: tool.riskLevel,
-        entityId: entityRef.entityId,
-        visibleFields,
-        deniedReason: validation.deniedReason
-      });
-
       return {
         toolName: tool.key,
         toolVersion: tool.version,
-        toolCallId: toolCall.id,
-        toolLifecycle: 'blocked',
+        toolLifecycle: 'failed',
         riskLevel: tool.riskLevel,
         entityRef,
         visibleFields,
-        deniedReason: validation.deniedReason
+        deniedReason: 'tool_contract_mismatch'
       };
     }
 
@@ -427,7 +415,7 @@ function executeWithTrustedTimeout<T>(execute: () => Promise<T>, timeoutMs: numb
 
 function firstPlannedCandidate(candidateTools: Prisma.JsonValue): Record<string, unknown> & { key: string } {
   if (!Array.isArray(candidateTools) || candidateTools.length === 0) {
-    return { key: 'mock.general.lookup', arguments: {}, reason: 'missing candidate' };
+    return { key: '', arguments: {}, reason: 'missing candidate' };
   }
 
   const tool = candidateTools[0];
@@ -435,5 +423,5 @@ function firstPlannedCandidate(candidateTools: Prisma.JsonValue): Record<string,
     return tool as Record<string, unknown> & { key: string };
   }
 
-  return { key: 'mock.general.lookup', arguments: {}, reason: 'invalid candidate' };
+  return { key: '', arguments: {}, reason: 'invalid candidate' };
 }

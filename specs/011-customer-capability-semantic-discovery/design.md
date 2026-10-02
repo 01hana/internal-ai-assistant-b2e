@@ -17,19 +17,21 @@ natural-language message + bounded Feature 010 context
   → active Customer capability catalog
   → generic deterministic semantic resolution
   → canonical capability + canonical typed parameters
-  → typed Feature 011 outcome
-  → Customer-scoped compatible binding
-  → exact accounting of every supplied parameter by mapping or semantic constraint
-  → declarative canonical-parameter → Tool-argument mapping where applicable
-  → exact current ToolDefinition resolution + input-schema validation
-  → existing Feature 008/009/010 Tool, Connector, projection, and evidence path
+  → Customer-scoped binding selection + exact parameter accounting
+  ├─ no semantically/parameter-compatible active binding → CAPABILITY_UNAVAILABLE
+  └─ one compatible binding → declarative canonical-parameter → Tool-argument mapping
+       → exact active read-only ToolDefinition contract + input-schema validation
+       → RESOLVED with version-pinned non-authoritative planning candidate
+  → existing Feature 010 Tool/Hybrid routing and lane-local coverage
+  → existing Feature 008 Tool lane revalidates current policy, roles/scopes, permissions, and exact Tool contract before ToolCall
+  → existing Feature 009 Connector, projection, and evidence path only if authorized
 ```
 
 Feature 011 does not introduce an execution authority, public API, second Tool registry, second RAG stack, model-generated operation, or final answer path. `GroundedContextBundleV1` remains unchanged. Feature 012 remains responsible for final natural-language answers and clarification wording.
 
 ### 1.1 Human-approved outcome interpretation
 
-An unrecognized or insufficiently recognized business meaning returns `NEEDS_CLARIFICATION` with reason code `CAPABILITY_NOT_RECOGNIZED`, no capability reference or authority, zero ToolCalls, and zero Customer business requests. `CAPABILITY_UNAVAILABLE` is reserved for a recognized capability whose relevant canonical parameters are semantically valid but for which the active verified Customer/integration/HostApp scope has no compatible active binding. These are two distinct non-executing cases within the existing four-outcome union.
+An unrecognized or insufficiently recognized business meaning returns `NEEDS_CLARIFICATION` with reason code `CAPABILITY_NOT_RECOGNIZED`, no capability reference or authority, zero ToolCalls, and zero Customer business requests. `CAPABILITY_UNAVAILABLE` is reserved for a recognized capability whose relevant canonical parameters are valid but for which the active scoped pack has no semantically and parameter-compatible active binding. Dynamic CustomerToolPolicy, permission, role/scope, runtime, Connector, or Tool denial does not turn a recognized capability into `CAPABILITY_UNAVAILABLE`. These remain distinct cases within the existing four-outcome union.
 
 ## 2. Current Repository Seams
 
@@ -38,6 +40,7 @@ An unrecognized or insufficiently recognized business meaning returns `NEEDS_CLA
 - `AssistantPlanningService` remains the orchestration entry point. It loads bounded conversation context, calls query understanding, persists the existing execution plan, and invokes the existing grounded retrieval router.
 - `ConversationSemanticReconstructorService` and `FollowUpSemanticResolverService` remain Feature 010 owners for bounded semantic frames and follow-up inheritance/replacement/clarification.
 - `GroundedRetrievalRouterService` remains the owner of `CONTEXT_ONLY`, `RAG`, `TOOL`, `HYBRID`, `CLARIFY`, and `INSUFFICIENT` routing and continues enforcing `MAX_TOOL_NEEDS_PER_TURN=1`.
+- `HybridRetrievalCoordinatorService` remains the Feature 010 owner of independent Tool/Document lane handling and `COMPLETE`/`PARTIAL`/`INSUFFICIENT` coverage; Feature 011 adds no second evaluator.
 - `ToolRegistryService` remains the ToolDefinition authority. It already supports exact read-only Tool resolution and closed input-schema validation.
 - `CustomerToolPolicyService` and `ToolPermissionPrecheckService` remain the Customer policy and permission authorities.
 - `AssistantReadonlyRuntimeService` remains the only read-only Tool execution path and continues to own current Tool re-resolution, ToolCall lifecycle, adapter selection, connector execution, result projection, and safe failure.
@@ -586,8 +589,11 @@ Existing free-form clarification needs remain a compatibility projection, while 
 NEEDS_CLARIFICATION ─→ existing clarificationNeeds ─→ F010 CLARIFY ─→ zero ToolCalls
 AMBIGUOUS            ─→ bounded candidateRefs       ─→ F010 CLARIFY ─→ zero ToolCalls
 CAPABILITY_UNAVAILABLE
-                     ─→ UNSUPPORTED need/reason     ─→ F010 INSUFFICIENT
-                                                                  └─ zero ToolCalls
+                     ─→ lane-local UNSUPPORTED Tool need (`NO_COMPATIBLE_ACTIVE_BINDING`)
+                     ─→ existing F010 coverage evaluator
+                          ├─ no covered need → INSUFFICIENT
+                          └─ covered Document need → PARTIAL
+                     └─ zero ToolCalls for the unavailable Tool need
 
 Feature 012 later owns natural-language rendering; Feature 011 emits no prose.
 ```
@@ -604,9 +610,9 @@ Compatibility never means "ignore unknown semantics." If the resolved parameters
 - one compatible binding proceeds to mapping;
 - multiple compatible bindings are a deployment configuration defect rejected during startup validation, not an arbitrary runtime tie-break.
 
-Static provisioning validation exact-resolves the referenced ToolDefinition and checks read-only status, version, mapping and constraint source existence, declared enum values, mutually exclusive and unique consumption declarations, explicit fixed semantics, declared target fields, target uniqueness, compatible constant types/enums, and statically satisfiable required fields. Runtime repeats complete supplied-parameter coverage, constraint compatibility, exact Tool resolution, mapping, and validation of the complete result through the existing Tool schema validator.
+Static provisioning validation exact-resolves the referenced ToolDefinition and checks active read-only side-effect-free status, version, mapping and constraint source existence, declared enum values, mutually exclusive and unique consumption declarations, explicit fixed semantics, declared target fields, target uniqueness, compatible constant types/enums, and statically satisfiable required fields. Dynamic CustomerToolPolicy enablement/denial is neither pack startup validity nor semantic binding compatibility; it cannot make the application unready or erase an otherwise valid candidate. Runtime repeats complete supplied-parameter coverage, constraint compatibility, exact Tool resolution, mapping, and validation of the complete result through the existing Tool schema validator.
 
-The execution plan carries the expected Tool version internally. The existing runtime re-resolves the current ToolDefinition; a missing, inactive, non-read-only, or version-drifted definition fails closed as `tool_contract_mismatch` before ToolCall start. It never falls forward to a newer Tool version.
+The execution plan carries the expected Tool version internally. The existing runtime re-resolves the exact current ToolDefinition and current policy, permissions, roles/scopes, and arguments before ToolCall start. A missing, inactive, write, side-effecting, schema-incompatible, or version-drifted Tool contract fails closed as `tool_contract_mismatch`; policy denial follows existing policy-denied Tool-lane semantics. Neither path grants execution or factual Tool evidence. It never falls forward to a newer Tool version.
 
 ### Alternatives considered
 
@@ -620,11 +626,11 @@ Exact selection and two-stage validation prevent stale configuration and preserv
 
 ### Security implications
 
-Mappings cannot create fields, code, routes, credentials, or permissions. Constants pass prohibited-value checks. Binding references grant no access.
+Mappings cannot create fields, code, routes, credentials, or permissions. Constants pass prohibited-value checks. Binding references and planning candidates grant no access; policy denial is enforced downstream without changing semantic meaning.
 
 ### Compatibility implications
 
-The resulting candidate retains the existing `{key, arguments, reason}` shape with an internal expected version added for fail-closed compatibility. CustomerToolPolicy and permission precheck execute exactly as today.
+The resulting candidate retains the existing `{key, arguments, reason}` shape with an internal expected version added for fail-closed compatibility. It is planning input only. CustomerToolPolicy and permission precheck execute in the existing Tool lane; their denial does not retroactively invalidate semantic resolution.
 
 ### Migration implications
 
@@ -645,6 +651,8 @@ canonical capability + validated parameters + same scoped catalog
            → validate complete Tool input schema
            → one version-pinned Tool candidate
 ```
+
+Dynamic CustomerToolPolicy denial is not a filter in this binding-selection flow.
 
 ## 10. Decision 8 — Feature 010 Integration Seam
 
@@ -668,7 +676,7 @@ Outcome adaptation is:
 | `RESOLVED` | exactly one planned Tool candidate and one Tool retrieval need |
 | `NEEDS_CLARIFICATION` | blocking structured clarification need; router `CLARIFY` |
 | `AMBIGUOUS` | blocking clarification with bounded scoped candidate refs; router `CLARIFY` |
-| `CAPABILITY_UNAVAILABLE` | unsupported retrieval need with bounded reason; router `INSUFFICIENT` |
+| `CAPABILITY_UNAVAILABLE` | lane-local unsupported Tool need with `NO_COMPATIBLE_ACTIVE_BINDING`; existing Feature 010 coverage yields `INSUFFICIENT` with no covered need or `PARTIAL` with a covered Document need |
 
 `QueryUnderstandingOutput` may carry the internal typed result transiently for planning and audit. Existing persistence fields retain bounded projections: candidate Tools, clarification needs, task type, and confidence. The complete result need not add a Prisma column because the safe resolution summary is appended to AuditEvent.
 
@@ -707,6 +715,17 @@ RESOLVED Tool candidate
   → existing projection + EvidenceRef
   → unchanged GroundedContextBundleV1
 ```
+
+The candidate is not execution authorization. In Hybrid, policy denial is local to the Tool lane:
+
+```text
+RESOLVED version-pinned semantic candidate → existing Hybrid plan
+  ├─ Tool lane → current CustomerToolPolicy / permission → DENIED → no Tool evidence
+  └─ Document lane → current document authorization → COVERED
+existing Feature 010 coverage → PARTIAL
+```
+
+With no covered lane the same Tool denial yields `INSUFFICIENT`. A semantically unavailable Tool need likewise remains lane-local; a covered Document need yields `PARTIAL`, while Tool-only or otherwise uncovered needs yield `INSUFFICIENT`. Blocking `NEEDS_CLARIFICATION` or `AMBIGUOUS` still routes to `CLARIFY` before retrieval. Feature 011 neither substitutes a Tool nor adds a Hybrid coordinator or coverage evaluator.
 
 ## 11. Decision 9 — Migration Boundary
 
@@ -955,6 +974,8 @@ Adding knowledge-backed capabilities requires a later versioned contract and sep
 - A malformed or non-normalizable time value yields invalid-parameter clarification.
 - Conflicting time expressions yield conflicting-parameter clarification.
 - A recognized capability with semantically valid canonical parameters and no compatible active binding yields `CAPABILITY_UNAVAILABLE`, zero ToolCalls, and zero Customer requests.
+- A semantically compatible binding remains `RESOLVED` despite current CustomerToolPolicy denial; static pack validation remains valid, while the existing Tool lane denies execution and produces no Tool evidence.
+- Tool-only policy denial and Tool-only `CAPABILITY_UNAVAILABLE` each produce `INSUFFICIENT` with no Tool evidence; either alongside a covered Hybrid Document need produces `PARTIAL`. No covered lane produces `INSUFFICIENT`; blocking clarification/ambiguity remains `CLARIFY`.
 - A generic all-mapped fixture accounts for every supplied parameter through `MAPPED_PARAMETER` and is binding-compatible; a generic all-constrained fixture accounts for every supplied parameter through `BINDING_SEMANTIC_CONSTRAINT` and is binding-compatible.
 - A fixture with at least one supplied parameter accounted for by neither mechanism makes that binding incompatible and yields `CAPABILITY_UNAVAILABLE` with zero ToolCalls when no complete alternative binding exists.
 - `今天新增幾張工單` yields valid `timeRange=today`, `CAPABILITY_UNAVAILABLE`, zero ToolCalls, and zero Customer requests because no active constraint accepts that value.
@@ -965,7 +986,7 @@ Adding knowledge-backed capabilities requires a later versioned contract and sep
 ### 16.3 Feature 010 and predecessor compatibility
 
 - Current follow-up inheritance and replacement run before final capability resolution; inherited values are revalidated against the active pack.
-- Clarification, ambiguity, and unavailable outcomes perform zero Tool or Customer API invocation.
+- Clarification and ambiguity block retrieval. An unavailable Tool need performs zero Tool or Customer business API invocation for that lane, while an independently authorized Hybrid Document lane may still retrieve.
 - Exactly one resolved Tool need re-enters current `TOOL` or `HYBRID` routing; multiple Tool needs remain unsupported.
 - `GroundedContextBundleV1`, public Assistant HTTP/SSE/SDK/history, AnswerDecision, and safe-failure contracts remain byte/shape compatible.
 - Focused Feature 008 permission/runtime/projection/evidence, Feature 009 transport/isolation, and Feature 010 follow-up/Tool/RAG/Hybrid/coverage suites remain passing.
@@ -999,6 +1020,10 @@ FINAL_LLM_SYNTHESIS_IN_FEATURE011=NO
 FEATURE008_TOOL_AUTHORITY_PRESERVED=YES
 FEATURE009_CONNECTOR_AUTHORITY_PRESERVED=YES
 FEATURE010_RETRIEVAL_AUTHORITY_PRESERVED=YES
+DYNAMIC_CUSTOMER_POLICY_IS_SEMANTIC_AUTHORITY=NO
+POLICY_DENIAL_CHANGES_CAPABILITY_MEANING=NO
+POLICY_DENIED_TOOL_BLOCKS_OTHER_HYBRID_LANES=NO
+CAPABILITY_UNAVAILABLE_IS_LANE_LOCAL=YES
 GROUNDED_CONTEXT_BUNDLE_V1_PRESERVED=YES
 PUBLIC_ASSISTANT_CONTRACT_CHANGED=NO
 PRISMA_CHANGE_REQUIRED=NO

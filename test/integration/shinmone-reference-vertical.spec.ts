@@ -5,7 +5,7 @@ import { createServer as createHttpServer } from 'node:http';
 import { createServer, request as httpsRequest } from 'node:https';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { Test } from '@nestjs/testing';
 import request = require('supertest');
 import { CustomerConnectorRuntimeModule } from '../../apps/customer-connector-runtime/src/customer-connector-runtime.module';
@@ -163,6 +163,9 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
       backend: {
         environment: {
           ...centralEnvironment(privateKeyPath, centralJwk, (runtimeServer.address() as AddressInfo).port),
+          ASSISTANT_CAPABILITY_PACK_PATHS_JSON: JSON.stringify([
+            resolve('test/fixtures/capability-packs/shinmone-reference-vertical.v1.json')
+          ]),
           ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON: JSON.stringify([shinmoneAdapterBinding({
             integrationId: 'integration-a', hostApp: 'admin'
           })])

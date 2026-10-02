@@ -17,7 +17,12 @@ import {
 import { resolveDeixisReferences } from './deixis-resolver';
 import { scoreQueryUnderstandingConfidence } from './query-confidence.scorer';
 import { TokenizerAdapter } from './tokenizer-adapter.interface';
-import { ToolDiscoveryService } from '../tools/tool-discovery.service';
+import { CapabilityResolutionService } from '../capabilities/capability-resolution.service';
+import { CapabilityCatalogRegistry } from '../capabilities/capability-catalog.registry';
+import { CapabilityParameterResolverService } from '../capabilities/capability-parameter-resolver.service';
+import type { CapabilityResolutionResultV1 } from '../capabilities/capability-pack.types';
+import type { CapabilityFollowUpFrameV1 } from '../assistant/conversation/conversation.types';
+import { createCustomerScopeFromHostIntegrationContext } from '../host-integration/host-integration-request.factory';
 import { RiskLevel } from '../generated/prisma/enums';
 import { ConversationSemanticReconstructorService } from '../assistant/conversation/conversation-semantic-reconstructor.service';
 import { FollowUpSemanticResolverService } from '../assistant/conversation/follow-up-semantic-resolver.service';
@@ -32,9 +37,11 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
   constructor(
     @Inject('TokenizerAdapter')
     private readonly tokenizerAdapter: TokenizerAdapter,
-    private readonly toolDiscovery: ToolDiscoveryService,
+    private readonly capabilityResolution: CapabilityResolutionService,
     @Optional() private readonly semanticReconstructor = new ConversationSemanticReconstructorService(),
-    @Optional() private readonly followUpResolver = new FollowUpSemanticResolverService()
+    @Optional() private readonly followUpResolver = new FollowUpSemanticResolverService(),
+    @Optional() private readonly catalogRegistry?: CapabilityCatalogRegistry,
+    @Optional() private readonly capabilityParameters?: CapabilityParameterResolverService
   ) {}
 
   async understand(input: QueryUnderstandingInput): Promise<QueryUnderstandingOutput> {
@@ -95,39 +102,92 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
     }
     const hasDocumentSubTask = independentlyDecomposedSubTasks.some((subTask) => isDocumentTaskType(subTask.type));
     const hasNonDocumentSubTask = independentlyDecomposedSubTasks.some((subTask) => !isDocumentTaskType(subTask.type));
-    const mustClarifyFollowUp = followUpResolution?.kind === 'CLARIFY';
-    const discovery = (!hasNonDocumentSubTask && isDocumentTaskType(documentTaskType)) || riskLevel !== RiskLevel.low
+    const scope = Object.freeze({ customerId: input.hostIntegrationContext.customerId,
+      integrationId: input.hostIntegrationContext.integrationId, hostApp: input.hostIntegrationContext.hostApp });
+    const scoped = this.catalogRegistry?.resolveCatalog(scope);
+    const catalog = scoped?.available ? scoped.catalog : undefined;
+    const priorCapabilityFrame = dependentFollowUp && !VAGUE_DEIXIS.test(normalizedText) && catalog
+      ? input.priorConversationContext?.capabilityFrames?.filter((frame) =>
+        frame.scope.customerId === scope.customerId && frame.scope.integrationId === scope.integrationId &&
+        frame.scope.hostApp === scope.hostApp && frame.packId === catalog.packId && frame.packVersion === catalog.packVersion &&
+        catalog.capabilities.some((item) => item.active && item.capabilityKey === frame.capabilityKey)).at(-1)
+      : undefined;
+    const priorCapability = priorCapabilityFrame && catalog?.capabilities.find((entry) => entry.capabilityKey === priorCapabilityFrame.capabilityKey);
+    const pageContextValues: Record<string, unknown> = {};
+    if (catalog && this.capabilityParameters && input.pageContext?.entityId) {
+      for (const capability of catalog.capabilities) {
+        for (const parameter of capability.parameters) {
+          if (parameter.type === 'bounded_string' &&
+            this.capabilityParameters.validateCanonicalValue(parameter, input.pageContext.entityId) !== undefined) {
+            pageContextValues[parameter.parameterName] = input.pageContext.entityId;
+          }
+        }
+      }
+    }
+    const currentValues: Record<string, unknown> = {};
+    if (priorCapability && this.capabilityParameters) {
+      const singleBounded = priorCapability.parameters.length === 1 && priorCapability.parameters[0].type === 'bounded_string'
+        ? priorCapability.parameters[0] : undefined;
+      if (singleBounded && currentSemanticFrame?.entity?.value) currentValues[singleBounded.parameterName] = currentSemanticFrame.entity.value;
+    }
+    const provisionalParameters = priorCapability && this.capabilityParameters && priorCapabilityFrame
+      ? this.capabilityParameters.resolve({ capability: priorCapability, text: normalizedText, currentValues,
+        capabilityRef: { packId: catalog!.packId, packVersion: catalog!.packVersion,
+          capabilityKey: priorCapability.capabilityKey, safeLabel: priorCapability.safeLabel } })
+      : undefined;
+    const provisionalFrame: CapabilityFollowUpFrameV1 | undefined = priorCapabilityFrame && provisionalParameters
+      ? Object.freeze({ ...priorCapabilityFrame, sourceMessageId: input.messageId,
+        parameters: Object.freeze(Object.entries(provisionalParameters.status === 'VALID' ? provisionalParameters.parameters : {})
+          .map(([parameterName, value]) => Object.freeze({ parameterName, value, source: 'current_explicit' as const,
+            sourceMessageId: input.messageId }))) })
+      : undefined;
+    const capabilityFollowUpResolution = provisionalFrame && catalog
+      ? this.followUpResolver.resolveCapability({ currentFrame: provisionalFrame,
+        priorFrames: [priorCapabilityFrame!], catalog })
+      : undefined;
+    const mustClarifyFollowUp = followUpResolution?.kind === 'CLARIFY' && !capabilityFollowUpResolution?.resolvedFrame;
+    const capabilityResult: CapabilityResolutionResultV1 | undefined = (!hasNonDocumentSubTask && isDocumentTaskType(documentTaskType)) || riskLevel !== RiskLevel.low
       || mustClarifyFollowUp
       ? undefined
-      : await this.toolDiscovery.discover({
-          customerScope: Object.freeze({ customerId: input.hostIntegrationContext.customerId }),
-          normalizedTerms, phrases: semanticPhrases, timeRanges: semanticTimeRanges, entityCandidates
+      : await this.capabilityResolution.resolve({
+          scope,
+          text: normalizedText,
+          pageContextValues,
+          ...(capabilityFollowUpResolution?.resolvedFrame ? { followUpFrame: capabilityFollowUpResolution.resolvedFrame } : {}),
+          auditContext: {
+            customerScope: createCustomerScopeFromHostIntegrationContext(input.hostIntegrationContext),
+            requestId: input.requestId, sessionId: input.sessionId, messageId: input.messageId
+          }
         });
-    const candidateTools = [...(discovery?.candidates ?? [])];
-    const taskType = discovery?.taskType ?? documentTaskType;
-    const requiredEvidence = discovery?.requiredEvidence.length
-      ? [...new Set([...discovery.requiredEvidence, ...(hasDocumentSubTask ? ['document_chunk'] : [])])]
+    const candidateTools = capabilityResult?.outcome === 'RESOLVED' ? [capabilityResult.toolCandidate] : [];
+    const currentCapabilityFrame: CapabilityFollowUpFrameV1 | undefined = capabilityResult &&
+      (capabilityResult.outcome === 'RESOLVED' || capabilityResult.outcome === 'CAPABILITY_UNAVAILABLE')
+      ? Object.freeze({ version: '1', scope, packId: capabilityResult.capability.packId,
+        packVersion: capabilityResult.capability.packVersion, capabilityKey: capabilityResult.capability.capabilityKey,
+        sourceMessageId: input.messageId,
+        parameters: Object.freeze(Object.entries(capabilityResult.parameters).map(([parameterName, value]) =>
+          Object.freeze({ parameterName, value, source: 'current_explicit' as const, sourceMessageId: input.messageId }))) })
+      : undefined;
+    const taskType = capabilityResult?.outcome === 'RESOLVED' ? 'general_lookup' : documentTaskType;
+    const requiredEvidence = capabilityResult?.outcome === 'RESOLVED'
+      ? ['identity_context', 'structured_record', ...(hasDocumentSubTask ? ['document_chunk'] : [])]
       : inferRequiredEvidence(taskType, entityCandidates, resolvedReferences);
     const subTasks = independentlyDecomposedSubTasks.length > 1
       ? independentlyDecomposedSubTasks
-      : discovery?.discoveredTaskTypes.length
-      ? discovery.discoveredTaskTypes.map((type, index) => ({ type, text: sentences[index]?.text ?? normalizedText }))
       : decomposeSubTasks(sentences, taskType);
     const followUpClarification = mustClarifyFollowUp ? [{
       type: 'follow_up', reason: followUpResolution.reasonCode, question: '請明確指定要查詢的主題或對象。', blocking: true
     }] : [];
-    const unsupportedLastMonth = followUpResolution?.resolvedFrame?.timeRange?.value === 'last_month'
-      && !isDocumentTaskType(taskType) && candidateTools.length === 0;
-    const capabilityClarification = unsupportedLastMonth ? [{
-      type: 'time_range', reason: 'unsupported_time_range', question: '目前無法查詢上個月的這項資料，請指定其他支援的時間範圍。', blocking: true
-    }] : [];
-    const clarificationNeeds = [...followUpClarification, ...capabilityClarification, ...(discovery?.clarificationNeeds ?? []), ...generateClarificationNeeds({
+    const capabilityClarification = capabilityResult?.outcome === 'NEEDS_CLARIFICATION' || capabilityResult?.outcome === 'AMBIGUOUS'
+      ? [{ type: 'capability', reason: capabilityResult.reasonCode, question: '請補充要查詢的業務對象或條件。', blocking: true }]
+      : [];
+    const clarificationNeeds = [...followUpClarification, ...capabilityClarification, ...generateClarificationNeeds({
       text: normalizedText,
       timeClarifications: timeRangeResult.clarificationNeeds,
       entityCandidates,
       resolvedReferences,
       candidateTools,
-      allowNoToolCandidate: isDocumentTaskType(taskType) || mustClarifyFollowUp || unsupportedLastMonth
+      allowNoToolCandidate: isDocumentTaskType(taskType) || mustClarifyFollowUp || capabilityResult !== undefined
     })];
     const scoredConfidence = scoreQueryUnderstandingConfidence({
       text: normalizedText,
@@ -136,10 +196,12 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
       resolvedReferences,
       clarificationNeeds,
       hasDocumentEvidenceRequirement: requiredEvidence.includes('document_chunk')
-      , discoveryConfidence: discovery?.matchConfidence,
+      , discoveryConfidence: capabilityResult?.outcome === 'RESOLVED' ? 1 : undefined,
       hasResolvedSemanticFollowUp: followUpResolution !== undefined && followUpResolution.kind !== 'CLARIFY'
     });
-    const confidence = EXPLICIT_DOCUMENT_EVIDENCE_RECALL.test(normalizedText)
+    const confidence = capabilityResult?.outcome === 'RESOLVED' || capabilityResult?.outcome === 'CAPABILITY_UNAVAILABLE'
+      ? Math.max(0.7, scoredConfidence)
+      : EXPLICIT_DOCUMENT_EVIDENCE_RECALL.test(normalizedText)
       ? Math.max(0.7, scoredConfidence)
       : scoredConfidence;
 
@@ -159,7 +221,10 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
       clarificationNeeds,
       requiredEvidence,
       currentSemanticFrame,
-      followUpResolution
+      followUpResolution,
+      currentCapabilityFrame,
+      capabilityFollowUpResolution,
+      capabilityResolution: capabilityResult
     };
   }
 }

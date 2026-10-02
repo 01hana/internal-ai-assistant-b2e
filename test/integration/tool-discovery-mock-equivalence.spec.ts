@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { MockConnectorAdapter } from '../../src/connectors/mock/mock-connector.adapter';
 import { ToolRegistryService } from '../../src/tools/tool-registry.service';
+import { ToolDiscoveryService } from '../../src/tools/tool-discovery.service';
 import {
   createAuthorizedInternalIdentityHeaders,
   createUs1TestAppWithState,
@@ -26,7 +27,7 @@ type ReadPath = Readonly<{
 const READ_PATHS: readonly ReadPath[] = [
   {
     name: 'order status', requestId: 'req-discovery-equivalence-order',
-    message: '請幫我查 SO-10001 訂單目前狀態',
+    message: '查詢訂單目前狀態 訂單號 SO-10001',
     pageContext: { module: 'orders', entityType: 'order', entityId: 'SO-10001', visibleColumns: ['status'] },
     toolKey: 'mock.orders.status.lookup',
     argument: { entityId: 'SO-10001' }, permission: 'orders:read', projectedField: 'status', projectedValue: 'picking', sourceId: 'SO-10001'
@@ -54,7 +55,7 @@ const READ_PATHS: readonly ReadPath[] = [
   }
 ];
 
-describe('T093 metadata-discovery complete mock equivalence', () => {
+describe('Feature 011 pack-backed Tool equivalence', () => {
   let app: INestApplication | undefined;
 
   afterEach(async () => {
@@ -69,7 +70,8 @@ describe('T093 metadata-discovery complete mock equivalence', () => {
     const adapter = app.get(MockConnectorAdapter);
     const registry = app.get(ToolRegistryService);
     const execute = jest.spyOn(adapter, 'execute');
-    const resolveTool = jest.spyOn(registry, 'resolveToolForCustomer');
+    const resolveTool = jest.spyOn(registry, 'resolveExactToolForCustomer');
+    const legacyDiscover = jest.spyOn(app.get(ToolDiscoveryService), 'discover');
 
     const response = await request(app.getHttpServer())
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
@@ -86,7 +88,8 @@ describe('T093 metadata-discovery complete mock equivalence', () => {
     ]);
 
     const plan = state.executionPlans.at(-1);
-    expect(plan?.candidateTools).toEqual([{ key: path.toolKey, arguments: path.argument, reason: 'metadata_discovery' }]);
+    expect(plan?.candidateTools).toEqual([{ key: path.toolKey, version: '1.0.0',
+      arguments: path.argument, reason: 'customer_capability_binding' }]);
     expect(plan?.decision).toBe('continue');
 
     expect(execute).toHaveBeenCalledTimes(1);
@@ -100,7 +103,8 @@ describe('T093 metadata-discovery complete mock equivalence', () => {
       toolName: path.toolKey,
       status: 'success'
     }));
-    expect(resolveTool).toHaveBeenCalledWith(path.toolKey, expect.objectContaining({ customerId: 'customer-a' }));
+    expect(resolveTool).toHaveBeenCalledWith(path.toolKey, '1.0.0', 'customer-a');
+    expect(legacyDiscover).not.toHaveBeenCalled();
     expect(toolCall?.permissionResult).toEqual(expect.objectContaining({ scopes: expect.arrayContaining([path.permission]) }));
     expect(toolCall?.outputSummary).toEqual(expect.objectContaining({ canonicalToolKey: path.toolKey }));
 

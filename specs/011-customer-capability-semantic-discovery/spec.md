@@ -103,7 +103,7 @@ As an internal user, I want the Assistant to distinguish missing information fro
 
 As an authorized internal user, I want a resolved capability to enter the existing execution path so that current permission, Tool, projection, evidence, and grounding controls remain authoritative.
 
-**Independent Test**: The supported Shinmone monthly capability binds to the existing `work-orders.monthly-new-count@1.0.0` Tool with `timeRange=this_month` explicitly consumed by a binding semantic constraint and no Tool input mapping. Synthetic Customer B separately proves canonical `itemRef` mapped to Tool argument `sku`. In both cases every supplied resolved canonical parameter is accounted for, the resulting Tool arguments are validated against the current ToolDefinition input schema, and the Tool is re-resolved under the current CustomerToolPolicy and permission scopes before the normal Feature 008/009/010 path can run.
+**Independent Test**: The supported Shinmone monthly capability binds to the existing `work-orders.monthly-new-count@1.0.0` Tool with `timeRange=this_month` explicitly consumed by a binding semantic constraint and no Tool input mapping. Synthetic Customer B separately proves canonical `itemRef` mapped to Tool argument `sku`. In both cases every supplied resolved canonical parameter is accounted for, the resulting Tool arguments are validated against the current ToolDefinition input schema, and the existing Feature 008/010 Tool lane re-resolves the exact Tool and current CustomerToolPolicy/permission scopes before ToolCall start.
 
 **Acceptance Scenarios**:
 
@@ -141,8 +141,10 @@ As a product architect, I want capability discovery to integrate with existing T
 **Acceptance Scenarios**:
 
 1. V1 Tool capability resolution enters the existing bounded Tool or Hybrid lane and retains Feature 010 need, coverage, evidence, and citation semantics.
-2. Capability metadata cannot place raw connector or pre-projection data into `GroundedContextBundleV1`.
-3. Future knowledge capability metadata remains declarative and cannot select inaccessible documents, bypass Customer/organization/permission filters, or become evidence by itself.
+2. A resolved Tool candidate denied by current CustomerToolPolicy or permission checks supplies no Tool evidence, but does not block an authorized Document lane; if that lane is covered, existing Feature 010 coverage is `PARTIAL`.
+3. An unavailable Tool capability contributes a lane-local unsupported Tool need; Tool-only coverage is `INSUFFICIENT`, while a covered Document need in Hybrid yields `PARTIAL`.
+4. Capability metadata cannot place raw connector or pre-projection data into `GroundedContextBundleV1`.
+5. Future knowledge capability metadata remains declarative and cannot select inaccessible documents, bypass Customer/organization/permission filters, or become evidence by itself.
 
 ### Edge Cases
 
@@ -155,7 +157,7 @@ As a product architect, I want capability discovery to integrate with existing T
 - A binding maps or semantically constrains some supplied canonical parameters but leaves another supplied parameter unaccounted for.
 - A binding mapping references an undeclared canonical parameter, supplies an undeclared constant, produces an unknown target field, or yields Tool arguments that fail the current ToolDefinition input schema.
 - The application-owned V1 semantic locale has no exact profile in the selected scoped capability definition.
-- A binding references a missing, inactive, non-read-only, schema-incompatible, or Customer-policy-denied Tool.
+- A binding references a missing, inactive, non-read-only, or schema-incompatible ToolDefinition contract; separately, current CustomerToolPolicy or permission checks may deny execution after semantic resolution without changing the capability outcome.
 - User text, page context, prior conversation, a Customer pack, or a model attempts to supply `customerId`, integration, HostApp, roles, permission scopes, Tool authority, connector configuration, or credentials.
 - A prior conversation frame names a capability that is no longer present or available in the current Customer catalog.
 - Two Customers intentionally reuse the same capability key, alias, organization ID, actor ID, or HostApp value.
@@ -175,15 +177,15 @@ As a product architect, I want capability discovery to integrate with existing T
 - **FR-008**: A resolved outcome MUST identify one canonical capability and a bounded set of canonical typed parameters, with safe resolution provenance sufficient for audit and testing. Semantic Core MUST resolve only canonical capability parameters and MUST NOT know Customer Tool or API argument spelling.
 - **FR-009**: When a capability is identified but required parameters are absent, `NEEDS_CLARIFICATION` MUST identify every missing canonical parameter and MUST NOT degrade to a generic missing-business-object reason.
 - **FR-010**: `NEEDS_CLARIFICATION` MUST distinguish structured missing, invalid, and conflicting canonical parameter issues. Missing MUST NOT be treated as invalid; invalid MUST NOT be treated as capability unavailable; conflicting MUST NOT be treated as capability unavailable; all clarification cases MUST cause zero Tool or Customer API execution. Exact result field and type names remain a design decision.
-- **FR-011**: `CAPABILITY_UNAVAILABLE` MUST mean that the intended capability and relevant canonical semantic values are valid, but the active verified Customer/integration/HostApp scope has no compatible active execution binding for that resolved combination. The system MUST NOT silently replace, widen, or map a valid value to another value. A supplied value that cannot be normalized to a valid canonical parameter value MUST instead use typed invalid-parameter clarification.
+- **FR-011**: `CAPABILITY_UNAVAILABLE` MUST mean that the intended capability and relevant canonical semantic values are valid, but the active verified Customer/integration/HostApp capability pack has no semantically and parameter-compatible active binding for that combination (`NO_COMPATIBLE_ACTIVE_BINDING`). It MUST NOT represent CustomerToolPolicy, permission, role/scope, runtime authorization, Connector, or Tool execution denial/failure. The system MUST NOT silently replace, widen, or map a valid value to another value. A supplied value that cannot be normalized to a valid canonical parameter value MUST instead use typed invalid-parameter clarification.
 - **FR-012**: Equally valid candidates MUST return ambiguity with bounded safe candidate references and MUST NOT select a candidate by arbitrary ordering.
 - **FR-013**: Unknown or unavailable meaning MUST NOT cause the system to infer business semantics from Tool names, descriptions, connector manifests, API paths, response fields, or another Customer's catalog.
 - **FR-014**: Business capability and execution Tool MUST remain separate identities. A capability binding MAY reference an existing ToolDefinition or another future explicitly supported target type, but semantic Core MUST NOT construct or mutate the target and canonical capability parameters MUST NOT be assumed to be Tool input arguments.
 - **FR-015**: V1 acceptance MUST support read-only Tool-backed capabilities. Write/action capabilities, confirmations, and approvals remain out of scope and MUST NOT be enabled by a pack.
-- **FR-016**: Before Tool execution, the system MUST apply the selected binding's validated declarative parameter mapping, re-resolve the current ToolDefinition and CustomerToolPolicy, validate the resulting Tool arguments against the current ToolDefinition input schema, and complete the current Feature 008 permission precheck.
+- **FR-016**: A `RESOLVED` version-pinned Tool candidate is planning input, not execution authorization, even when current CustomerToolPolicy would deny it. Before ToolCall start, the existing Tool lane MUST re-resolve the exact Tool key/version and current CustomerToolPolicy, verify active/read-only/no-side-effect status, roles and permission scopes, and revalidate mapped arguments against the current ToolDefinition input schema. Missing, drifted, inactive, write, side-effecting, or schema-incompatible Tool contracts fail closed as `tool_contract_mismatch` without latest-version fallback; policy denial retains existing Tool-lane denial semantics. Neither path produces unauthorized execution or factual Tool evidence.
 - **FR-017**: Capability packs and bindings MUST NOT grant roles or permission scopes, weaken ToolDefinition requirements, override risk, skip confirmation/approval rules, or act as evidence of authorization.
 - **FR-018**: Organization, actor, roles, and permission scopes MUST come from verified current identity. They MAY constrain downstream availability/authorization but MUST NOT be asserted by user text or pack metadata.
-- **FR-019**: Missing, invalid, inactive, incompatible, ambiguous, or unavailable catalog/binding state MUST fail closed before Tool or Customer business-data invocation.
+- **FR-019**: Missing, invalid, inactive, incompatible, ambiguous, or unavailable catalog/binding state MUST fail closed before Tool or Customer business-data invocation. Pack startup validity MUST check binding integrity, complete parameter accounting, exact active read-only side-effect-free ToolDefinition contract existence/version, input schema, and mapping compatibility; dynamic CustomerToolPolicy enablement/denial MUST NOT invalidate the pack or define semantic binding compatibility.
 - **FR-020**: Feature 011 MUST preserve Feature 008 ownership of Tool validation, authorization, execution lifecycle, projection, masking/minimization, and EvidenceRef creation.
 - **FR-021**: Feature 011 MUST preserve Feature 009 ownership of Connector Runtime operations, manifests, credentials, bindings, upstream transport, response validation, and extraction.
 - **FR-022**: Feature 011 MUST preserve Feature 010 ownership of bounded conversation context, follow-up resolution, retrieval modes/needs, current-authority re-entry, coverage, evidence normalization, citations, and `GroundedContextBundleV1`.
@@ -217,6 +219,7 @@ As a product architect, I want capability discovery to integrate with existing T
 - **FR-050**: A binding semantic constraint MUST be compatibility metadata only: it declares the exact bounded canonical enum values inherently represented by the target operation, grants no execution or permission authority, performs no argument mapping, and contains no expression language. Optional canonical parameters that were not supplied require no runtime accounting; when supplied, they are subject to FR-049.
 - **FR-051**: Pack startup validation MUST reject unknown mapping or constraint parameters, unknown constrained enum values, contradictory or duplicate parameter-consumption declarations, implicit fixed semantics, unknown or duplicate mapping targets, and statically unsatisfied required Tool inputs. Runtime MUST recheck complete supplied-parameter coverage before releasing a Tool candidate and MUST NOT remove or ignore an unaccounted parameter.
 - **FR-052**: Feature 011 V1 MUST use the existing application-owned `zh-TW` semantic locale already supplied by current query-understanding and grounding orchestration. Locale is semantic matching input only and MUST NOT establish Customer scope or execution authority. Resolution MUST require an exact compatible locale profile; absence MUST fail safely as unrecognized meaning without cross-locale fallback or LLM language detection.
+- **FR-053**: `CAPABILITY_UNAVAILABLE` MUST project to a lane-local unsupported Tool need with reason `NO_COMPATIBLE_ACTIVE_BINDING`, not directly to a whole-plan outcome. Feature 010 alone evaluates coverage: no covered need yields `INSUFFICIENT`; a covered Document need alongside an unavailable or policy-denied Tool need yields `PARTIAL`. Blocking `NEEDS_CLARIFICATION` and `AMBIGUOUS` still route to `CLARIFY`; no fifth capability outcome or second coverage evaluator is permitted.
 
 ### Security and Fail-Closed Requirements
 
@@ -224,6 +227,7 @@ As a product architect, I want capability discovery to integrate with existing T
 - Capability identity and binding lookup MUST remain within the verified active Customer/integration and applicable HostApp scope; a globally materialized multi-Customer candidate pool is forbidden even if later filtering would occur.
 - Catalog records, aliases, examples, parameter values, and bindings from another Customer MUST be indistinguishable from nonexistent data to the active request.
 - Semantic resolution and capability bindings are non-authoritative. Current identity, CustomerToolPolicy, permission scopes, ToolDefinition, risk controls, and downstream source authorization remain authoritative.
+- Dynamic policy or permission denial does not change recognized capability meaning or semantic binding compatibility. A planning candidate never grants execution; the existing Tool lane must deny unauthorized work and cannot fabricate Tool evidence or block an independently covered Hybrid Document lane.
 - Documents, prior Assistant prose, page context, model output, and Customer pack examples are untrusted semantic inputs and cannot issue instructions or grant execution authority.
 - Invalid catalog state, catalog lookup failure, candidate overflow, parameter overflow, binding mismatch, or audit failure MUST produce a safe non-executing result.
 - Feature 011 is read-only. No confirmation, approval, write Tool, or human-approval bypass is introduced. Existing handoff/escalation behavior remains available for unsupported or policy-governed cases.
@@ -252,6 +256,10 @@ FINAL_LLM_SYNTHESIS_IN_FEATURE011=NO
 CAPABILITY_PACK_IDENTITY_AUTHORITY=NO
 CAPABILITY_PACK_PERMISSION_AUTHORITY=NO
 CAPABILITY_BINDING_EXECUTION_AUTHORITY=NO
+DYNAMIC_CUSTOMER_POLICY_IS_SEMANTIC_AUTHORITY=NO
+POLICY_DENIAL_CHANGES_CAPABILITY_MEANING=NO
+POLICY_DENIED_TOOL_BLOCKS_OTHER_HYBRID_LANES=NO
+CAPABILITY_UNAVAILABLE_IS_LANE_LOCAL=YES
 CAPABILITY_DISCOVERY_BEFORE_CUSTOMER_SCOPE=FORBIDDEN
 GLOBAL_CROSS_CUSTOMER_CANDIDATE_POOL=FORBIDDEN
 ARBITRARY_TOOL_OR_API_INVENTION=FORBIDDEN
@@ -280,7 +288,7 @@ These entity names describe required concepts only. Exact versioned type names a
 - A work-order-new-count expression without a time range MUST return `NEEDS_CLARIFICATION` with `missingParameters=["timeRange"]` and zero ToolCalls.
 - `今天新增幾張工單` MUST recognize `today` as a valid canonical time value, resolve the intended capability and canonical `timeRange=today`, then return `CAPABILITY_UNAVAILABLE` because the installed reference binding supports only the monthly combination, with zero ToolCalls and zero Shinmone business requests.
 - A supplied time value that cannot be normalized to a valid canonical value MUST return typed invalid-parameter clarification and MUST NOT return `CAPABILITY_UNAVAILABLE`.
-- A supported monthly request MUST bind through Customer-owned configuration to existing `work-orders.monthly-new-count@1.0.0`. The binding MUST explicitly constrain `timeRange` to `[this_month]`, thereby consuming the fixed monthly semantic condition, and MUST use an empty Tool-input mapping because the existing Tool accepts no inputs. The resulting empty Tool arguments MUST pass the current ToolDefinition input schema, CustomerToolPolicy, and permission precheck before entering the existing Feature 008/009/010 path.
+- A supported monthly request MUST bind through Customer-owned configuration to existing `work-orders.monthly-new-count@1.0.0`. The binding MUST explicitly constrain `timeRange` to `[this_month]`, thereby consuming the fixed monthly semantic condition, and MUST use an empty Tool-input mapping because the existing Tool accepts no inputs. The resulting empty Tool arguments MUST pass the current ToolDefinition input schema; the existing Tool lane MUST then enforce current CustomerToolPolicy and permission precheck before ToolCall start.
 - `Dashboard/KPIStats`, `NewOrders`, upstream `TimeRange=thisMonth`, response pointers, credentials, and connector details MUST remain outside generic semantic Core.
 
 ## Synthetic Customer B Acceptance
@@ -320,6 +328,7 @@ Such metadata MUST NOT contain retrieval algorithms, document contents, permissi
 - **SC-011**: Every supplied resolved canonical parameter in every Tool-backed fixture is accounted for exactly once by a validated mapping or explicit semantic constraint. Fixtures prove mapped-only and constraint-only compatibility, reject unaccounted parameters and unknown source/target fields fail-closed, and validate resulting Tool arguments against the current ToolDefinition input schema before execution.
 - **SC-012**: Shinmone proves the generic semantic-constraint mechanism with `timeRange=[this_month]` and an empty mapping; `timeRange=today` remains valid but unavailable. Customer B proves the generic mapped-parameter mechanism with `itemRef` to `sku`. Neither case requires a Customer-specific Core branch.
 - **SC-013**: V1 resolution uses only the application-owned `zh-TW` locale, exact-matches semantic profiles, and performs zero cross-locale fallback or language-model detection; a missing exact profile safely yields capability-not-recognized clarification.
+- **SC-014**: Dynamic policy denial leaves a recognized capability `RESOLVED` but yields zero Tool evidence; Tool-only denial is `INSUFFICIENT`, while a covered Hybrid Document lane yields `PARTIAL`. A semantically unavailable Tool need is likewise lane-local: Tool-only is `INSUFFICIENT`, covered Hybrid Document is `PARTIAL`. Blocking clarification and ambiguity remain `CLARIFY`.
 
 ## Open Design Questions
 

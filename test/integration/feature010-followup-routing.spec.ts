@@ -17,6 +17,10 @@ describe('Feature 010 semantic follow-up routing (T037-T042)', () => {
 
   beforeEach(async () => {
     ({ app, state } = await createUs1TestAppWithState({
+      capabilityPackPaths: [
+        'test/fixtures/capability-packs/customer-a-monthly-followup.v1.json',
+        'test/fixtures/capability-packs/customer-b-inventory.v1.json'
+      ],
       dataAdapterRegistrationsFactory: ({ mockRegistrations }) => Object.freeze([
         ...mockRegistrations,
         Object.freeze({ adapter: businessAdapter, connectorKey: 'business', customerId: 'customer-b', integrationId: 'integration-erp', hostApp: 'erp', active: true })
@@ -54,7 +58,7 @@ describe('Feature 010 semantic follow-up routing (T037-T042)', () => {
   });
 
   it('replaces Customer B SKU and executes one newly discovered, currently authorized ToolCall', async () => {
-    await sendB('req-f010-p4-sku-seed', '請查 SKU-B-001 庫存');
+    await sendB('req-f010-p4-sku-seed', '查詢庫存現量 料號 SKU-B-001');
     const before = counts();
     const response = await sendB('req-f010-p4-sku-followup', 'SKU-B-002 呢？');
     expect(response.status).toBe(200);
@@ -71,12 +75,12 @@ describe('Feature 010 semantic follow-up routing (T037-T042)', () => {
     expect(planningAudit('req-f010-p4-sku-followup')).toMatchObject({ retrievalMode: 'TOOL' });
   });
 
-  it('resolves last_month but clarifies unsupported capability with zero execution', async () => {
+  it('resolves last_month as unavailable with zero execution', async () => {
     await sendA('req-f010-p4-month-seed', '請查這個月新增工單數', { module: 'work-orders', visibleColumns: ['createdAt'] });
     const before = counts();
     const response = await sendA('req-f010-p4-month-followup', '上個月呢？', { module: 'work-orders', visibleColumns: ['createdAt'] });
     expect(counts()).toEqual(before);
-    expect(parseSseResponse(response.text).at(-1)?.data?.data?.answerDecision).toBe('clarification_required');
+    expect(parseSseResponse(response.text).at(-1)?.data?.data?.answerDecision).toBe('no_answer');
     expect(resolutionAudit('req-f010-p4-month-followup')).toMatchObject({ kind: 'REPLACE', replacedDimensions: ['timeRange'] });
     expect(planningAudit('req-f010-p4-month-followup')).toMatchObject({ retrievalMode: 'INSUFFICIENT', retrievalReasonCode: 'RETRIEVAL_NEEDS_INSUFFICIENT' });
   });

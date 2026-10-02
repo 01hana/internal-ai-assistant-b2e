@@ -58,11 +58,19 @@ export class ConversationContextLoaderService {
       let semanticFrame;
       let capabilityFrame;
       if (queryUnderstanding !== undefined) {
-        const guarded = this.guard.guard(queryUnderstanding);
+        const source = isRecord(queryUnderstanding) ? queryUnderstanding : undefined;
+        const { capabilityFollowUpFrame, ...legacySource } = source ?? {};
+        const guarded = this.guard.guard(source ? legacySource : queryUnderstanding);
         if (guarded.accepted) {
           semanticFrame = this.reconstructor.reconstruct(guarded.value, text(user.id)!);
-          const guardedRecord = isRecord(guarded.value) ? guarded.value : undefined;
-          capabilityFrame = this.reconstructor.reconstructCapabilityFrame(guardedRecord?.capabilityFollowUpFrame);
+          if (capabilityFollowUpFrame !== undefined) {
+            const guardedCapability = this.guard.guard(capabilityFollowUpFrame);
+            if (guardedCapability.accepted) {
+              capabilityFrame = this.reconstructor.reconstructCapabilityFrame(guardedCapability.value);
+            } else {
+              reasons.add(guardedCapability.reasonCode);
+            }
+          }
         } else {
           reasons.add(guarded.reasonCode);
         }

@@ -15,8 +15,8 @@ describe('Feature 010 does not generate with an LLM (T072)', () => {
 
   it.each([
     ['document-only', '退貨流程 SOP 怎麼說？'],
-    ['Tool-only', '請查 SKU-DEMO-RED 目前庫存'],
-    ['Hybrid COMPLETE', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式'],
+    ['Tool-only', '查詢庫存可用量 料號 SKU-DEMO-RED'],
+    ['Hybrid COMPLETE', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式'],
     ['CLARIFY', '那個呢？']
   ])('keeps LLM invocation count zero for %s', async (_case, message) => {
     await expectNoLlm(() => send(`req-f010-no-llm-${String(_case).replace(/\W/g, '-')}`, message));
@@ -24,11 +24,11 @@ describe('Feature 010 does not generate with an LLM (T072)', () => {
 
   it('keeps LLM invocation count zero for Hybrid PARTIAL and INSUFFICIENT', async () => {
     state.knowledgeDocuments.splice(0); state.knowledgeChunks.splice(0);
-    await expectNoLlm(() => send('req-f010-no-llm-partial', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式'));
+    await expectNoLlm(() => send('req-f010-no-llm-partial', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式'));
     expect(metadata('req-f010-no-llm-partial')).toEqual(expect.objectContaining({ coverage: 'PARTIAL' }));
 
     state.customerToolPolicies.find((item) => item.toolDefinitionId === 'tool-definition-inventory-001')!.enabled = false;
-    await expectNoLlm(() => send('req-f010-no-llm-insufficient', '請查 SKU-DEMO-BLUE 目前庫存，並依退貨流程 SOP 說明處理方式'));
+    await expectNoLlm(() => send('req-f010-no-llm-insufficient', '查詢庫存可用量 料號 SKU-DEMO-BLUE，並依退貨流程 SOP 說明處理方式', 'SKU-DEMO-BLUE'));
     expect(metadata('req-f010-no-llm-insufficient')).toEqual(expect.objectContaining({ coverage: 'INSUFFICIENT' }));
   });
 
@@ -49,12 +49,12 @@ describe('Feature 010 does not generate with an LLM (T072)', () => {
     expect(summarize).not.toHaveBeenCalled();
   }
 
-  function send(requestId: string, message: string) {
+  function send(requestId: string, message: string, entityId = 'SKU-DEMO-RED') {
     return request(app.getHttpServer()).post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
         claims: { ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA, permission_scopes: ['orders:read', 'inventory:read'] }, requestId
       }))
-      .send({ message, pageContext: { module: 'inventory', entityType: 'item', entityId: 'SKU-DEMO-RED', visibleColumns: ['availableQuantity', 'incomingQuantity'] } });
+      .send({ message, pageContext: { module: 'inventory', entityType: 'item', entityId, visibleColumns: ['availableQuantity', 'incomingQuantity'] } });
   }
 
   function metadata(requestId: string): any { return state.answerDecisions.find((item) => item.requestId === requestId)?.metadata; }

@@ -125,6 +125,7 @@ describe('Feature 008 registry runtime cutover', () => {
     const select = jest.spyOn(app.get(DataAdapterRegistry), 'select');
     const toolRegistry = app.get(ToolRegistryService);
     const validateNamedOperation = toolRegistry.validateNamedOperation.bind(toolRegistry);
+    const priorToolCallCount = state.toolCalls.length;
     let validationCount = 0;
     jest.spyOn(toolRegistry, 'validateNamedOperation').mockImplementation((tool, candidate) => {
       validationCount += 1;
@@ -138,7 +139,7 @@ describe('Feature 008 registry runtime cutover', () => {
     expect(response.status).toBe(200);
     expect(select).not.toHaveBeenCalled();
     expect(adapter.execute).not.toHaveBeenCalled();
-    expect(state.toolCalls.at(-1)).toEqual(expect.objectContaining({ status: 'blocked', executionStatus: 'not_started' }));
+    expect(state.toolCalls).toHaveLength(priorToolCallCount);
   });
 
   it.each([
@@ -303,7 +304,7 @@ async function sendOrderRequest(
     .post('/api/v1/assistant/sessions/session-owned-001/messages')
     .set(headers)
     .send({
-      message: '請查 SO-10001 訂單狀態',
+      message: '查詢訂單目前狀態 訂單號 SO-10001',
       pageContext: {
         connectorContextRef: CONNECTOR_CONTEXT_REF,
         module: 'orders',

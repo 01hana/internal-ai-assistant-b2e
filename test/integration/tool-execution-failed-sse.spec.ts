@@ -29,7 +29,7 @@ describe('US2 failed tool execution SSE lifecycle', () => {
         })
       )
       .send({
-        message: '請查 SO-99999 訂單狀態',
+        message: '查詢訂單目前狀態 訂單號 SO-99999',
         pageContext: {
           module: 'orders',
           entityType: 'order',

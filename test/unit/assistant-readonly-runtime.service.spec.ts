@@ -13,6 +13,31 @@ import {
 } from '../../src/tools/tool-registry.types';
 
 describe('AssistantReadonlyRuntimeService', () => {
+  it('rejects a version-pinned contract drift before creating any ToolCall or selecting a Connector', async () => {
+    const resolveExactToolForCustomer = jest.fn().mockResolvedValue({ deniedReason: 'tool_not_registered' });
+    const resolveToolForCustomer = jest.fn().mockResolvedValue({ resolved: {
+      tool: registeredTool(), requiredRoles: [], requiredPermissionScopes: []
+    } });
+    const startToolCall = jest.fn();
+    const blockToolCall = jest.fn();
+    const registrySelect = jest.fn();
+    const service = createRuntimeService({ resolveExactToolForCustomer, resolveToolForCustomer, startToolCall, blockToolCall, registrySelect });
+    const input = runtimeInput();
+    input.executionPlan.candidateTools = [{
+      key: 'mock.orders.status.lookup', version: '1.0.0',
+      arguments: { entityId: 'SO-10001' }, reason: 'customer_capability_binding'
+    }];
+
+    const result = await service.execute(input);
+
+    expect(resolveExactToolForCustomer).toHaveBeenCalledWith('mock.orders.status.lookup', '1.0.0', input.customerScope.customerId);
+    expect(resolveToolForCustomer).not.toHaveBeenCalled();
+    expect(result.deniedReason).toBe('tool_contract_mismatch');
+    expect(startToolCall).not.toHaveBeenCalled();
+    expect(blockToolCall).not.toHaveBeenCalled();
+    expect(registrySelect).not.toHaveBeenCalled();
+  });
+
   it('starts before connector execution and completes only from projected connector data', async () => {
     const connectorExecute = jest.fn().mockResolvedValue({
       status: 'succeeded',
@@ -38,6 +63,7 @@ describe('AssistantReadonlyRuntimeService', () => {
     input.executionPlan.candidateTools = [
       {
         key: 'mock.orders.status.lookup',
+        version: '1.0.0',
         arguments: { entityId: 'SO-10002' },
         reason: 'order status query',
         operation: 'mock.orders.cancel'
@@ -94,7 +120,7 @@ describe('AssistantReadonlyRuntimeService', () => {
   });
 
   it.each<ToolPermissionDeniedReason>(['tool_not_registered', 'tool_inactive'])(
-    'blocks the tool call and does not call the connector when registry resolution fails with %s',
+    'fails before ToolCall and does not call the connector when pinned registry resolution fails with %s',
     async (deniedReason) => {
       const connectorExecute = jest.fn();
       const registrySelect = jest.fn();
@@ -112,11 +138,11 @@ describe('AssistantReadonlyRuntimeService', () => {
 
       expect(connectorExecute).not.toHaveBeenCalled();
       expect(registrySelect).not.toHaveBeenCalled();
-      expect(recordDenied).toHaveBeenCalledWith(expect.objectContaining({ deniedReason }));
-      expect(blockToolCall).toHaveBeenCalledWith(expect.objectContaining({ deniedReason }));
-      expect(result.toolCallId).toBe('tool-call-blocked-001');
-      expect(result.toolLifecycle).toBe('blocked');
-      expect(result.deniedReason).toBe(deniedReason);
+      expect(recordDenied).not.toHaveBeenCalled();
+      expect(blockToolCall).not.toHaveBeenCalled();
+      expect(result.toolCallId).toBeUndefined();
+      expect(result.toolLifecycle).toBe('failed');
+      expect(result.deniedReason).toBe('tool_contract_mismatch');
     }
   );
 
@@ -141,15 +167,10 @@ describe('AssistantReadonlyRuntimeService', () => {
 
     expect(connectorExecute).not.toHaveBeenCalled();
     expect(registrySelect).not.toHaveBeenCalled();
-    expect(recordDenied).toHaveBeenCalledWith(
-      expect.objectContaining({
-        deniedReason: 'schema_invalid',
-        schemaErrorReason: 'missing_required_entityId'
-      })
-    );
-    expect(blockToolCall).toHaveBeenCalledWith(expect.objectContaining({ deniedReason: 'schema_invalid' }));
-    expect(result.toolLifecycle).toBe('blocked');
-    expect(result.deniedReason).toBe('schema_invalid');
+    expect(recordDenied).not.toHaveBeenCalled();
+    expect(blockToolCall).not.toHaveBeenCalled();
+    expect(result.toolLifecycle).toBe('failed');
+    expect(result.deniedReason).toBe('tool_contract_mismatch');
   });
 
   it('blocks malformed candidate arguments before ToolCall start or connector execution', async () => {
@@ -172,6 +193,7 @@ describe('AssistantReadonlyRuntimeService', () => {
     input.executionPlan.candidateTools = [
       {
         key: 'mock.orders.status.lookup',
+        version: '1.0.0',
         arguments: { entityId: 'SO-10001', connectorContextRef: 'ccr_runtime_secret' },
         reason: 'unsafe candidate',
         operation: 'delete'
@@ -183,9 +205,9 @@ describe('AssistantReadonlyRuntimeService', () => {
     expect(startToolCall).not.toHaveBeenCalled();
     expect(connectorExecute).not.toHaveBeenCalled();
     expect(registrySelect).not.toHaveBeenCalled();
-    expect(blockToolCall).toHaveBeenCalledWith(expect.objectContaining({ deniedReason: 'schema_invalid' }));
+    expect(blockToolCall).not.toHaveBeenCalled();
     expect(JSON.stringify(blockToolCall.mock.calls)).not.toContain('ccr_runtime_secret');
-    expect(result.toolLifecycle).toBe('blocked');
+    expect(result.toolLifecycle).toBe('failed');
   });
 
   it('blocks the tool call and does not call the connector when permission pre-check denies execution', async () => {
@@ -219,9 +241,9 @@ describe('AssistantReadonlyRuntimeService', () => {
     const blockToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-policy-denied' } });
     const recordDenied = jest.fn();
     const checkResolvedCustomerTool = jest.fn();
-    const resolveToolForCustomer = jest.fn().mockResolvedValue({ deniedReason: 'customer_policy_denied' });
+    const resolveExactToolForCustomer = jest.fn().mockResolvedValue({ deniedReason: 'customer_policy_denied' });
     const service = createRuntimeService({
-      resolveToolForCustomer,
+      resolveExactToolForCustomer,
       checkResolvedCustomerTool,
       connectorExecute,
       registrySelect,
@@ -232,13 +254,14 @@ describe('AssistantReadonlyRuntimeService', () => {
     const input = runtimeInput();
     input.executionPlan.candidateTools = [{
       key: 'mock.orders.status.lookup',
+      version: '1.0.0',
       arguments: { entityId: 'SO-10001' },
       reason: 'metadata_discovery_policy_denied'
     }];
 
     const result = await service.execute(input);
 
-    expect(resolveToolForCustomer).toHaveBeenCalledWith('mock.orders.status.lookup', input.customerScope);
+    expect(resolveExactToolForCustomer).toHaveBeenCalledWith('mock.orders.status.lookup', '1.0.0', input.customerScope.customerId);
     expect(checkResolvedCustomerTool).not.toHaveBeenCalled();
     expect(startToolCall).not.toHaveBeenCalled();
     expect(registrySelect).not.toHaveBeenCalled();
@@ -260,7 +283,7 @@ describe('AssistantReadonlyRuntimeService', () => {
       missingScopes: ['orders:read']
     });
     const blockToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-current-permission' } });
-    const resolveToolForCustomer = jest.fn().mockResolvedValue({
+    const resolveExactToolForCustomer = jest.fn().mockResolvedValue({
       resolved: {
         tool: registeredTool(),
         requiredRoles: [],
@@ -270,7 +293,7 @@ describe('AssistantReadonlyRuntimeService', () => {
     const registrySelect = jest.fn();
     const connectorExecute = jest.fn();
     const service = createRuntimeService({
-      resolveToolForCustomer,
+      resolveExactToolForCustomer,
       checkResolvedCustomerTool,
       blockToolCall,
       registrySelect,
@@ -279,13 +302,14 @@ describe('AssistantReadonlyRuntimeService', () => {
     const input = runtimeInput();
     input.executionPlan.candidateTools = [{
       key: 'mock.orders.status.lookup',
+      version: '1.0.0',
       arguments: { entityId: 'SO-10001' },
       reason: 'metadata_discovery_policy_denied'
     }];
 
     const result = await service.execute(input);
 
-    expect(resolveToolForCustomer).toHaveBeenCalledWith('mock.orders.status.lookup', input.customerScope);
+    expect(resolveExactToolForCustomer).toHaveBeenCalledWith('mock.orders.status.lookup', '1.0.0', input.customerScope.customerId);
     expect(checkResolvedCustomerTool).toHaveBeenCalledWith(expect.objectContaining({
       customerScope: input.customerScope,
       resolvedTool: expect.objectContaining({ tool: expect.objectContaining({ key: 'mock.orders.status.lookup' }) })
@@ -301,9 +325,9 @@ describe('AssistantReadonlyRuntimeService', () => {
     const registrySelect = jest.fn();
     const blockToolCall = jest.fn().mockResolvedValue({ toolCall: { id: 'tool-call-latest-policy-denied' } });
     const checkResolvedCustomerTool = jest.fn();
-    const resolveToolForCustomer = jest.fn().mockResolvedValue({ deniedReason: 'customer_policy_denied' });
+    const resolveExactToolForCustomer = jest.fn().mockResolvedValue({ deniedReason: 'customer_policy_denied' });
     const service = createRuntimeService({
-      resolveToolForCustomer,
+      resolveExactToolForCustomer,
       checkResolvedCustomerTool,
       connectorExecute,
       registrySelect,
@@ -312,13 +336,14 @@ describe('AssistantReadonlyRuntimeService', () => {
     const input = runtimeInput();
     input.executionPlan.candidateTools = [{
       key: 'mock.orders.status.lookup',
+      version: '1.0.0',
       arguments: { entityId: 'SO-10001' },
       reason: 'metadata_discovery'
     }];
 
     const result = await service.execute(input);
 
-    expect(resolveToolForCustomer).toHaveBeenCalledWith('mock.orders.status.lookup', input.customerScope);
+    expect(resolveExactToolForCustomer).toHaveBeenCalledWith('mock.orders.status.lookup', '1.0.0', input.customerScope.customerId);
     expect(checkResolvedCustomerTool).not.toHaveBeenCalled();
     expect(registrySelect).not.toHaveBeenCalled();
     expect(connectorExecute).not.toHaveBeenCalled();
@@ -335,7 +360,7 @@ describe('AssistantReadonlyRuntimeService', () => {
 
     expect(runtimeSource).not.toContain('POLICY_DENIED_DISCOVERY_REASON');
     expect(runtimeSource).not.toMatch(/candidate\.reason/);
-    expect(runtimeSource).toContain('resolveToolForCustomer(toolName, input.customerScope)');
+    expect(runtimeSource).toContain('resolveExactToolForCustomer(toolName, pinnedVersion, input.customerScope.customerId)');
   });
 
   it('keeps productized transport unreachable until the existing permission precheck succeeds', async () => {
@@ -755,6 +780,7 @@ describe('ToolCallService', () => {
 function createRuntimeService(overrides?: {
   registryResult?: { resolved?: { tool: RegisteredToolDefinition; requiredRoles: readonly string[]; requiredPermissionScopes: readonly string[] }; deniedReason?: ToolPermissionDeniedReason };
   resolveToolForCustomer?: jest.Mock;
+  resolveExactToolForCustomer?: jest.Mock;
   checkResolvedCustomerTool?: jest.Mock;
   validation?: { valid: true } | { valid: false; deniedReason: 'schema_invalid'; schemaErrorReason: string };
   permission?: { allowed: true } | { allowed: false; reason: ToolPermissionDeniedReason; missingScopes?: string[] };
@@ -783,6 +809,8 @@ function createRuntimeService(overrides?: {
   return new AssistantReadonlyRuntimeService(
     {
       resolveToolForCustomer: overrides?.resolveToolForCustomer ?? jest.fn().mockResolvedValue(overrides?.registryResult ?? { resolved: { tool: registeredTool(), requiredRoles: [], requiredPermissionScopes: [] } }),
+      resolveExactToolForCustomer: overrides?.resolveExactToolForCustomer ?? jest.fn().mockResolvedValue(
+        overrides?.registryResult ?? { resolved: { tool: registeredTool(), requiredRoles: [], requiredPermissionScopes: [] } }),
       resolveResultPolicy: jest.fn().mockReturnValue({
         allowed: true,
         policy: {
@@ -892,6 +920,7 @@ function runtimeInput(): AssistantReadonlyRuntimeInput {
       candidateTools: [
         {
           key: 'mock.orders.status.lookup',
+          version: '1.0.0',
           arguments: { entityId: 'SO-10001' },
           reason: 'order status query'
         }

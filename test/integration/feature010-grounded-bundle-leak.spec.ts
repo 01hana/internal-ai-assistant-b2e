@@ -113,7 +113,7 @@ describe('Feature 010 grounded bundle cross-boundary leak prevention (T077)', ()
     jest.spyOn(connector, 'execute').mockResolvedValueOnce({ toolKey: 'mock.orders.status.lookup', status: 'failed',
       error: { code: 'CONNECTOR_UNAVAILABLE', message: 'LEAK_CONNECTOR_SENTINEL LEAK_RAW_RESPONSE_SENTINEL' },
       metadata: { rawResponse: 'LEAK_RAW_RESPONSE_SENTINEL' } });
-    const response = await send('req-f010-leak-connector', '請查 SO-10001 訂單狀態', {
+    const response = await send('req-f010-leak-connector', '查詢訂單目前狀態 訂單號 SO-10001', {
       module: 'orders', entityType: 'order', entityId: 'SO-10001', visibleColumns: ['status']
     });
     const records = { calls: state.toolCalls.filter((item) => item.requestId === 'req-f010-leak-connector'),

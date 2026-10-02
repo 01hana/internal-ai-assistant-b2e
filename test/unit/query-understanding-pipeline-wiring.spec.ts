@@ -36,7 +36,8 @@ describe('QueryUnderstandingModule wiring', () => {
     expect(moduleRef.get(ToolDiscoveryService)).toBeInstanceOf(ToolDiscoveryService);
     expect(moduleRef.get(ConversationSemanticReconstructorService)).toBeInstanceOf(ConversationSemanticReconstructorService);
     expect(moduleRef.get(CapabilitySemanticResolverService)).toBeInstanceOf(CapabilitySemanticResolverService);
-    expect(() => moduleRef.get(CapabilityResolutionService)).toThrow();
-    expect(pipeline).toHaveProperty('toolDiscovery', moduleRef.get(ToolDiscoveryService));
+    expect(moduleRef.get(CapabilityResolutionService)).toBeInstanceOf(CapabilityResolutionService);
+    expect(pipeline).toHaveProperty('capabilityResolution', moduleRef.get(CapabilityResolutionService));
+    expect(pipeline).not.toHaveProperty('toolDiscovery');
   });
 });

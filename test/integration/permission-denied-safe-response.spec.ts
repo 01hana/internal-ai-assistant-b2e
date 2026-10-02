@@ -34,7 +34,7 @@ describe('US4 permission denied safe response', () => {
         }
       )
       .send({
-        message: '請查 SO-10001 訂單狀態',
+        message: '查詢訂單目前狀態 訂單號 SO-10001',
         pageContext: {
           module: 'orders',
           entityType: 'order',

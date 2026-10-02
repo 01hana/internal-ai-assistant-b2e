@@ -29,6 +29,11 @@ function harness(toolOverride: Partial<RegisteredToolDefinition> = {}) {
   const selected = { ...tool, ...toolOverride };
   const validator = new ToolRegistryService({} as never, {} as never);
   const tools = {
+    resolveExactExecutableTool: jest.fn(async (key: string, version: string) =>
+      key === selected.key && version === selected.version
+        ? { tool: selected }
+        : { deniedReason: 'tool_not_registered' }
+    ),
     resolveExactToolForCustomer: jest.fn(async (key: string, version: string, customerId: string) =>
       key === selected.key && version === selected.version && customerId === 'customer-a'
         ? { resolved: { tool: selected, requiredRoles: [], requiredPermissionScopes: [] } }
@@ -84,6 +89,19 @@ describe('CapabilityBindingResolverService static declarations', () => {
 });
 
 describe('CapabilityBindingResolverService Tool contract', () => {
+  it('keeps static validity and semantic resolution when current CustomerToolPolicy denies execution', async () => {
+    const { resolver, tools } = harness();
+    tools.resolveExactToolForCustomer.mockResolvedValue({ deniedReason: 'customer_policy_denied' } as never);
+
+    await expect(resolver.validateCatalog(catalog())).resolves.toBeUndefined();
+    await expect(resolver.resolve(catalog(), 'cap.count', { timeRange: 'this_month' })).resolves.toMatchObject({
+      outcome: 'RESOLVED',
+      toolCandidate: { key: 'tool.count', version: '1.0.0', arguments: {} }
+    });
+    expect(tools.resolveExactExecutableTool).toHaveBeenCalledWith('tool.count', '1.0.0');
+    expect(tools.resolveExactToolForCustomer).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['unknown target', 'missing', 'value'], ['non-top-level target', 'nested.value', 'value'],
     ['constant type mismatch', 'count', 2], ['constant enum mismatch', 'count', 'other']
@@ -127,9 +145,9 @@ describe('CapabilityBindingResolverService Tool contract', () => {
     }
   });
 
-  it('rejects denied exact Tool or policy', async () => {
+  it('rejects denied exact Tool independent of Customer policy', async () => {
     const { resolver, tools } = harness();
-    tools.resolveExactToolForCustomer.mockResolvedValueOnce({ deniedReason: 'customer_policy_denied' } as never);
+    tools.resolveExactExecutableTool.mockResolvedValueOnce({ deniedReason: 'tool_not_registered' } as never);
     await expect(resolver.validateCatalog(catalog())).rejects.toThrow('CAPABILITY_BINDING_INVALID');
   });
 
@@ -140,7 +158,7 @@ describe('CapabilityBindingResolverService Tool contract', () => {
     ['wrong exact version', { version: '2.0.0' }]
   ])('rejects %s target despite a successful lookup response', async (_label, override) => {
     const { resolver, tools } = harness();
-    tools.resolveExactToolForCustomer.mockResolvedValueOnce({ resolved: { tool: { ...tool, ...override }, requiredRoles: [], requiredPermissionScopes: [] } } as never);
+    tools.resolveExactExecutableTool.mockResolvedValueOnce({ tool: { ...tool, ...override } } as never);
     await expect(resolver.validateCatalog(catalog())).rejects.toThrow('CAPABILITY_BINDING_INVALID');
   });
 });
@@ -231,19 +249,18 @@ describe('CapabilityBindingResolverService runtime accounting', () => {
   it.each([
     ['missing Tool', 'tool_not_registered'],
     ['inactive Tool', 'tool_inactive'],
-    ['side-effecting Tool', 'operation_denied'],
-    ['newly denied Customer policy', 'customer_policy_denied']
+    ['side-effecting Tool', 'operation_denied']
   ])('does not release a candidate after %s runtime drift', async (_kind, denial) => {
     const { resolver, tools } = harness();
     await resolver.validateCatalog(catalog());
-    tools.resolveExactToolForCustomer.mockResolvedValueOnce({ deniedReason: denial } as never);
+    tools.resolveExactExecutableTool.mockResolvedValueOnce({ deniedReason: denial } as never);
     await expect(resolver.resolve(catalog(), 'cap.count', { timeRange: 'this_month' })).rejects.toThrow('CAPABILITY_BINDING_INVALID');
   });
 
   it('rejects a changed Tool version after validation, without latest-version fallback', async () => {
     const { resolver, tools } = harness();
     await resolver.validateCatalog(catalog());
-    tools.resolveExactToolForCustomer.mockResolvedValueOnce({ resolved: { tool: { ...tool, version: '2.0.0' }, requiredRoles: [], requiredPermissionScopes: [] } } as never);
+    tools.resolveExactExecutableTool.mockResolvedValueOnce({ tool: { ...tool, version: '2.0.0' } } as never);
     await expect(resolver.resolve(catalog(), 'cap.count', { timeRange: 'this_month' })).rejects.toThrow('CAPABILITY_BINDING_INVALID');
     expect(tools.validateNamedOperation).not.toHaveBeenCalled();
   });
@@ -255,15 +272,15 @@ describe('CapabilityBindingResolverService runtime accounting', () => {
   ])('rejects a %s runtime Tool even if the lookup response is unexpectedly resolved', async (_label, override) => {
     const { resolver, tools } = harness();
     await resolver.validateCatalog(catalog());
-    tools.resolveExactToolForCustomer.mockResolvedValueOnce({ resolved: { tool: { ...tool, ...override }, requiredRoles: [], requiredPermissionScopes: [] } } as never);
+    tools.resolveExactExecutableTool.mockResolvedValueOnce({ tool: { ...tool, ...override } } as never);
     await expect(resolver.resolve(catalog(), 'cap.count', { timeRange: 'this_month' })).rejects.toThrow('CAPABILITY_BINDING_INVALID');
     expect(tools.validateNamedOperation).not.toHaveBeenCalled();
   });
 
-  it('redacts a runtime policy lookup exception and releases no candidate', async () => {
+  it('redacts a runtime Tool lookup exception and releases no candidate', async () => {
     const { resolver, tools } = harness();
     await resolver.validateCatalog(catalog());
-    tools.resolveExactToolForCustomer.mockRejectedValueOnce(new Error('secret policy store detail'));
+    tools.resolveExactExecutableTool.mockRejectedValueOnce(new Error('secret Tool store detail'));
     await expect(resolver.resolve(catalog(), 'cap.count', { timeRange: 'this_month' })).rejects.toThrow('CAPABILITY_BINDING_INVALID');
     expect(tools.validateNamedOperation).not.toHaveBeenCalled();
   });

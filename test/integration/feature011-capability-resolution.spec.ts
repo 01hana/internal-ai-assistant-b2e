@@ -34,9 +34,10 @@ describe('Feature 011 Shinmone pack-backed direct resolution', () => {
       parameters: { timeRange: 'this_month' },
       toolCandidate: { key: 'work-orders.monthly-new-count', version: '1.0.0', arguments: {} }
     });
-    expect(harness.tools.resolveExactToolForCustomer).toHaveBeenCalledWith(
-      'work-orders.monthly-new-count', '1.0.0', scope.customerId
+    expect(harness.tools.resolveExactExecutableTool).toHaveBeenCalledWith(
+      'work-orders.monthly-new-count', '1.0.0'
     );
+    expect(harness.tools.resolveExactToolForCustomer).not.toHaveBeenCalled();
     expect(harness.audit.record).toHaveBeenCalledTimes(1);
     expect(harness.audit.record).toHaveBeenCalledWith(expect.objectContaining({
       outcome: 'RESOLVED', capabilityKey: 'work-orders.count', parameterNames: ['timeRange']

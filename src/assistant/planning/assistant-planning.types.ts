@@ -33,6 +33,7 @@ export interface AssistantPlanningResult {
 
 export interface PlannedOperationCandidate {
   key: string;
+  version?: string;
   arguments: Record<string, unknown>;
   reason: string;
 }

@@ -20,7 +20,8 @@ describe('Feature 011 direct Customer B portability and isolation', () => {
       parameters: { itemRef: 'ABC-1' },
       toolCandidate: { key: 'inventory.stock-on-hand', version: '1.0.0', arguments: { sku: 'ABC-1' } }
     });
-    expect(harness.tools.resolveExactToolForCustomer).toHaveBeenCalledWith('inventory.stock-on-hand', '1.0.0', 'customer-b');
+    expect(harness.tools.resolveExactExecutableTool).toHaveBeenCalledWith('inventory.stock-on-hand', '1.0.0');
+    expect(harness.tools.resolveExactToolForCustomer).not.toHaveBeenCalled();
   });
 
   it.each([
