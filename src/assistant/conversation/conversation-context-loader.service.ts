@@ -51,6 +51,7 @@ export class ConversationContextLoaderService {
     const evidenceRefs: SafePriorEvidenceRefCandidate[] = [];
     const evidenceRefLimit = boundedLimit(input.maxEvidenceRefs, MAX_PRIOR_EVIDENCE_REFS);
     const newestFirstExchanges: SafeCompletedConversationExchange[] = [];
+    const newestFirstAnswers: NonNullable<BoundedConversationContext['completedAssistantAnswers']>[number][] = [];
     for (const record of completed) {
       const user = asRecord(record.userMessage)!;
       const assistant = asRecord(record.assistantMessage)!;
@@ -97,6 +98,21 @@ export class ConversationContextLoaderService {
       const userContent = text(user.content);
       const guardedUser = userContent === undefined ? undefined : this.guard.guard(userContent);
       if (guardedUser && !guardedUser.accepted) reasons.add(guardedUser.reasonCode);
+      const assistantContent = assistant.finalized === true && asRecord(record.answerDecision)?.status === 'answered'
+        ? text(assistant.content) : undefined;
+      const guardedAssistant = assistantContent && assistantContent !== 'Pending answer.'
+        ? this.guard.guard(assistantContent) : undefined;
+      if (guardedAssistant && !guardedAssistant.accepted) reasons.add(guardedAssistant.reasonCode);
+      if (guardedUser?.accepted && typeof guardedUser.value === 'string' &&
+        guardedAssistant?.accepted && typeof guardedAssistant.value === 'string') {
+        newestFirstAnswers.push(Object.freeze({
+          exchangeId: text(record.exchangeId) ?? text(record.requestId)!,
+          userText: guardedUser.value,
+          assistantText: guardedAssistant.value,
+          createdAt: isoText(record.createdAt),
+          ...(capabilityFrame ? { capabilityScope: Object.freeze({ ...capabilityFrame.scope }) } : {})
+        }));
+      }
       newestFirstExchanges.push(Object.freeze({
         exchangeId: text(record.exchangeId) ?? text(record.requestId)!,
         requestId: text(record.requestId),
@@ -116,6 +132,7 @@ export class ConversationContextLoaderService {
       selectedExchangeIdsNewestFirst: newestFirstExchanges.map((exchange) => exchange.exchangeId),
       chronologicalExchangeIds: chronological.map((exchange) => exchange.exchangeId),
       exchanges: chronological,
+      completedAssistantAnswers: [...newestFirstAnswers].reverse(),
       semanticFrames: chronological.flatMap((exchange) => exchange.semanticFrame ? [exchange.semanticFrame] : []),
       capabilityFrames: chronological.flatMap((exchange) => exchange.capabilityFrame ? [exchange.capabilityFrame] : []),
       evidenceRefs,

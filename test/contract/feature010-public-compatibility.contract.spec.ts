@@ -8,7 +8,7 @@ import {
 } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
-const INTERNAL_KEYS = /GroundedContextBundle|groundedRetrievalPlan|requestedNeeds|needResults|resolvedFrame|boundedRecentTurns|citations|unsupportedNeeds|canonicalToolKey|permissionResult|permissionSnapshot|rawResponse|preProjectionData|transientConnectorContext/i;
+const INTERNAL_KEYS = /GroundedContextBundle|GroundedGenerationContext|generationEligibility|providerMetadata|promptContext|groundedRetrievalPlan|requestedNeeds|needResults|resolvedFrame|boundedRecentTurns|citations|unsupportedNeeds|canonicalToolKey|permissionResult|permissionSnapshot|rawResponse|preProjectionData|transientConnectorContext/i;
 
 describe('Feature 010 public compatibility contract (T075)', () => {
   let app: INestApplication;

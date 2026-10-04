@@ -66,6 +66,9 @@ export class ConversationContextRepository {
         },
         assistantMessage: {
           id: pair.assistant.id,
+          content: pair.assistant.content,
+          finalized: decision.status === 'answered' && pair.assistant.answerDecision === 'answered' &&
+            pair.assistant.content.trim().length > 0 && pair.assistant.content !== 'Pending answer.',
           createdAt: pair.assistant.createdAt.toISOString()
         },
         answerDecision: {
@@ -123,6 +126,7 @@ interface MessageWithContext {
   readonly requestId: string;
   readonly role: AssistantMessageRole;
   readonly content: string;
+  readonly answerDecision?: string | null;
   readonly createdAt: Date;
   readonly queryUnderstanding?: unknown;
   readonly answerDecisions?: ReadonlyArray<{ readonly id: string; readonly status: string }>;

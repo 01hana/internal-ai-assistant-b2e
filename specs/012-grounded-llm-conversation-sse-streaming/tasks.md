@@ -1,7 +1,7 @@
 # Tasks: Feature 012 — Grounded LLM Conversation & SSE Streaming
 
 **Input**: Human-approved `spec.md`, `design.md`, and `plan.md` in this directory; Constitution 3.0.0 is authoritative.
-**Status**: Task generation only. Every task is unchecked; implementation and Phase A require separate human authorization.
+**Status**: Phases A–B T001–T017 complete; Gates A–B passed. T018 is the first unexecuted task; Phase C requires separate human authorization.
 **Baseline**: Feature 011 Gate F is complete. Feature 011 T078 and Phases G/H/I remain unexecuted. Feature 010 scope-boundary has the separately known `5/6` Shinmone manifest-hash caveat.
 
 ## Format, dependencies, and stop rule
@@ -17,14 +17,30 @@
 **Goal**: Lock eligibility, internal contracts, and the exact Feature 010 generation-only amendment before wiring a model into the request path.
 **Independent test**: Closed eligibility and public-compatibility contracts pass while the production Assistant still makes zero generation calls.
 
-- [ ] T001 [US1] Add RED eligibility cases for covered `COMPLETE`, covered `PARTIAL`, and revalidated `CONTEXT_ONLY`, plus blocked `CLARIFY`, `INSUFFICIENT`, conflict, invalid grounding, no covered lane, risk/approval/confirmation/escalation, and permission-only denial in new `test/unit/feature012-generation-eligibility.spec.ts`; each case must assert a server-owned decision and zero model authority.
-- [ ] T002 [US4] Classify and lock predecessor assertions in `test/integration/feature010-no-llm-generation.spec.ts`: identify the covered-path zero-`generateAnswer` assertion for Phase C amendment, and add passing guards for permanent zero `classifyIntent`, zero `summarize`, zero model Tool/capability/permission/coverage authority, and zero factual generation for blocked outcomes; do not change the current request path in Phase A.
-- [ ] T003 [US1] Add RED closed-shape and trust-class cases for eligibility, `GroundedGenerationContextV1`, attempt/result, streaming chunk, terminal metadata, and safe failure reasons in new `test/contract/feature012-generation-internal.contract.spec.ts`; reject model-controlled Tool authority, permission/policy snapshots, and raw Connector/Tool payloads.
-- [ ] T004 [US1] Define minimal readonly internal generation contracts in new `src/assistant/generation/grounded-generation.types.ts` until T003 passes; defer the provider interface extension to Phase D, keep these contracts internal, and leave `GroundedContextBundleV1` unchanged.
-- [ ] T005 [US1] Implement a pure deterministic eligibility gate in new `src/assistant/generation/generation-eligibility.service.ts` until T001 passes; require at least one covered evidence need and preserve the existing no-answer, conflict, risk, and approval decisions without invoking an LLM.
-- [ ] T006 [US4] Add contract assertions in `test/contract/feature010-public-compatibility.contract.spec.ts`, `test/contract/grounded-context-bundle.contract.spec.ts`, and new `test/contract/feature012-public-compatibility.contract.spec.ts` that the endpoint, SSE names/envelope/final shape, history shape, and `GroundedContextBundleV1` do not change; these must pass without request-path generation wiring.
-- [ ] T007 [US1] Add RED `PARTIAL` and citation-allowlist eligibility fixtures to `test/unit/feature012-generation-eligibility.spec.ts`; prove a denied/unavailable Tool lane with independently covered Document evidence stays eligible only for its covered portion, whereas permission-only denial remains blocked.
-- [ ] T008 Run the Phase A focused unit/contract suites and root typecheck, then record `FEATURE012_GATE_A=PASS` and the precise Feature 010 assertion amendment in `specs/012-grounded-llm-conversation-sse-streaming/tasks.md`; STOP unless contracts are closed, public/bundle shapes unchanged, and production request behavior unchanged.
+- [x] T001 [US1] Add RED eligibility cases for covered `COMPLETE`, covered `PARTIAL`, and revalidated `CONTEXT_ONLY`, plus blocked `CLARIFY`, `INSUFFICIENT`, conflict, invalid grounding, no covered lane, risk/approval/confirmation/escalation, and permission-only denial in new `test/unit/feature012-generation-eligibility.spec.ts`; each case must assert a server-owned decision and zero model authority.
+- [x] T002 [US4] Classify and lock predecessor assertions in `test/integration/feature010-no-llm-generation.spec.ts`: identify the covered-path zero-`generateAnswer` assertion for Phase C amendment, and add passing guards for permanent zero `classifyIntent`, zero `summarize`, zero model Tool/capability/permission/coverage authority, and zero factual generation for blocked outcomes; do not change the current request path in Phase A.
+- [x] T003 [US1] Add RED closed-shape and trust-class cases for eligibility, `GroundedGenerationContextV1`, attempt/result, streaming chunk, terminal metadata, and safe failure reasons in new `test/contract/feature012-generation-internal.contract.spec.ts`; reject model-controlled Tool authority, permission/policy snapshots, and raw Connector/Tool payloads.
+- [x] T004 [US1] Define minimal readonly internal generation contracts in new `src/assistant/generation/grounded-generation.types.ts` until T003 passes; defer the provider interface extension to Phase D, keep these contracts internal, and leave `GroundedContextBundleV1` unchanged.
+- [x] T005 [US1] Implement a pure deterministic eligibility gate in new `src/assistant/generation/generation-eligibility.service.ts` until T001 passes; require at least one covered evidence need and preserve the existing no-answer, conflict, risk, and approval decisions without invoking an LLM.
+- [x] T006 [US4] Add contract assertions in `test/contract/feature010-public-compatibility.contract.spec.ts`, `test/contract/grounded-context-bundle.contract.spec.ts`, and new `test/contract/feature012-public-compatibility.contract.spec.ts` that the endpoint, SSE names/envelope/final shape, history shape, and `GroundedContextBundleV1` do not change; these must pass without request-path generation wiring.
+- [x] T007 [US1] Add RED `PARTIAL` and citation-allowlist eligibility fixtures to `test/unit/feature012-generation-eligibility.spec.ts`; prove a denied/unavailable Tool lane with independently covered Document evidence stays eligible only for its covered portion, whereas permission-only denial remains blocked.
+- [x] T008 Run the Phase A focused unit/contract suites and root typecheck, then record `FEATURE012_GATE_A=PASS` and the precise Feature 010 assertion amendment in `specs/012-grounded-llm-conversation-sse-streaming/tasks.md`; STOP unless contracts are closed, public/bundle shapes unchanged, and production request behavior unchanged.
+
+**Phase A execution evidence (2026-10-02)**:
+
+- T001 authentic RED: `npm run test:unit -- --runInBand --runTestsByPath test/unit/feature012-generation-eligibility.spec.ts` failed with `TS2307` only for the not-yet-created eligibility service after fixture typing was corrected. T005 minimal service made the initial 16 assertions GREEN. A subsequent unlinked-evidence assertion was authentic RED (`ELIGIBLE` instead of `INVALID_GROUNDING`), then GREEN after exact covered-need linkage validation.
+- T002 `EXISTING_GREEN`: `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-no-llm-generation.spec.ts` passed 6/6. The covered document/Tool/Hybrid/CONTEXT_ONLY zero-`generateAnswer` expectation is the **future Phase C superseded target only**. Zero `classifyIntent`/`summarize` semantic authority and blocked-outcome zero factual generation remain permanent; the production request path still makes no LLM call.
+- T003 authentic RED: `npm run test:contract -- --runInBand --runTestsByPath test/contract/feature012-generation-internal.contract.spec.ts` failed on `TS2307` for the not-yet-created internal type module. T004 minimal readonly contracts made it 4/4 GREEN; the provider interface and `GroundedContextBundleV1` were not changed.
+- T006 `EXISTING_GREEN` plus focused assertions: endpoint metadata and answer-only SSE envelope/final shape pass 2/2; existing public compatibility and bundle contracts remain GREEN. T007 `EXISTING_GREEN`: denied/unavailable Tool plus covered Document remains `PARTIAL` and exposes only covered references; permission-only denial with no covered lane remains blocked.
+- T008 focused Gate A: unit suites 39/39, contract suites 46/46, predecessor integration 6/6, root typecheck PASS. Changed-file lint and `git diff --check` PASS. No Assistant production provider/module wiring, public contract shape, Gateway, Prisma, or Feature 010 bundle change.
+
+```text
+FEATURE012_GATE_A=PASS
+FEATURE012_COMPLETED_TASK_RANGE=T001-T008
+FEATURE012_FIRST_UNEXECUTED_TASK=T009
+FEATURE012_PRODUCTION_GENERATION_ENABLED=NO
+FEATURE012_PHASE_B_AUTHORIZED=NO
+```
 
 ## Phase B — Bounded conversation generation context
 
@@ -32,15 +48,31 @@
 **Goal**: Project currently approved evidence and up to four completed same-scope exchanges into a generation-only, trust-labeled context.
 **Independent test**: Identical inputs produce byte-for-byte stable bounded output, no foreign/incomplete source enters, and no LLM is called.
 
-- [ ] T009 [US2] Add RED same-scope and collision fixtures in new `test/unit/feature012-generation-context-projector.spec.ts` for verified Customer, session, integration compatibility, organization, HostApp, and actor; foreign text and references must be absent even when other IDs collide.
-- [ ] T010 [US2] Add RED completed-answer source tests in `test/unit/feature012-generation-context-projector.spec.ts` and `test/unit/conversation-context-loader.service.spec.ts`; exclude `Pending answer.`, failed, cancelled, rejected, partial-stream, and non-final assistant text while admitting only durably completed final answers.
-- [ ] T011 [US2] Add RED bound/order cases in `test/unit/feature012-generation-context-projector.spec.ts` for at most four exchanges, 16 KiB aggregate UTF-8, conservative at-least-one-token-per-byte estimation, 2/4/6/3/1 KiB source allocations, stable evidence selection, chronological presentation, and Unicode-safe truncation; missing required metadata/evidence must fail closed.
-- [ ] T012 [US2] Implement the separate projector in new `src/assistant/generation/generation-context-projector.service.ts`, consuming `src/assistant/conversation/conversation-context-loader.service.ts` and `src/assistant/grounding/grounded-context-bundle.service.ts` without turning either into a prompt builder; satisfy T009–T011 with closed trust labels and no whole-bundle serialization.
-- [ ] T013 [US2] Add RED prior-reference freshness/authorization and source-guard tests in `test/unit/feature012-generation-context-projector.spec.ts`; only current-request-revalidated EvidenceRefs and source-guarded user/document/final text may enter, never raw Tool or Connector results.
-- [ ] T014 [US2] Reuse `src/assistant/grounding/prior-grounded-evidence-eligibility.service.ts` and `src/assistant/conversation/conversation-source-guard.ts` from the projector until T013 passes; prior assistant wording remains conversation context, not an evidence, coverage, permission, capability, or freshness input.
-- [ ] T015 [US2] Add a two-Customer integration fixture in new `test/integration/feature012-generation-context-isolation.spec.ts` with colliding organization, HostApp, actor, and source IDs; assert zero cross-Customer text, citation, or EvidenceRef leakage and zero model calls.
-- [ ] T016 [US2] Add the prior-answer-100/current-approved-evidence-80 regression to new `test/eval/feature012-grounded-conversation.eval.spec.ts`; assert the projection privileges 80 and cannot promote prior text into covered evidence, then retain the same fixture for the generated-answer Gate F test.
-- [ ] T017 Run the Phase B projector/isolation/eval fixtures and applicable Feature 010 context/prior-evidence contracts, then record `FEATURE012_GATE_B=PASS` in `specs/012-grounded-llm-conversation-sse-streaming/tasks.md`; STOP unless projection is deterministic, bounded, same-scope, and model-free.
+- [x] T009 [US2] Add RED same-scope and collision fixtures in new `test/unit/feature012-generation-context-projector.spec.ts` for verified Customer, session, integration compatibility, organization, HostApp, and actor; foreign text and references must be absent even when other IDs collide.
+- [x] T010 [US2] Add RED completed-answer source tests in `test/unit/feature012-generation-context-projector.spec.ts` and `test/unit/conversation-context-loader.service.spec.ts`; exclude `Pending answer.`, failed, cancelled, rejected, partial-stream, and non-final assistant text while admitting only durably completed final answers.
+- [x] T011 [US2] Add RED bound/order cases in `test/unit/feature012-generation-context-projector.spec.ts` for at most four exchanges, 16 KiB aggregate UTF-8, conservative at-least-one-token-per-byte estimation, 2/4/6/3/1 KiB source allocations, stable evidence selection, chronological presentation, and Unicode-safe truncation; missing required metadata/evidence must fail closed.
+- [x] T012 [US2] Implement the separate projector in new `src/assistant/generation/generation-context-projector.service.ts`, consuming `src/assistant/conversation/conversation-context-loader.service.ts` and `src/assistant/grounding/grounded-context-bundle.service.ts` without turning either into a prompt builder; satisfy T009–T011 with closed trust labels and no whole-bundle serialization.
+- [x] T013 [US2] Add RED prior-reference freshness/authorization and source-guard tests in `test/unit/feature012-generation-context-projector.spec.ts`; only current-request-revalidated EvidenceRefs and source-guarded user/document/final text may enter, never raw Tool or Connector results.
+- [x] T014 [US2] Reuse `src/assistant/grounding/prior-grounded-evidence-eligibility.service.ts` and `src/assistant/conversation/conversation-source-guard.ts` from the projector until T013 passes; prior assistant wording remains conversation context, not an evidence, coverage, permission, capability, or freshness input.
+- [x] T015 [US2] Add a two-Customer integration fixture in new `test/integration/feature012-generation-context-isolation.spec.ts` with colliding organization, HostApp, actor, and source IDs; assert zero cross-Customer text, citation, or EvidenceRef leakage and zero model calls.
+- [x] T016 [US2] Add the prior-answer-100/current-approved-evidence-80 regression to new `test/eval/feature012-grounded-conversation.eval.spec.ts`; assert the projection privileges 80 and cannot promote prior text into covered evidence, then retain the same fixture for the generated-answer Gate F test.
+- [x] T017 Run the Phase B projector/isolation/eval fixtures and applicable Feature 010 context/prior-evidence contracts, then record `FEATURE012_GATE_B=PASS` in `specs/012-grounded-llm-conversation-sse-streaming/tasks.md`; STOP unless projection is deterministic, bounded, same-scope, and model-free.
+
+**Phase B execution evidence (2026-10-03)**:
+
+- T009–T011 authentic RED: the new projector suite initially failed with `TS2307` solely because the projector did not yet exist; the completed-answer loader test independently failed because final text was absent. T012 and the narrow repository/loader source projection made those cases GREEN. Completed final text is held in a generation-only companion field, not in `GroundedContextBundleV1.boundedRecentTurns`; missing integration provenance is excluded. No Prisma change was needed.
+- T013–T014 focused RED/GREEN: a prior EvidenceRef without current-request revalidation and covered metadata without a citation fail closed. The projector accepts only the existing prior-grounded service result, reuses the existing conversation source guard, and copies only declared projected Tool scalars. Prior Assistant prose remains conversation-only.
+- T015–T016: two-Customer collision integration and prior-answer-100/current-approved-evidence-80 direct eval PASS. The predecessor Hybrid `PARTIAL` and `INSUFFICIENT` zero-generation assertions are separated without changing request-time behavior.
+- T017 Gate B: focused unit 69/69, contracts 63/63, integration 15/15, eval 1/1; root typecheck, changed-file lint, and `git diff --check` PASS. Static check confirms the projector is not imported into the Assistant request path and no production LLM generation was enabled.
+
+```text
+FEATURE012_GATE_A=PASS
+FEATURE012_GATE_B=PASS
+FEATURE012_COMPLETED_TASK_RANGE=T001-T017
+FEATURE012_FIRST_UNEXECUTED_TASK=T018
+FEATURE012_PRODUCTION_GENERATION_ENABLED=NO
+FEATURE012_PHASE_C_AUTHORIZED=NO
+```
 
 ## Phase C — Non-streaming grounded-generation checkpoint
 
@@ -140,4 +172,4 @@ FEATURE012_PUBLIC_CONTRACT_BREAKING_CHANGE=NO
 FEATURE012_PRISMA_MIGRATION=NO
 ```
 
-**Current task-generation state**: `FEATURE012_TASKS_STATUS=READY_FOR_HUMAN_REVIEW`; `FEATURE012_IMPLEMENTATION_STARTED=NO`; `FEATURE012_FIRST_AUTHORIZED_PHASE=NONE`.
+**Current implementation state**: Phases A–B Gates A–B PASS; T018–T057 remain unchecked. Phase C is not authorized. Reserved Gate F markers above are not current results.

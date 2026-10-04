@@ -30,6 +30,7 @@ type ForbiddenAuthorityKey =
 type _DocumentAuthorityBoundary = AssertNever<Extract<keyof DocumentRetrievalNeed, ForbiddenAuthorityKey>>;
 type _ToolAuthorityBoundary = AssertNever<Extract<keyof ToolRetrievalNeed, ForbiddenAuthorityKey | 'canonicalToolKey'>>;
 type _UnsupportedAuthorityBoundary = AssertNever<Extract<keyof UnsupportedRetrievalNeed, ForbiddenAuthorityKey>>;
+type _NoFeature012GenerationFields = AssertNever<Extract<keyof GroundedContextBundleV1, 'generationContext' | 'prompt' | 'modelOutput'>>;
 
 describe('Feature 010 GroundedContextBundleV1 contract (T026)', () => {
   it('fixes the canonical retrieval modes and coverage states', () => {
@@ -90,6 +91,7 @@ describe('Feature 010 GroundedContextBundleV1 contract (T026)', () => {
       locale: 'zh-TW'
     };
     expect(bundle).toMatchObject({ version: '1', retrieval: { mode: 'RAG', coverage: 'COMPLETE' }, locale: 'zh-TW' });
+    expect(Object.keys(bundle).sort()).toEqual(['citations', 'conversationContext', 'currentRequest', 'evidence', 'locale', 'retrieval', 'unsupportedNeeds', 'version']);
     expect(bundle.evidence[0]).not.toHaveProperty('citations');
     expect(bundle.citations[0]).toMatchObject({ evidenceRefId: 'evidence-1', needId: 'need-1' });
   });

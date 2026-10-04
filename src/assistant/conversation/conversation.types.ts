@@ -105,6 +105,13 @@ export interface BoundedConversationContext {
   readonly selectedExchangeIdsNewestFirst: readonly string[];
   readonly chronologicalExchangeIds: readonly string[];
   readonly exchanges: readonly SafeCompletedConversationExchange[];
+  readonly completedAssistantAnswers?: readonly Readonly<{
+    exchangeId: string;
+    userText: string;
+    assistantText: string;
+    createdAt: string;
+    capabilityScope?: Readonly<{ customerId: string; integrationId: string; hostApp: string }>;
+  }>[];
   readonly semanticFrames: readonly ConversationSemanticFrame[];
   readonly capabilityFrames?: readonly CapabilityFollowUpFrameV1[];
   readonly evidenceRefs: readonly SafePriorEvidenceRefCandidate[];

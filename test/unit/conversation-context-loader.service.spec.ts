@@ -11,6 +11,17 @@ type ContextLoaderConstructor = new (repository: { loadScopedContext(input: unkn
 const SCOPE = Object.freeze({ customerId: 'customer-a', sessionId: 'session-1', organizationId: 'org-1', hostApp: 'erp', actorId: 'actor-1' });
 
 describe('Feature 010 bounded conversation context RED (T003)', () => {
+  it('Feature 012 exposes only durable answered final text as optional generation context', async () => {
+    const records = [
+      { ...exchange(1), assistantMessage: { id: 'assistant-1', content: 'final-1', finalized: true } },
+      { ...exchange(2), assistantMessage: { id: 'assistant-2', content: 'Pending answer.', finalized: true } },
+      { ...exchange(3), assistantMessage: { id: 'assistant-3', content: 'partial-3', finalized: false } },
+      { ...exchange(4), assistantMessage: { id: 'assistant-4', content: 'rejected-4', finalized: true }, answerDecision: { status: 'no_answer' } }
+    ];
+    const loaded = await createLoader(records).load({ scope: SCOPE });
+    expect(loaded.completedAssistantAnswers).toEqual([expect.objectContaining({ assistantText: 'final-1' })]);
+    expect(JSON.stringify(loaded.exchanges)).not.toMatch(/final-1|partial-3|rejected-4/);
+  });
   it('selects the newest four complete exchanges and four evidence refs deterministically, then reconstructs chronologically', async () => {
     const records = Array.from({ length: 6 }, (_, index) => exchange(index + 1));
     const loader = createLoader([...records.reverse(), orphanAssistant(), orphanUser()]);
