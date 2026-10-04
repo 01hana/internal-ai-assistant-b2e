@@ -1,30 +1,34 @@
 <!--
 Sync Impact Report
-Version change: 1.0.0 -> 2.0.0
-Focused cleanup: retained version 2.0.0 and Last Amended 2026-07-30; clarified requestId,
-SDK/Customer Host transport ownership, protected-endpoint scope, and control-plane separation.
-Modified principles:
-- C2 測試先行與可回歸：新增 customer 跨界隔離測試門檻
-- C3 安全與權限不可繞過 -> C3 Trusted Identity Boundary
-- C4 API 一致性與可嵌入性：釐清 Gateway、Backend、SDK 與 Customer Host 的責任
-- C5 RAG 與工具品質可衡量：新增 customer namespace/filter 與 customer-scoped tool policy
-- C6 全鏈路可稽核：新增 customer 可追溯性
-Added sections:
-- Customer ownership hierarchy
-Removed sections:
-- 單一公司／單一組織部署與不集中管理多家公司之產品假設
+Version change: 2.0.0 -> 3.0.0 (MAJOR)
+Motivation: redefine the audit persistence failure consequence only for safely completed read-only
+grounded LLM generation; every LLM invocation still requires an append-only audit attempt.
+Impact: Feature 012 governance/documentation only; existing Feature 008–011 fail-closed audit
+contracts and production behavior remain unchanged. MAJOR is required because C6's former
+universal successful-persistence rule is materially redefined, not merely reworded.
+Modified principle and directly dependent clauses:
+- C6 全鏈路可稽核：區分必要 audit attempt、唯讀生成的安全可觀測失敗，以及受保護流程的
+  既有成功持久化要求；未預定未來寫入操作政策。
+- Definition of Done：依流程驗證 audit outcome，保留受保護流程的成功寫入門檻。
+- 禁止事項第 7 項：禁止省略嘗試、靜默失敗、偽報成功及繞過 fail-closed gate。
+Added sections: none
+Removed sections: none
 Templates reviewed:
 - ✅ .specify/templates/plan-template.md：通用 Constitution Check，無需修改
 - ✅ .specify/templates/spec-template.md：通用規格模板，無需修改
 - ✅ .specify/templates/tasks-template.md：通用任務模板，無需修改
+Dependent documents aligned:
+- specs/012-grounded-llm-conversation-sse-streaming/spec.md
+- specs/012-grounded-llm-conversation-sse-streaming/design.md
+- specs/012-grounded-llm-conversation-sse-streaming/plan.md
 Follow-up TODOs:
-- 將來的 Customer-Scoped Assistant Core spec 必須把本憲章要求轉為資料模型、JWT contract、
-  repository/service 規則與測試；本次不修改 spec、schema 或 production code。
+- Feature 012 implementation must prove a bounded safe operational failure signal for its
+  read-only audit-only failure path; ordinary telemetry never counts as successful audit.
 -->
 
 # 內部後台 AI 助理產品 Constitution
 
-**版本**：2.0.0 | **Ratified**：2026-06-11 | **Last Amended**：2026-07-30
+**版本**：3.0.0 | **Ratified**：2026-06-11 | **Last Amended**：2026-10-02
 
 ---
 
@@ -135,7 +139,24 @@ Customer 的敏感資料再於回答階段過濾。涉及資料查詢的回答�
 ### C6 全鏈路可稽核
 
 每次對話、工具選擇、資料查詢、權限拒絕、RAG evidence、LLM 呼叫、操作建議、
-confirmation、approval、handoff/escalation 都必須寫入 append-only audit event。
+confirmation、approval、handoff/escalation 都必須依其流程契約執行 append-only audit。
+每次 LLM 呼叫均必須嘗試將 audit event 寫入 append-only storage；不得省略嘗試或靜默
+忽略持久化失敗。
+
+僅對已完成可信身份與 Customer scope 驗證、授權與政策檢查、證據授權與新鮮度、grounding／
+coverage、no-answer／衝突檢查、生成資格、輸出結構與引用驗證，且核心答案已成功持久化的
+唯讀 grounded LLM generation：若之後只有 append-only audit storage 失敗，必須以現有
+安全運維機制記錄有界、可察覺的失敗訊號，明確保持 `AUDIT_PERSISTED=NO`；該失敗本身
+不得撤銷已完成答案或阻擋成功的 final。沒有安全失敗訊號時，不得宣稱符合此例外。
+一般 application log／telemetry 不等於成功的 append-only audit；失敗訊號的業務相關
+metadata 僅可包含有界的 requestId、sessionId、messageId、event type、
+`AUDIT_PERSISTED=NO` 與固定原因碼；不得包含 prompt、答案本文、原始業務資料或
+evidence、provider／Connector 原始內容、憑證、token 或 secret。
+
+既有安全或權威關鍵流程若要求 audit 成功持久化後才釋出 authority、candidate 或受保護
+操作，仍須維持 fail-closed；唯讀生成的例外不得放寬 Feature 008–011 的既有契約。
+未來 write-capable、具副作用或其他安全關鍵流程可採更嚴格的 fail-closed audit 政策，
+具體要求由各自的 feature 與治理審查決定，不自動繼承唯讀生成規則。
 
 Audit event 必須至少能追溯 requestId、timestamp、customer、organization、host app、
 actor、session/message、eventType、decision、toolCallId、riskLevel、permission result、
@@ -294,7 +315,10 @@ tool payload 摘要、決策、時間、理由與 requestId。
 - [ ] API request/response/error 格式符合版本化 contract
 - [ ] customer scope、權限檢查與資料遮罩已實作
 - [ ] 高風險操作有 confirmation、approval 或 handoff/escalation 路徑
-- [ ] Audit event 已記錄必要欄位
+- [ ] 必要的 append-only audit 已嘗試，結果可判定且失敗未被靜默忽略；成功寫入的 event
+  已記錄必要欄位。唯讀 grounded LLM generation 的核心答案安全完成後若僅 audit storage
+  失敗，須有安全運維失敗訊號並保持 `AUDIT_PERSISTED=NO`；要求 audit 成功才可釋出
+  權威、candidate 或受保護操作的流程，仍須成功持久化。
 - [ ] RAG/tool answer 有 evidence 或明確 no-answer/clarification 行為
 - [ ] 無硬編碼 secret、無未處理 Promise rejection、無不必要 `any` 型別
 
@@ -333,7 +357,10 @@ tool payload 摘要、決策、時間、理由與 requestId。
 4. 不得讓寫入型 tool 與讀取型 tool 共用同一個無風險執行路徑。
 5. 不得為了回答流暢而忽略 evidence 不足、資料矛盾或工具失敗。
 6. 不得把高風險操作包裝成一般 chat 回覆而跳過審核。
-7. 不得缺少 audit event 或只記錄最終答案。
+7. 不得省略必要的 append-only audit 嘗試、靜默忽略持久化失敗、將一般 log／telemetry
+   偽稱為成功 audit，或只記錄最終答案；既有 fail-closed 流程在 audit 未成功持久化時
+   不得釋出權威、candidate 或受保護操作。C6 定義的唯讀生成安全可觀測失敗不屬於
+   省略 audit 嘗試。
 8. SDK/widget 與 Customer Host 可以安全傳輸既有登入憑證或 session、提供同源
    BFF／reverse proxy，但不得放置 secret、建立或覆寫 canonical identity claims、
    customer boundary、權限決策或敏感 mapping。
@@ -364,4 +391,4 @@ tool payload 摘要、決策、時間、理由與 requestId。
 - 每個 `tasks.md` 必須包含 customer isolation、身份與權限、安全、API contract、RAG
   品質、audit、高風險審核相關的測試或驗收工作。
 
-**Version**: 2.0.0 | **Ratified**: 2026-06-11 | **Last Amended**: 2026-07-30
+**Version**: 3.0.0 | **Ratified**: 2026-06-11 | **Last Amended**: 2026-10-02
