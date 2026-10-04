@@ -9,6 +9,7 @@ import {
   Us1TestState
 } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
+import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 describe('Feature 010 semantic follow-up routing (T037-T042)', () => {
   let app: INestApplication;
@@ -26,6 +27,10 @@ describe('Feature 010 semantic follow-up routing (T037-T042)', () => {
         Object.freeze({ adapter: businessAdapter, connectorKey: 'business', customerId: 'customer-b', integrationId: 'integration-erp', hostApp: 'erp', active: true })
       ])
     }));
+    jest.spyOn(app.get(LlmExecutionService, { strict: false }), 'generateAnswer').mockResolvedValue({
+      content: '核准證據顯示結果。', finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false }
+    });
     state.customerToolPolicies.push({
       customerId: 'customer-b', toolDefinitionId: 'tool-definition-customer-b-stock-001', enabled: true,
       requiredRoles: [], requiredPermissionScopes: ['inventory:read']

@@ -1649,6 +1649,8 @@ function createPrismaMock(state: MockState) {
       feedbackEvents: state.feedbackEvents,
       reviewItems: state.reviewItems,
       evidenceRefs: state.evidenceRefs,
+      groundingChecks: state.groundingChecks,
+      answerDecisions: state.answerDecisions,
       auditEvents: state.auditEvents,
       toolCalls: state.toolCalls
     });
@@ -1663,6 +1665,8 @@ function createPrismaMock(state: MockState) {
       restoreStateArray(state.feedbackEvents, snapshot.feedbackEvents);
       restoreStateArray(state.reviewItems, snapshot.reviewItems);
       restoreStateArray(state.evidenceRefs, snapshot.evidenceRefs);
+      restoreStateArray(state.groundingChecks, snapshot.groundingChecks);
+      restoreStateArray(state.answerDecisions, snapshot.answerDecisions);
       restoreStateArray(state.auditEvents, snapshot.auditEvents);
       restoreStateArray(state.toolCalls, snapshot.toolCalls);
       throw error;

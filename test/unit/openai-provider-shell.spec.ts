@@ -27,8 +27,10 @@ describe('OpenAiProvider', () => {
     expect(client.responses.create).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'test-selected-model',
-        input: expect.stringContaining('status:已確認')
-      })
+        input: expect.stringContaining('status:已確認'),
+        max_output_tokens: 1024
+      }),
+      { maxRetries: 0 }
     );
   });
 

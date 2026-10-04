@@ -17,7 +17,7 @@ import {
 
 export interface OpenAiResponsesClient {
   responses: {
-    create(input: { model: string; input: string; instructions?: string }): Promise<{ output_text?: string }>;
+    create(input: { model: string; input: string; instructions?: string; max_output_tokens?: number }, options?: { maxRetries?: number }): Promise<{ output_text?: string }>;
   };
 }
 
@@ -48,8 +48,9 @@ export class OpenAiProvider implements LlmProvider {
       const response = await this.client.responses.create({
         model: this.getModel(),
         instructions: input.instructions,
-        input: toResponseInput(input.messages, input.evidence)
-      });
+        input: toResponseInput(input.messages, input.evidence),
+        max_output_tokens: Math.min(input.maxOutputTokens ?? 1024, 1024)
+      }, { maxRetries: 0 });
 
       return {
         content: response.output_text ?? '',

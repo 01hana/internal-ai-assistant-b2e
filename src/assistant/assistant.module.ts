@@ -4,6 +4,7 @@ import { ApprovalsModule } from '../approvals/approvals.module';
 import { EvidenceModule } from '../evidence/evidence.module';
 import { FeedbackModule } from '../feedback/feedback.module';
 import { IdentityModule } from '../identity/identity.module';
+import { LlmModule } from '../llm/llm.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { QueryUnderstandingModule } from '../query-understanding/query-understanding.module';
@@ -39,6 +40,10 @@ import { GroundedContextBundleService } from './grounding/grounded-context-bundl
 import { PriorGroundedEvidenceEligibilityService } from './grounding/prior-grounded-evidence-eligibility.service';
 import { PriorGroundedContextService } from './grounding/prior-grounded-context.service';
 import { GroundedRetrievalAuditService } from './grounding/grounded-retrieval-audit.service';
+import { GenerationEligibilityService } from './generation/generation-eligibility.service';
+import { GenerationContextProjectorService } from './generation/generation-context-projector.service';
+import { GroundedGenerationPromptService } from './generation/grounded-generation-prompt.service';
+import { GroundedAnswerFinalizerService } from './generation/grounded-answer-finalizer.service';
 
 @Module({
   imports: [
@@ -48,6 +53,7 @@ import { GroundedRetrievalAuditService } from './grounding/grounded-retrieval-au
     QueryUnderstandingModule,
     RetrievalModule,
     IdentityModule,
+    LlmModule,
     EvidenceModule,
     FeedbackModule,
     ToolsModule,
@@ -87,7 +93,11 @@ import { GroundedRetrievalAuditService } from './grounding/grounded-retrieval-au
     GroundedContextBundleService,
     PriorGroundedEvidenceEligibilityService,
     PriorGroundedContextService,
-    GroundedRetrievalAuditService
+    GroundedRetrievalAuditService,
+    GenerationEligibilityService,
+    GenerationContextProjectorService,
+    GroundedGenerationPromptService,
+    GroundedAnswerFinalizerService
   ],
   exports: [
     AssistantPlanningService,

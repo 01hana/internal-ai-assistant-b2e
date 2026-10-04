@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
+import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 import {
   createAuthorizedInternalIdentityHeaders,
   createUs1TestAppWithState,
@@ -13,9 +14,14 @@ const INTERNAL_KEYS = /GroundedContextBundle|GroundedGenerationContext|generatio
 describe('Feature 010 public compatibility contract (T075)', () => {
   let app: INestApplication;
   let state: Us1TestState;
+  let generateAnswer: jest.SpyInstance;
 
   beforeAll(async () => {
     ({ app, state } = await createUs1TestAppWithState({ forceMessageServiceErrorForSessionId: 'session-flow-error-001' }));
+    generateAnswer = jest.spyOn(app.get(LlmExecutionService, { strict: false }), 'generateAnswer').mockResolvedValue({
+      content: '核准證據顯示結果。', finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false }
+    });
     state.customerToolPolicies.push({ customerId: 'customer-a', toolDefinitionId: 'tool-definition-inventory-001', enabled: true,
       requiredRoles: [], requiredPermissionScopes: [] });
   });
@@ -27,11 +33,13 @@ describe('Feature 010 public compatibility contract (T075)', () => {
       ['tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final']],
     ['clarification', 'req-f010-public-clarify', '那個呢？', { module: 'orders', visibleColumns: [] }, ['answer_delta', 'final']]
   ])('preserves the %s SSE event order and envelope without publishing internal bundle fields', async (_name, requestId, message, pageContext, expectedEvents) => {
+    const generationCountBefore = generateAnswer.mock.calls.length;
     const response = await send(requestId, message, pageContext);
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toContain('text/event-stream');
     const events = parseSseResponse(response.text);
     expect(events.map((event) => event.event)).toEqual(expectedEvents);
+    expect(generateAnswer.mock.calls.length - generationCountBefore).toBe(_name === 'clarification' ? 0 : 1);
     for (const event of events) {
       expectExactKeys(event.data, ['requestId', 'sessionId', 'messageId', 'eventType', 'sequence', 'data']);
       expect(event.data).toEqual(expect.objectContaining({ requestId, sessionId: 'session-owned-001', messageId: expect.any(String),

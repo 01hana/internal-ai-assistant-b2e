@@ -1,7 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { AuditWriterService } from '../../audit/audit-writer.service';
 import { Prisma } from '../../generated/prisma/client';
 import { AnswerDecisionStatus, ExecutionDecision, NoAnswerReason } from '../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AssistantMessageRepository } from '../message/assistant-message.repository';
+import type { RetrievalCoverage, RetrievalMode } from '../../retrieval/grounded-retrieval.types';
 import { GroundedAnswerInput } from '../runtime/grounded-answer-input.types';
 import {
   AnswerPlan,
@@ -17,7 +20,54 @@ type GroundedAnswerDecisionInput = Omit<BuildAnswerDecisionInput, 'evidenceRefs'
 
 @Injectable()
 export class AnswerDecisionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly messageRepository?: AssistantMessageRepository,
+    @Optional() private readonly auditWriter?: AuditWriterService
+  ) {}
+
+  async completeGeneratedAnswer(input: {
+    customerScope: BuildAnswerDecisionInput['customerScope'];
+    requestId: string;
+    sessionId: string;
+    messageId: string;
+    text: string;
+    evidenceRefIds: readonly string[];
+    retrievalMode: RetrievalMode;
+    coverage: Extract<RetrievalCoverage, 'COMPLETE' | 'PARTIAL'>;
+    groundedContextBundle?: BuildAnswerDecisionInput['groundedContextBundle'];
+  }): Promise<PersistedAnswerDecisionResult> {
+    if (!this.messageRepository || !this.auditWriter || !input.text.trim() || input.evidenceRefIds.length === 0) {
+      throw new Error('GENERATION_CORE_COMPLETION_INVALID');
+    }
+    return this.prisma.db.$transaction(async (database) => {
+      const groundingCheck = await database.groundingCheck.create({ data: {
+        customerId: input.customerScope.customerId, requestId: input.requestId, messageId: input.messageId,
+        covered: true, checkedClaimCount: 0, unsupportedClaimCount: 0,
+        evidenceRefIds: [...input.evidenceRefIds], metadata: toJsonInput({ generation: 'FEATURE012', retrievalMode: input.retrievalMode, coverage: input.coverage,
+          ...(input.groundedContextBundle ? toSafeBundleMetadata(input.groundedContextBundle) : {}) })
+      } });
+      const decision = await database.answerDecision.create({ data: {
+        customerId: input.customerScope.customerId, requestId: input.requestId, messageId: input.messageId,
+        status: AnswerDecisionStatus.answered, groundingCheckId: groundingCheck.id,
+        metadata: toJsonInput({ answerType: 'grounded_text', generation: 'FEATURE012', retrievalMode: input.retrievalMode, coverage: input.coverage,
+          selectedEvidenceCount: input.evidenceRefIds.length,
+          ...(input.groundedContextBundle ? toSafeBundleMetadata(input.groundedContextBundle) : {}) })
+      } });
+      await this.messageRepository!.completeAssistantMessage({ customerScope: input.customerScope, messageId: input.messageId,
+        content: input.text, answerDecision: AnswerDecisionStatus.answered }, database);
+      await this.auditWriter!.append({ customerScope: input.customerScope, requestId: input.requestId, sessionId: input.sessionId,
+        messageId: input.messageId, eventType: 'answer_generated', decision: AnswerDecisionStatus.answered,
+        evidenceRefIds: [], metadata: toJsonInput({ answerDecisionId: decision.id, groundingCheckId: groundingCheck.id,
+          selectedEvidenceCount: input.evidenceRefIds.length }) }, database);
+      return {
+        status: AnswerDecisionStatus.answered,
+        answerPlan: { answerType: 'grounded_text' as const, expectedAnswerShape: null, selectedEvidenceRefs: [...input.evidenceRefIds],
+          allowedClaims: [], disallowedClaims: [], missingInformation: [] },
+        answer: { text: input.text, delta: input.text }, groundingCheckId: groundingCheck.id, answerDecisionId: decision.id
+      };
+    });
+  }
 
   async decide(input: BuildAnswerDecisionInput): Promise<PersistedAnswerDecisionResult> {
     const answerPlan = this.buildAnswerPlan(input);

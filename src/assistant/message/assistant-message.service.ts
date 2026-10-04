@@ -29,6 +29,12 @@ import { GroundedContextBundleService } from '../grounding/grounded-context-bund
 import { PriorGroundedContextService } from '../grounding/prior-grounded-context.service';
 import type { GroundedContextBundleV1 } from '../grounding/grounded-context-bundle.types';
 import { GroundedRetrievalAuditService } from '../grounding/grounded-retrieval-audit.service';
+import { GenerationEligibilityService } from '../generation/generation-eligibility.service';
+import { GenerationContextProjectorService } from '../generation/generation-context-projector.service';
+import { GroundedGenerationPromptService } from '../generation/grounded-generation-prompt.service';
+import { GroundedAnswerFinalizerService } from '../generation/grounded-answer-finalizer.service';
+import { LlmExecutionService } from '../../llm/llm-execution.service';
+import type { LlmProviderMetadata } from '../../llm/llm-provider.interface';
 
 @Injectable()
 export class AssistantMessageService {
@@ -53,7 +59,12 @@ export class AssistantMessageService {
     private readonly groundedCoordinator: HybridRetrievalCoordinatorService,
     private readonly groundedBundleService: GroundedContextBundleService,
     private readonly priorGroundedContext: PriorGroundedContextService,
-    private readonly groundedAudit: GroundedRetrievalAuditService
+    private readonly groundedAudit: GroundedRetrievalAuditService,
+    private readonly generationEligibility: GenerationEligibilityService,
+    private readonly generationContextProjector: GenerationContextProjectorService,
+    private readonly generationPrompt: GroundedGenerationPromptService,
+    private readonly groundedAnswerFinalizer: GroundedAnswerFinalizerService,
+    private readonly llmExecution: LlmExecutionService
   ) {}
 
   async sendMessage(input: SendAssistantMessageInput): Promise<AssistantSseEventRecord[]> {
@@ -1029,6 +1040,66 @@ export class AssistantMessageService {
     const conflict = this.evidenceConflictDetector.detect(toolFacts);
     const conflictGate = this.noAnswerGateService.evaluateEvidenceConflict(conflict);
     const failedToolOnly = evidenceIds.length === 0 && (toolExecution?.toolLifecycle === 'failed' || toolExecution?.toolLifecycle === 'blocked');
+    const generationEligibility = this.generationEligibility.evaluate({
+      bundle,
+      executionDecision: planningResult.decision,
+      riskLevel: planningResult.executionPlan.riskAssessment,
+      safeGate: conflictGate,
+      groundingValid: !conflictGate,
+      priorEvidenceRevalidated: mode !== 'CONTEXT_ONLY' || prior.complete
+    });
+    if (generationEligibility.kind === 'ELIGIBLE' && !failedToolOnly) {
+      if (!planningResult.priorConversationContext) throw new Error('GENERATION_CONTEXT_INVALID');
+      const generationContext = this.generationContextProjector.project({
+        scope: { ...customerScope, sessionId },
+        context: planningResult.priorConversationContext,
+        bundle,
+        priorGroundedContext: prior
+      });
+      const prompt = this.generationPrompt.build(generationContext, {
+        requestId: input.requestId, sessionId, messageId: assistantMessageId
+      });
+      await this.groundedAudit.recordBundle({ customerScope, requestId: input.requestId, sessionId,
+        messageId: assistantMessageId, bundle, durationMs: Math.max(0, Date.now() - startedAt) });
+      let providerMetadata: LlmProviderMetadata = { provider: 'unknown', model: 'unknown', fallbackUsed: false };
+      let failureReason: 'PROVIDER_ERROR' | 'INVALID_OUTPUT' | 'CORE_PERSISTENCE_FAILED' = 'PROVIDER_ERROR';
+      try {
+        const generated = await this.llmExecution.generateAnswer(prompt, {
+          identityContext: input.identityContext, sessionId, messageId: assistantMessageId
+        }, 'terminal');
+        providerMetadata = generated.metadata;
+        failureReason = 'INVALID_OUTPUT';
+        const text = this.groundedAnswerFinalizer.finalize(generated, generationContext);
+        failureReason = 'CORE_PERSISTENCE_FAILED';
+        const answerDecision = await this.answerDecisionService.completeGeneratedAnswer({
+          customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId, text,
+          evidenceRefIds: generationEligibility.evidenceRefIds, retrievalMode: mode,
+          coverage: generationEligibility.coverage, groundedContextBundle: bundle
+        });
+        await this.contextStateService.updateAfterMessageFlow({ customerScope, sessionId, pageContext: input.pageContext,
+          planningResult, toolCallIds: toolExecution?.toolCallId ? [toolExecution.toolCallId] : [], evidenceRefIds: evidenceIds });
+        await this.llmExecution.recordGroundedGenerationTerminal({ requestId: input.requestId,
+          identityContext: input.identityContext, sessionId, messageId: assistantMessageId,
+          metadata: providerMetadata, outcome: 'COMPLETED', durationMs: Math.max(0, Date.now() - startedAt) });
+        const finalData = { answerDecision: answerDecision.status, answer: text, evidenceRefs: evidenceIds };
+        if (toolExecution?.toolLifecycle && toolExecution.toolName) {
+          return this.sseEventBuilder.buildMessageEvents({ requestId: input.requestId, sessionId, messageId: assistantMessageId,
+            toolCallId: toolExecution.toolCallId ?? 'not-executed', toolName: toolExecution.toolName,
+            toolLifecycle: toolExecution.toolLifecycle, deniedReason: toolExecution.deniedReason, errorCode: toolExecution.errorCode,
+            evidenceRefIds: toolExecution.toolLifecycle === 'completed' ? evidenceIds.filter((id) =>
+              coordinated.evidence.some((evidence) => evidence.kind === 'TOOL' && evidence.evidenceRefId === id)) : [],
+            answerDelta: text, finalData });
+        }
+        return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId, sessionId,
+          messageId: assistantMessageId, answerDelta: text, finalData });
+      } catch {
+        await this.llmExecution.recordGroundedGenerationTerminal({ requestId: input.requestId,
+          identityContext: input.identityContext, sessionId, messageId: assistantMessageId,
+          metadata: providerMetadata, outcome: 'FAILED', reasonCode: failureReason,
+          durationMs: Math.max(0, Date.now() - startedAt) });
+        throw new Error('GROUNDED_GENERATION_FAILED');
+      }
+    }
     const answerDecision = conflictGate?.kind === 'no_answer'
       ? await this.answerDecisionService.recordSafeDecision({
           customerScope, requestId: input.requestId, messageId: assistantMessageId,

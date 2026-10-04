@@ -42,8 +42,8 @@ export class AssistantMessageRepository {
     });
   }
 
-  async getVisibleMessage(input: { customerScope: CustomerScope; messageId: string }) {
-    const message = await this.prisma.db.assistantMessage.findUnique({
+  async getVisibleMessage(input: { customerScope: CustomerScope; messageId: string }, database: Prisma.TransactionClient | PrismaService['db'] = this.prisma.db) {
+    const message = await database.assistantMessage.findUnique({
       where: {
         customerId_id: {
           customerId: input.customerScope.customerId,
@@ -64,9 +64,9 @@ export class AssistantMessageRepository {
     messageId: string;
     content: string;
     answerDecision: AnswerDecisionStatus;
-  }) {
-    await this.getVisibleMessage(input);
-    return this.prisma.db.assistantMessage.update({
+  }, database: Prisma.TransactionClient | PrismaService['db'] = this.prisma.db) {
+    await this.getVisibleMessage(input, database);
+    return database.assistantMessage.update({
       where: {
         customerId_id: {
           customerId: input.customerScope.customerId,

@@ -39,6 +39,7 @@ export interface GenerateAnswerInput {
   evidence: LlmEvidenceSummary[];
   instructions?: string;
   responseFormat?: 'text' | 'json';
+  maxOutputTokens?: number;
 }
 
 export interface GenerateAnswerResult {
