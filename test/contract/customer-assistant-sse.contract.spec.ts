@@ -10,6 +10,7 @@ import {
   Us1TestState
 } from '../support/us1-test-app.helper';
 import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
+import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 const describeCustomerUs1 = process.env.RUN_CUSTOMER_US1_TESTS === 'true' ? describe : describe.skip;
 
@@ -26,6 +27,10 @@ describeCustomerUs1('Customer SSE isolation contract', () => {
       internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: fixture.jwks }
     }));
     connectorExecute = jest.spyOn(app.get(MockConnectorAdapter), 'execute');
+    jest.spyOn(app.get(LlmExecutionService, { strict: false }), 'generateAnswer').mockResolvedValue({
+      content: '核准證據顯示結果。', finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false }
+    });
   });
   afterAll(async () => {
     connectorExecute.mockRestore();
@@ -73,7 +78,7 @@ describeCustomerUs1('Customer SSE isolation contract', () => {
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(headersFor('customerA', 'req-sse-own-customer-a'))
       .send({
-        message: '這張訂單目前狀態？',
+        message: '查詢訂單目前狀態 訂單號 SO-10001',
         pageContext: {
           module: 'orders',
           screenId: 'order-detail',
@@ -108,13 +113,13 @@ describeCustomerUs1('Customer SSE isolation contract', () => {
       .post('/api/v1/assistant/sessions/session-hidden-001/messages')
       .set(headersFor('customerB', 'req-sse-own-customer-b'))
       .send({
-        message: '這張訂單目前狀態？',
+        message: '查詢庫存現量 料號 SKU-B-001',
         pageContext: {
-          module: 'orders',
-          screenId: 'order-detail',
-          entityType: 'order',
-          entityId: 'SO-10001',
-          visibleColumns: ['status', 'customerName']
+          module: 'inventory',
+          screenId: 'inventory-detail',
+          entityType: 'item',
+          entityId: 'SKU-B-001',
+          visibleColumns: ['quantity']
         }
       });
 

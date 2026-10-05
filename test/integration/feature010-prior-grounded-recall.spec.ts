@@ -7,12 +7,17 @@ import { PriorGroundedContextService } from '../../src/assistant/grounding/prior
 import { ConversationContextLoaderService } from '../../src/assistant/conversation/conversation-context-loader.service';
 import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
 import { CUSTOMER_SCOPE_FIXTURES, createCustomerScopeFixtureIdentityContext } from '../support/customer-scope-fixtures';
+import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
   let app: INestApplication;
   let state: Us1TestState;
   beforeEach(async () => {
     ({ app, state } = await createUs1TestAppWithState());
+    jest.spyOn(app.get(LlmExecutionService, { strict: false }), 'generateAnswer').mockResolvedValue({
+      content: '核准證據顯示結果。', finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false }
+    });
     state.customerToolPolicies.push({ customerId: 'customer-a', toolDefinitionId: 'tool-definition-inventory-001', enabled: true, requiredRoles: [], requiredPermissionScopes: [] });
   });
   afterEach(async () => app.close());

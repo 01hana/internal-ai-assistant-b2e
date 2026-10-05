@@ -35,6 +35,7 @@ import { GroundedGenerationPromptService } from '../generation/grounded-generati
 import { GroundedAnswerFinalizerService } from '../generation/grounded-answer-finalizer.service';
 import { LlmExecutionService } from '../../llm/llm-execution.service';
 import type { LlmProviderMetadata } from '../../llm/llm-provider.interface';
+import { createSseEvent } from '../../common/sse/sse-event.helper';
 
 @Injectable()
 export class AssistantMessageService {
@@ -1063,39 +1064,63 @@ export class AssistantMessageService {
         messageId: assistantMessageId, bundle, durationMs: Math.max(0, Date.now() - startedAt) });
       let providerMetadata: LlmProviderMetadata = { provider: 'unknown', model: 'unknown', fallbackUsed: false };
       let failureReason: 'PROVIDER_ERROR' | 'INVALID_OUTPUT' | 'CORE_PERSISTENCE_FAILED' = 'PROVIDER_ERROR';
+      const streamedEvents: AssistantSseEventRecord[] = [];
+      const emit = async (event: AssistantSseEventRecord) => {
+        if (input.abortSignal?.aborted) throw new Error('LLM_STREAM_ABORTED');
+        if (input.eventSink) await input.eventSink(event);
+        else streamedEvents.push(event);
+      };
+      const makeEvent = <T>(eventType: 'answer_delta' | 'final', sequence: number, data: T): AssistantSseEventRecord<T> => {
+        const payload = createSseEvent({ requestId: input.requestId, sessionId, messageId: assistantMessageId, eventType, sequence, data });
+        return { event: eventType, payload };
+      };
+      const prelude = toolExecution?.toolLifecycle && toolExecution.toolName
+        ? this.sseEventBuilder.buildMessageEvents({ requestId: input.requestId, sessionId, messageId: assistantMessageId,
+          toolCallId: toolExecution.toolCallId ?? 'not-executed', toolName: toolExecution.toolName,
+          toolLifecycle: toolExecution.toolLifecycle, deniedReason: toolExecution.deniedReason, errorCode: toolExecution.errorCode,
+          evidenceRefIds: toolExecution.toolLifecycle === 'completed' ? evidenceIds.filter((id) =>
+            coordinated.evidence.some((evidence) => evidence.kind === 'TOOL' && evidence.evidenceRefId === id)) : [],
+          answerDelta: '', finalData: { answerDecision: AnswerDecisionStatus.answered, answer: '', evidenceRefs: [] }
+        }).slice(0, -2) : [];
+      let sequence = prelude.length;
+      let committed = false;
       try {
-        const generated = await this.llmExecution.generateAnswer(prompt, {
+        for (const event of prelude) await emit(event);
+        let accumulated = '';
+        let completed = false;
+        for await (const event of this.llmExecution.streamAnswer(prompt, {
           identityContext: input.identityContext, sessionId, messageId: assistantMessageId
-        }, 'terminal');
-        providerMetadata = generated.metadata;
+        }, { signal: input.abortSignal ?? new AbortController().signal })) {
+          if (event.type === 'text_delta') {
+            accumulated += event.text;
+            await emit(makeEvent('answer_delta', ++sequence, { delta: event.text }));
+          } else {
+            providerMetadata = event.metadata;
+            completed = true;
+          }
+        }
+        if (!completed) throw new Error('LLM_STREAM_INCOMPLETE');
         failureReason = 'INVALID_OUTPUT';
-        const text = this.groundedAnswerFinalizer.finalize(generated, generationContext);
+        const text = this.groundedAnswerFinalizer.finalize({ content: accumulated, finishReason: 'stop', metadata: providerMetadata }, generationContext);
         failureReason = 'CORE_PERSISTENCE_FAILED';
         const answerDecision = await this.answerDecisionService.completeGeneratedAnswer({
           customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId, text,
           evidenceRefIds: generationEligibility.evidenceRefIds, retrievalMode: mode,
           coverage: generationEligibility.coverage, groundedContextBundle: bundle
         });
+        committed = true;
         await this.contextStateService.updateAfterMessageFlow({ customerScope, sessionId, pageContext: input.pageContext,
           planningResult, toolCallIds: toolExecution?.toolCallId ? [toolExecution.toolCallId] : [], evidenceRefIds: evidenceIds });
         await this.llmExecution.recordGroundedGenerationTerminal({ requestId: input.requestId,
           identityContext: input.identityContext, sessionId, messageId: assistantMessageId,
           metadata: providerMetadata, outcome: 'COMPLETED', durationMs: Math.max(0, Date.now() - startedAt) });
         const finalData = { answerDecision: answerDecision.status, answer: text, evidenceRefs: evidenceIds };
-        if (toolExecution?.toolLifecycle && toolExecution.toolName) {
-          return this.sseEventBuilder.buildMessageEvents({ requestId: input.requestId, sessionId, messageId: assistantMessageId,
-            toolCallId: toolExecution.toolCallId ?? 'not-executed', toolName: toolExecution.toolName,
-            toolLifecycle: toolExecution.toolLifecycle, deniedReason: toolExecution.deniedReason, errorCode: toolExecution.errorCode,
-            evidenceRefIds: toolExecution.toolLifecycle === 'completed' ? evidenceIds.filter((id) =>
-              coordinated.evidence.some((evidence) => evidence.kind === 'TOOL' && evidence.evidenceRefId === id)) : [],
-            answerDelta: text, finalData });
-        }
-        return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId, sessionId,
-          messageId: assistantMessageId, answerDelta: text, finalData });
+        await emit(makeEvent('final', ++sequence, finalData));
+        return streamedEvents;
       } catch {
-        await this.llmExecution.recordGroundedGenerationTerminal({ requestId: input.requestId,
+        if (!committed) await this.llmExecution.recordGroundedGenerationTerminal({ requestId: input.requestId,
           identityContext: input.identityContext, sessionId, messageId: assistantMessageId,
-          metadata: providerMetadata, outcome: 'FAILED', reasonCode: failureReason,
+          metadata: providerMetadata, outcome: input.abortSignal?.aborted ? 'CANCELLED' : 'FAILED', reasonCode: failureReason,
           durationMs: Math.max(0, Date.now() - startedAt) });
         throw new Error('GROUNDED_GENERATION_FAILED');
       }

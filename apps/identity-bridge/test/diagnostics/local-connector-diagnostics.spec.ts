@@ -7,6 +7,7 @@ import { ScopeProjector } from '../../src/idx/scope-projector';
 import { BridgeConfigService } from '../../src/config/bridge-config.service';
 import { bridgeEnvironment } from '../signing/signing-fixtures';
 import { menu, response, token } from '../fixtures/idx-semantic.vectors';
+import { IdxTransportError } from '../../src/idx/transport/transport.error';
 
 describe('local Connector correlation diagnostics', () => {
   it('is disabled by default and unless both explicit local flags are present', () => {
@@ -67,5 +68,33 @@ describe('local Connector correlation diagnostics', () => {
       'canonical-jwt-secret-sentinel', 'connector-context-ref-secret-sentinel', 'binding-reference-secret-sentinel',
       'credential-handle-secret-sentinel', 'private-key-secret-sentinel', JSON.stringify(menuBody)
     ]) expect(output).not.toContain(prohibited);
+  });
+
+  it('records only the closed transport reason for a failed MenuDetail request', async () => {
+    const events: BridgeDiagnosticEvent[] = [];
+    const diagnostics = new LocalConnectorDiagnostics(
+      { LOCAL_CONNECTOR_DIAGNOSTICS: '1', LOCAL_DEVELOPMENT: '1' },
+      (event) => events.push(event)
+    );
+    const nativeToken = 'native-token-secret-sentinel';
+    const rawBody = 'raw-idx-response-secret-sentinel';
+    const service = new ExchangeService(
+      { execute: jest.fn().mockRejectedValue(new IdxTransportError('content_type')) } as never,
+      new IdxMenuDetailValidator(),
+      new IdentityAdmissionService(new BridgeConfigService(bridgeEnvironment([{ kid: 'shape-only', status: 'published', publicJwk: {} }]))),
+      new IdxPermissionNormalizer(), new ScopeProjector(), { issue: jest.fn() } as never, undefined, diagnostics
+    );
+
+    await expect(service.exchange(nativeToken, '3bf71d6f-151c-4ef2-b534-0268b3c5cde2')).rejects.toMatchObject({
+      category: 'provider_unavailable', reason: 'content_type'
+    });
+
+    const failures = events.filter((event) => event.stage === 'MENUDETAIL_REQUEST_FAILED' || event.stage === 'EXCHANGE_FAILED');
+    expect(failures).toHaveLength(2);
+    expect(failures).toEqual(expect.arrayContaining([
+      expect.objectContaining({ failureCategory: 'IDX_TRANSPORT_FAILED', transportCategory: 'CONTENT_TYPE' })
+    ]));
+    const output = JSON.stringify(events);
+    for (const prohibited of [nativeToken, rawBody, 'Authorization', 'Bearer']) expect(output).not.toContain(prohibited);
   });
 });

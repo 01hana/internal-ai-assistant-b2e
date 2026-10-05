@@ -13,6 +13,7 @@ import { ConversationContextLoaderService } from '../../src/assistant/conversati
 import { DocumentEvidenceSourceGuard } from '../../src/retrieval/document-evidence-source-guard';
 import { GroundedToolEvidenceNormalizer } from '../../src/assistant/grounding/grounded-tool-evidence.normalizer';
 import { MockConnectorAdapter } from '../../src/connectors/mock/mock-connector.adapter';
+import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 const FORBIDDEN = /secret-token-sentinel|proof-sentinel|credential-sentinel|connector-sentinel|raw-sentinel|preprojection-sentinel|permission-sentinel|cross-customer-sentinel/i;
 
@@ -22,6 +23,10 @@ describe('Feature 010 grounded bundle cross-boundary leak prevention (T077)', ()
 
   beforeEach(async () => {
     ({ app, state } = await createUs1TestAppWithState());
+    jest.spyOn(app.get(LlmExecutionService, { strict: false }), 'generateAnswer').mockResolvedValue({
+      content: '核准證據顯示結果。', finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false }
+    });
     state.customerToolPolicies.push({ customerId: 'customer-a', toolDefinitionId: 'tool-definition-inventory-001', enabled: true,
       requiredRoles: [], requiredPermissionScopes: [] });
   });

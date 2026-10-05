@@ -10,6 +10,7 @@ export interface LlmProvider {
   readonly key: string;
   getMetadata(input?: LlmMetadataInput): LlmProviderMetadata;
   generateAnswer(input: GenerateAnswerInput): Promise<GenerateAnswerResult>;
+  streamAnswer(input: GenerateAnswerInput, options: LlmStreamOptions): AsyncIterable<LlmStreamEvent>;
   classifyIntent(input: ClassifyIntentInput): Promise<ClassifyIntentResult>;
   summarize(input: SummarizeInput): Promise<SummarizeResult>;
 }
@@ -47,6 +48,15 @@ export interface GenerateAnswerResult {
   finishReason: 'stop' | 'length' | 'tool_required' | 'not_executed' | 'error';
   metadata: LlmProviderMetadata;
 }
+
+export interface LlmStreamOptions {
+  readonly signal: AbortSignal;
+}
+
+/** Only provisional text crosses the provider boundary before terminal metadata. */
+export type LlmStreamEvent =
+  | Readonly<{ type: 'text_delta'; text: string }>
+  | Readonly<{ type: 'completed'; finishReason: GenerateAnswerResult['finishReason']; metadata: LlmProviderMetadata }>;
 
 export interface ClassifyIntentInput {
   requestId: string;

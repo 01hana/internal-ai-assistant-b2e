@@ -1,7 +1,7 @@
 # Tasks: Feature 012 — Grounded LLM Conversation & SSE Streaming
 
 **Input**: Human-approved `spec.md`, `design.md`, and `plan.md` in this directory; Constitution 3.0.0 is authoritative.
-**Status**: Phases A–C T001–T030 complete; Gates A–C passed. Phase D remains unauthorized; T031 is the first unexecuted task.
+**Status**: Phases A–D T001–T039 complete; Gates A–D passed. Phase E is not authorized; T040 is the first unexecuted task.
 **Baseline**: Feature 011 Gate F is complete. Feature 011 T078 and Phases G/H/I remain unexecuted. Feature 010 scope-boundary has the separately known `5/6` Shinmone manifest-hash caveat.
 
 ## Format, dependencies, and stop rule
@@ -137,15 +137,46 @@ FEATURE012_PHASE_D_AUTHORIZED=NO
 **Goal**: Replace the checkpoint's completed-text delivery with provider-native provisional chunks through the existing Backend SSE and Gateway forwarding path.
 **Independent test**: A controlled provider causes at least two client-observable deltas before provider completion, then at most one successful post-commit final.
 
-- [ ] T031 [US3] Add RED typed-stream tests in `test/unit/provider-interface-shape.spec.ts` and `test/unit/llm-execution.service.spec.ts` for async chunks, AbortSignal, deadline, byte/token caps, terminal metadata, and normalized safe failures through the existing provider selector.
-- [ ] T032 [US3] Add RED OpenAI-native stream tests in `test/unit/openai-provider-shell.spec.ts` for real incremental SDK events, one request on error/timeout even before the first delta, `maxRetries: 0`, abort propagation, and no complete-answer string splitting.
-- [ ] T033 [US3] Extend `src/llm/llm-provider.interface.ts`, `src/llm/llm-execution.service.ts`, and `src/llm/openai/openai.provider.ts` to satisfy T031–T032 using the existing client and provider selection; prohibit generation auto-retry at Assistant, wrapper, provider, and SDK layers from the first attempt.
-- [ ] T034 [US3] Add RED Backend event-timing/order tests in `test/unit/assistant-message.service.spec.ts` and `test/contract/assistant-messages-sse.contract.spec.ts`; real Tool/evidence events precede provider-driven provisional `answer_delta`, at least two deltas precede provider completion, and successful `final` follows full validation and durable commit.
-- [ ] T035 [US3] Introduce a bounded ordered event-producing generation seam in `src/assistant/message/assistant-message.service.ts` and keep `src/assistant/assistant.controller.ts` transport-only; stream each accepted provider chunk immediately while privately accumulating for final validation, without a broad Assistant service refactor or persisting deltas.
-- [ ] T036 [US3] Add RED cancellation/error tests in `test/contract/assistant-messages-sse.contract.spec.ts` for HTTP close → Backend abort → `LlmExecutionService` → provider, malformed chunk, provider error, and safe post-stream error event; no failed path may emit a successful `final` or raw exception text.
-- [ ] T037 [US3] Propagate request abort and server-owned timeout/output limits through `src/assistant/assistant.controller.ts`, `src/assistant/message/assistant-message.service.ts`, and `src/llm/llm-execution.service.ts` until T036 passes; do not create a second streaming service or public event schema.
-- [ ] T038 [US3] Run focused transparency/cancellation tests in `apps/gateway/test/operations/gateway-assistant.controller.spec.ts` and `test/contract/customer-assistant-sse.contract.spec.ts`; if existing `apps/gateway/src/operations/gateway-assistant.controller.ts` cannot forward incremental chunks and cancellation unchanged, STOP with `GATEWAY_STREAMING_AMENDMENT_REQUIRED` instead of redesigning Gateway.
-- [ ] T039 [US3] Run provider, Backend SSE, Gateway forwarding, public envelope, no-retry, and typecheck/build focused checks; record `FEATURE012_GATE_D=PASS` in `specs/012-grounded-llm-conversation-sse-streaming/tasks.md` only if ≥2 deltas precede completion, abort reaches the provider, and at most one successful post-commit final exists.
+- [x] T031 [US3] Add RED typed-stream tests in `test/unit/provider-interface-shape.spec.ts` and `test/unit/llm-execution.service.spec.ts` for async chunks, AbortSignal, deadline, byte/token caps, terminal metadata, and normalized safe failures through the existing provider selector.
+- [x] T032 [US3] Add RED OpenAI-native stream tests in `test/unit/openai-provider-shell.spec.ts` for real incremental SDK events, one request on error/timeout even before the first delta, `maxRetries: 0`, abort propagation, and no complete-answer string splitting.
+- [x] T033 [US3] Extend `src/llm/llm-provider.interface.ts`, `src/llm/llm-execution.service.ts`, and `src/llm/openai/openai.provider.ts` to satisfy T031–T032 using the existing client and provider selection; prohibit generation auto-retry at Assistant, wrapper, provider, and SDK layers from the first attempt.
+- [x] T034 [US3] Add RED Backend event-timing/order tests in `test/unit/assistant-message.service.spec.ts` and `test/contract/assistant-messages-sse.contract.spec.ts`; real Tool/evidence events precede provider-driven provisional `answer_delta`, at least two deltas precede provider completion, and successful `final` follows full validation and durable commit.
+- [x] T035 [US3] Introduce a bounded ordered event-producing generation seam in `src/assistant/message/assistant-message.service.ts` and keep `src/assistant/assistant.controller.ts` transport-only; stream each accepted provider chunk immediately while privately accumulating for final validation, without a broad Assistant service refactor or persisting deltas.
+- [x] T036 [US3] Add RED cancellation/error tests in `test/contract/assistant-messages-sse.contract.spec.ts` for HTTP close → Backend abort → `LlmExecutionService` → provider, malformed chunk, provider error, and safe post-stream error event; no failed path may emit a successful `final` or raw exception text.
+- [x] T037 [US3] Propagate request abort and server-owned timeout/output limits through `src/assistant/assistant.controller.ts`, `src/assistant/message/assistant-message.service.ts`, and `src/llm/llm-execution.service.ts` until T036 passes; do not create a second streaming service or public event schema.
+- [x] T038 [US3] Run focused transparency/cancellation tests in `apps/gateway/test/operations/gateway-assistant.controller.spec.ts` and `test/contract/customer-assistant-sse.contract.spec.ts`; if existing `apps/gateway/src/operations/gateway-assistant.controller.ts` cannot forward incremental chunks and cancellation unchanged, STOP with `GATEWAY_STREAMING_AMENDMENT_REQUIRED` instead of redesigning Gateway.
+- [x] T039 [US3] Run provider, Backend SSE, Gateway forwarding, public envelope, no-retry, and typecheck/build focused checks; record `FEATURE012_GATE_D=PASS` in `specs/012-grounded-llm-conversation-sse-streaming/tasks.md` only if ≥2 deltas precede completion, abort reaches the provider, and at most one successful post-commit final exists.
+
+Phase D interrupted-working-tree evidence (2026-10-05):
+
+- T031–T033: existing typed/native stream implementation was retained. A new malformed-terminal-metadata test produced authentic RED (unexpected resolved promise); the existing validator was narrowly tightened and the provider/interface/execution suites passed 23/23. OpenAI native delta, pre-/post-chunk failure, incomplete/error event, SDK AbortSignal, and one-request/no-retry assertions passed. No completed-string splitting or second provider path exists.
+- T034–T037: the real Backend HTTP contract passed 11/11, including two client-observed deltas before provider completion, ToolCall/evidence ordering, no premature `final` or AnswerDecision, one final after completion, malformed event, provider error, client disconnect, and 4 KiB output limit. The direct Controller unit test checks eventSink transport; the real `AssistantMessageService` HTTP contract is the authoritative timing test. Provisional text was not persisted as completed content on failure. The test-only single-delta predecessor bridge was not used as native-stream evidence.
+- T038: Gateway controller, Backend client, and trust-chain suites passed 99/99. The existing Backend-client test proves reader cancellation aborts the underlying fetch signal; Gateway source was unchanged. Customer-facing SSE contract passed 11/11 with the exact command in an environment permitting a listener; the restricted sandbox attempt stopped at `listen EPERM 0.0.0.0` before assertions.
+- T039 interrupted attempt: Phase D unit/contract, Feature 012 generation/context, Feature 011 scoped capability, public/bundle contracts, direct eval, root typecheck, Backend/Gateway builds, changed-file lint, and `git diff --check` passed. The expanded Feature 010 predecessor integration run had 70/74 tests pass but four failures across `feature010-prior-grounded-recall.spec.ts` and `feature010-grounded-bundle-leak.spec.ts`; those same failures reproduced when the two suites ran alone (14/18). Their files and query-understanding/prior-evidence source had no Phase D diff. This was not the known manifest-hash caveat. At that point Gate D was not represented as PASS and T039 remained unchecked pending review of the predecessor failure scope.
+
+```text
+FEATURE012_GATE_D_AT_INTERRUPTION=BLOCKED
+FEATURE012_COMPLETED_TASK_RANGE_AT_INTERRUPTION=T001-T038
+FEATURE012_FIRST_UNEXECUTED_TASK_AT_INTERRUPTION=T039
+FEATURE012_TRUE_STREAMING_ENABLED_AT_INTERRUPTION=NO
+FEATURE012_PHASE_E_AUTHORIZED_AT_INTERRUPTION=NO
+```
+
+T039 authoritative blocker resolution and Gate D acceptance (2026-10-05):
+
+- The original two predecessor suites reproduced 4 failures (14/18). In each case the first divergence occurred on the seed turn before Phase D streaming: the Phase C generation path had no deterministic provider response in these two older integration fixtures, leaving `Pending answer.` and no completed AnswerDecision despite attached evidence. The conversation loader correctly excluded that incomplete exchange; the later Hybrid/Tool follow-up then lacked a prior capability frame and clarified, while the document recall had no prior evidence candidate and re-retrieved. This was a test-fixture gap, not a changed Feature 010 prior-evidence rule or a Phase D timing regression.
+- Only `test/integration/feature010-prior-grounded-recall.spec.ts` and `test/integration/feature010-grounded-bundle-leak.spec.ts` gained a test-boundary `generateAnswer` stub returning a fixed, safe complete answer through the existing single-delta predecessor bridge. No original assertion was removed or weakened. The temporary non-sensitive diagnostic prints were removed. No production source, prior-evidence eligibility, context loader, query understanding, pack, or Feature 008–011 authority changed in this resolution.
+- Exact focused rerun: `npm run test:integration -- --runInBand --runTestsByPath test/integration/feature010-prior-grounded-recall.spec.ts test/integration/feature010-grounded-bundle-leak.spec.ts` passed 18/18. The original nine-suite expanded integration command (Feature 012 generation/context, Feature 010 grounded retrieval/no-LLM/follow-up/prior recall/context isolation/bundle leak, Feature 011 capability resolution) passed 74/74.
+- Phase D/context unit command passed 56/56; Backend SSE/public/bundle contract command passed 48/48; Gateway controller/Backend-client/trust-chain command passed 99/99; Customer SSE contract passed 11/11 using the listener-capable environment; direct Feature 012/011 eval passed 6/6. Root `npm run typecheck`, Backend `npm run build`, Gateway `npm run build`, lint of all Phase D and the two amended predecessor files, and `git diff --check` passed.
+- Existing native-stream evidence remains authoritative: at least two HTTP-observable provider deltas before completion, ToolCall/evidence before deltas, abort through Backend and Gateway to provider, one SDK request with `maxRetries: 0`, no completed partial history, and at most one final after validation and durable core completion. Gateway production source, public SSE/history shape, `GroundedContextBundleV1`, Prisma, and Feature 008–011 authorities were unchanged. Feature 010 scope-boundary's separately known 5/6 Shinmone manifest-hash caveat is not a Gate D predecessor failure and is not called full acceptance.
+
+```text
+FEATURE012_GATE_D=PASS
+FEATURE012_COMPLETED_TASK_RANGE=T001-T039
+FEATURE012_FIRST_UNEXECUTED_TASK=T040
+FEATURE012_TRUE_STREAMING_ENABLED=YES
+FEATURE012_PHASE_E_AUTHORIZED=NO
+```
 
 ## Phase E — Failure, cancellation, and persistence
 
@@ -209,4 +240,4 @@ FEATURE012_PUBLIC_CONTRACT_BREAKING_CHANGE=NO
 FEATURE012_PRISMA_MIGRATION=NO
 ```
 
-**Current implementation state**: Phases A–C Gates A–C PASS; T001–T030 are complete and T031+ remain unchecked. Non-streaming production request-time generation is enabled, but true streaming is not. The earlier disabled-generation and incomplete-Gate statements above are historical attempt evidence, not current state. Reserved Gate F markers above are not current results.
+**Current implementation state**: Phases A–D Gates A–D PASS; T001–T039 are complete and T040 is the first unexecuted task. Provider-native streaming is accepted at Gate D in the current working tree. T040+ and Phase E are not authorized. The earlier disabled-generation, incomplete-Gate, and blocked Gate D statements above are historical attempt evidence, not current state. Reserved Gate F markers above are not current results.

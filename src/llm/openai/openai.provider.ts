@@ -7,6 +7,8 @@ import {
   ClassifyIntentResult,
   GenerateAnswerInput,
   GenerateAnswerResult,
+  LlmStreamEvent,
+  LlmStreamOptions,
   LlmMessage,
   LlmMetadataInput,
   LlmProvider,
@@ -17,9 +19,12 @@ import {
 
 export interface OpenAiResponsesClient {
   responses: {
-    create(input: { model: string; input: string; instructions?: string; max_output_tokens?: number }, options?: { maxRetries?: number }): Promise<{ output_text?: string }>;
+    create(input: { model: string; input: string; instructions?: string; max_output_tokens?: number; stream: true }, options?: { maxRetries?: number; signal?: AbortSignal }): AsyncIterable<OpenAiStreamEvent>;
+    create(input: { model: string; input: string; instructions?: string; max_output_tokens?: number; stream?: false }, options?: { maxRetries?: number; signal?: AbortSignal }): Promise<{ output_text?: string }>;
   };
 }
+
+type OpenAiStreamEvent = Readonly<{ type: string; delta?: unknown; response?: { status?: unknown } }>;
 
 @Injectable()
 export class OpenAiProvider implements LlmProvider {
@@ -63,6 +68,35 @@ export class OpenAiProvider implements LlmProvider {
         finishReason: 'error',
         metadata: this.getFallbackMetadata(input.requestId, 'provider_error')
       };
+    }
+  }
+
+  async *streamAnswer(input: GenerateAnswerInput, options: LlmStreamOptions): AsyncIterable<LlmStreamEvent> {
+    try {
+      const stream = this.client.responses.create({
+        model: this.getModel(), instructions: input.instructions,
+        input: toResponseInput(input.messages, input.evidence),
+        max_output_tokens: Math.min(input.maxOutputTokens ?? 1024, 1024), stream: true
+      }, { maxRetries: 0, signal: options.signal });
+      let completed = false;
+      for await (const event of stream) {
+        if (options.signal.aborted) throw new Error('LLM_STREAM_ABORTED');
+        if (event.type === 'response.output_text.delta') {
+          if (typeof event.delta !== 'string' || event.delta.length === 0) throw new Error('LLM_STREAM_INVALID_EVENT');
+          yield Object.freeze({ type: 'text_delta', text: event.delta });
+        } else if (event.type === 'response.completed') {
+          if (event.response?.status !== undefined && event.response.status !== 'completed') throw new Error('LLM_STREAM_PROVIDER_FAILURE');
+          completed = true;
+          yield Object.freeze({ type: 'completed', finishReason: 'stop', metadata: this.getMetadata({ requestId: input.requestId }) });
+        } else if (['response.failed', 'response.incomplete', 'error'].includes(event.type)) {
+          throw new Error('LLM_STREAM_PROVIDER_FAILURE');
+        }
+      }
+      if (!completed) throw new Error('LLM_STREAM_INCOMPLETE');
+    } catch (error) {
+      if (options.signal.aborted) throw new Error('LLM_STREAM_ABORTED');
+      if (error instanceof Error && /^LLM_STREAM_[A-Z_]+$/.test(error.message)) throw error;
+      throw new Error('LLM_STREAM_PROVIDER_FAILURE');
     }
   }
 

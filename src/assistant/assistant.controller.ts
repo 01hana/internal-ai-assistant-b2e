@@ -81,6 +81,14 @@ export class AssistantController {
 
     response.status(HttpStatus.OK);
     response.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    const abortController = new AbortController();
+    const onClose = () => { if (!response.writableEnded) abortController.abort(); };
+    response.once('close', onClose);
+
+    const writeEvent = (event: { event: string; payload: unknown }) => {
+      if (abortController.signal.aborted || response.writableEnded) throw new Error('ASSISTANT_STREAM_ABORTED');
+      response.write(`event: ${event.event}\ndata: ${JSON.stringify(event.payload)}\n\n`);
+    };
 
     try {
       const events = await this.assistantMessageService.sendMessage({
@@ -91,27 +99,23 @@ export class AssistantController {
         hostIntegrationContext: host,
         pageContext,
         transientConnectorContext: transient,
+        abortSignal: abortController.signal,
+        eventSink: writeEvent,
       });
-
-      response.send(
-        events
-          .map(
-            (event) =>
-              `event: ${event.event}\ndata: ${JSON.stringify(event.payload)}\n\n`,
-          )
-          .join(""),
-      );
-      return;
+      for (const event of events) writeEvent(event);
     } catch (error) {
-      const fallback = this.assistantMessageService.createErrorEvent({
-        requestId,
-        sessionId,
-        code: extractErrorCode(error),
-        message: extractErrorMessage(error),
-      });
-      response.send(
-        `event: ${fallback.event}\ndata: ${JSON.stringify(fallback.payload)}\n\n`,
-      );
+      if (!abortController.signal.aborted && !response.writableEnded) {
+        const fallback = this.assistantMessageService.createErrorEvent({
+          requestId,
+          sessionId,
+          code: extractErrorCode(error),
+          message: extractErrorMessage(error),
+        });
+        writeEvent(fallback);
+      }
+    } finally {
+      response.off('close', onClose);
+      if (!response.writableEnded) response.end();
     }
   }
 

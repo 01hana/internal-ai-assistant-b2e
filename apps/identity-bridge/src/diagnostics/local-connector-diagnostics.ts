@@ -29,6 +29,7 @@ export type BridgeDiagnosticEvent = Readonly<{
   httpStatusCategory?: string;
   durationMs?: number;
   failureCategory?: string;
+  transportCategory?: string;
 }>;
 
 export type BridgeDiagnosticMetadata = Readonly<{
@@ -37,6 +38,7 @@ export type BridgeDiagnosticMetadata = Readonly<{
   httpStatusCategory?: string;
   durationMs?: number;
   failureCategory?: string;
+  transportCategory?: string;
 }>;
 
 export type BridgeDiagnosticWriter = (event: BridgeDiagnosticEvent) => void;
@@ -62,7 +64,8 @@ export class LocalConnectorDiagnostics {
       ...(safeId(metadata.internalBindingRequestId) ? { internalBindingRequestId: metadata.internalBindingRequestId } : {}),
       ...(optionalSafeCategory(metadata.httpStatusCategory) ? { httpStatusCategory: metadata.httpStatusCategory } : {}),
       ...(boundedDuration(metadata.durationMs) === undefined ? {} : { durationMs: boundedDuration(metadata.durationMs) }),
-      ...(optionalSafeCategory(metadata.failureCategory) ? { failureCategory: metadata.failureCategory } : {})
+      ...(optionalSafeCategory(metadata.failureCategory) ? { failureCategory: metadata.failureCategory } : {}),
+      ...(optionalSafeCategory(metadata.transportCategory) ? { transportCategory: metadata.transportCategory } : {})
     });
     this.writer(event);
   }

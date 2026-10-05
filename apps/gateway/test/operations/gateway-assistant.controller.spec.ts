@@ -14,6 +14,28 @@ import { UpstreamAuthenticationError } from '../../src/upstream-auth/upstream-au
  * JWKS, CustomerScope, or GatewayBackendClient evidence.
  */
 describe('GatewayAssistantController SSE lifecycle', () => {
+  it('forwards Backend chunks before the source stream completes', async () => {
+    let sourceController!: ReadableStreamDefaultController<Uint8Array>;
+    const stream = new ReadableStream<Uint8Array>({ start(controller) { sourceController = controller; } });
+    const response = new TestResponse();
+    const operation = new GatewayAssistantController(createHandler(stream)).sendStreamMessage(
+      'Bearer upstream-token', 'controller-incremental', undefined, 'session-owned-001',
+      { message: 'covered query' }, response as unknown as Response
+    );
+    const encoder = new TextEncoder();
+    sourceController.enqueue(encoder.encode('event: answer_delta\ndata: a\n\n'));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(response.writes).toEqual(['event: answer_delta\ndata: a\n\n']);
+    expect(response.ended).toBe(false);
+    sourceController.enqueue(encoder.encode('event: answer_delta\ndata: b\n\n'));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(response.writes).toHaveLength(2);
+    expect(response.ended).toBe(false);
+    sourceController.close();
+    await operation;
+    expect(response.ended).toBe(true);
+  });
+
   it('cancels the source reader and ends without writing later chunks when the Host response closes', async () => {
     const source = createPendingStream();
     const handler = createHandler(source.stream);

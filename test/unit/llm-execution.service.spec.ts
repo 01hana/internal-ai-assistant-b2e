@@ -4,6 +4,103 @@ import { LlmObservabilityService } from '../../src/llm/llm-observability.service
 import { LlmProviderService } from '../../src/llm/llm-provider.service';
 
 describe('LlmExecutionService', () => {
+  it('streams typed provisional text and one terminal event through the selected provider', async () => {
+    const controller = new AbortController();
+    const streamAnswer = jest.fn(async function* () {
+      yield { type: 'text_delta' as const, text: '甲' };
+      yield { type: 'text_delta' as const, text: '乙' };
+      yield { type: 'completed' as const, finishReason: 'stop' as const, metadata: metadata('req-stream') };
+    });
+    const provider = createProvider({ streamAnswer });
+    const service = createService(provider, jest.fn());
+    const events = [];
+    for await (const event of service.streamAnswer({ requestId: 'req-stream', messages: [], evidence: [], maxOutputTokens: 1024 }, executionContext(), { signal: controller.signal, deadlineMs: 1000 })) events.push(event);
+    expect(events).toEqual([
+      { type: 'text_delta', text: '甲' }, { type: 'text_delta', text: '乙' },
+      { type: 'completed', finishReason: 'stop', metadata: metadata('req-stream') }
+    ]);
+    expect(streamAnswer).toHaveBeenCalledTimes(1);
+    expect(streamAnswer).toHaveBeenCalledWith(expect.objectContaining({ requestId: 'req-stream' }), expect.objectContaining({ signal: expect.any(AbortSignal) }));
+  });
+
+  it('rejects over-budget input before provider selection and caps requested output tokens', async () => {
+    const streamAnswer = jest.fn(async function* () {
+      yield { type: 'completed' as const, finishReason: 'stop' as const, metadata: metadata('req-capped') };
+    });
+    const service = createService(createProvider({ streamAnswer }), jest.fn());
+    await expect(async () => {
+      for await (const _event of service.streamAnswer({ requestId: 'req-oversized-input',
+        messages: [{ role: 'user', content: 'x'.repeat(16 * 1024) }], evidence: [] },
+      executionContext(), { signal: new AbortController().signal })) { /* consume */ }
+    }).rejects.toThrow('LLM_STREAM_INPUT_LIMIT');
+    expect(streamAnswer).not.toHaveBeenCalled();
+
+    for await (const _event of service.streamAnswer({ requestId: 'req-capped', messages: [], evidence: [], maxOutputTokens: 2048 },
+      executionContext(), { signal: new AbortController().signal })) { /* consume */ }
+    expect(streamAnswer).toHaveBeenCalledWith(expect.objectContaining({ maxOutputTokens: 1024 }), expect.any(Object));
+  });
+
+  it('rejects malformed terminal metadata without releasing its provider diagnostic', async () => {
+    const service = createService(createProvider({ streamAnswer: async function* () {
+      yield { type: 'completed', finishReason: 'stop', metadata: {
+        provider: 'openai', model: 'test-model', fallbackUsed: false, fallbackReason: 42
+      } } as never;
+    } }), jest.fn());
+    await expect(async () => {
+      for await (const _event of service.streamAnswer({ requestId: 'req-malformed-metadata', messages: [], evidence: [] },
+        executionContext(), { signal: new AbortController().signal })) { /* consume */ }
+    }).rejects.toThrow('LLM_STREAM_INVALID_EVENT');
+  });
+
+  it('aborts and rejects a stream that exceeds the server output bound', async () => {
+    const upstreamAbort = jest.fn();
+    const provider = createProvider({ streamAnswer: async function* (_input, options) {
+      options.signal.addEventListener('abort', upstreamAbort);
+      yield { type: 'text_delta', text: 'x'.repeat(4097) };
+    } });
+    const service = createService(provider, jest.fn());
+    await expect(async () => {
+      for await (const _event of service.streamAnswer({ requestId: 'req-stream-limit', messages: [], evidence: [] }, executionContext(), { signal: new AbortController().signal })) { /* consume */ }
+    }).rejects.toThrow('LLM_STREAM_OUTPUT_LIMIT');
+    expect(upstreamAbort).toHaveBeenCalledTimes(1);
+  });
+
+  it('enforces a server deadline while a provider is stalled before its first chunk', async () => {
+    let providerSignal: AbortSignal | undefined;
+    const provider = createProvider({ streamAnswer: async function* (_input, options) {
+      providerSignal = options.signal;
+      await new Promise<void>(() => undefined);
+      yield { type: 'text_delta', text: 'unreachable' };
+    } });
+    const service = createService(provider, jest.fn());
+    await expect(async () => {
+      for await (const _event of service.streamAnswer({ requestId: 'req-deadline', messages: [], evidence: [] }, executionContext(), { signal: new AbortController().signal, deadlineMs: 5 })) { /* consume */ }
+    }).rejects.toThrow('LLM_STREAM_DEADLINE');
+    expect(providerSignal?.aborted).toBe(true);
+  });
+
+  it('propagates caller abort and rejects malformed provider chunks safely', async () => {
+    const caller = new AbortController();
+    let providerSignal: AbortSignal | undefined;
+    const provider = createProvider({ streamAnswer: async function* (_input, options) {
+      providerSignal = options.signal;
+      caller.abort();
+      await new Promise<void>(() => undefined);
+      yield { type: 'text_delta', text: 'unreachable' };
+    } });
+    const service = createService(provider, jest.fn());
+    await expect(async () => {
+      for await (const _event of service.streamAnswer({ requestId: 'req-abort', messages: [], evidence: [] }, executionContext(), { signal: caller.signal })) { /* consume */ }
+    }).rejects.toThrow('LLM_STREAM_ABORTED');
+    expect(providerSignal?.aborted).toBe(true);
+
+    const malformed = createService(createProvider({ streamAnswer: async function* () {
+      yield { type: 'text_delta', text: '' };
+    } }), jest.fn());
+    await expect(async () => {
+      for await (const _event of malformed.streamAnswer({ requestId: 'req-invalid', messages: [], evidence: [] }, executionContext(), { signal: new AbortController().signal })) { /* consume */ }
+    }).rejects.toThrow('LLM_STREAM_INVALID_EVENT');
+  });
   it('records provider metadata after generateAnswer succeeds without leaking prompt, raw response, or API key', async () => {
     const provider = createProvider({
       generateAnswer: jest.fn().mockResolvedValue({

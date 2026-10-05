@@ -42,8 +42,9 @@ export class ExchangeService {
       this.diagnostics?.emit('MENUDETAIL_REQUEST_SUCCEEDED', 'SUCCEEDED', metadata);
     } catch (error) {
       const failureCategory = error instanceof IdxTransportError ? 'IDX_TRANSPORT_FAILED' : 'UNEXPECTED_TRANSPORT_FAILURE';
-      this.diagnostics?.emit('MENUDETAIL_REQUEST_FAILED', 'FAILED', { ...metadata, failureCategory });
-      this.diagnostics?.emit('EXCHANGE_FAILED', 'FAILED', { ...metadata, failureCategory, durationMs: Date.now() - startedAt });
+      const transportCategory = error instanceof IdxTransportError ? error.reason.toUpperCase() : undefined;
+      this.diagnostics?.emit('MENUDETAIL_REQUEST_FAILED', 'FAILED', { ...metadata, failureCategory, transportCategory });
+      this.diagnostics?.emit('EXCHANGE_FAILED', 'FAILED', { ...metadata, failureCategory, transportCategory, durationMs: Date.now() - startedAt });
       if (error instanceof IdxTransportError) throw error;
       throw new ExchangeUnavailableError();
     }

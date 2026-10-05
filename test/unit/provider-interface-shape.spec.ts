@@ -27,4 +27,21 @@ describe('provider and adapter interfaces', () => {
     expect(tokenizerAdapter.key).toBe('fake-tokenizer');
     expect(connectorAdapter.listTools()).toEqual([]);
   });
+
+  it('exposes a typed abortable provider stream rather than SDK events', async () => {
+    const controller = new AbortController();
+    const provider: Pick<LlmProvider, 'streamAnswer'> = {
+      async *streamAnswer(_input, options) {
+        expect(options.signal).toBe(controller.signal);
+        yield { type: 'text_delta', text: '甲' };
+        yield { type: 'completed', finishReason: 'stop', metadata: { provider: 'fake-llm', model: 'fake-model', fallbackUsed: false } };
+      }
+    };
+    const events = [];
+    for await (const event of provider.streamAnswer({ requestId: 'req-stream', messages: [], evidence: [] }, { signal: controller.signal })) events.push(event);
+    expect(events).toEqual([
+      { type: 'text_delta', text: '甲' },
+      { type: 'completed', finishReason: 'stop', metadata: { provider: 'fake-llm', model: 'fake-model', fallbackUsed: false } }
+    ]);
+  });
 });

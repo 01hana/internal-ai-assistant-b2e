@@ -526,6 +526,16 @@ export async function createUs1TestAppWithState(
   }
   const moduleRef = await builder.compile();
 
+  // Test-only bridge for predecessor suites that assert the completed-answer boundary.
+  // Production always consumes provider-native chunks; streaming timing tests replace this mock.
+  const { LlmExecutionService } = await import('../../src/llm/llm-execution.service');
+  const testLlmExecution = moduleRef.get(LlmExecutionService, { strict: false });
+  jest.spyOn(testLlmExecution, 'streamAnswer').mockImplementation(async function* (input, context) {
+    const generated = await testLlmExecution.generateAnswer(input, context, 'terminal');
+    if (generated.content) yield { type: 'text_delta', text: generated.content };
+    yield { type: 'completed', finishReason: generated.finishReason, metadata: generated.metadata };
+  });
+
   const { AssistantMessageService } = await import('../../src/assistant/message/assistant-message.service');
   const { AssistantSseEventBuilder } = await import('../../src/assistant/sse/assistant-sse-event.builder');
   const assistantMessageService = moduleRef.get(AssistantMessageService);
