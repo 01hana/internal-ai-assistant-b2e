@@ -27,7 +27,7 @@ describe('Feature 010 active conversation-context isolation (T019)', () => {
       status: 'answered',
       noAnswerReason: null,
       clarificationQuestionId: null,
-      groundingCheckId: null,
+      groundingCheckId: 'grounding-context-owned-001',
       metadata: null,
       createdAt: new Date('2026-06-16T00:00:05.000Z')
     });

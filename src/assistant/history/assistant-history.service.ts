@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditWriterService } from '../../audit/audit-writer.service';
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -22,20 +22,28 @@ export class AssistantHistoryService {
     const customerScope = createCustomerScopeFromIdentityContext(input.identityContext);
     const limit = Math.min(Math.max(input.limit ?? 50, 1), 50);
     if (input.cursor) {
-      await this.messageRepository.getVisibleMessageForSession({
+      const cursorMessage = await this.messageRepository.getVisibleMessageForSession({
         customerScope,
         sessionId: session.id,
         messageId: input.cursor
       });
+      if (!this.historyAccessService.isCompletedHistoryMessage(cursorMessage)) throw new NotFoundException();
     }
-    const messages = await this.messageRepository.findMessagesForSession({
-      customerScope,
-      sessionId: session.id,
-      limit: limit + 1,
-      cursor: input.cursor
-    });
-    const visibleMessages = messages.slice(0, limit);
-    const nextMessage = messages[limit];
+    const visibleMessages: Awaited<ReturnType<AssistantMessageRepository['findMessagesForSession']>> = [];
+    let scanCursor = input.cursor;
+    while (visibleMessages.length <= limit) {
+      const batch = await this.messageRepository.findMessagesForSession({
+        customerScope, sessionId: session.id, limit: 50, cursor: scanCursor
+      });
+      for (const message of batch) {
+        if (this.historyAccessService.isCompletedHistoryMessage(message)) visibleMessages.push(message);
+        if (visibleMessages.length > limit) break;
+      }
+      if (visibleMessages.length > limit || batch.length < 50) break;
+      scanCursor = batch.at(-1)!.id;
+    }
+    const nextMessage = visibleMessages[limit];
+    visibleMessages.splice(limit);
 
     const toolCalls = await this.prisma.db.toolCall.findMany({
       where: {

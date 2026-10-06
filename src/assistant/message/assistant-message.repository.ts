@@ -81,13 +81,16 @@ export class AssistantMessageRepository {
   }
 
   async getVisibleMessageForSession(input: { customerScope: CustomerScope; sessionId: string; messageId: string }) {
-    const message = await this.prisma.db.assistantMessage.findFirst({
+    const messages = await this.prisma.db.assistantMessage.findMany({
       where: {
         customerId: input.customerScope.customerId,
         sessionId: input.sessionId,
         id: input.messageId
-      }
+      },
+      take: 1,
+      include: { answerDecisions: { orderBy: { createdAt: 'desc' }, take: 1 } }
     });
+    const message = messages[0];
 
     if (!message) {
       throw this.createMessageNotFoundError();
@@ -113,7 +116,8 @@ export class AssistantMessageRepository {
       orderBy: {
         createdAt: 'asc'
       },
-      take: input.limit
+      take: input.limit,
+      include: { answerDecisions: { orderBy: { createdAt: 'desc' }, take: 1 } }
     });
   }
 

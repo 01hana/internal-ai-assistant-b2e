@@ -36,10 +36,12 @@ export class AnswerDecisionService {
     retrievalMode: RetrievalMode;
     coverage: Extract<RetrievalCoverage, 'COMPLETE' | 'PARTIAL'>;
     groundedContextBundle?: BuildAnswerDecisionInput['groundedContextBundle'];
+    abortSignal?: AbortSignal;
   }): Promise<PersistedAnswerDecisionResult> {
     if (!this.messageRepository || !this.auditWriter || !input.text.trim() || input.evidenceRefIds.length === 0) {
       throw new Error('GENERATION_CORE_COMPLETION_INVALID');
     }
+    if (input.abortSignal?.aborted) throw new Error('GENERATION_CORE_ABORTED');
     return this.prisma.db.$transaction(async (database) => {
       const groundingCheck = await database.groundingCheck.create({ data: {
         customerId: input.customerScope.customerId, requestId: input.requestId, messageId: input.messageId,
@@ -60,6 +62,8 @@ export class AnswerDecisionService {
         messageId: input.messageId, eventType: 'answer_generated', decision: AnswerDecisionStatus.answered,
         evidenceRefIds: [], metadata: toJsonInput({ answerDecisionId: decision.id, groundingCheckId: groundingCheck.id,
           selectedEvidenceCount: input.evidenceRefIds.length }) }, database);
+      // Abort before durable commit must roll back all three completion records and the protected audit.
+      if (input.abortSignal?.aborted) throw new Error('GENERATION_CORE_ABORTED');
       return {
         status: AnswerDecisionStatus.answered,
         answerPlan: { answerType: 'grounded_text' as const, expectedAnswerShape: null, selectedEvidenceRefs: [...input.evidenceRefIds],

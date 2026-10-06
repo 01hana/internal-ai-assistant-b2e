@@ -35,6 +35,20 @@ describe('OpenAiProvider', () => {
     expect(create).toHaveBeenCalledTimes(1);
   });
 
+  it.each([false, true])('uses exactly one SDK request on provider error afterDelta=%s', async (afterDelta) => {
+    const create = jest.fn().mockReturnValue((async function* () {
+      if (afterDelta) yield { type: 'response.output_text.delta', delta: 'provisional' };
+      throw new Error('private SDK error');
+    })());
+    const provider = new OpenAiProvider(createConfigService(), { responses: { create } } as unknown as OpenAiResponsesClient);
+    await expect(async () => {
+      for await (const _event of provider.streamAnswer({ requestId: 'req-one-error', messages: [], evidence: [] },
+        { signal: new AbortController().signal })) { /* consume */ }
+    }).rejects.toThrow('LLM_STREAM_PROVIDER_FAILURE');
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][1]).toMatchObject({ maxRetries: 0 });
+  });
+
   it.each(['response.incomplete', 'response.failed', 'error'])('fails safely on %s without retry or raw diagnostics', async (eventType) => {
     const create = jest.fn().mockReturnValue((async function* () {
       yield { type: eventType, response: { status: 'raw provider detail must stay private' } };

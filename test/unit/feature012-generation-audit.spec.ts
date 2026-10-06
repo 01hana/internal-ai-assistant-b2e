@@ -47,6 +47,7 @@ describe('Feature 012 terminal generation audit', () => {
 
   it.each([
     ['FAILED', 'PROVIDER_ERROR'],
+    ['TIMEOUT', 'PROVIDER_TIMEOUT'],
     ['CANCELLED', 'CANCELLED']
   ] as const)('attempts exactly one safe terminal append for %s generation', async (outcome, reasonCode) => {
     const append = jest.fn().mockResolvedValue({ id: 'audit-terminal' });
@@ -65,5 +66,27 @@ describe('Feature 012 terminal generation audit', () => {
     }));
     const serialized = JSON.stringify(append.mock.calls);
     expect(serialized).not.toMatch(/private|prompt|generated answer|rawResponse|credential|connectorContextRef|toolResult/);
+  });
+
+  it('does not retry or leak a late rejected append after the bounded deadline', async () => {
+    jest.useFakeTimers();
+    const warn = jest.spyOn(StructuredLoggerService.prototype, 'warn').mockImplementation(() => undefined);
+    let rejectAppend!: (reason: Error) => void;
+    const append = jest.fn().mockImplementation(() => new Promise((_resolve, reject) => { rejectAppend = reject; }));
+    const service = new LlmObservabilityService({ append } as unknown as AuditWriterService);
+    const completion = service.recordGenerationTerminal({
+      requestId: 'req-f012-audit', sessionId: 'session-a', messageId: 'message-a', identityContext,
+      metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false },
+      outcome: 'COMPLETED', durationMs: 12
+    });
+    await jest.advanceTimersByTimeAsync(2001);
+    expect(await completion).toEqual({ auditPersisted: false });
+    rejectAppend(new Error('private late diagnostic'));
+    await Promise.resolve();
+    expect(append).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('private late diagnostic');
+    warn.mockRestore();
+    jest.useRealTimers();
   });
 });

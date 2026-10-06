@@ -1106,21 +1106,23 @@ export class AssistantMessageService {
         const answerDecision = await this.answerDecisionService.completeGeneratedAnswer({
           customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId, text,
           evidenceRefIds: generationEligibility.evidenceRefIds, retrievalMode: mode,
-          coverage: generationEligibility.coverage, groundedContextBundle: bundle
+          coverage: generationEligibility.coverage, groundedContextBundle: bundle, abortSignal: input.abortSignal
         });
         committed = true;
-        await this.contextStateService.updateAfterMessageFlow({ customerScope, sessionId, pageContext: input.pageContext,
-          planningResult, toolCallIds: toolExecution?.toolCallId ? [toolExecution.toolCallId] : [], evidenceRefIds: evidenceIds });
         await this.llmExecution.recordGroundedGenerationTerminal({ requestId: input.requestId,
           identityContext: input.identityContext, sessionId, messageId: assistantMessageId,
           metadata: providerMetadata, outcome: 'COMPLETED', durationMs: Math.max(0, Date.now() - startedAt) });
+        await this.contextStateService.updateAfterMessageFlow({ customerScope, sessionId, pageContext: input.pageContext,
+          planningResult, toolCallIds: toolExecution?.toolCallId ? [toolExecution.toolCallId] : [], evidenceRefIds: evidenceIds });
         const finalData = { answerDecision: answerDecision.status, answer: text, evidenceRefs: evidenceIds };
         await emit(makeEvent('final', ++sequence, finalData));
         return streamedEvents;
-      } catch {
+      } catch (error) {
         if (!committed) await this.llmExecution.recordGroundedGenerationTerminal({ requestId: input.requestId,
           identityContext: input.identityContext, sessionId, messageId: assistantMessageId,
-          metadata: providerMetadata, outcome: input.abortSignal?.aborted ? 'CANCELLED' : 'FAILED', reasonCode: failureReason,
+          metadata: providerMetadata,
+          outcome: input.abortSignal?.aborted ? 'CANCELLED' : error instanceof Error && error.message === 'LLM_STREAM_DEADLINE' ? 'TIMEOUT' : 'FAILED',
+          reasonCode: input.abortSignal?.aborted ? 'CANCELLED' : error instanceof Error && error.message === 'LLM_STREAM_DEADLINE' ? 'PROVIDER_TIMEOUT' : failureReason,
           durationMs: Math.max(0, Date.now() - startedAt) });
         throw new Error('GROUNDED_GENERATION_FAILED');
       }

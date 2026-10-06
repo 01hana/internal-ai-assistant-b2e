@@ -3,6 +3,7 @@ import { AssistantMessageRole, AssistantSessionStatus } from '../../generated/pr
 import { PrismaService } from '../../prisma/prisma.service';
 import { MAX_CONTEXT_MESSAGE_SCAN } from './conversation-limits';
 import { ConversationScope } from './conversation.types';
+import { isCompletedAssistantMessage } from '../message/assistant-completion.predicate';
 
 export interface ConversationContextRepositoryInput {
   readonly scope: ConversationScope;
@@ -51,8 +52,10 @@ export class ConversationContextRepository {
     }
 
     return [...byRequest.entries()].flatMap(([requestId, pair]) => {
-      if (!pair.user || !pair.assistant || (pair.assistant.answerDecisions ?? []).length === 0) return [];
-      const decision = pair.assistant.answerDecisions![0];
+      if (!pair.user || !pair.assistant) return [];
+      const decision = pair.assistant.answerDecisions?.[0];
+      if (!isCompletedAssistantMessage(pair.assistant, decision)) return [];
+      if (!decision) return [];
       return [{
         exchangeId: requestId,
         requestId,
@@ -67,13 +70,14 @@ export class ConversationContextRepository {
         assistantMessage: {
           id: pair.assistant.id,
           content: pair.assistant.content,
-          finalized: decision.status === 'answered' && pair.assistant.answerDecision === 'answered' &&
-            pair.assistant.content.trim().length > 0 && pair.assistant.content !== 'Pending answer.',
+          answerDecision: pair.assistant.answerDecision,
+          finalized: decision.status === 'answered',
           createdAt: pair.assistant.createdAt.toISOString()
         },
         answerDecision: {
           id: decision.id,
-          status: decision.status
+          status: decision.status,
+          groundingCheckId: decision.groundingCheckId
         },
         groundingCheck: pair.assistant.groundingChecks?.[0]
           ? {
@@ -129,7 +133,7 @@ interface MessageWithContext {
   readonly answerDecision?: string | null;
   readonly createdAt: Date;
   readonly queryUnderstanding?: unknown;
-  readonly answerDecisions?: ReadonlyArray<{ readonly id: string; readonly status: string }>;
+  readonly answerDecisions?: ReadonlyArray<{ readonly id: string; readonly status: string; readonly groundingCheckId: string | null }>;
   readonly groundingChecks?: ReadonlyArray<{
     readonly covered: boolean;
     readonly unsupportedClaimCount: number;

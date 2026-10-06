@@ -16,7 +16,7 @@ export interface RecordLlmProviderDecisionInput {
 }
 
 export interface RecordGenerationTerminalInput extends RecordLlmProviderDecisionInput {
-  outcome: 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  outcome: 'COMPLETED' | 'FAILED' | 'TIMEOUT' | 'CANCELLED';
   durationMs: number;
   reasonCode?: 'PROVIDER_ERROR' | 'PROVIDER_TIMEOUT' | 'CANCELLED' | 'INVALID_OUTPUT' | 'CORE_PERSISTENCE_FAILED';
 }
@@ -53,6 +53,7 @@ export class LlmObservabilityService {
     } catch {
       this.logger.warn('FEATURE012_AUDIT_PERSISTENCE_FAILED', 'LlmObservabilityService', {
         AUDIT_PERSISTED: 'NO', eventType: 'llm_generation_terminal',
+        outcome: input.outcome, reasonCode: 'AUDIT_APPEND_FAILED_OR_DEADLINE',
         requestId: bounded(input.requestId), sessionId: bounded(input.sessionId), messageId: bounded(input.messageId)
       });
       return { auditPersisted: false };

@@ -12,6 +12,7 @@ import {
   SafeCompletedConversationExchange,
   SafePriorEvidenceRefCandidate
 } from './conversation.types';
+import { isCompletedAssistantMessage } from '../message/assistant-completion.predicate';
 
 export interface LoadConversationContextInput {
   readonly scope: ConversationScope;
@@ -143,10 +144,14 @@ export class ConversationContextLoaderService {
 }
 
 function isCompleteExchange(record: Record<string, unknown>): boolean {
+  const assistant = asRecord(record.assistantMessage);
+  const decision = asRecord(record.answerDecision);
   return record.completed === true
     && asRecord(record.userMessage) !== undefined
-    && asRecord(record.assistantMessage) !== undefined
-    && asRecord(record.answerDecision) !== undefined;
+    && assistant !== undefined
+    && decision !== undefined
+    && isCompletedAssistantMessage({ content: assistant.content as string, answerDecision: assistant.answerDecision as string },
+      { id: decision.id as string, status: decision.status as string, groundingCheckId: decision.groundingCheckId as string });
 }
 
 function hasExactScope(record: Record<string, unknown>, expected: ConversationScope): boolean {

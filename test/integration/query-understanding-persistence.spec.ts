@@ -108,7 +108,8 @@ describe('query understanding persistence integration', () => {
     const repository = new ConversationContextRepository({ db: {
       assistantSession: { findFirst: jest.fn().mockResolvedValue({ status: 'active' }) },
       assistantMessage: { findMany: jest.fn().mockResolvedValue([
-        { id: 'assistant-1', requestId: 'req-1', role: 'assistant', createdAt: now, answerDecisions: [{ id: 'decision-1', status: 'answered' }], groundingChecks: [], evidenceRefs: [] },
+        { id: 'assistant-1', requestId: 'req-1', role: 'assistant', content: 'completed answer', answerDecision: 'answered',
+          createdAt: now, answerDecisions: [{ id: 'decision-1', status: 'answered', groundingCheckId: 'grounding-1' }], groundingChecks: [], evidenceRefs: [] },
         { id: 'user-1', requestId: 'req-1', role: 'user', content: 'synthetic', createdAt: now, queryUnderstanding: {
           resolvedReferences: { version: '1', kind: 'CAPABILITY_FOLLOW_UP_FRAME_ENVELOPE', references: [], capabilityFrame: capabilityFrame() },
           phrases: [], normalizedTerms: [], timeRanges: [], entityCandidates: [], subTasks: [], confidence: 0.9

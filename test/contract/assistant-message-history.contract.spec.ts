@@ -1,9 +1,54 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createAuthorizedInternalIdentityHeaders, createIdentityHeaders, createUs1TestApp } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createIdentityHeaders, createUs1TestApp, createUs1TestAppWithState } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 
 describe('assistant message history contract', () => {
+  it('exposes only durable completed Assistant text, never pending or provisional records', async () => {
+    const fixture = await createUs1TestAppWithState({ seedCompletedHistoryDecision: true });
+    try {
+      const seed = fixture.state.messages.find((message) => message.id === 'message-owned-assistant-001')!;
+      fixture.state.messages.push(
+        { ...seed, id: 'message-history-pending', requestId: 'req-history-pending', content: 'Pending answer.', answerDecision: 'no_answer' },
+        { ...seed, id: 'message-history-provisional', requestId: 'req-history-provisional', content: 'provisional streamed text', answerDecision: 'answered' },
+        { ...seed, id: 'message-history-failed', requestId: 'req-history-failed', content: 'rejected model text', answerDecision: 'tool_failed' },
+        { ...seed, id: 'message-history-partial-transaction', requestId: 'req-history-partial-transaction',
+          content: 'uncommitted model text', answerDecision: 'answered' },
+        { ...seed, id: 'message-history-completed', requestId: 'req-history-completed', content: 'durable final text', answerDecision: 'answered' }
+      );
+      fixture.state.answerDecisions.push({ id: 'decision-history-partial', customerId: 'customer-a', requestId: 'req-history-partial-transaction',
+        messageId: 'message-history-partial-transaction', status: 'answered', noAnswerReason: null, clarificationQuestionId: null,
+        groundingCheckId: null, metadata: null, createdAt: new Date('2026-06-16T00:00:05.000Z') });
+      fixture.state.answerDecisions.push({ id: 'decision-history-failed', customerId: 'customer-a', requestId: 'req-history-failed',
+        messageId: 'message-history-failed', status: 'tool_failed', noAnswerReason: null, clarificationQuestionId: null,
+        groundingCheckId: 'grounding-history-failed', metadata: null, createdAt: new Date('2026-06-16T00:00:05.000Z') });
+      fixture.state.answerDecisions.push({ id: 'decision-history-completed', customerId: 'customer-a', requestId: 'req-history-completed',
+        messageId: 'message-history-completed', status: 'answered', noAnswerReason: null, clarificationQuestionId: null,
+        groundingCheckId: 'grounding-history-completed', metadata: null, createdAt: new Date('2026-06-16T00:00:05.000Z') });
+      const response = await request(fixture.app.getHttpServer())
+        .get('/api/v1/assistant/sessions/session-owned-001/messages')
+        .set(createIdentityHeaders({ 'x-request-id': 'req-history-completion-contract' }));
+      const ids = response.body.data.messages.map((message: { messageId: string }) => message.messageId);
+      expect(ids).toContain('message-history-completed');
+      expect(ids).not.toContain('message-history-pending');
+      expect(ids).not.toContain('message-history-provisional');
+      expect(ids).not.toContain('message-history-failed');
+      expect(ids).not.toContain('message-history-partial-transaction');
+      const page = await request(fixture.app.getHttpServer())
+        .get('/api/v1/assistant/sessions/session-owned-001/messages')
+        .query({ limit: 2, cursor: 'message-owned-assistant-001' })
+        .set(createIdentityHeaders({ 'x-request-id': 'req-history-completion-page' }));
+      expect(page.status).toBe(200);
+      expect(page.body.data.messages.map((message: { messageId: string }) => message.messageId))
+        .toEqual(['message-history-completed']);
+      expect(page.body.data.nextCursor).toBeNull();
+      const hiddenCursor = await request(fixture.app.getHttpServer())
+        .get('/api/v1/assistant/sessions/session-owned-001/messages')
+        .query({ limit: 1, cursor: 'message-history-pending' })
+        .set(createIdentityHeaders({ 'x-request-id': 'req-history-pending-cursor' }));
+      expect(hiddenCursor.status).toBe(404);
+    } finally { await fixture.app.close(); }
+  });
   let app: INestApplication;
 
   beforeAll(async () => {

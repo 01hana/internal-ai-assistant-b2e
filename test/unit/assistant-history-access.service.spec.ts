@@ -4,6 +4,23 @@ import { AssistantSessionService } from '../../src/assistant/session/assistant-s
 import { AssistantSessionStatus } from '../../src/generated/prisma/enums';
 
 describe('AssistantHistoryAccessService', () => {
+  it('does not authorize a pending or decision-less Assistant message as completed history', () => {
+    const service = new AssistantHistoryAccessService({} as AssistantSessionService);
+    const completed = { role: 'assistant', content: 'verified final', answerDecision: 'answered',
+      answerDecisions: [{ id: 'decision-1', status: 'answered', groundingCheckId: 'grounding-1' }] };
+    expect(service.isCompletedHistoryMessage(completed)).toBe(true);
+    expect(service.isCompletedHistoryMessage({ ...completed, content: '目前沒有足夠的核准資料。', answerDecision: 'no_answer',
+      answerDecisions: [{ id: 'decision-safe', status: 'no_answer', groundingCheckId: 'grounding-safe' }] })).toBe(true);
+    for (const message of [
+      { ...completed, content: 'Pending answer.' },
+      { ...completed, content: '   ' },
+      { ...completed, answerDecisions: [] },
+      { ...completed, answerDecisions: [{ id: 'decision-1', status: 'answered', groundingCheckId: null }] },
+      { ...completed, answerDecision: 'no_answer' },
+      { ...completed, answerDecisions: [{ id: 'decision-1', status: 'tool_failed', groundingCheckId: 'grounding-1' }] },
+      { ...completed, answerDecision: 'tool_failed', answerDecisions: [{ id: 'decision-1', status: 'tool_failed', groundingCheckId: 'grounding-1' }] }
+    ]) expect(service.isCompletedHistoryMessage(message)).toBe(false);
+  });
   const identityContext = {
     requestId: 'req-history-access',
     customer: { customerId: 'customer-a', integrationId: 'integration-a' },

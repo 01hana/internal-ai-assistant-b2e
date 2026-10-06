@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { createIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
+import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 describe('message history evidence link integration', () => {
   let app: INestApplication;
@@ -10,6 +11,10 @@ describe('message history evidence link integration', () => {
     const testApp = await createUs1TestAppWithState();
     app = testApp.app;
     state = testApp.state;
+    jest.spyOn(app.get(LlmExecutionService, { strict: false }), 'generateAnswer').mockResolvedValue({
+      content: '核准證據顯示訂單狀態。', finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false }
+    });
   });
 
   afterAll(async () => {

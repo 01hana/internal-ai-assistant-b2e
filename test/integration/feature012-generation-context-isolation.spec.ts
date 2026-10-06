@@ -28,8 +28,8 @@ function record(customerId: string, integrationId: string, content: string) {
     scope: { customerId, sessionId: 'session-shared', organizationId: 'org-shared', hostApp: 'erp', actorId: 'actor-shared' },
     sessionStatus: 'active', completed: true,
     userMessage: { id: `user-${customerId}`, content: 'What is the inventory?' },
-    assistantMessage: { id: `assistant-${customerId}`, content, finalized: true },
-    answerDecision: { status: 'answered' },
+    assistantMessage: { id: `assistant-${customerId}`, content, answerDecision: 'answered', finalized: true },
+    answerDecision: { id: `decision-${customerId}`, status: 'answered', groundingCheckId: `grounding-${customerId}` },
     queryUnderstanding: { capabilityFollowUpFrame: {
       version: '1', scope: { customerId, integrationId, hostApp: 'erp' }, packId: 'pack', packVersion: '1.0.0',
       capabilityKey: 'inventory.count', sourceMessageId: `user-${customerId}`, parameters: []

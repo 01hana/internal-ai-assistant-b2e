@@ -433,6 +433,8 @@ export type Us1TestState = MockState;
 export type { InternalIdentityTestConfig } from './internal-identity-test-module.helper';
 
 export type Us1TestAppOptions = {
+  /** Opt-in durable history seed; most request-path fixtures start without prior completed turns. */
+  seedCompletedHistoryDecision?: boolean;
   capabilityPackPaths?: readonly string[];
   internalIdentity?: InternalIdentityTestConfig;
   /** Retains the production remote-JWKS verifier for transport-level identity tests. */
@@ -468,6 +470,16 @@ export async function createUs1TestAppWithState(
   );
 
   const state = createInitialState();
+  if (options.seedCompletedHistoryDecision) {
+    state.answerDecisions.push(
+      { id: 'answer-decision-owned-seed-001', customerId: 'customer-a', requestId: 'req-history-seed-001',
+        messageId: 'message-owned-assistant-001', status: 'answered', noAnswerReason: null, clarificationQuestionId: null,
+        groundingCheckId: 'grounding-owned-seed-001', metadata: null, createdAt: new Date('2026-06-16T00:00:04.000Z') },
+      { id: 'answer-decision-hidden-seed-001', customerId: 'customer-b', requestId: 'req-history-seed-hidden-001',
+        messageId: 'message-hidden-assistant-001', status: 'answered', noAnswerReason: null, clarificationQuestionId: null,
+        groundingCheckId: 'grounding-hidden-seed-001', metadata: null, createdAt: new Date('2026-06-16T00:00:04.000Z') }
+    );
+  }
   const prismaMock = createPrismaMock(state);
   const internalIdentity = createInternalIdentityTestConfig(options.internalIdentity ?? {
     issuer: TEST_GATEWAY_ISSUER,
@@ -567,7 +579,7 @@ export async function createUs1TestAppWithState(
 }
 
 export async function createUs1TestApp(): Promise<INestApplication> {
-  const { app } = await createUs1TestAppWithState();
+  const { app } = await createUs1TestAppWithState({ seedCompletedHistoryDecision: true });
   return app;
 }
 
