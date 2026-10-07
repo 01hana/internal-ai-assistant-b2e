@@ -7,6 +7,7 @@ import {
   parseSseResponse
 } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
+import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 const CONNECTOR_CONTEXT_REF = `ccr_${'R'.repeat(43)}`;
 const SENTINELS = Object.freeze({
@@ -27,6 +28,12 @@ describe('Feature 009 prohibited-material leak closeout', () => {
   it('keeps the transient connector reference out of persistence, Evidence, answer, SSE, and history', async () => {
     const fixture = await createUs1TestAppWithState();
     try {
+      jest.spyOn(fixture.app.get(LlmExecutionService, { strict: false }), 'streamAnswer').mockImplementation(async function* (input) {
+        const citation = input.instructions?.split('allowedCitations=')[1]?.split(',')[0]?.trim();
+        if (!citation) throw new Error('TEST_APPROVED_CITATION_MISSING');
+        yield { type: 'text_delta', text: `核准證據支持此回答。[${citation}]` };
+        yield { type: 'completed', finishReason: 'stop', metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false } };
+      });
       const headers = createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
         claims: { permission_scopes: ['orders:read'] },
         requestId: 'req-phase13-transient-reference'
@@ -35,7 +42,7 @@ describe('Feature 009 prohibited-material leak closeout', () => {
         .post('/api/v1/assistant/sessions/session-owned-001/messages')
         .set(headers)
         .send({
-          message: '這張訂單目前狀態？',
+          message: '查詢訂單目前狀態 訂單號 SO-10001',
           pageContext: {
             module: 'orders', screenId: 'order-detail', entityType: 'order', entityId: 'SO-10001',
             connectorContextRef: CONNECTOR_CONTEXT_REF

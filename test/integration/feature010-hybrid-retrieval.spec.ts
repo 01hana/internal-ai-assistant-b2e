@@ -5,6 +5,7 @@ import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-ident
 import { HybridRetrievalCoordinatorService } from '../../src/assistant/grounding/hybrid-retrieval-coordinator.service';
 import { GroundedToolRetrievalService } from '../../src/assistant/grounding/grounded-tool-retrieval.service';
 import { GroundedDocumentRetrievalService } from '../../src/retrieval/grounded-document-retrieval.service';
+import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 describe('Feature 010 explicit Hybrid coordination (T060)', () => {
   let app: INestApplication;
@@ -12,6 +13,12 @@ describe('Feature 010 explicit Hybrid coordination (T060)', () => {
   beforeEach(async () => {
     ({ app, state } = await createUs1TestAppWithState());
     state.customerToolPolicies.push({ customerId: 'customer-a', toolDefinitionId: 'tool-definition-inventory-001', enabled: true, requiredRoles: [], requiredPermissionScopes: [] });
+    jest.spyOn(app.get(LlmExecutionService, { strict: false }), 'streamAnswer').mockImplementation(async function* (input) {
+      const citation = input.instructions?.split('allowedCitations=')[1]?.split(',')[0]?.trim();
+      if (!citation) throw new Error('TEST_APPROVED_CITATION_MISSING');
+      yield { type: 'text_delta', text: `核准證據支持此回答。[${citation}]` };
+      yield { type: 'completed', finishReason: 'stop', metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false } };
+    });
   });
   afterEach(async () => app.close());
 

@@ -120,7 +120,8 @@ describe('AssistantMessageRepository', () => {
       orderBy: {
         createdAt: 'asc'
       },
-      take: 2
+      take: 2,
+      include: { answerDecisions: { orderBy: { createdAt: 'desc' }, take: 1 } }
     });
   });
 });

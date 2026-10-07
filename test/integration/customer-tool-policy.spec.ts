@@ -1,15 +1,15 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState } from '../support/us1-test-app.helper';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse } from '../support/us1-test-app.helper';
 import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
 import { CUSTOMER_TOOL_PHASE6 } from '../support/customer-tool-phase6-fixtures';
 import { ToolRegistryService } from '../../src/tools/tool-registry.service';
 import { parseToolDiscoveryMetadataV1 } from '../../src/tools/tool-discovery.service';
 import { CUSTOMER_SCOPE_FIXTURES, createCustomerScopeFixtureScope } from '../support/customer-scope-fixtures';
 
-const describeUs3 = process.env.RUN_CUSTOMER_US3_TESTS === 'true' ? describe : describe.skip;
-
-describeUs3('CustomerToolPolicy contract', () => {
+// The former opt-in US3 cases used a synthetic sentence no longer recognized by
+// the approved scoped packs. Keep their policy invariants on supported paths.
+describe('Current scoped CustomerToolPolicy request-path contract', () => {
   const fixture = createInternalIdentityJwtFixture();
   let app: INestApplication;
   let state: Awaited<ReturnType<typeof createUs1TestAppWithState>>['state'];
@@ -20,32 +20,62 @@ describeUs3('CustomerToolPolicy contract', () => {
   });
   afterEach(async () => app.close());
 
-  it.each(['customerA', 'customerB'] as const)('requires a Customer-qualified policy lookup for %s on the shared global tool', async (customer) => {
-    await request(app.getHttpServer())
-      .post(`/api/v1/assistant/sessions/${customer === 'customerA' ? 'session-owned-001' : 'session-hidden-001'}/messages`)
-      .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims[customer], requestId: `req-us3-policy-${customer}` }))
-      .send({ message: '這張訂單目前狀態？', pageContext: { module: 'orders', entityId: 'SO-10001', visibleColumns: ['status'] } });
+  const supported = {
+    customerA: { customerId: 'customer-a', toolDefinitionId: CUSTOMER_TOOL_PHASE6.toolDefinitionId,
+      sessionId: 'session-owned-001', message: '查詢訂單目前狀態 訂單號 SO-10001',
+      pageContext: { module: 'orders', entityId: 'SO-10001', visibleColumns: ['status'] } },
+    customerB: { customerId: 'customer-b', toolDefinitionId: 'tool-definition-customer-b-stock-001',
+      sessionId: 'session-hidden-001', message: '查詢庫存現量 料號 SKU-B-001',
+      pageContext: { module: 'inventory', entityId: 'SKU-B-001', visibleColumns: ['quantity'] } }
+  } as const;
+
+  function sendSupported(customer: 'customerA' | 'customerB', requestId: string) {
+    const selected = supported[customer];
+    return request(app.getHttpServer())
+      .post(`/api/v1/assistant/sessions/${selected.sessionId}/messages`)
+      .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: {
+        ...fixture.canonicalClaims[customer],
+        permission_scopes: customer === 'customerB' ? ['orders:read', 'inventory:read'] : ['orders:read']
+      }, requestId }))
+      .send({ message: selected.message, pageContext: selected.pageContext });
+  }
+
+  it.each(['customerA', 'customerB'] as const)('requires an exact Customer-qualified policy lookup for supported %s capability', async (customer) => {
+    await sendSupported(customer, `req-us3-policy-${customer}`);
+    const selected = supported[customer];
     expect(prismaMock.customerToolPolicy.findUnique).toHaveBeenCalledWith(expect.objectContaining({
-      where: { customerId_toolDefinitionId: { customerId: customer === 'customerA' ? 'customer-a' : 'customer-b', toolDefinitionId: CUSTOMER_TOOL_PHASE6.toolDefinitionId } }
+      where: { customerId_toolDefinitionId: { customerId: selected.customerId, toolDefinitionId: selected.toolDefinitionId } }
+    }));
+    expect(prismaMock.customerToolPolicy.findUnique).not.toHaveBeenCalledWith(expect.objectContaining({
+      where: { customerId_toolDefinitionId: { customerId: customer === 'customerA' ? 'customer-b' : 'customer-a',
+        toolDefinitionId: selected.toolDefinitionId } }
     }));
   });
 
   it.each([
-    ['disabled', 'customerB', undefined],
-    ['missing', 'customerA', () => { state.customerToolPolicies.splice(0, 1); }],
-    ['foreign-only', 'customerA', () => { state.customerToolPolicies.splice(0, state.customerToolPolicies.length, { ...CUSTOMER_TOOL_PHASE6.policies.customerB, toolDefinitionId: CUSTOMER_TOOL_PHASE6.toolDefinitionId }); }]
-  ] as const)('executes %s policy flow as a safe, indistinguishable denial', async (_scenario, customer, arrange) => {
-    arrange?.();
+    ['disabled', 'customerB'],
+    ['missing', 'customerA'],
+    ['foreign-only', 'customerA']
+  ] as const)('executes %s policy flow as a safe denial on a supported capability', async (scenario, customer) => {
+    const selected = supported[customer];
+    const ownIndex = state.customerToolPolicies.findIndex((item) => item.customerId === selected.customerId && item.toolDefinitionId === selected.toolDefinitionId);
+    expect(ownIndex).toBeGreaterThanOrEqual(0);
+    if (scenario === 'disabled') state.customerToolPolicies[ownIndex].enabled = false;
+    else state.customerToolPolicies.splice(ownIndex, 1);
+    if (scenario === 'foreign-only') {
+      const foreign = state.customerToolPolicies.find((item) => item.customerId === 'customer-b' && item.toolDefinitionId === selected.toolDefinitionId);
+      expect(foreign).toBeDefined();
+      foreign!.enabled = true;
+    }
     const before = snapshotDeniedWork(state);
-    const response = await request(app.getHttpServer())
-      .post(`/api/v1/assistant/sessions/${customer === 'customerA' ? 'session-owned-001' : 'session-hidden-001'}/messages`)
-      .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims[customer], requestId: `req-us3-policy-${_scenario}` }))
-      .send({ message: '這張訂單目前狀態？', pageContext: { module: 'orders', entityId: 'SO-10001', visibleColumns: ['status'] } });
+    const response = await sendSupported(customer, `req-us3-policy-${scenario}`);
 
-    const customerId = customer === 'customerA' ? 'customer-a' : 'customer-b';
     expect(prismaMock.customerToolPolicy.findUnique).toHaveBeenCalledWith(expect.objectContaining({
-      where: { customerId_toolDefinitionId: { customerId, toolDefinitionId: CUSTOMER_TOOL_PHASE6.toolDefinitionId } }
+      where: { customerId_toolDefinitionId: { customerId: selected.customerId, toolDefinitionId: selected.toolDefinitionId } }
     }));
+    expect(parseSseResponse(response.text).find(({ event }) => event === 'final')?.data?.data).toEqual(
+      expect.objectContaining({ answerDecision: 'permission_denied' })
+    );
     expect(response.text).not.toContain('customer-a');
     expect(response.text).not.toContain('customer-b');
     expect(snapshotDeniedWork(state)).toEqual(before);
@@ -56,10 +86,7 @@ describeUs3('CustomerToolPolicy contract', () => {
     if (!tool) throw new Error('US3 global ToolDefinition fixture is missing.');
     tool.isActive = false;
     const before = snapshotDeniedWork(state);
-    await request(app.getHttpServer())
-      .post('/api/v1/assistant/sessions/session-owned-001/messages')
-      .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims.customerA, requestId: 'req-us3-inactive' }))
-      .send({ message: '這張訂單目前狀態？', pageContext: { module: 'orders', entityId: 'SO-10001', visibleColumns: ['status'] } });
+    await sendSupported('customerA', 'req-us3-inactive');
 
     expect(prismaMock.customerToolPolicy.findUnique).not.toHaveBeenCalledWith(expect.objectContaining({
       where: {
@@ -71,12 +98,30 @@ describeUs3('CustomerToolPolicy contract', () => {
     }));
     expect(snapshotDeniedWork(state)).toEqual(before);
   });
+
+  it.each([
+    ['required role', 'requiredRoles', ['manager']],
+    ['required scope', 'requiredPermissionScopes', ['orders:admin']]
+  ] as const)('denies insufficient %s before Tool or Connector execution', async (scenario, field, requirement) => {
+    const policy = state.customerToolPolicies.find((item) => item.customerId === 'customer-a' && item.toolDefinitionId === CUSTOMER_TOOL_PHASE6.toolDefinitionId)!;
+    policy[field] = [...requirement];
+    const before = snapshotDeniedWork(state);
+    const response = await sendSupported('customerA', `req-us3-${scenario.replace(' ', '-')}`);
+    expect(prismaMock.customerToolPolicy.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: { customerId_toolDefinitionId: { customerId: 'customer-a', toolDefinitionId: CUSTOMER_TOOL_PHASE6.toolDefinitionId } }
+    }));
+    expect(parseSseResponse(response.text).find(({ event }) => event === 'final')?.data?.data).toEqual(
+      expect.objectContaining({ answerDecision: 'permission_denied' })
+    );
+    expect(snapshotDeniedWork(state)).toEqual(before);
+  });
 });
 
 function snapshotDeniedWork(state: Awaited<ReturnType<typeof createUs1TestAppWithState>>['state']) {
   return {
     evidence: state.evidenceRefs.length,
-    successfulToolCalls: state.toolCalls.filter((item) => item.status === 'success').length
+    successfulToolCalls: state.toolCalls.filter((item) => item.status === 'success').length,
+    startedToolCalls: state.toolCalls.filter((item) => item.executionStatus !== 'not_started').length
   };
 }
 

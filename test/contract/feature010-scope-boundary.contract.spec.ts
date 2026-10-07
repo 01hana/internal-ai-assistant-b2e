@@ -15,7 +15,7 @@ const HASHES = Object.freeze({
   feature010Spec: '3c33d6737768d59d6b62f907d77be06fea2b8b6c145392527d473019436c9346',
   feature010Design: 'c060bcf6a9e305fbecc75697410642f261ded88eb9230ad9d36e5b9b5c02500f',
   feature010Plan: 'c6d151ca35e53655fefb2cfde53879208cfb3e3642d0b94df68b9b74d49835e5',
-  assistantController: '0ad4fadadc2916d5252fe4b0e369cfb3dad9a16bdb9054d1d67ce5a127ec33b5',
+  assistantController: '44dd7a188c399c1530cb895b0301ff514bdd1e906529e5b0736bab5f47cc3ae0',
   assistantDto: '3c2f59a25f480a0d42c188d1bbd18304020eeffcf284d77fe9bb07585f0b9216',
   sseEventTypes: '9a58004960347cf40a55fbd443da356377fa0c61c87329c0a531ffca78c5fb06',
   assistantSseTypes: 'e3020a6884e6381a766ff61fa094dd05f135c65020e3b7a0a6a89c69f62d2f9c',

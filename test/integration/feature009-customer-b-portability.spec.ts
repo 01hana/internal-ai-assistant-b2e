@@ -38,11 +38,12 @@ import {
 } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 import { createEphemeralTlsTestFixture, type EphemeralTlsTestFixture } from '../../apps/customer-connector-runtime/test/fixtures/ephemeral-tls-test-fixture';
+import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 const TLS_HOST = 'phase6-upstream.test';
 let tlsFixture: EphemeralTlsTestFixture;
 const CONTEXT: ConnectorBindingTrustedContextV1 = Object.freeze({
-  customerId: 'customer-b', integrationId: 'inventory-b', hostApp: 'customer-b-inventory',
+  customerId: 'customer-b', integrationId: 'integration-erp', hostApp: 'erp',
   connectorInstanceId: 'customer-b-inventory-connector-1', organizationId: 'org-shared', actorId: 'actor-shared'
 });
 const API_KEY = 'customer-b-api-key-sentinel';
@@ -127,6 +128,12 @@ describe('Feature 009 Synthetic Customer B portability', () => {
         }, toolRegistry, centralTransport)
       ])
     });
+    jest.spyOn(assistant.app.get(LlmExecutionService, { strict: false }), 'streamAnswer').mockImplementation(async function* (input) {
+      const citation = input.instructions?.split('allowedCitations=')[1]?.split(',')[0]?.trim();
+      if (!citation) throw new Error('TEST_APPROVED_CITATION_MISSING');
+      yield { type: 'text_delta', text: `核准證據支持此回答。[${citation}]` };
+      yield { type: 'completed', finishReason: 'stop', metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false } };
+    });
     const hiddenSession = assistant.state.sessions.find(({ id }) => id === 'session-hidden-001');
     if (!hiddenSession) throw new Error('Customer B session fixture missing.');
     hiddenSession.hostApp = CONTEXT.hostApp;
@@ -148,6 +155,8 @@ describe('Feature 009 Synthetic Customer B portability', () => {
 
       const response = await requestAssistant(assistant.app.getHttpServer(), binding.connectorContextRef);
       expect(response.status).toBe(200);
+      expect(assistant.state.toolCalls.at(-1)?.errorCode).toBeNull();
+      expect(assistant.state.toolCalls.at(-1)).toMatchObject({ status: 'success', executionStatus: 'executed' });
       const events = parseSseResponse(response.text);
       expect(events.map(({ event }) => event)).toEqual([
         'tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final'
@@ -261,7 +270,7 @@ function runtimeEnvironmentFor(
     CONNECTOR_CENTRAL_TRUST_KEYS_JSON: JSON.stringify([{
       kind: 'central-invocation', profileKey: 'central-customer-b-v1', typ: 'assistant-connector-service+jwt',
       issuer: 'urn:assistant:connector', subject: 'central-adapter',
-      audience: 'urn:assistant:connector:customer-b:inventory-b:customer-b-inventory:business:customer-b-inventory-connector-1',
+      audience: `urn:assistant:connector:${CONTEXT.customerId}:${CONTEXT.integrationId}:${CONTEXT.hostApp}:business:${CONTEXT.connectorInstanceId}`,
       keyDomain: 'central-customer-b-domain', trustedContext: baseContext,
       keys: [{ kid: 'customer-b-central-key', status: 'active', publicJwk: centralJwk }]
     }]),
@@ -380,7 +389,7 @@ function requestAssistant(server: unknown, connectorContextRef: string) {
       requestId: 'req-phase13-customer-b-portability'
     }))
     .send({
-      message: '請查 SKU-B-001 庫存',
+      message: '查詢庫存現量 料號 SKU-B-001',
       pageContext: { module: 'inventory', connectorContextRef }
     });
 }

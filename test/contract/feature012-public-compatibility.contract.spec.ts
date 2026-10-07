@@ -32,4 +32,18 @@ describe('Feature 012 Phase A public compatibility (T006)', () => {
     expect(Object.keys(events[1].payload.data as object).sort()).toEqual(['answer', 'answerDecision', 'evidenceRefs']);
     expect(events.map((event) => event.payload.sequence)).toEqual([1, 2]);
   });
+
+  it('keeps Tool lifecycle and evidence before answer delivery in the public SSE contract', () => {
+    const events = new AssistantSseEventBuilder().buildMessageEvents({
+      requestId: 'request-1', sessionId: 'session-1', messageId: 'message-1',
+      toolLifecycle: 'completed', toolCallId: 'tool-call-1', toolName: 'read-only-tool',
+      evidenceRefIds: ['evidence-1'], answerDelta: 'approved answer',
+      finalData: { answerDecision: AnswerDecisionStatus.answered, answer: 'approved answer', evidenceRefs: ['evidence-1'] }
+    });
+    expect(events.map((event) => event.event)).toEqual([
+      'tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final'
+    ] satisfies SseEventType[]);
+    expect(events.map((event) => event.payload.sequence)).toEqual([1, 2, 3, 4, 5]);
+    expect(Object.keys(events.at(-1)!.payload.data as object).sort()).toEqual(['answer', 'answerDecision', 'evidenceRefs']);
+  });
 });

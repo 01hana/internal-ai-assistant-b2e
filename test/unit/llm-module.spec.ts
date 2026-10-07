@@ -64,6 +64,7 @@ function createConfigValues(): EnvironmentVariables {
     OPENAI_API_KEY: 'placeholder-openai-api-key',
     ENABLE_RUNTIME_DEBUG: false,
     ENABLE_REDIS: false,
+    ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]',
     ENABLE_SWAGGER_DOCS: false,
     SWAGGER_PATH: 'docs'
   };

@@ -36,6 +36,33 @@ describe('GatewayAssistantController SSE lifecycle', () => {
     expect(response.ended).toBe(true);
   });
 
+  it('passes Tool/evidence and two provisional deltas through unchanged before one committed final', async () => {
+    let sourceController!: ReadableStreamDefaultController<Uint8Array>;
+    const stream = new ReadableStream<Uint8Array>({ start(controller) { sourceController = controller; } });
+    const response = new TestResponse();
+    const operation = new GatewayAssistantController(createHandler(stream)).sendStreamMessage(
+      'Bearer upstream-token', 'controller-grounded-stream', undefined, 'session-owned-001',
+      { message: 'covered query' }, response as unknown as Response
+    );
+    const encoder = new TextEncoder();
+    const chunks = [
+      'event: tool_call_started\ndata: {"id":"call-1"}\n\n',
+      'event: tool_call_completed\ndata: {"id":"call-1"}\n\n',
+      'event: evidence_attached\ndata: {"evidenceRefs":["evidence-1"]}\n\n',
+      'event: answer_delta\ndata: {"delta":"甲"}\n\n',
+      'event: answer_delta\ndata: {"delta":"乙"}\n\n'
+    ];
+    for (const chunk of chunks) sourceController.enqueue(encoder.encode(chunk));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(response.writes).toEqual(chunks);
+    expect(response.ended).toBe(false);
+    sourceController.enqueue(encoder.encode('event: final\ndata: {"answer":"甲乙"}\n\n'));
+    sourceController.close();
+    await operation;
+    expect(response.writes.at(-1)).toBe('event: final\ndata: {"answer":"甲乙"}\n\n');
+    expect(response.writes.filter((chunk) => chunk.startsWith('event: final'))).toHaveLength(1);
+  });
+
   it('cancels the source reader and ends without writing later chunks when the Host response closes', async () => {
     const source = createPendingStream();
     const handler = createHandler(source.stream);

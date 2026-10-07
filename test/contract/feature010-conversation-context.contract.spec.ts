@@ -73,7 +73,8 @@ describe('Feature 010 Phase 2 bounded conversation-context contract (T022)', () 
         loadScopedContext: async () => [{
           exchangeId: 'exchange-1', requestId: 'request-1', scope, sessionStatus: 'active', completed: true,
           userMessage: { id: 'user-1', content: 'safe question' },
-          assistantMessage: { id: 'assistant-1' }, answerDecision: { status: 'answered' }, evidence,
+          assistantMessage: { id: 'assistant-1', content: 'Completed answer.', answerDecision: 'answered' },
+          answerDecision: { id: 'decision-1', status: 'answered', groundingCheckId: 'grounding-1' }, evidence,
           createdAt: '2026-09-17T00:00:00.000Z'
         }]
       });
