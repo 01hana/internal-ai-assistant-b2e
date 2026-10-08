@@ -4,6 +4,7 @@
 const { readFileSync } = module.require('node:fs');
 const { join, resolve } = module.require('node:path');
 const { spawnSync } = module.require('node:child_process');
+const { randomUUID } = module.require('node:crypto');
 
 const bridgeRoot = resolve(__dirname, '..');
 const composeFile = join(bridgeRoot, 'compose.yaml');
@@ -22,6 +23,7 @@ async function executeVerifier(options = {}) {
   const exchange = options.exchange ?? defaultExchange;
   const inspectLogs = options.inspectLogs ?? defaultInspectLogs;
   const config = options.config ?? expectedConfig;
+  const publicExchangeRequestId = options.publicExchangeRequestId ?? `local-idx-${randomUUID()}`;
 
   if (!Array.isArray(argv) || argv.length !== 0 || interactive !== true) return safeFailure(stdout, 'BRIDGE_REQUEST');
 
@@ -49,7 +51,8 @@ async function executeVerifier(options = {}) {
     try {
       stdout('LOCAL_EXCHANGE_REQUEST_STARTED=YES\n');
       response = await exchange(nativeToken, Object.freeze({
-        url: `http://127.0.0.1:${port}/identity/exchange`, method: 'POST', body: undefined
+        url: `http://127.0.0.1:${port}/identity/exchange`, method: 'POST', body: undefined,
+        requestId: publicExchangeRequestId
       }));
     } catch {
       stdout(`SAME_TOKEN_DIAGNOSIS=${sameTokenDiagnosis(directResult, undefined)}\n`);
@@ -58,7 +61,17 @@ async function executeVerifier(options = {}) {
     const bridgeStatus = Number.isInteger(response?.status) ? response.status : undefined;
     if (bridgeStatus !== undefined) stdout(`BRIDGE_EXCHANGE_HTTP_STATUS=${bridgeStatus}\n`);
     stdout(`SAME_TOKEN_DIAGNOSIS=${sameTokenDiagnosis(directResult, bridgeStatus)}\n`);
-    if (!response || response.status !== 200) return safeFailure(stdout, stageForStatus(response?.status));
+    if (!response || response.status !== 200) {
+      let stage = stageForStatus(response?.status);
+      if (response?.status === 503) {
+        try {
+          const logs = await inspectLogs();
+          if (typeof logs !== 'string' || logs.includes(nativeToken)) return safeFailure(stdout, 'BRIDGE_REQUEST');
+          stage = diagnosticStageFor503(logs, publicExchangeRequestId);
+        } catch { /* fail closed to the public transport-level classification */ }
+      }
+      return safeFailure(stdout, stage);
+    }
     const body = response.body;
     if (!plain(body) || !exactKeys(body, ['accessToken', 'tokenType', 'expiresIn']) || body.tokenType !== 'Bearer' || body.expiresIn !== 300 || typeof body.accessToken !== 'string' || !body.accessToken) {
       return safeFailure(stdout, 'CANONICAL_ISSUANCE');
@@ -102,7 +115,7 @@ async function defaultExchange(nativeToken, request, options = {}) {
   try {
     const response = await fetchImpl(request.url, {
       method: request.method,
-      headers: Object.freeze({ authorization: `Bearer ${nativeToken}` }),
+      headers: Object.freeze({ authorization: `Bearer ${nativeToken}`, 'x-request-id': request.requestId }),
       signal
     });
     if (response.status !== 200) return Object.freeze({ status: response.status });
@@ -260,6 +273,22 @@ function stageForStatus(status) {
   return 'IDX_TRANSPORT';
 }
 
+function diagnosticStageFor503(logs, requestId) {
+  const required = ['MENUDETAIL_REQUEST_SUCCEEDED', 'IDENTITY_ADMISSION_SUCCEEDED', 'BINDING_HANDOFF_FAILED'];
+  let index = 0;
+  for (const line of String(logs).split(/\r?\n/)) {
+    const start = line.indexOf('{');
+    if (start < 0) continue;
+    try {
+      const event = JSON.parse(line.slice(start));
+      if (event?.publicExchangeRequestId !== requestId || event?.stage !== required[index]) continue;
+      index += 1;
+      if (index === required.length) return 'CONNECTOR_BINDING';
+    } catch { /* non-diagnostic log line */ }
+  }
+  return 'IDX_TRANSPORT';
+}
+
 function sameTokenDiagnosis(directResult, bridgeStatus) {
   if (!directResult || directResult.conclusive === false || !Number.isInteger(directResult.status) || !Number.isInteger(bridgeStatus)) return 'INCONCLUSIVE';
   if (directResult.status === 200 && typeof directResult.applicationCode200 !== 'boolean') return 'INCONCLUSIVE';
@@ -273,13 +302,15 @@ function sameTokenDiagnosis(directResult, bridgeStatus) {
 
 function safeFailure(output, stage) {
   output(`REAL_IDX_LOCAL_EXCHANGE=FAIL\nFAILURE_STAGE=${stage}\n`);
+  if (stage === 'IDX_TRANSPORT') return 20;
+  if (stage === 'CONNECTOR_BINDING') return 21;
   return 1;
 }
 
 function plain(value) { return typeof value === 'object' && value !== null && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype; }
 function exactKeys(value, expected) { const keys = Object.keys(value); return keys.length === expected.length && keys.every((key) => expected.includes(key)); }
 
-module.exports = Object.freeze({ executeVerifier, mergeEnvironmentFiles, readHiddenToken, defaultExchange, defaultDirectMenuDetailProbe });
+module.exports = Object.freeze({ executeVerifier, mergeEnvironmentFiles, readHiddenToken, defaultExchange, defaultDirectMenuDetailProbe, diagnosticStageFor503 });
 
 if (require.main === module) {
   executeVerifier().then((status) => { process.exitCode = status; });

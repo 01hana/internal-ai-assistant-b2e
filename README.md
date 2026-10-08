@@ -4,11 +4,42 @@ NestJS + TypeScript backend service for the v1 internal assistant core.
 
 ## Local Quickstart
 
+### One-command Assistant startup
+
+The Customer SPA remains separately owned and is started from its own repository:
+
+```sh
+npm run dev
+```
+
+From this Assistant repository, start every required Assistant-side local service and run readiness checks with:
+
+```sh
+npm run local:start
+```
+
+The command reconciles the active LAN address, its managed `/etc/hosts` block, a collision-free Identity Bridge Docker subnet, persistent local-only keys/certificates, PostgreSQL, Backend, Customer Connector Runtime, Connector HTTPS overlay, Identity Bridge, IDX HTTPS proxy, local JWKS proxy, cloudflared tunnel, Gateway Feature007 trust provisioning, Gateway, and the Gateway local signing authority. Re-running it is idempotent: healthy matching components are reused, unhealthy managed processes are restarted, and affected local containers are recreated when generated network configuration changes.
+
+Use the companion commands for inspection and cleanup:
+
+```sh
+npm run local:status
+npm run local:doctor
+npm run local:doctor -- --idx
+npm run local:stop
+```
+
+`local:status` is read-only. `local:stop` stops only resources recorded as managed by this orchestration and preserves PostgreSQL data, local signing keys, local CAs, and connector authority. The optional `--idx` doctor delegates to the existing hidden-input diagnostic; `local:start` never asks for, logs, or persists a native AccessToken. Startup validates OpenAI configuration but never sends a live OpenAI request.
+
+This workflow is development-only. Production and staging deployments do not use it, and files under `.local-state/`, `.local-secrets/`, or `.gateway-local-keys/` must never be promoted. When Wi-Fi or VPN routing changes, run `npm run local:start` again. The tool asks for `sudo` only when its marked `/etc/hosts` block must change; it never edits entries outside that block.
+
 ### Prerequisites
 
 - Node.js 22+
 - npm
 - Docker and Docker Compose
+- cloudflared (required by the existing hardened local JWKS trust flow)
+- mkcert and OpenSSL (local TLS material; the project CA is not installed into system trust stores)
 - PostgreSQL supplied by Docker Compose
 - Prisma CLI through the repository npm scripts
 

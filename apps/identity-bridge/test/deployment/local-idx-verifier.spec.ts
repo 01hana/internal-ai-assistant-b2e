@@ -127,7 +127,7 @@ describe('pre-Phase-10 real IDX local verifier tooling', () => {
         options.signal.addEventListener('abort', () => reject(new Error('synthetic abort')), { once: true });
       })
     }));
-    expect(await verifier.executeVerifier({ ...harness.options, exchange })).toBe(1);
+    expect(await verifier.executeVerifier({ ...harness.options, exchange })).toBe(20);
     assertSafeFailure(harness.output(), 'IDX_TRANSPORT');
   });
 
@@ -182,8 +182,31 @@ describe('pre-Phase-10 real IDX local verifier tooling', () => {
     [400, 'BRIDGE_REQUEST'], [401, 'MENUDETAIL_REJECTED'], [403, 'ENTRY_ADMISSION'], [503, 'IDX_TRANSPORT']
   ])('maps HTTP %s to safe failure category %s', async (status, stage) => {
     const harness = createHarness({ status });
-    expect(await verifier.executeVerifier(harness.options)).toBe(1);
+    expect(await verifier.executeVerifier(harness.options)).toBe(status === 503 ? 20 : 1);
     assertSafeFailure(harness.output(), stage);
+  });
+
+  it('classifies correlated post-admission binding failure diagnostics as CONNECTOR_BINDING', async () => {
+    const harness = createHarness({ status: 503 });
+    const requestId = 'local-idx-regression-request';
+    const inspectLogs = jest.fn(async () => [
+      { stage: 'MENUDETAIL_REQUEST_SUCCEEDED', publicExchangeRequestId: requestId, result: 'SUCCEEDED' },
+      { stage: 'IDENTITY_ADMISSION_SUCCEEDED', publicExchangeRequestId: requestId, result: 'SUCCEEDED' },
+      { stage: 'BINDING_HANDOFF_FAILED', publicExchangeRequestId: requestId, result: 'FAILED', failureCategory: 'CONNECTOR_DESTINATION_REJECTED' }
+    ].map((event) => `identity-bridge-1 | ${JSON.stringify(event)}`).join('\n'));
+    expect(await verifier.executeVerifier({ ...harness.options, publicExchangeRequestId: requestId, inspectLogs })).toBe(21);
+    expect(harness.exchange).toHaveBeenCalledWith(nativeToken, expect.objectContaining({ requestId }));
+    assertSafeFailure(harness.output(), 'CONNECTOR_BINDING');
+    expect(harness.output()).not.toContain('CONNECTOR_DESTINATION_REJECTED');
+  });
+
+  it('does not classify uncorrelated or pre-admission 503 diagnostics as Connector binding', async () => {
+    const harness = createHarness({ status: 503 });
+    const inspectLogs = jest.fn(async () => JSON.stringify({
+      stage: 'BINDING_HANDOFF_FAILED', publicExchangeRequestId: 'different-request', result: 'FAILED'
+    }));
+    expect(await verifier.executeVerifier({ ...harness.options, publicExchangeRequestId: 'local-idx-current', inspectLogs })).toBe(20);
+    assertSafeFailure(harness.output(), 'IDX_TRANSPORT');
   });
 
   it('contains no Authentication call, localStorage scraping, token persistence, or Entry request body', () => {
@@ -204,7 +227,7 @@ function createHarness(response: { status: number; body?: unknown } = { status: 
   const directProbe = jest.fn(async () => ({ status: 200, applicationCode200: true }));
   return {
     readToken, exchange, directProbe,
-    options: { argv: [], environment: {}, interactive: true, readToken, directProbe, exchange, inspectLogs, config: localConfig, stdout: (value: string) => stdout.push(value), stderr: (value: string) => stderr.push(value) },
+    options: { argv: [], environment: {}, interactive: true, publicExchangeRequestId: 'local-idx-test-request', readToken, directProbe, exchange, inspectLogs, config: localConfig, stdout: (value: string) => stdout.push(value), stderr: (value: string) => stderr.push(value) },
     output: () => `${stdout.join('')}\n${stderr.join('')}`
   };
 }
