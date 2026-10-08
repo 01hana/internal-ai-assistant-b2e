@@ -23,6 +23,8 @@ export interface LlmExecutionStreamOptions {
   readonly deadlineMs?: number;
 }
 
+const STREAM_CLEANUP_DEADLINE_MS = 100;
+
 @Injectable()
 export class LlmExecutionService {
   constructor(
@@ -66,14 +68,16 @@ export class LlmExecutionService {
     const timer = setTimeout(() => abort('LLM_STREAM_DEADLINE'), deadline);
     let outputBytes = 0;
     let completed = false;
+    let exhausted = false;
+    let iterator: AsyncIterator<LlmStreamEvent> | undefined;
     try {
       if (options.signal.aborted) abort('LLM_STREAM_ABORTED');
       if (controller.signal.aborted) throw new Error(abortReason);
       const stream = provider.streamAnswer({ ...input, maxOutputTokens: Math.min(input.maxOutputTokens ?? 1024, 1024) }, { signal: controller.signal });
-      const iterator = stream[Symbol.asyncIterator]();
+      iterator = stream[Symbol.asyncIterator]();
       while (true) {
         const next = await Promise.race([iterator.next(), abortWait]);
-        if (next.done) break;
+        if (next.done) { exhausted = true; break; }
         const event = next.value as LlmStreamEvent;
         if (event?.type === 'text_delta' && typeof event.text === 'string' && event.text.length > 0 && !completed) {
           outputBytes += Buffer.byteLength(event.text, 'utf8');
@@ -89,12 +93,18 @@ export class LlmExecutionService {
       }
       if (!completed) throw new Error('LLM_STREAM_INCOMPLETE');
     } catch (error) {
+      if (controller.signal.aborted && ['LLM_STREAM_ABORTED', 'LLM_STREAM_DEADLINE'].includes(abortReason)) {
+        throw new Error(abortReason);
+      }
       if (error instanceof Error && /^LLM_STREAM_[A-Z_]+$/.test(error.message)) throw error;
       throw new Error('LLM_STREAM_PROVIDER_FAILURE');
     } finally {
       clearTimeout(timer);
       options.signal.removeEventListener('abort', onExternalAbort);
-      controller.abort();
+      if (!exhausted) {
+        controller.abort();
+        if (iterator) await closeIteratorBounded(iterator);
+      }
     }
   }
 
@@ -128,6 +138,19 @@ export class LlmExecutionService {
       messageId: context.messageId,
       metadata
     });
+  }
+}
+
+async function closeIteratorBounded(iterator: AsyncIterator<LlmStreamEvent>): Promise<void> {
+  if (!iterator.return) return;
+  const close = Promise.resolve().then(() => iterator.return!()).then(() => undefined, () => undefined);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([close, new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, STREAM_CLEANUP_DEADLINE_MS);
+    })]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 

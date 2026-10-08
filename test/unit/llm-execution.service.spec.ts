@@ -2,11 +2,25 @@ import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 import { LlmProvider } from '../../src/llm/llm-provider.interface';
 import { LlmObservabilityService } from '../../src/llm/llm-observability.service';
 import { LlmProviderService } from '../../src/llm/llm-provider.service';
+import { spawnSync } from 'node:child_process';
 
 describe('LlmExecutionService', () => {
+  it('keeps a strict Node process alive through SDK-shaped stream failures and aborts', () => {
+    const result = spawnSync(process.execPath, [
+      '--unhandled-rejections=strict', '-r', 'ts-node/register/transpile-only',
+      require.resolve('../support/openai-stream-crash-probe.cjs')
+    ], { cwd: process.cwd(), encoding: 'utf8', timeout: 10000,
+      env: { ...process.env, OPENAI_API_KEY: '', TS_NODE_COMPILER_OPTIONS: '{"rootDir":"."}' } });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe('PROCESS_SAFE');
+  });
+
   it('streams typed provisional text and one terminal event through the selected provider', async () => {
     const controller = new AbortController();
-    const streamAnswer = jest.fn(async function* () {
+    let providerSignal: AbortSignal | undefined;
+    const streamAnswer = jest.fn(async function* (_input: unknown, options: { signal: AbortSignal }) {
+      providerSignal = options.signal;
       yield { type: 'text_delta' as const, text: '甲' };
       yield { type: 'text_delta' as const, text: '乙' };
       yield { type: 'completed' as const, finishReason: 'stop' as const, metadata: metadata('req-stream') };
@@ -21,6 +35,52 @@ describe('LlmExecutionService', () => {
     ]);
     expect(streamAnswer).toHaveBeenCalledTimes(1);
     expect(streamAnswer).toHaveBeenCalledWith(expect.objectContaining({ requestId: 'req-stream' }), expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(controller.signal.aborted).toBe(false);
+    expect(providerSignal?.aborted).toBe(false);
+  });
+
+  it.each(['caller abort', 'deadline'] as const)('closes a pending provider iterator after %s', async (scenario) => {
+    const caller = new AbortController();
+    let notifyStarted!: () => void;
+    const started = new Promise<void>((resolve) => { notifyStarted = resolve; });
+    const close = jest.fn().mockResolvedValue({ done: true, value: undefined });
+    const provider = createProvider({ streamAnswer: jest.fn((_input, options) => ({
+      [Symbol.asyncIterator]: () => ({
+        next: () => new Promise<IteratorResult<unknown>>((_resolve, reject) => {
+          options.signal.addEventListener('abort', () => reject(new Error('APIUserAbortError')), { once: true });
+          notifyStarted();
+        }),
+        return: close
+      })
+    })) as LlmProvider['streamAnswer'] });
+    const service = createService(provider, jest.fn());
+    const consume = async () => {
+      for await (const _event of service.streamAnswer({ requestId: 'req-pending', messages: [], evidence: [] },
+        executionContext(), { signal: caller.signal, deadlineMs: scenario === 'deadline' ? 5 : 1000 })) { /* consume */ }
+    };
+    const result = consume();
+    await started;
+    if (scenario === 'caller abort') caller.abort();
+    await expect(result).rejects.toThrow(scenario === 'deadline' ? 'LLM_STREAM_DEADLINE' : 'LLM_STREAM_ABORTED');
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it('bounds iterator cleanup when return never settles', async () => {
+    const close = jest.fn(() => new Promise<IteratorResult<unknown>>(() => undefined));
+    const provider = createProvider({ streamAnswer: jest.fn(() => ({
+      [Symbol.asyncIterator]: () => ({
+        next: jest.fn().mockResolvedValue({ done: false, value: { type: 'text_delta', text: '' } }),
+        return: close
+      })
+    })) as LlmProvider['streamAnswer'] });
+    const service = createService(provider, jest.fn());
+    const started = Date.now();
+    await expect(async () => {
+      for await (const _event of service.streamAnswer({ requestId: 'req-stalled-cleanup', messages: [], evidence: [] },
+        executionContext(), { signal: new AbortController().signal })) { /* consume */ }
+    }).rejects.toThrow('LLM_STREAM_INVALID_EVENT');
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 
   it('rejects over-budget input before provider selection and caps requested output tokens', async () => {

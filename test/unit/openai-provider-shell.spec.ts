@@ -3,14 +3,36 @@ import { EnvironmentVariables } from '../../src/common/config/env.validation';
 import { OpenAiProvider, OpenAiResponsesClient } from '../../src/llm/openai/openai.provider';
 
 describe('OpenAiProvider', () => {
+  it('awaits the SDK promise before consuming native Responses events', async () => {
+    const controller = new AbortController();
+    const stream = (async function* () {
+      yield { type: 'response.output_text.delta', delta: '甲' };
+      yield { type: 'response.output_text.delta', delta: '乙' };
+      yield { type: 'response.completed', response: { status: 'completed' } };
+    })();
+    const sdkResult = Promise.resolve(stream);
+    expect(Symbol.asyncIterator in sdkResult).toBe(false);
+    const create = jest.fn().mockReturnValue(sdkResult);
+    const provider = new OpenAiProvider(createConfigService(), { responses: { create } });
+    const events: unknown[] = [];
+    for await (const event of provider.streamAnswer({ requestId: 'req-sdk-promise', messages: [], evidence: [] },
+      { signal: controller.signal })) events.push(event);
+    expect(events).toEqual([
+      { type: 'text_delta', text: '甲' }, { type: 'text_delta', text: '乙' },
+      { type: 'completed', finishReason: 'stop', metadata: provider.getMetadata({ requestId: 'req-sdk-promise' }) }
+    ]);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ stream: true }), { maxRetries: 0, signal: controller.signal });
+  });
+
   it('maps native Responses text-delta events incrementally and preserves SDK no-retry', async () => {
     const controller = new AbortController();
-    const create = jest.fn().mockReturnValue((async function* () {
+    const create = jest.fn().mockResolvedValue((async function* () {
       yield { type: 'response.output_text.delta', delta: '甲' };
       yield { type: 'response.output_text.delta', delta: '乙' };
       yield { type: 'response.completed', response: { status: 'completed' } };
     })());
-    const provider = new OpenAiProvider(createConfigService(), { responses: { create } } as unknown as OpenAiResponsesClient);
+    const provider = new OpenAiProvider(createConfigService(), { responses: { create } });
     const events: unknown[] = [];
     for await (const event of provider.streamAnswer({ requestId: 'req-native', messages: [], evidence: [], maxOutputTokens: 1024 }, { signal: controller.signal })) events.push(event);
     expect(events).toEqual([
@@ -22,11 +44,11 @@ describe('OpenAiProvider', () => {
   });
 
   it('does not retry native streaming after an error following a delta', async () => {
-    const create = jest.fn().mockReturnValue((async function* () {
+    const create = jest.fn().mockResolvedValue((async function* () {
       yield { type: 'response.output_text.delta', delta: 'provisional' };
       throw new Error('raw provider failure');
     })());
-    const provider = new OpenAiProvider(createConfigService(), { responses: { create } } as unknown as OpenAiResponsesClient);
+    const provider = new OpenAiProvider(createConfigService(), { responses: { create } });
     const events: unknown[] = [];
     await expect(async () => {
       for await (const event of provider.streamAnswer({ requestId: 'req-error', messages: [], evidence: [] }, { signal: new AbortController().signal })) events.push(event);
@@ -36,11 +58,11 @@ describe('OpenAiProvider', () => {
   });
 
   it.each([false, true])('uses exactly one SDK request on provider error afterDelta=%s', async (afterDelta) => {
-    const create = jest.fn().mockReturnValue((async function* () {
+    const create = jest.fn().mockResolvedValue((async function* () {
       if (afterDelta) yield { type: 'response.output_text.delta', delta: 'provisional' };
       throw new Error('private SDK error');
     })());
-    const provider = new OpenAiProvider(createConfigService(), { responses: { create } } as unknown as OpenAiResponsesClient);
+    const provider = new OpenAiProvider(createConfigService(), { responses: { create } });
     await expect(async () => {
       for await (const _event of provider.streamAnswer({ requestId: 'req-one-error', messages: [], evidence: [] },
         { signal: new AbortController().signal })) { /* consume */ }
@@ -50,10 +72,10 @@ describe('OpenAiProvider', () => {
   });
 
   it.each(['response.incomplete', 'response.failed', 'error'])('fails safely on %s without retry or raw diagnostics', async (eventType) => {
-    const create = jest.fn().mockReturnValue((async function* () {
+    const create = jest.fn().mockResolvedValue((async function* () {
       yield { type: eventType, response: { status: 'raw provider detail must stay private' } };
     })());
-    const provider = new OpenAiProvider(createConfigService(), { responses: { create } } as unknown as OpenAiResponsesClient);
+    const provider = new OpenAiProvider(createConfigService(), { responses: { create } });
     let failure: unknown;
     try {
       for await (const _event of provider.streamAnswer({ requestId: 'req-terminal-error', messages: [], evidence: [] }, { signal: new AbortController().signal })) { /* consume */ }
@@ -67,8 +89,8 @@ describe('OpenAiProvider', () => {
   });
 
   it('makes one native request on pre-chunk provider failure and on abort', async () => {
-    const failedCreate = jest.fn().mockImplementation(() => { throw new Error('raw SDK failure'); });
-    const failed = new OpenAiProvider(createConfigService(), { responses: { create: failedCreate } } as unknown as OpenAiResponsesClient);
+    const failedCreate = jest.fn().mockRejectedValue(new Error('raw SDK failure'));
+    const failed = new OpenAiProvider(createConfigService(), { responses: { create: failedCreate } });
     await expect(async () => {
       for await (const _event of failed.streamAnswer({ requestId: 'req-before', messages: [], evidence: [] }, { signal: new AbortController().signal })) { /* consume */ }
     }).rejects.toThrow('LLM_STREAM_PROVIDER_FAILURE');
@@ -76,11 +98,11 @@ describe('OpenAiProvider', () => {
     expect(failedCreate).toHaveBeenCalledWith(expect.objectContaining({ stream: true }), expect.objectContaining({ maxRetries: 0 }));
 
     const controller = new AbortController();
-    const create = jest.fn().mockReturnValue((async function* () {
+    const create = jest.fn().mockResolvedValue((async function* () {
       controller.abort();
       yield { type: 'response.output_text.delta', delta: 'discarded' };
     })());
-    const aborted = new OpenAiProvider(createConfigService(), { responses: { create } } as unknown as OpenAiResponsesClient);
+    const aborted = new OpenAiProvider(createConfigService(), { responses: { create } });
     await expect(async () => {
       for await (const _event of aborted.streamAnswer({ requestId: 'req-aborted', messages: [], evidence: [] }, { signal: controller.signal })) { /* consume */ }
     }).rejects.toThrow('LLM_STREAM_ABORTED');

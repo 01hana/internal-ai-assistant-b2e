@@ -18,13 +18,8 @@ import {
 } from '../llm-provider.interface';
 
 export interface OpenAiResponsesClient {
-  responses: {
-    create(input: { model: string; input: string; instructions?: string; max_output_tokens?: number; stream: true }, options?: { maxRetries?: number; signal?: AbortSignal }): AsyncIterable<OpenAiStreamEvent>;
-    create(input: { model: string; input: string; instructions?: string; max_output_tokens?: number; stream?: false }, options?: { maxRetries?: number; signal?: AbortSignal }): Promise<{ output_text?: string }>;
-  };
+  responses: Pick<OpenAI['responses'], 'create'>;
 }
-
-type OpenAiStreamEvent = Readonly<{ type: string; delta?: unknown; response?: { status?: unknown } }>;
 
 @Injectable()
 export class OpenAiProvider implements LlmProvider {
@@ -73,7 +68,7 @@ export class OpenAiProvider implements LlmProvider {
 
   async *streamAnswer(input: GenerateAnswerInput, options: LlmStreamOptions): AsyncIterable<LlmStreamEvent> {
     try {
-      const stream = this.client.responses.create({
+      const stream = await this.client.responses.create({
         model: this.getModel(), instructions: input.instructions,
         input: toResponseInput(input.messages, input.evidence),
         max_output_tokens: Math.min(input.maxOutputTokens ?? 1024, 1024), stream: true
@@ -169,7 +164,7 @@ export class OpenAiProvider implements LlmProvider {
 }
 
 function createOpenAiClient(apiKey: string): OpenAiResponsesClient {
-  return new OpenAI({ apiKey }) as unknown as OpenAiResponsesClient;
+  return new OpenAI({ apiKey });
 }
 
 function toResponseInput(messages: LlmMessage[], evidence: GenerateAnswerInput['evidence']): string {
