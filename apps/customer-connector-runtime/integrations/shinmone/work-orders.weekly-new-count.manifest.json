@@ -1,0 +1,70 @@
+{
+  "version": "1",
+  "connectorKey": "business",
+  "operations": [
+    {
+      "operationKey": "work-orders.weekly-new-count",
+      "contractVersion": "1.0.0",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "upstreamServiceRef": "shinmone-scm-api",
+      "request": {
+        "profile": "GET_QUERY_V1",
+        "path": "/Dashboard/KPIStats",
+        "fixedQuery": { "TimeRange": "thisWeek" },
+        "argumentMappings": []
+      },
+      "credentialProfileRef": "shinmone-idx-bearer-v1",
+      "readOnly": true,
+      "response": {
+        "validationProfile": "DECLARED_POINTERS_V1",
+        "acceptedHttpStatuses": [200],
+        "acceptedApplicationCodes": [200],
+        "applicationCodePointer": "/Code",
+        "contentType": "application/json",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "Code": { "type": "integer" },
+            "Data": {
+              "type": "object",
+              "properties": {
+                "NewOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": { "type": "integer", "minimum": 0 }
+                  },
+                  "required": ["Current"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["NewOrders"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["Code", "Data"],
+          "additionalProperties": false
+        },
+        "extraction": [
+          { "source": "operation_key", "targetField": "metricKey", "conversion": "string" },
+          { "source": "fixed_query", "queryName": "TimeRange", "targetField": "period", "conversion": "string" },
+          { "source": "response_pointer", "sourcePointer": "/Data/NewOrders/Current", "targetField": "count", "conversion": "non_negative_integer" }
+        ]
+      },
+      "limits": {
+        "maxRequestBytes": 4096,
+        "maxResponseBytes": 262144,
+        "maxDepth": 8,
+        "maxItems": 100,
+        "maxStringLength": 1024,
+        "timeoutMs": 3500
+      },
+      "errorMap": {},
+      "readinessDependency": "shinmone-scm-api"
+    }
+  ]
+}

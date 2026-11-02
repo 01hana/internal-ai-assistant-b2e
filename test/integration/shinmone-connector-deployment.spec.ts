@@ -20,7 +20,11 @@ describe('Shinmone reference exact central deployment configuration', () => {
     expect(parseProductizedAdapterBindings(JSON.stringify([shinmoneAdapterBinding()]))).toEqual([
       expect.objectContaining({
         ...SHINMONE_REFERENCE_AUTHORITY,
-        operations: [{ key: 'work-orders.monthly-new-count', version: '1.0.0' }]
+        operations: [
+          { key: 'work-orders.monthly-new-count', version: '1.0.0' },
+          { key: 'work-orders.today-new-count', version: '1.0.0' },
+          { key: 'work-orders.weekly-new-count', version: '1.0.0' }
+        ]
       })
     ]);
   });

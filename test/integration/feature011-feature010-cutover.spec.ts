@@ -15,7 +15,11 @@ const host = Object.freeze({
 });
 
 describe('Feature 011 / Feature 010 request-path cutover', () => {
-  it('selects the verified scoped pack and releases the exact monthly planning candidate without legacy discovery', async () => {
+  it.each([
+    ['今天新增多少工單？', 'today', 'work-orders.today-new-count'],
+    ['本週新增多少工單？', 'this_week', 'work-orders.weekly-new-count'],
+    ['這個月新增幾張工單？', 'this_month', 'work-orders.monthly-new-count']
+  ])('selects the verified scoped pack and releases the exact period planning candidate: %s', async (text, timeRange, toolKey) => {
     const harness = await createFeature011DirectHarness([packPath]);
     const resolver = new CapabilityResolutionService(harness.registry, harness.semantic, harness.parameters, harness.binding, harness.audit);
     const discover = jest.fn(async () => ({
@@ -28,16 +32,16 @@ describe('Feature 011 / Feature 010 request-path cutover', () => {
 
     const output = await pipeline.understand({
       requestId: host.requestId, sessionId: 'session-cutover', messageId: 'message-cutover',
-      text: '這個月新增幾張工單？', hostIntegrationContext: host
+      text, hostIntegrationContext: host
     });
 
     expect(discover).not.toHaveBeenCalled();
     expect(output.candidateTools).toEqual([expect.objectContaining({
-      key: 'work-orders.monthly-new-count', version: '1.0.0', arguments: {}
+      key: toolKey, version: '1.0.0', arguments: {}
     })]);
     expect(output).toMatchObject({ capabilityResolution: {
       outcome: 'RESOLVED', capability: { capabilityKey: 'work-orders.count' },
-      parameters: { timeRange: 'this_month' }
+      parameters: { timeRange }
     } });
     expect(harness.audit.record).toHaveBeenCalledTimes(1);
   });
@@ -60,7 +64,7 @@ describe('Feature 011 / Feature 010 request-path cutover', () => {
 
   it.each([
     ['請查工單新增數量', 'NEEDS_CLARIFICATION', 'PARAMETER_ISSUES'],
-    ['今天工單新增數量', 'CAPABILITY_UNAVAILABLE', 'NO_COMPATIBLE_ACTIVE_BINDING']
+    ['工單新增數量 期間 下季', 'NEEDS_CLARIFICATION', 'PARAMETER_ISSUES']
   ])('projects %s without a Tool candidate or legacy discovery', async (text, outcome, reasonCode) => {
     const harness = await createFeature011DirectHarness([packPath]);
     const resolver = new CapabilityResolutionService(harness.registry, harness.semantic, harness.parameters, harness.binding, harness.audit);

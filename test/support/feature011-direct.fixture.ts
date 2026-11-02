@@ -10,6 +10,8 @@ import type { RegisteredToolDefinition } from '../../src/tools/tool-registry.typ
 
 const definitions: Readonly<Record<string, RegisteredToolDefinition>> = Object.freeze(Object.fromEntries([
   referenceTool('work-orders.monthly-new-count', 'customer-shinmone-scm-local'),
+  referenceTool('work-orders.today-new-count', 'customer-shinmone-scm-local'),
+  referenceTool('work-orders.weekly-new-count', 'customer-shinmone-scm-local'),
   referenceTool('inventory.stock-on-hand', 'customer-b', 'sku'),
   referenceTool('mock.orders.status.lookup', 'customer-a', 'entityId'),
   referenceTool('mock.work-orders.progress.lookup', 'customer-a', 'entityId'),

@@ -5,7 +5,9 @@ import {
   SHINMONE_CREDENTIAL_KIND,
   SHINMONE_CREDENTIAL_PROFILE_REF,
   SHINMONE_BEARER_STRATEGY_KEY,
-  SHINMONE_MANIFEST_PATH
+  SHINMONE_MANIFEST_PATH,
+  SHINMONE_TODAY_MANIFEST_PATH,
+  SHINMONE_WEEKLY_MANIFEST_PATH
 } from './shinmone.constants';
 import { ShinmoneIdxCredentialProvider, type ShinmoneProviderOptions } from './shinmone-idx-credential.provider';
 
@@ -23,6 +25,6 @@ export function createShinmoneRuntimeIntegration(options: ShinmoneProviderOption
     credentialProviders: Object.freeze([provider]),
     credentialStrategies: Object.freeze([strategy]),
     credentialProfiles: Object.freeze([profile]),
-    manifestFiles: Object.freeze([SHINMONE_MANIFEST_PATH])
+    manifestFiles: Object.freeze([SHINMONE_MANIFEST_PATH, SHINMONE_TODAY_MANIFEST_PATH, SHINMONE_WEEKLY_MANIFEST_PATH])
   });
 }

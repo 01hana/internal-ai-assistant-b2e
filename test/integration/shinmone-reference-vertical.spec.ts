@@ -81,15 +81,18 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
     });
     const integration = createShinmoneRuntimeIntegration();
     const manifestDirectory = mkdtempSync(join(tmpdir(), 'phase11-manifest-'));
-    const mountedManifestPath = join(manifestDirectory, 'shinmone.json');
-    writeFileSync(mountedManifestPath, readFileSync(integration.manifestFiles[0]!, 'utf8'));
-    chmodSync(mountedManifestPath, 0o444);
+    const mountedManifestPaths = integration.manifestFiles.map((source, index) => {
+      const mounted = join(manifestDirectory, `shinmone-${index}.json`);
+      writeFileSync(mounted, readFileSync(source, 'utf8'));
+      chmodSync(mounted, 0o444);
+      return mounted;
+    });
     const runtimeEnvironment = runtimeEnvironmentFor(
       bridgeInitial,
       centralJwk,
       integration,
       (upstream.address() as AddressInfo).port,
-      mountedManifestPath
+      mountedManifestPaths
     );
     const runtimeModule = await Test.createTestingModule({
       imports: [CustomerConnectorRuntimeModule.forEnvironment(runtimeEnvironment, integration.bootstrapProviders, {
@@ -181,6 +184,11 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
         }
       }
     });
+    const { LlmExecutionService } = await import('../../src/llm/llm-execution.service');
+    jest.spyOn(gateway.backend.get(LlmExecutionService, { strict: false }), 'streamAnswer').mockImplementation(async function* () {
+      yield { type: 'text_delta', text: '核准證據顯示新增工單數為 17。' };
+      yield { type: 'completed', finishReason: 'stop', metadata: { provider: 'test', model: 'shinmone-fixture', fallbackUsed: false } };
+    });
 
     try {
       const exchange = await request(bridge.getHttpServer())
@@ -227,6 +235,43 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
         answerDecision: 'answered', answer: expect.any(String)
       }));
       expect(events.at(-1)?.data?.data.answer).toContain('17');
+
+      const periodPrisma = createPrismaClient(process.env.DATABASE_URL!);
+      try {
+        for (const [message, period, toolKey] of [
+          ['今天新增多少工單？', 'today', 'work-orders.today-new-count'],
+          ['本週新增多少工單？', 'thisWeek', 'work-orders.weekly-new-count']
+        ]) {
+          const periodSession = await request(gateway.gateway.getHttpServer())
+            .post('/api/v1/assistant/sessions')
+            .set('authorization', `Bearer ${exchange.body.accessToken}`)
+            .set('x-request-id', `req-phase11-${period}-session`)
+            .send({ pageContext: { module: 'work-orders' } });
+          expect(periodSession.status).toBe(201);
+          const periodResponse = await request(gateway.gateway.getHttpServer())
+            .post(`/api/v1/assistant/sessions/${periodSession.body.data.sessionId}/messages`)
+            .set('authorization', `Bearer ${exchange.body.accessToken}`)
+            .set('x-request-id', `req-phase11-${period}-question`)
+            .send({ message, pageContext: { module: 'work-orders', connectorContextRef: exchange.body.connectorContextRef } });
+          expect(periodResponse.status).toBe(200);
+          const periodEvents = parseSseResponse(periodResponse.text);
+          expect(upstreamRequests.map(({ url }) => url)).toHaveLength(period === 'today' ? 2 : 3);
+          expect(periodEvents.map(({ event }) => event)).toEqual([
+            'tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final'
+          ]);
+          expect(periodEvents.at(-1)?.data?.data.answer).toContain('17');
+          expect(upstreamRequests.at(-1)).toEqual({
+            method: 'GET', url: `/Dashboard/KPIStats?TimeRange=${period}`,
+            authorization: `Bearer ${nativeAccessToken}`
+          });
+          const periodToolCall = await periodPrisma.toolCall.findFirst({
+            where: { customerId: 'customer-a', requestId: `req-phase11-${period}-question` }
+          });
+          expect(periodToolCall).toMatchObject({ toolName: toolKey, toolVersion: '1.0.0', status: 'success' });
+        }
+      } finally {
+        await periodPrisma.$disconnect();
+      }
 
       runtimeReadiness.setReady('upstream', false);
       upstreamRequests.splice(0, upstreamRequests.length);
@@ -308,7 +353,7 @@ function runtimeEnvironmentFor(
   centralJwk: Readonly<Record<string, unknown>>,
   integration: ReturnType<typeof createShinmoneRuntimeIntegration>,
   upstreamPort: number,
-  mountedManifestPath: string
+  mountedManifestPaths: readonly string[]
 ): Record<string, unknown> {
   const context = {
     customerId: 'customer-a', integrationId: 'integration-a', hostApp: 'admin',
@@ -333,7 +378,7 @@ function runtimeEnvironmentFor(
       keys: binding.serviceAuth.keys.map((key) => ({ kid: key.kid, status: key.status, publicJwk: key.publicJwk })),
       providerKey: binding.context.providerKey
     }]),
-    CONNECTOR_MANIFEST_FILES: JSON.stringify([mountedManifestPath]),
+    CONNECTOR_MANIFEST_FILES: JSON.stringify(mountedManifestPaths),
     CONNECTOR_CREDENTIAL_PROFILES_JSON: JSON.stringify(integration.credentialProfiles),
     CONNECTOR_UPSTREAMS_JSON: JSON.stringify([{
       upstreamServiceRef: 'shinmone-scm-api', origin: `https://${TLS_HOST}:${upstreamPort}`, basePath: '/',

@@ -3,6 +3,8 @@ import { CapabilityParameterResolverService } from '../../src/capabilities/capab
 import { FollowUpSemanticResolverService } from '../../src/assistant/conversation/follow-up-semantic-resolver.service';
 import type { CapabilityDefinitionV1, ScopedCapabilityCatalogV1 } from '../../src/capabilities/capability-pack.types';
 import type { CapabilityFollowUpFrameV1 } from '../../src/assistant/conversation/conversation.types';
+import { CapabilityResolutionService } from '../../src/capabilities/capability-resolution.service';
+import { createFeature011DirectHarness } from '../support/feature011-direct.fixture';
 
 describe('Feature 011 direct capability resolution eval', () => {
   const toolCalls = jest.fn();
@@ -10,6 +12,29 @@ describe('Feature 011 direct capability resolution eval', () => {
   const modelCalls = jest.fn();
 
   beforeEach(() => jest.clearAllMocks());
+
+  it.each([
+    ['今天新增多少工單？', 'today', 'work-orders.today-new-count'],
+    ['今日新開幾張工單？', 'today', 'work-orders.today-new-count'],
+    ['本週新增多少工單？', 'this_week', 'work-orders.weekly-new-count'],
+    ['這週新開幾張？', 'this_week', 'work-orders.weekly-new-count'],
+    ['這個禮拜新增工單有多少？', 'this_week', 'work-orders.weekly-new-count'],
+    ['本月新增多少工單？', 'this_month', 'work-orders.monthly-new-count'],
+    ['這個月新增幾張工單？', 'this_month', 'work-orders.monthly-new-count'],
+    ['本月份新開多少工單？', 'this_month', 'work-orders.monthly-new-count']
+  ])('uses the scoped Shinmone pack for %s', async (text, timeRange, toolKey) => {
+    const harness = await createFeature011DirectHarness(['customer-capability-packs/shinmone-scm-local/1.0.0.json']);
+    const service = new CapabilityResolutionService(harness.registry, harness.semantic, harness.parameters, harness.binding, harness.audit);
+    const result = await service.resolve({
+      scope: { customerId: 'customer-shinmone-scm-local', integrationId: 'shinmone-scm-assistant-local', hostApp: 'shinmone-scm' },
+      text
+    });
+    expect(result).toMatchObject({ outcome: 'RESOLVED', capability: { capabilityKey: 'work-orders.count' },
+      parameters: { timeRange }, toolCandidate: { key: toolKey, version: '1.0.0', arguments: {} } });
+    expect(toolCalls).not.toHaveBeenCalled();
+    expect(customerRequests).not.toHaveBeenCalled();
+    expect(modelCalls).not.toHaveBeenCalled();
+  });
 
   it.each([
     '請查本月工單新增數量',

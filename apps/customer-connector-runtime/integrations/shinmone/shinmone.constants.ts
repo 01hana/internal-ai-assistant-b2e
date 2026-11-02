@@ -7,3 +7,7 @@ export const SHINMONE_BEARER_STRATEGY_KEY = 'shinmone-fixed-bearer-v1';
 export const SHINMONE_CREDENTIAL_KIND = 'bearer-v1';
 export const SHINMONE_OPERATION_KEY = 'work-orders.monthly-new-count';
 export const SHINMONE_MANIFEST_PATH = join(__dirname, 'work-orders.monthly-new-count.manifest.json');
+export const SHINMONE_TODAY_OPERATION_KEY = 'work-orders.today-new-count';
+export const SHINMONE_WEEKLY_OPERATION_KEY = 'work-orders.weekly-new-count';
+export const SHINMONE_TODAY_MANIFEST_PATH = join(__dirname, 'work-orders.today-new-count.manifest.json');
+export const SHINMONE_WEEKLY_MANIFEST_PATH = join(__dirname, 'work-orders.weekly-new-count.manifest.json');

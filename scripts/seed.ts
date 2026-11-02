@@ -207,7 +207,7 @@ const KNOWLEDGE_DOCUMENT_FIXTURES = [
 
 async function seedToolDefinitions(prisma: PrismaClient) {
   const definitions = [];
-  for (const tool of [...MOCK_TOOL_DEFINITIONS, SHINMONE_REFERENCE_TOOL_DEFINITION]) {
+  for (const tool of [...MOCK_TOOL_DEFINITIONS, SHINMONE_REFERENCE_TOOL_DEFINITION, ...SHINMONE_ADDITIONAL_PERIOD_TOOL_DEFINITIONS]) {
     definitions.push(await prisma.toolDefinition.upsert({
       where: {
         name_version: {
@@ -227,9 +227,11 @@ async function seedToolDefinitions(prisma: PrismaClient) {
 }
 
 async function seedCustomerToolPolicies(prisma: PrismaClient, toolDefinitions: Array<{ id: string; name: string; version: string }>) {
-  const customerATools = toolDefinitions.filter((tool) => tool.name.startsWith('mock.') || tool.name === 'work-orders.monthly-new-count');
+  const customerATools = toolDefinitions.filter((tool) => tool.name.startsWith('mock.') || [
+    'work-orders.today-new-count', 'work-orders.weekly-new-count', 'work-orders.monthly-new-count'
+  ].includes(tool.name));
   const customerBTools = toolDefinitions.filter((tool) => tool.name === 'inventory.stock-on-hand');
-  if (customerATools.length !== 7 || customerBTools.length !== 1) throw new Error('Required discovery ToolDefinitions were not seeded.');
+  if (customerATools.length !== 9 || customerBTools.length !== 1) throw new Error('Required discovery ToolDefinitions were not seeded.');
   const obsoleteCustomerBReadTool = toolDefinitions.find((tool) => tool.name === 'mock.orders.status.lookup' && tool.version === '1.0.0');
   if (!obsoleteCustomerBReadTool) throw new Error('Required mock order status ToolDefinition was not seeded.');
   await prisma.customerToolPolicy.deleteMany({
@@ -559,6 +561,32 @@ const SHINMONE_REFERENCE_TOOL_DEFINITION = {
   auditBehavior: { summarizeInput: true, summarizeOutput: true },
   isActive: true
 };
+
+const SHINMONE_ADDITIONAL_PERIOD_TOOL_DEFINITIONS = [
+  { name: 'work-orders.today-new-count', period: 'today', description: 'Count new work orders for the current server-local day.' },
+  { name: 'work-orders.weekly-new-count', period: 'thisWeek', description: 'Count new work orders from server-local Monday through today.' }
+].map(({ name, period, description }) => ({
+  ...SHINMONE_REFERENCE_TOOL_DEFINITION,
+  name,
+  description,
+  inputSchema: {
+    ...SHINMONE_REFERENCE_TOOL_DEFINITION.inputSchema,
+    'x-assistant-discovery-v1': discoveryMetadata({
+      resource: ['workOrder'], intent: ['read'], metric: ['newCount', 'count'],
+      timeRange: [period === 'today' ? 'today' : 'this_week'],
+      required: ['resource', 'metric', 'timeRange'],
+      taskType: period === 'today' ? 'work_order_today_new_count' : 'work_order_weekly_new_count'
+    })
+  },
+  outputSchema: {
+    ...SHINMONE_REFERENCE_TOOL_DEFINITION.outputSchema,
+    properties: {
+      metricKey: { type: 'string', enum: [name] },
+      period: { type: 'string', enum: [period] },
+      count: { type: 'integer', minimum: 0 }
+    }
+  }
+}));
 
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
