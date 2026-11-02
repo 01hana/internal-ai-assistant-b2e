@@ -47,6 +47,10 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   OPENAI_API_KEY!: string;
 
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
+
   @IsString()
   @IsNotEmpty()
   INTERNAL_IDENTITY_JWT_ISSUER!: string;

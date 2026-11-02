@@ -9,9 +9,11 @@ import { ToolsModule } from '../tools/tools.module';
 import { ConversationSemanticReconstructorService } from '../assistant/conversation/conversation-semantic-reconstructor.service';
 import { FollowUpSemanticResolverService } from '../assistant/conversation/follow-up-semantic-resolver.service';
 import { CapabilitiesModule } from '../capabilities/capabilities.module';
+import { LlmModule } from '../llm/llm.module';
+import { LlmToolSelectionService } from './llm-tool-selection.service';
 
 @Module({
-  imports: [PrismaModule, AuditModule, ToolsModule, CapabilitiesModule],
+  imports: [PrismaModule, AuditModule, ToolsModule, CapabilitiesModule, LlmModule],
   providers: [
     QueryUnderstandingRepository,
     QueryUnderstandingService,
@@ -23,6 +25,7 @@ import { CapabilitiesModule } from '../capabilities/capabilities.module';
       useExisting: DefaultTokenizerAdapter
     },
     RuleBasedQueryUnderstandingPipeline,
+    LlmToolSelectionService,
     {
       provide: 'QueryUnderstandingPipeline',
       useExisting: RuleBasedQueryUnderstandingPipeline

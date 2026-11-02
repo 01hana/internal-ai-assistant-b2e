@@ -1,10 +1,13 @@
 import { RiskLevel } from '../../src/generated/prisma/enums';
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
-import { createToolDiscoveryFixtureService } from '../support/tool-discovery.fixture';
+import { createCapabilityResolutionFixtureService } from '../support/tool-discovery.fixture';
 
 describe('RuleBasedQueryUnderstandingPipeline', () => {
-  const service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
+  let service: RuleBasedQueryUnderstandingPipeline;
+  beforeAll(async () => {
+    service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), await createCapabilityResolutionFixtureService());
+  });
   const hostIntegrationContext = {
     requestId: 'req-qu-001',
     customerId: 'customer-a',
@@ -21,7 +24,7 @@ describe('RuleBasedQueryUnderstandingPipeline', () => {
       requestId: 'req-qu-001',
       sessionId: 'session-001',
       messageId: 'message-001',
-      text: '請幫我查 SO-10001 訂單目前狀態',
+      text: '查詢訂單目前狀態 SO-10001',
       hostIntegrationContext
     };
 
@@ -31,14 +34,15 @@ describe('RuleBasedQueryUnderstandingPipeline', () => {
 
     const result = await service.understand(input);
 
-    expect(result.taskType).toBe('order_status_lookup');
+    expect(result.taskType).toBe('general_lookup');
     expect(result.candidateTools).toEqual([
       {
         key: 'mock.orders.status.lookup',
+        version: '1.0.0',
         arguments: {
           entityId: 'SO-10001'
         },
-        reason: 'metadata_discovery'
+        reason: 'customer_capability_binding'
       }
     ]);
     expect(result.riskLevel).toBe(RiskLevel.low);
@@ -56,11 +60,11 @@ describe('RuleBasedQueryUnderstandingPipeline', () => {
       hostIntegrationContext
     });
 
-    expect(result.clarificationNeeds).toEqual([
+    expect(result.clarificationNeeds).toEqual(expect.arrayContaining([
       expect.objectContaining({
         reason: 'empty_query'
       })
-    ]);
+    ]));
     expect(result.confidence).toBe(0);
   });
 
@@ -69,11 +73,13 @@ describe('RuleBasedQueryUnderstandingPipeline', () => {
       requestId: 'req-qu-003',
       sessionId: 'session-001',
       messageId: 'message-003',
-      text: '請查一下訂單',
+      text: '查詢訂單目前狀態',
       hostIntegrationContext
     });
 
-    expect(result.taskType).toBe('order_status_lookup');
+    expect(result.capabilityResolution).toMatchObject({ outcome: 'NEEDS_CLARIFICATION',
+      reasonCode: 'PARAMETER_ISSUES', missingParameters: ['entityRef'] });
+    expect(result.candidateTools).toEqual([]);
     expect(result.clarificationNeeds.length).toBeGreaterThan(0);
     expect(result.confidence).toBeLessThan(0.7);
   });

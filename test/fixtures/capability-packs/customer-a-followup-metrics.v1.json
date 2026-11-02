@@ -1,0 +1,71 @@
+{
+  "version": "1",
+  "packId": "customer-a-followup-metrics",
+  "packVersion": "1.0.0",
+  "customerId": "customer-a",
+  "integrationId": "integration-erp",
+  "hostApps": ["erp"],
+  "active": true,
+  "capabilities": [
+    {
+      "version": "1",
+      "capabilityKey": "inventory.availability",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "庫存可用量",
+      "followUpSemanticEvidence": { "version": "1", "targetTerms": ["可用量", "可供量"] },
+      "semanticProfiles": [{
+        "version": "1",
+        "locale": "zh-TW",
+        "aliases": ["查詢庫存可用量", "查詢庫存可供量"],
+        "examples": ["查詢庫存可用量"],
+        "resourceTerms": ["庫存"],
+        "intentTerms": ["查詢"],
+        "metricTerms": ["可用量", "可供量"],
+        "requiredSignalGroups": ["resource", "metric"]
+      }],
+      "parameters": [{
+        "version": "1", "parameterName": "entityRef", "type": "bounded_string",
+        "required": true, "semanticTerms": ["料號"], "maxLength": 64,
+        "tokenSyntax": "SAFE_IDENTIFIER", "prefixes": ["SKU-"]
+      }]
+    },
+    {
+      "version": "1",
+      "capabilityKey": "inventory.stock",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "庫存現量",
+      "followUpSemanticEvidence": { "version": "1", "targetTerms": ["現量"] },
+      "semanticProfiles": [{
+        "version": "1",
+        "locale": "zh-TW",
+        "aliases": ["查詢庫存現量"],
+        "examples": ["查詢庫存現量"],
+        "resourceTerms": ["庫存"],
+        "intentTerms": ["查詢"],
+        "metricTerms": ["現量"],
+        "requiredSignalGroups": ["resource", "metric"]
+      }],
+      "parameters": [{
+        "version": "1", "parameterName": "entityRef", "type": "bounded_string",
+        "required": true, "semanticTerms": ["料號"], "maxLength": 64,
+        "tokenSyntax": "SAFE_IDENTIFIER", "prefixes": ["SKU-"]
+      }]
+    }
+  ],
+  "bindings": [
+    {
+      "version": "1", "bindingId": "inventory.availability", "bindingVersion": "1.0.0",
+      "active": true, "capabilityKey": "inventory.availability", "semanticConstraints": [],
+      "target": { "kind": "TOOL", "toolKey": "mock.inventory.availability.lookup", "toolVersion": "1.0.0" },
+      "mappings": [{ "version": "1", "targetArgument": "entityId", "source": "CANONICAL_PARAMETER", "parameterName": "entityRef" }]
+    },
+    {
+      "version": "1", "bindingId": "inventory.stock", "bindingVersion": "1.0.0",
+      "active": true, "capabilityKey": "inventory.stock", "semanticConstraints": [],
+      "target": { "kind": "TOOL", "toolKey": "mock.inventory.stock.lookup", "toolVersion": "1.0.0" },
+      "mappings": [{ "version": "1", "targetArgument": "entityId", "source": "CANONICAL_PARAMETER", "parameterName": "entityRef" }]
+    }
+  ]
+}

@@ -2,6 +2,15 @@ import { RiskLevel, ToolOperation } from '../../src/generated/prisma/enums';
 import { ToolDiscoveryService } from '../../src/tools/tool-discovery.service';
 import { ToolRegistryService } from '../../src/tools/tool-registry.service';
 import type { RegisteredToolDefinition } from '../../src/tools/tool-registry.types';
+import { CapabilityResolutionService } from '../../src/capabilities/capability-resolution.service';
+import { createFeature011DirectHarness } from './feature011-direct.fixture';
+
+export async function createCapabilityResolutionFixtureService(): Promise<CapabilityResolutionService> {
+  const harness = await createFeature011DirectHarness(['test/fixtures/capability-packs/customer-a-reference.v1.json']);
+  return new CapabilityResolutionService(
+    harness.registry, harness.semantic, harness.parameters, harness.binding, harness.audit
+  );
+}
 
 const validator = new ToolRegistryService({} as never, {} as never);
 

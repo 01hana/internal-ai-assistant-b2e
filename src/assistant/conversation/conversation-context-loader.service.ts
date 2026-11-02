@@ -80,14 +80,23 @@ export class ConversationContextLoaderService {
 
       const exchangeEvidenceIds: string[] = [];
       for (const candidate of Array.isArray(record.evidence) ? record.evidence : []) {
-        const guarded = this.guard.guard(candidate);
-        if (!guarded.accepted) {
-          reasons.add(guarded.reasonCode);
+        const summary = asRecord(candidate)?.summary;
+        const checkedSummary = summary === undefined ? undefined : this.guard.guard(summary);
+        if (checkedSummary && !checkedSummary.accepted &&
+          !['CONTEXT_DEPTH_EXCEEDED', 'CONTEXT_ITEM_LIMIT_EXCEEDED', 'CONTEXT_METADATA_TOO_LARGE']
+            .includes(checkedSummary.reasonCode)) {
+          reasons.add(checkedSummary.reasonCode);
           continue;
         }
         const safe = toEvidenceCandidate(candidate);
         if (!safe) {
           reasons.add('CONTEXT_MALFORMED_VALUE');
+          continue;
+        }
+        // The loader needs only the reference metadata, never a prior API response or its summary.
+        const guarded = this.guard.guard(safe);
+        if (!guarded.accepted) {
+          reasons.add(guarded.reasonCode);
           continue;
         }
         if (evidenceRefs.length < evidenceRefLimit) {
@@ -123,7 +132,10 @@ export class ConversationContextLoaderService {
         createdAt: isoText(record.createdAt),
         semanticFrame,
         capabilityFrame,
-        evidenceRefIds: Object.freeze(exchangeEvidenceIds)
+        evidenceRefIds: Object.freeze(exchangeEvidenceIds),
+        groundingVerified: asRecord(record.groundingCheck)?.covered === true &&
+          asRecord(record.groundingCheck)?.unsupportedClaimCount === 0,
+        selectionPreviouslyModelCalled: record.selectionPreviouslyModelCalled === true
       }));
     }
 
@@ -177,10 +189,10 @@ function toEvidenceCandidate(value: unknown): SafePriorEvidenceRefCandidate | un
   if (!id) return undefined;
   return Object.freeze({
     id,
-    messageId: text(record?.messageId),
-    sourceType: text(record?.sourceType),
-    sourceId: text(record?.sourceId),
-    observedAt: text(record?.timestamp)
+    ...(text(record?.messageId) ? { messageId: text(record?.messageId) } : {}),
+    ...(text(record?.sourceType) ? { sourceType: text(record?.sourceType) } : {}),
+    ...(text(record?.sourceId) ? { sourceId: text(record?.sourceId) } : {}),
+    ...(text(record?.timestamp) ? { observedAt: text(record?.timestamp) } : {})
   });
 }
 

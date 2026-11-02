@@ -125,6 +125,17 @@ describe('Feature 010 bounded conversation context RED (T003)', () => {
     expect(Object.isFrozen((result.exchanges as unknown[])[0])).toBe(true);
   });
 
+  it('retains only a reference to deep structured Evidence without exposing prior facts', async () => {
+    const source: Record<string, unknown> = exchange(1);
+    source.evidence = [{ id: 'structured-evidence', messageId: 'assistant-1',
+      sourceType: 'structured_record', sourceId: 'synthetic-source',
+      summary: { fields: { Data: { Category: { Current: 987654 } } } } }];
+    const result = await createLoader([source]).load({ scope: SCOPE });
+    expect(result.evidenceRefIds).toEqual(['structured-evidence']);
+    expect((result.exchanges as Array<{ groundingVerified: boolean }>)[0].groundingVerified).toBe(true);
+    expect(JSON.stringify(result)).not.toMatch(/987654|Category|Current|summary/);
+  });
+
   it('reconstructs only whitelisted semantic dimensions with per-message provenance', async () => {
     const source: Record<string, unknown> = exchange(1);
     source.queryUnderstanding = {

@@ -12,6 +12,15 @@ import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-ident
 import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 describe('Feature 010 semantic follow-up routing (T037-T042)', () => {
+  let previousToolSelection: string | undefined;
+  beforeAll(() => {
+    previousToolSelection = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
+  });
+  afterAll(() => {
+    if (previousToolSelection === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousToolSelection;
+  });
   let app: INestApplication;
   let state: Us1TestState;
   const businessAdapter = customerBBusinessAdapter();
@@ -94,7 +103,7 @@ describe('Feature 010 semantic follow-up routing (T037-T042)', () => {
   function resolutionAudit(requestId: string) { return state.auditEvents.find((event) => event.requestId === requestId && event.eventType === 'conversation_followup_resolved')?.metadata; }
   function planningAudit(requestId: string) { return state.auditEvents.find((event) => event.requestId === requestId && event.eventType === 'execution_plan_created')?.metadata; }
   function loadAContext() {
-    return app.get(ConversationContextLoaderService).load({ scope: { customerId: 'customer-a', sessionId: 'session-owned-001', organizationId: 'org-shared', hostApp: 'erp', actorId: 'actor-shared' } });
+    return app.get(ConversationContextLoaderService).load({ scope: { customerId: 'customer-a', integrationId: 'integration-erp', sessionId: 'session-owned-001', organizationId: 'org-shared', hostApp: 'erp', actorId: 'actor-shared' } });
   }
   function sendA(requestId: string, message: string, pageContext: Record<string, unknown>) {
     return request(app.getHttpServer()).post('/api/v1/assistant/sessions/session-owned-001/messages')

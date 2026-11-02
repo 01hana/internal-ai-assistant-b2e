@@ -31,6 +31,8 @@ export const MAX_BOUNDED_STRING_LENGTH = 256;
 
 const PACK_KEYS = keys('version', 'packId', 'packVersion', 'customerId', 'integrationId', 'hostApps', 'active', 'capabilities', 'bindings');
 const CAPABILITY_KEYS = keys('version', 'capabilityKey', 'active', 'kind', 'safeLabel', 'semanticProfiles', 'parameters');
+const CAPABILITY_WITH_FOLLOW_UP_KEYS = keys(...CAPABILITY_KEYS, 'followUpSemanticEvidence');
+const FOLLOW_UP_EVIDENCE_KEYS = keys('version', 'targetTerms');
 const PROFILE_KEYS = keys('version', 'locale', 'aliases', 'examples', 'resourceTerms', 'intentTerms', 'metricTerms', 'requiredSignalGroups');
 const ENUM_PARAMETER_KEYS = keys('version', 'parameterName', 'type', 'required', 'semanticTerms', 'values');
 const BOUNDED_STRING_PARAMETER_KEYS = keys('version', 'parameterName', 'type', 'required', 'semanticTerms', 'maxLength', 'tokenSyntax', 'prefixes');
@@ -71,12 +73,14 @@ export function parseCustomerCapabilityPackV1(input: unknown): CustomerCapabilit
   };
   assertUnique(parsed.hostApps, (value) => value);
   assertUnique(parsed.capabilities, (value) => value.capabilityKey);
+  assertUnique(parsed.capabilities.flatMap((capability) => capability.followUpSemanticEvidence?.targetTerms ?? []), normalizeSemanticText);
   assertUnique(parsed.bindings, (value) => `${value.bindingId}\u0000${value.bindingVersion}`);
   return parsed;
 }
 
 function parseCapability(input: unknown): CapabilityDefinitionV1 {
-  if (!isExactObject(input, CAPABILITY_KEYS) || input.version !== '1' || typeof input.active !== 'boolean' || input.kind !== 'READ_ONLY_TOOL') invalid();
+  if ((!isExactObject(input, CAPABILITY_KEYS) && !isExactObject(input, CAPABILITY_WITH_FOLLOW_UP_KEYS)) ||
+    input.version !== '1' || typeof input.active !== 'boolean' || input.kind !== 'READ_ONLY_TOOL') invalid();
   const parsed: CapabilityDefinitionV1 = {
     version: '1',
     capabilityKey: identifier(input.capabilityKey),
@@ -84,11 +88,20 @@ function parseCapability(input: unknown): CapabilityDefinitionV1 {
     kind: 'READ_ONLY_TOOL',
     safeLabel: safeText(input.safeLabel, MAX_TEXT_LENGTH),
     semanticProfiles: objectList(input.semanticProfiles, 1, MAX_SEMANTIC_PROFILES_PER_CAPABILITY, parseSemanticProfile),
-    parameters: objectList(input.parameters, 1, MAX_PARAMETERS_PER_CAPABILITY, parseParameter)
+    ...(Object.prototype.hasOwnProperty.call(input, 'followUpSemanticEvidence')
+      ? { followUpSemanticEvidence: parseFollowUpSemanticEvidence(input.followUpSemanticEvidence) } : {}),
+    parameters: objectList(input.parameters, 0, MAX_PARAMETERS_PER_CAPABILITY, parseParameter)
   };
   assertUnique(parsed.semanticProfiles, (value) => value.locale.toLocaleLowerCase('en-US'));
   assertUnique(parsed.parameters, (value) => value.parameterName);
   return parsed;
+}
+
+function parseFollowUpSemanticEvidence(input: unknown): NonNullable<CapabilityDefinitionV1['followUpSemanticEvidence']> {
+  if (!isExactObject(input, FOLLOW_UP_EVIDENCE_KEYS) || input.version !== '1') invalid();
+  const targetTerms = stringList(input.targetTerms, 1, MAX_TERMS_PER_LIST, MAX_TEXT_LENGTH);
+  assertUnique(targetTerms, normalizeSemanticText);
+  return { version: '1', targetTerms };
 }
 
 function parseSemanticProfile(input: unknown): CapabilitySemanticMetadataV1 {

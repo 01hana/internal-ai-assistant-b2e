@@ -43,6 +43,18 @@ export class ConversationContextRepository {
       }
     });
 
+    const requestIds = [...new Set(messages.map((message) => message.requestId))];
+    const selectionEvents = requestIds.length > 0 ? await this.prisma.db.auditEvent.findMany({
+      where: { customerId: scope.customerId, sessionId: scope.sessionId,
+        organizationId: scope.organizationId, hostApp: scope.hostApp, actorId: scope.actorId,
+        eventType: 'llm_tool_selection_completed', requestId: { in: requestIds } },
+      take: MAX_CONTEXT_MESSAGE_SCAN,
+      select: { requestId: true, messageId: true, metadata: true }
+    }) : [];
+    const modelSelectedMessages = new Set(selectionEvents.flatMap((event) =>
+      event.messageId && isRecord(event.metadata) && event.metadata.modelCalled === true
+        ? [`${event.requestId}:${event.messageId}`] : []));
+
     const byRequest = new Map<string, { user?: MessageWithContext; assistant?: MessageWithContext }>();
     for (const rawMessage of messages) {
       const message = rawMessage as unknown as MessageWithContext;
@@ -63,6 +75,7 @@ export class ConversationContextRepository {
         scope,
         sessionStatus: session.status,
         completed: true,
+        selectionPreviouslyModelCalled: modelSelectedMessages.has(`${requestId}:${pair.user.id}`),
         userMessage: {
           id: pair.user.id,
           content: pair.user.content,
@@ -99,6 +112,10 @@ export class ConversationContextRepository {
       }];
     });
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function toSafeQueryUnderstandingSource(value: unknown): Record<string, unknown> | undefined {

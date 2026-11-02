@@ -11,6 +11,7 @@ import { getPageEntityRef, getPresentationFieldPaths, getVisibleColumns } from '
 import { PageEntityRef } from '../page-context/page-context.types';
 import { AssistantReadonlyRuntimeInput, AssistantReadonlyRuntimeResult } from './runtime.types';
 import { ToolCallService } from './tool-call.service';
+import { QueryScopeValidationService } from '../../query-scope/query-scope-validation.service';
 
 @Injectable()
 export class AssistantReadonlyRuntimeService {
@@ -19,7 +20,8 @@ export class AssistantReadonlyRuntimeService {
     private readonly permissionPrecheck: ToolPermissionPrecheckService,
     private readonly toolCallService: ToolCallService,
     private readonly resultProjector: AdapterResultProjectorService,
-    private readonly dataAdapterRegistry: DataAdapterRegistry
+    private readonly dataAdapterRegistry: DataAdapterRegistry,
+    private readonly queryScopeValidation: QueryScopeValidationService
   ) {}
 
   async execute(input: AssistantReadonlyRuntimeInput): Promise<AssistantReadonlyRuntimeResult> {
@@ -165,6 +167,20 @@ export class AssistantReadonlyRuntimeService {
         visibleFields,
         deniedReason: 'tool_contract_mismatch'
       };
+    }
+
+    const scopeDecision = await this.queryScopeValidation.evaluate({
+      customerScope: input.customerScope, identityContext: input.identityContext,
+      integrationId: input.hostIntegrationContext.integrationId, hostApp: input.hostIntegrationContext.hostApp,
+      requestId: input.requestId, sessionId: input.sessionId, sourceMessageId: input.sourceMessageId,
+      capabilityKey: typeof candidate.capabilityKey === 'string' ? candidate.capabilityKey : undefined,
+      bindingId: typeof candidate.bindingId === 'string' ? candidate.bindingId : undefined,
+      toolKey: tool.key, toolVersion: tool.version
+    });
+    if (scopeDecision.outcome !== 'ALLOW' && scopeDecision.outcome !== 'NOT_APPLICABLE') {
+      return { toolName: tool.key, toolVersion: tool.version, toolLifecycle: 'blocked',
+        riskLevel: tool.riskLevel, entityRef, visibleFields,
+        deniedReason: scopeDecision.outcome === 'CLARIFY' ? 'query_scope_clarification_required' : 'query_scope_denied' };
     }
 
     const startedAt = Date.now();

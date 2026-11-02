@@ -25,7 +25,7 @@ describe('Feature 012 two-Customer generation-context isolation', () => {
 function record(customerId: string, integrationId: string, content: string) {
   return {
     exchangeId: `exchange-${customerId}`, requestId: `request-${customerId}`,
-    scope: { customerId, sessionId: 'session-shared', organizationId: 'org-shared', hostApp: 'erp', actorId: 'actor-shared' },
+    scope: { customerId, integrationId, sessionId: 'session-shared', organizationId: 'org-shared', hostApp: 'erp', actorId: 'actor-shared' },
     sessionStatus: 'active', completed: true,
     userMessage: { id: `user-${customerId}`, content: 'What is the inventory?' },
     assistantMessage: { id: `assistant-${customerId}`, content, answerDecision: 'answered', finalized: true },

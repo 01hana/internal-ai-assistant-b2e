@@ -65,6 +65,7 @@ export class AssistantPlanningService {
       });
     }
     const { output, persisted } = await this.queryUnderstandingService.understandAndPersist({
+      ...(input.identityContext ? { identityContext: input.identityContext } : {}),
       requestId: input.requestId,
       sessionId: input.sessionId,
       messageId: input.messageId,
@@ -92,7 +93,8 @@ export class AssistantPlanningService {
           requestId: input.requestId,
           decomposedNeeds: toRetrievalNeedCandidates(input.text, output),
           resolvedFrame: routingFrame,
-          followUpResolution: output.capabilityFollowUpResolution?.resolvedFrame ? undefined : output.followUpResolution
+          followUpResolution: output.candidateTools.length > 0 || output.capabilityFollowUpResolution?.resolvedFrame
+            ? undefined : output.followUpResolution
         })
       : undefined;
     const executionPlan = await this.prisma.db.executionPlan.create({
@@ -133,6 +135,7 @@ export class AssistantPlanningService {
 }
 
 function toRetrievalNeedCandidates(text: string, output: QueryUnderstandingOutput): readonly RetrievalNeedCandidate[] {
+  if (isLlmUnavailable(output)) return [{ kind: 'UNSUPPORTED', reasonCode: 'LLM_NO_COMPATIBLE_TOOL' }];
   if (output.capabilityResolution?.outcome === 'NEEDS_CLARIFICATION' || output.capabilityResolution?.outcome === 'AMBIGUOUS') {
     return [{ kind: 'AMBIGUOUS', reasonCode: output.capabilityResolution.reasonCode }];
   }
@@ -176,6 +179,7 @@ function isDocumentNeed(type: string): boolean {
 }
 
 export function determinePlanningDecision(output: QueryUnderstandingOutput): ExecutionDecision {
+  if (isLlmUnavailable(output)) return ExecutionDecision.no_answer;
   if (output.capabilityResolution?.outcome === 'NEEDS_CLARIFICATION' || output.capabilityResolution?.outcome === 'AMBIGUOUS') return ExecutionDecision.clarify;
   if (output.clarificationNeeds.length > 0 || output.confidence < 0.7) {
     return ExecutionDecision.clarify;
@@ -189,11 +193,20 @@ export function determinePlanningDecision(output: QueryUnderstandingOutput): Exe
   return ExecutionDecision.continue;
 }
 
+function isLlmUnavailable(output: QueryUnderstandingOutput): boolean {
+  return output.capabilityResolution?.outcome === 'NEEDS_CLARIFICATION' &&
+    ['LLM_NO_MATCH', 'LLM_NO_ALLOWED_TOOL', 'LLM_SELECTION_FAILED'].includes(output.capabilityResolution.reasonCode);
+}
+
 function toExecutionPlanCreateInput(
   input: AssistantPlanningInput,
   output: QueryUnderstandingOutput
 ): Prisma.ExecutionPlanUncheckedCreateInput {
-  const candidateTools = normalizePlannedCandidates(output.candidateTools);
+  const candidateTools = normalizePlannedCandidates(output.candidateTools).map((candidate) =>
+    output.capabilityResolution?.outcome === 'RESOLVED'
+      ? { ...candidate, capabilityKey: output.capabilityResolution.capability.capabilityKey,
+          bindingId: output.capabilityResolution.bindingRef.bindingId }
+      : candidate);
 
   return {
     customerId: input.customerScope.customerId,

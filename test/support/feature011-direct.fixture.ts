@@ -16,6 +16,7 @@ const definitions: Readonly<Record<string, RegisteredToolDefinition>> = Object.f
   referenceTool('mock.orders.status.lookup', 'customer-a', 'entityId'),
   referenceTool('mock.work-orders.progress.lookup', 'customer-a', 'entityId'),
   referenceTool('mock.inventory.availability.lookup', 'customer-a', 'entityId'),
+  referenceTool('mock.inventory.stock.lookup', 'customer-a', 'entityId'),
   referenceTool('mock.business-partner.history.lookup', 'customer-a', 'entityId')
 ].map(([customerId, tool]) => [tool.key, Object.freeze({ ...tool, fixtureCustomerId: customerId })])) as Record<string, RegisteredToolDefinition>);
 
@@ -36,17 +37,20 @@ function referenceTool(key: string, customerId: string, argument?: string): read
 
 export async function createFeature011DirectHarness(
   relativePaths: readonly string[],
-  options: Readonly<{ additionalMonthlyToolPolicyCustomerIds?: readonly string[] }> = {}
+  options: Readonly<{ additionalMonthlyToolPolicyCustomerIds?: readonly string[];
+    additionalTools?: Readonly<Record<string, Readonly<{ customerId: string; tool: RegisteredToolDefinition }>>> }> = {}
 ) {
   const validator = new ToolRegistryService({} as never, {} as never);
   const additionalMonthlyPolicyCustomers = new Set(options.additionalMonthlyToolPolicyCustomerIds ?? []);
+  const resolvedDefinitions = { ...definitions, ...Object.fromEntries(Object.entries(options.additionalTools ?? {})
+    .map(([key, entry]) => [key, { ...entry.tool, fixtureCustomerId: entry.customerId }])) };
   const tools = {
     resolveExactExecutableTool: jest.fn(async (key: string, version: string) => {
-      const tool = definitions[key];
+      const tool = resolvedDefinitions[key];
       return tool && tool.version === version ? { tool } : { deniedReason: 'tool_not_registered' };
     }),
     resolveExactToolForCustomer: jest.fn(async (key: string, version: string, customerId: string) => {
-      const tool = definitions[key];
+      const tool = resolvedDefinitions[key];
       const owner = (tool as RegisteredToolDefinition & { fixtureCustomerId?: string } | undefined)?.fixtureCustomerId;
       return tool && tool.version === version && (
         owner === customerId || (key === 'work-orders.monthly-new-count' && additionalMonthlyPolicyCustomers.has(customerId))
@@ -55,7 +59,8 @@ export async function createFeature011DirectHarness(
         : { deniedReason: 'customer_policy_denied' };
     }),
     validateNamedOperation: jest.fn((tool: RegisteredToolDefinition, candidate: unknown) =>
-      validator.validateNamedOperation(tool, candidate))
+      validator.validateNamedOperation(tool, candidate)),
+    resolveResultPolicy: jest.fn((tool: RegisteredToolDefinition) => validator.resolveResultPolicy(tool))
   };
   const registry = new CapabilityCatalogRegistry();
   const loader = new CapabilityPackLoader(registry, tools as never, NODE_CAPABILITY_PACK_FILE_ACCESS);

@@ -48,13 +48,16 @@ export class OpenAiProvider implements LlmProvider {
       const response = await this.client.responses.create({
         model: this.getModel(),
         instructions: input.instructions,
-        input: toResponseInput(input.messages, input.evidence),
+        input: input.responseFormat === 'json'
+          ? `Respond in JSON.\n${toResponseInput(input.messages, input.evidence)}`
+          : toResponseInput(input.messages, input.evidence),
+        ...(input.responseFormat === 'json' ? { text: { format: { type: 'json_object' as const } } } : {}),
         max_output_tokens: Math.min(input.maxOutputTokens ?? 1024, 1024)
       }, { maxRetries: 0 });
 
       return {
         content: response.output_text ?? '',
-        finishReason: 'stop',
+        finishReason: response.status === undefined || response.status === 'completed' ? 'stop' : 'error',
         metadata: this.getMetadata({ requestId: input.requestId })
       };
     } catch {

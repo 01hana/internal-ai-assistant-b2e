@@ -1,7 +1,9 @@
 import { Prisma } from '../generated/prisma/client';
 import { RiskLevel } from '../generated/prisma/enums';
+import type { RequestIdentityContext } from '../identity/identity-context.types';
 import { HostIntegrationContext } from '../host-integration/host-integration.types';
 import type { CapabilityResolutionResultV1 } from '../capabilities/capability-pack.types';
+import type { PreCandidateQueryScopeApplicabilityV1 } from '../query-scope/query-scope.types';
 import { NormalizedPageContext } from '../assistant/page-context/page-context.types';
 import type { BoundedConversationContext } from '../assistant/conversation/conversation.types';
 import type {
@@ -12,6 +14,7 @@ import type {
 } from '../assistant/conversation/conversation.types';
 
 export interface QueryUnderstandingInput {
+  identityContext?: RequestIdentityContext;
   requestId: string;
   sessionId: string;
   messageId: string;
@@ -120,6 +123,7 @@ export interface QueryUnderstandingOutput {
   readonly currentCapabilityFrame?: CapabilityFollowUpFrameV1;
   readonly capabilityFollowUpResolution?: CapabilityFollowUpResolutionDecisionV1;
   readonly capabilityResolution?: CapabilityResolutionResultV1;
+  readonly preCandidateScopeApplicability?: PreCandidateQueryScopeApplicabilityV1;
 }
 
 export interface PersistedQueryUnderstandingResult {

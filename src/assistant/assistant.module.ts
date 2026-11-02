@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { DynamicModule, Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { EvidenceModule } from '../evidence/evidence.module';
@@ -8,6 +8,7 @@ import { LlmModule } from '../llm/llm.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { QueryUnderstandingModule } from '../query-understanding/query-understanding.module';
+import { CapabilitiesModule } from '../capabilities/capabilities.module';
 import { RetrievalModule } from '../retrieval/retrieval.module';
 import { ToolsModule } from '../tools/tools.module';
 import { HostIntegrationModule } from '../host-integration/host-integration.module';
@@ -44,6 +45,18 @@ import { GenerationEligibilityService } from './generation/generation-eligibilit
 import { GenerationContextProjectorService } from './generation/generation-context-projector.service';
 import { GroundedGenerationPromptService } from './generation/grounded-generation-prompt.service';
 import { GroundedAnswerFinalizerService } from './generation/grounded-answer-finalizer.service';
+import {
+  QUERY_SCOPE_ACTIVATIONS,
+  QUERY_SCOPE_REGISTRATIONS,
+  QueryScopeActivation,
+  QueryScopeRegistration
+} from '../query-scope/query-scope.types';
+import { QueryScopeValidationService } from '../query-scope/query-scope-validation.service';
+
+export interface AssistantQueryScopeComposition {
+  readonly activations: () => readonly QueryScopeActivation[];
+  readonly registrations: () => readonly QueryScopeRegistration[];
+}
 
 @Module({
   imports: [
@@ -51,6 +64,7 @@ import { GroundedAnswerFinalizerService } from './generation/grounded-answer-fin
     AuditModule,
     ApprovalsModule,
     QueryUnderstandingModule,
+    CapabilitiesModule,
     RetrievalModule,
     IdentityModule,
     LlmModule,
@@ -76,6 +90,7 @@ import { GroundedAnswerFinalizerService } from './generation/grounded-answer-fin
     EvidenceConflictDetectorService,
     NoAnswerGateService,
     AssistantReadonlyRuntimeService,
+    QueryScopeValidationService,
     ToolCallService,
     AssistantSseEventBuilder,
     ConversationContextRepository,
@@ -108,4 +123,17 @@ import { GroundedAnswerFinalizerService } from './generation/grounded-answer-fin
     AnswerDecisionService
   ]
 })
-export class AssistantModule {}
+export class AssistantModule {
+  static register(queryScope: AssistantQueryScopeComposition = {
+    activations: () => Object.freeze([]),
+    registrations: () => Object.freeze([])
+  }): DynamicModule {
+    return {
+      module: AssistantModule,
+      providers: [
+        { provide: QUERY_SCOPE_ACTIVATIONS, useFactory: queryScope.activations },
+        { provide: QUERY_SCOPE_REGISTRATIONS, useFactory: queryScope.registrations }
+      ]
+    };
+  }
+}

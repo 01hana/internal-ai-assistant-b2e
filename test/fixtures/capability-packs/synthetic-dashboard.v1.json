@@ -1,0 +1,40 @@
+{
+  "version": "1",
+  "packId": "synthetic-dashboard-eval",
+  "packVersion": "1.0.0",
+  "customerId": "customer-a",
+  "integrationId": "integration-erp",
+  "hostApps": ["erp"],
+  "active": true,
+  "capabilities": [
+    {
+      "version": "1", "capabilityKey": "dashboard.snapshot", "active": true,
+      "kind": "READ_ONLY_TOOL", "safeLabel": "合成儀表板統計",
+      "semanticProfiles": [{ "version": "1", "locale": "zh-TW", "aliases": ["合成儀表板"], "examples": ["讀取合成儀表板"],
+        "resourceTerms": ["dashboard"], "intentTerms": ["read"], "metricTerms": ["statistics"],
+        "requiredSignalGroups": ["resource", "metric"] }],
+      "parameters": []
+    },
+    {
+      "version": "1", "capabilityKey": "orders.status", "active": true,
+      "kind": "READ_ONLY_TOOL", "safeLabel": "合成訂單明細",
+      "semanticProfiles": [{ "version": "1", "locale": "zh-TW", "aliases": ["合成訂單明細"], "examples": ["讀取合成訂單明細"],
+        "resourceTerms": ["order"], "intentTerms": ["read"], "metricTerms": ["status"],
+        "requiredSignalGroups": ["resource", "metric"] }],
+      "parameters": [{ "version": "1", "parameterName": "entityRef", "type": "bounded_string",
+        "required": true, "semanticTerms": ["訂單編號"], "maxLength": 64,
+        "tokenSyntax": "SAFE_IDENTIFIER", "prefixes": ["SO-"] }]
+    }
+  ],
+  "bindings": [
+    { "version": "1", "bindingId": "dashboard.snapshot", "bindingVersion": "1.0.0", "active": true,
+      "capabilityKey": "dashboard.snapshot", "semanticConstraints": [],
+      "target": { "kind": "TOOL", "toolKey": "synthetic.dashboard.snapshot", "toolVersion": "1.0.0" },
+      "mappings": [] },
+    { "version": "1", "bindingId": "orders.status", "bindingVersion": "1.0.0", "active": true,
+      "capabilityKey": "orders.status", "semanticConstraints": [],
+      "target": { "kind": "TOOL", "toolKey": "mock.orders.status.lookup", "toolVersion": "1.0.0" },
+      "mappings": [{ "version": "1", "targetArgument": "entityId", "source": "CANONICAL_PARAMETER",
+        "parameterName": "entityRef" }] }
+  ]
+}

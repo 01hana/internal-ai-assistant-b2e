@@ -32,7 +32,7 @@ function context(exchanges: unknown[]) {
     return [{ exchangeId: value.exchangeId, userText: value.userText, assistantText: value.assistantText,
       createdAt: value.createdAt, capabilityScope: (value.capabilityFrame as { scope?: unknown } | undefined)?.scope }];
   });
-  return { scope: { customerId: scope.customerId, sessionId: scope.sessionId, organizationId: scope.organizationId, hostApp: scope.hostApp, actorId: scope.actorId },
+  return { scope: { customerId: scope.customerId, integrationId: scope.integrationId, sessionId: scope.sessionId, organizationId: scope.organizationId, hostApp: scope.hostApp, actorId: scope.actorId },
     exchanges, completedAssistantAnswers, selectedExchangeIdsNewestFirst: [], chronologicalExchangeIds: [], semanticFrames: [], capabilityFrames: [], evidenceRefs: [], evidenceRefIds, rejectedReasonCodes: [] };
 }
 
@@ -47,7 +47,7 @@ describe('Feature 012 bounded generation context', () => {
     const result = projector.project({ scope, context: input as never, bundle: bundle() });
     expect(result.priorExchanges.map((item: { assistantText: string }) => item.assistantText)).toEqual(['answer-1']);
     expect(JSON.stringify(result)).not.toMatch(/foreign-|unproven-/);
-    for (const field of ['customerId', 'sessionId', 'organizationId', 'hostApp', 'actorId'] as const) {
+    for (const field of ['customerId', 'integrationId', 'sessionId', 'organizationId', 'hostApp', 'actorId'] as const) {
       const foreign = context([exchange(1)]);
       foreign.scope[field] = `other-${field}`;
       expect(() => projector.project({ scope, context: foreign as never, bundle: bundle() })).toThrow('GENERATION_CONTEXT_INVALID');

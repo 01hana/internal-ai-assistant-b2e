@@ -1,0 +1,44 @@
+{
+  "version": "1",
+  "packId": "customer-c-hr-leave",
+  "packVersion": "1.0.0",
+  "customerId": "customer-c",
+  "integrationId": "integration-hr",
+  "hostApps": ["hr-portal"],
+  "active": true,
+  "capabilities": [{
+    "version": "1",
+    "capabilityKey": "leave.request-count",
+    "active": true,
+    "kind": "READ_ONLY_TOOL",
+    "safeLabel": "請假申請數量",
+    "semanticProfiles": [{
+      "version": "1",
+      "locale": "zh-TW",
+      "aliases": ["查詢今天請假申請數量"],
+      "examples": ["查詢今天請假申請數量"],
+      "resourceTerms": ["請假申請"],
+      "intentTerms": ["查詢"],
+      "metricTerms": ["數量"],
+      "requiredSignalGroups": ["resource", "metric"]
+    }],
+    "parameters": [{
+      "version": "1", "parameterName": "timeRange", "type": "enum", "required": true,
+      "semanticTerms": ["期間"],
+      "values": [{ "value": "today", "aliases": ["今天", "今日"] }]
+    }]
+  }],
+  "bindings": [{
+    "version": "1",
+    "bindingId": "leave.request-count",
+    "bindingVersion": "1.0.0",
+    "active": true,
+    "capabilityKey": "leave.request-count",
+    "semanticConstraints": [{
+      "version": "1", "parameterName": "timeRange", "operator": "ENUM_VALUE_IN",
+      "allowedValues": ["today"]
+    }],
+    "target": { "kind": "TOOL", "toolKey": "hr.leave-request-count", "toolVersion": "1.0.0" },
+    "mappings": []
+  }]
+}

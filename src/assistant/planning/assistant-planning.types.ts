@@ -1,6 +1,7 @@
 import { Prisma } from '../../generated/prisma/client';
 import { ExecutionDecision, RiskLevel } from '../../generated/prisma/enums';
 import { CustomerScope } from '../../identity/customer-scope.types';
+import type { RequestIdentityContext } from '../../identity/identity-context.types';
 import { HostIntegrationContext } from '../../host-integration/host-integration.types';
 import { NormalizedPageContext } from '../page-context/page-context.types';
 import {
@@ -12,6 +13,7 @@ import type { GroundedRetrievalPlan } from '../../retrieval/grounded-retrieval.t
 import type { BoundedConversationContext } from '../conversation/conversation.types';
 
 export interface AssistantPlanningInput {
+  identityContext?: RequestIdentityContext;
   customerScope: CustomerScope;
   requestId: string;
   sessionId: string;
@@ -34,6 +36,8 @@ export interface AssistantPlanningResult {
 export interface PlannedOperationCandidate {
   key: string;
   version?: string;
+  capabilityKey?: string;
+  bindingId?: string;
   arguments: Record<string, unknown>;
   reason: string;
 }

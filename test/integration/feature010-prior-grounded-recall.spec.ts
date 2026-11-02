@@ -10,6 +10,15 @@ import { CUSTOMER_SCOPE_FIXTURES, createCustomerScopeFixtureIdentityContext } fr
 import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
+  let previousToolSelection: string | undefined;
+  beforeAll(() => {
+    previousToolSelection = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
+  });
+  afterAll(() => {
+    if (previousToolSelection === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousToolSelection;
+  });
   let app: INestApplication;
   let state: Us1TestState;
   beforeEach(async () => {
@@ -49,7 +58,7 @@ describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
     expect(state.queryUnderstandingResults.find((item) => item.requestId === 'req-f010-tool-seed')?.resolvedReferences)
       .toMatchObject({ kind: 'CAPABILITY_FOLLOW_UP_FRAME_ENVELOPE' });
     const loaded = await app.get(ConversationContextLoaderService).load({ scope: {
-      customerId: 'customer-a', sessionId: 'session-owned-001', organizationId: 'org-shared',
+      customerId: 'customer-a', integrationId: 'integration-erp', sessionId: 'session-owned-001', organizationId: 'org-shared',
       hostApp: 'erp', actorId: 'actor-shared'
     } });
     expect({ exchanges: loaded.exchanges.length, rejectionCodes: loaded.rejectedReasonCodes,
@@ -58,6 +67,62 @@ describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
     await send('req-f010-tool-recall', '你剛說庫存是多少？');
     expect(counts()).toEqual(before);
     expect(metadata('req-f010-tool-recall')).toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY', coverage: 'COMPLETE' }));
+  });
+
+  it.each([
+    ['unknown-metric', '你剛說庫存周轉率是多少？'],
+    ['different-metric', '你剛說庫存現量是多少？'],
+    ['ambiguous-target', '你剛說的是多少？'],
+    ['different-entity', '你剛說 SKU-DEMO-BLUE 庫存是多少？'],
+    ['different-company', '你剛說其他公司的庫存是多少？']
+  ])('does not reuse prior Tool evidence for %s', async (label, question) => {
+    await send(`req-f010-recall-negative-seed-${label}`, '查詢庫存可用量 料號 SKU-DEMO-RED');
+    const priorId = state.evidenceRefs.at(-1)?.id;
+    const before = counts();
+    await send(`req-f010-recall-negative-${label}`, question);
+    const decision = metadata(`req-f010-recall-negative-${label}`);
+    expect(decision).not.toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
+    expect(decision?.evidenceIds ?? []).not.toContain(priorId);
+    expect(state.answerDecisions.find((item) => item.requestId === `req-f010-recall-negative-${label}`)?.status).not.toBe('answered');
+    expect(counts().tools).toBe(before.tools);
+  });
+
+  it('does not recall without a completed exchange or traceable evidence', async () => {
+    const emptyBefore = counts();
+    await send('req-f010-recall-no-prior', '你剛說庫存是多少？');
+    expect(metadata('req-f010-recall-no-prior')).not.toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
+    expect(counts()).toEqual(emptyBefore);
+
+    await send('req-f010-recall-untraceable-seed', '查詢庫存可用量 料號 SKU-DEMO-RED');
+    const refIndex = state.evidenceRefs.findIndex((item) => item.requestId === 'req-f010-recall-untraceable-seed');
+    expect(refIndex).toBeGreaterThanOrEqual(0);
+    state.evidenceRefs.splice(refIndex, 1);
+    const before = counts();
+    await send('req-f010-recall-untraceable', '你剛說庫存是多少？');
+    expect(metadata('req-f010-recall-untraceable')).not.toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
+    expect(counts()).toEqual(before);
+  });
+
+  it('does not use an old Pack version as the current recall target', async () => {
+    await send('req-f010-recall-pack-seed', '查詢庫存可用量 料號 SKU-DEMO-RED');
+    const understanding = state.queryUnderstandingResults.find((item) => item.requestId === 'req-f010-recall-pack-seed')!;
+    const envelope = understanding.resolvedReferences as Record<string, any>;
+    expect(envelope.kind).toBe('CAPABILITY_FOLLOW_UP_FRAME_ENVELOPE');
+    understanding.resolvedReferences = { ...envelope,
+      capabilityFrame: { ...envelope.capabilityFrame, packVersion: '0.9.0' } };
+    const before = counts();
+    await send('req-f010-recall-pack-mismatch', '你剛說庫存是多少？');
+    expect(metadata('req-f010-recall-pack-mismatch')).not.toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
+    expect(counts()).toEqual(before);
+  });
+
+  it('keeps multiple incompatible prior topics ambiguous when the recall target is omitted', async () => {
+    await send('req-f010-recall-multi-document', '退貨流程 SOP 怎麼說？');
+    await send('req-f010-recall-multi-tool', '查詢庫存可用量 料號 SKU-DEMO-RED');
+    const before = counts();
+    await send('req-f010-recall-multi-ambiguous', '你剛說的是多少？');
+    expect(metadata('req-f010-recall-multi-ambiguous')).not.toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
+    expect(counts()).toEqual(before);
   });
 
   it('re-retrieves document evidence after version change or current access revocation', async () => {
@@ -124,7 +189,7 @@ describe('Feature 010 current-authorized prior grounded recall (T066)', () => {
       plan: { mode: 'RAG', reasonCode: 'DOCUMENT_NEED', resolvedFrame: { topicKey: 'expense-reimbursement-policy',
         resource: { value: 'expenseReimbursement', source: 'inherited', sourceMessageId: 'message-prior', confidence: 1 } },
         needs: [{ id: 'need-expense', kind: 'DOCUMENT', query: 'expense reimbursement policy', topicKey: 'expense-reimbursement-policy' }] },
-      context: { scope: { customerId: 'customer-a', sessionId: 'session-owned-001', organizationId: 'org-001', hostApp: 'erp', actorId: 'actor-001' },
+      context: { scope: { customerId: 'customer-a', integrationId: 'integration-erp', sessionId: 'session-owned-001', organizationId: 'org-001', hostApp: 'erp', actorId: 'actor-001' },
         selectedExchangeIdsNewestFirst: ['exchange-prior'], chronologicalExchangeIds: ['exchange-prior'],
         exchanges: [{ exchangeId: 'exchange-prior', requestId: 'req-f010-generic-topic-seed', userMessageId: 'message-prior',
           assistantMessageId: prior.messageId!, createdAt: prior.timestamp.toISOString(),

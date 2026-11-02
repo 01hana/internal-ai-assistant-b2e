@@ -52,12 +52,7 @@ export class CapabilityBindingResolverService {
       if (definition.required && !Object.prototype.hasOwnProperty.call(parameters, definition.parameterName)) invalid();
     }
     const reference = Object.freeze({ packId: catalog.packId, packVersion: catalog.packVersion, capabilityKey, safeLabel: capability.safeLabel });
-    const compatible: CapabilityBindingV1[] = [];
-    for (const binding of catalog.bindings) {
-      if (!binding.active || binding.capabilityKey !== capabilityKey) continue;
-      validateDeclaration(capability, binding);
-      if (isCompatible(binding, parameters)) compatible.push(binding);
-    }
+    const compatible = this.compatibleBindings(catalog, capability, parameters);
     if (compatible.length === 0) {
       return Object.freeze({ version: '1', outcome: 'CAPABILITY_UNAVAILABLE', capability: reference, parameters: Object.freeze({ ...parameters }), reasonCode: 'NO_COMPATIBLE_ACTIVE_BINDING' });
     }
@@ -83,6 +78,40 @@ export class CapabilityBindingResolverService {
       bindingRef: Object.freeze({ bindingId: binding.bindingId, bindingVersion: binding.bindingVersion }),
       toolCandidate: Object.freeze({ key: resolved.tool.key, version: resolved.tool.version, arguments: validation.operation.arguments, reason: 'customer_capability_binding' })
     });
+  }
+
+  /** Metadata-only selection for a deny-only scope check; never materializes a Tool candidate. */
+  resolveApplicableBindingMetadata(
+    catalog: ScopedCapabilityCatalogV1,
+    capabilityKey: string,
+    parameters: Readonly<Record<string, CanonicalParameterValueV1>>
+  ): Readonly<{ bindingId: string; bindingVersion: string; toolKey: string; toolVersion: string }> | undefined {
+    const capability = catalog.capabilities.find((item) => item.active && item.capabilityKey === capabilityKey);
+    if (!capability || capability.parameters.some((definition) => definition.required &&
+      !Object.prototype.hasOwnProperty.call(parameters, definition.parameterName))) return undefined;
+    if (Object.entries(parameters).some(([name, value]) => {
+      const definition = capability.parameters.find((item) => item.parameterName === name);
+      return !definition || validateCapabilityCanonicalValue(definition, value) !== value;
+    })) return undefined;
+    const compatible = this.compatibleBindings(catalog, capability, parameters);
+    if (compatible.length !== 1) return undefined;
+    const binding = compatible[0];
+    return Object.freeze({ bindingId: binding.bindingId, bindingVersion: binding.bindingVersion,
+      toolKey: binding.target.toolKey, toolVersion: binding.target.toolVersion });
+  }
+
+  private compatibleBindings(
+    catalog: ScopedCapabilityCatalogV1,
+    capability: CapabilityDefinitionV1,
+    parameters: Readonly<Record<string, CanonicalParameterValueV1>>
+  ): CapabilityBindingV1[] {
+    const compatible: CapabilityBindingV1[] = [];
+    for (const binding of catalog.bindings) {
+      if (!binding.active || binding.capabilityKey !== capability.capabilityKey) continue;
+      validateDeclaration(capability, binding);
+      if (isCompatible(binding, parameters)) compatible.push(binding);
+    }
+    return compatible;
   }
 
   private async resolveExactTool(binding: CapabilityBindingV1) {

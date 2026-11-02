@@ -140,6 +140,17 @@ describe('OpenAiProvider', () => {
     );
   });
 
+  it('passes JSON response mode to Responses API and rejects an incomplete response', async () => {
+    const client = createClientMock({ output_text: '{"decision":"none"}', status: 'incomplete' });
+    const provider = new OpenAiProvider(createConfigService(), client);
+    const result = await provider.generateAnswer({ requestId: 'req-json', messages: [], evidence: [], responseFormat: 'json' });
+    expect(client.responses.create).toHaveBeenCalledWith(expect.objectContaining({
+      text: { format: { type: 'json_object' } },
+      input: expect.stringContaining('Respond in JSON.')
+    }), { maxRetries: 0 });
+    expect(result.finishReason).toBe('error');
+  });
+
   it('returns safe fallback metadata when the SDK call fails without exposing the API key', async () => {
     const client = {
       responses: {
@@ -218,7 +229,7 @@ function createConfigService() {
   } as unknown as ConfigService<EnvironmentVariables, true>;
 }
 
-function createClientMock(response: { output_text?: string }) {
+function createClientMock(response: { output_text?: string; status?: string }) {
   return {
     responses: {
       create: jest.fn().mockResolvedValue(response)

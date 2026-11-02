@@ -45,6 +45,8 @@ import {
 import { isValidNormalizedKnowledgeDocumentAccessPolicy } from '../../src/retrieval/knowledge-access-policy.types';
 import { DataAdapterRegistrations } from '../../src/connectors/data-adapter-registration';
 import type { ToolRegistryService } from '../../src/tools/tool-registry.service';
+import type { QueryScopeActivation, QueryScopeRegistration } from '../../src/query-scope/query-scope.types';
+import { ConfigService } from '@nestjs/config';
 
 type SessionRecord = {
   id: string;
@@ -435,11 +437,15 @@ export type Us1TestState = MockState;
 export type { InternalIdentityTestConfig } from './internal-identity-test-module.helper';
 
 export type Us1TestAppOptions = {
+  /** Test-owned isolated PostgreSQL URL; Prisma remains mocked until a test explicitly swaps its provider. */
+  isolatedDatabaseUrl?: string;
   /** Opt-in durable history seed; most request-path fixtures start without prior completed turns. */
   seedCompletedHistoryDecision?: boolean;
   /** Add test-only records before capability bootstrap validates exact Tool bindings. */
   augmentStateBeforeInit?: (state: Us1TestState) => void;
   capabilityPackPaths?: readonly string[];
+  queryScopeRegistrations?: readonly QueryScopeRegistration[];
+  queryScopeActivations?: readonly QueryScopeActivation[];
   internalIdentity?: InternalIdentityTestConfig;
   /** Retains the production remote-JWKS verifier for transport-level identity tests. */
   internalIdentityVerifierMode?: 'static' | 'remote';
@@ -454,7 +460,7 @@ export type Us1TestAppOptions = {
 export async function createUs1TestAppWithState(
   options: Us1TestAppOptions = {}
 ): Promise<{ app: INestApplication; state: Us1TestState; prismaMock: ReturnType<typeof createPrismaMock> }> {
-  process.env.DATABASE_URL = 'postgresql://assistant:assistant_dev_password@localhost:5432/assistant_dev';
+  process.env.DATABASE_URL = options.isolatedDatabaseUrl ?? 'postgresql://assistant:assistant_dev_password@localhost:5432/assistant_dev';
   process.env.POSTGRES_USER = 'assistant';
   process.env.POSTGRES_PASSWORD = 'assistant_dev_password';
   process.env.POSTGRES_DB = 'assistant_dev';
@@ -499,6 +505,7 @@ export async function createUs1TestAppWithState(
   const { createStaticInternalIdentityTokenVerifier } = await import('../../src/identity/internal-identity-token-verifier');
   const { INTERNAL_IDENTITY_CONFIG, INTERNAL_IDENTITY_TOKEN_VERIFIER } = await import('../../src/identity/identity-token.types');
   const { PrismaService } = await import('../../src/prisma/prisma.service');
+  const { QUERY_SCOPE_ACTIVATIONS, QUERY_SCOPE_REGISTRATIONS } = await import('../../src/query-scope/query-scope.types');
   const builder = Test.createTestingModule({
     imports: [AppModule, MockConnectorModule],
     providers: [{ provide: INTERNAL_IDENTITY_TEST_CONFIG, useValue: internalIdentity }]
@@ -536,6 +543,13 @@ export async function createUs1TestAppWithState(
     }))
   );
   builder.overrideProvider(MockConnectorAdapter).useValue(testMockAdapter);
+  if (options.queryScopeRegistrations) {
+    builder.overrideProvider(QUERY_SCOPE_REGISTRATIONS).useValue(options.queryScopeRegistrations);
+  }
+  if (options.queryScopeActivations || options.queryScopeRegistrations) {
+    builder.overrideProvider(QUERY_SCOPE_ACTIVATIONS)
+      .useValue(options.queryScopeActivations ?? options.queryScopeRegistrations ?? []);
+  }
   if (options.internalIdentityVerifierMode !== 'remote') {
     builder.overrideProvider(INTERNAL_IDENTITY_TOKEN_VERIFIER)
       .useValue(createStaticInternalIdentityTokenVerifier(internalIdentity));
@@ -554,6 +568,10 @@ export async function createUs1TestAppWithState(
       .useValue(options.dataAdapterRegistrations ?? testMockRegistrations);
   }
   const moduleRef = await builder.compile();
+  // ConfigModule can cache the first test app's environment across multiple app graphs.
+  // Each synthetic app must bootstrap exactly the Pack paths requested for that graph.
+  moduleRef.get(ConfigService, { strict: false }).set('ASSISTANT_CAPABILITY_PACK_PATHS_JSON',
+    process.env.ASSISTANT_CAPABILITY_PACK_PATHS_JSON);
 
   // Test-only bridge for predecessor suites that assert the completed-answer boundary.
   // Production always consumes provider-native chunks; streaming timing tests replace this mock.

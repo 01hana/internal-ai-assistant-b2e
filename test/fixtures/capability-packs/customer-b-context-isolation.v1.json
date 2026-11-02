@@ -1,0 +1,29 @@
+{
+  "version": "1",
+  "packId": "customer-b-context-isolation",
+  "packVersion": "1.0.0",
+  "customerId": "customer-b",
+  "integrationId": "integration-erp",
+  "hostApps": ["erp"],
+  "active": true,
+  "capabilities": [{
+    "version": "1",
+    "capabilityKey": "demo.dashboard.kpistats",
+    "active": true,
+    "kind": "READ_ONLY_TOOL",
+    "safeLabel": "隔離的庫存概況",
+    "semanticProfiles": [{
+      "version": "1", "locale": "zh-TW",
+      "aliases": ["查詢庫存概況"], "examples": ["查詢庫存現量"],
+      "resourceTerms": ["庫存"], "intentTerms": ["查詢"],
+      "metricTerms": ["現量", "可用量"], "requiredSignalGroups": ["resource", "metric"]
+    }],
+    "parameters": []
+  }],
+  "bindings": [{
+    "version": "1", "bindingId": "customer-b-stock-isolated", "bindingVersion": "1.0.0",
+    "active": true, "capabilityKey": "demo.dashboard.kpistats", "semanticConstraints": [],
+    "target": { "kind": "TOOL", "toolKey": "demo.customer-b.inventory.snapshot", "toolVersion": "1.0.0" },
+    "mappings": []
+  }]
+}

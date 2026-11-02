@@ -6,6 +6,7 @@ import { createCustomerScopeFromIdentityContext } from '../../src/identity/custo
 import { HostIntegrationRequestFactory } from '../../src/host-integration/host-integration-request.factory';
 import type { DocumentRetrievalNeed } from '../../src/retrieval/grounded-retrieval.types';
 import { RetrievalService } from '../../src/retrieval/retrieval.service';
+import { LlmProviderService } from '../../src/llm/llm-provider.service';
 import { CUSTOMER_SCOPE_FIXTURES, createCustomerScopeFixtureIdentityContext } from '../support/customer-scope-fixtures';
 import { loadFeature010Export } from '../support/feature010-red-contract.helper';
 import {
@@ -20,16 +21,36 @@ type DocumentLane = { execute(input: Record<string, unknown>): Promise<any> };
 type DocumentLaneConstructor = new (...args: never[]) => DocumentLane;
 
 describe('Feature 010 grounded document retrieval RED (T044)', () => {
+  let previousToolSelection: string | undefined;
+  beforeAll(() => {
+    previousToolSelection = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
+  });
+  afterAll(() => {
+    if (previousToolSelection === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousToolSelection;
+  });
   let app: INestApplication;
   let state: Us1TestState;
   let prismaMock: any;
+  let generate: jest.SpyInstance;
 
   beforeEach(async () => {
     ({ app, state, prismaMock } = await createUs1TestAppWithState());
+    generate = jest.spyOn(app.get(LlmProviderService).getSelectedProvider(), 'generateAnswer').mockImplementation(async (input) => ({
+      content: input.requestId === 'req-f010-p5-sop'
+        ? '退貨流程須先確認訂單狀態與收貨紀錄，再依 SOP 建立退貨申請。'
+        : '員工旅遊補助依辦法申請，申請期限為旅遊結束後三十日內。',
+      finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'deterministic-test', fallbackUsed: false }
+    }));
     await seedTravelPolicy(prismaMock);
   });
 
-  afterEach(async () => app.close());
+  afterEach(async () => {
+    await app.close();
+    jest.restoreAllMocks();
+  });
 
   it('plans and executes standalone travel policy through one canonical RAG lane with zero ToolCalls', async () => {
     const before = counts();
@@ -47,9 +68,13 @@ describe('Feature 010 grounded document retrieval RED (T044)', () => {
   });
 
   it('persists the resolved travel topic and application-deadline aspect in the follow-up retrieval query', async () => {
-    await send('req-f010-p5-seed', '公司的員工旅遊補助規定是什麼？');
+    const seedResponse = await send('req-f010-p5-seed', '公司的員工旅遊補助規定是什麼？');
+    expect(parseSseResponse(seedResponse.text).map((event) => event.event)).toEqual(['answer_delta', 'final']);
+    expect(state.answerDecisions.find((item) => item.requestId === 'req-f010-p5-seed')?.status).toBe('answered');
     const before = counts();
     const { plan, result } = await planAndRun('req-f010-p5-followup', '那申請期限呢？');
+    expect(state.auditEvents.find((item) => item.requestId === 'req-f010-p5-followup' && item.eventType === 'conversation_context_loaded')?.metadata)
+      .toEqual(expect.objectContaining({ exchangeCount: 1 }));
     expect(plan.groundedRetrievalPlan).toMatchObject({ mode: 'RAG', resolvedFrame: expect.any(Object) });
     expect(result.needResult.status).toBe('COVERED');
     expect(counts()).toEqual({ retrievalRuns: before.retrievalRuns + 1, toolCalls: before.toolCalls });
@@ -65,6 +90,13 @@ describe('Feature 010 grounded document retrieval RED (T044)', () => {
     expect(response.status).toBe(200);
     expect(parseSseResponse(response.text).at(-1)?.data?.data?.answerDecision).toBe('answered');
     expect(counts()).toEqual({ retrievalRuns: before.retrievalRuns + 1, toolCalls: before.toolCalls });
+    expect(state.executionPlans.at(-1)?.taskType).toBe('document_knowledge_lookup');
+    expect(state.evidenceRefs.filter((item) => item.requestId === 'req-f010-p5-sop')).not.toHaveLength(0);
+    expect(generate).toHaveBeenCalledWith(expect.objectContaining({
+      requestId: 'req-f010-p5-sop', messages: expect.arrayContaining([
+        expect.objectContaining({ role: 'tool', content: expect.stringContaining('<UNTRUSTED_DOCUMENT_EVIDENCE>') })
+      ])
+    }));
   });
 
   it('returns an unsupported need with no evidence or citations when no selected document exists', async () => {

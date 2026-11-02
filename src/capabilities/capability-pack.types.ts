@@ -19,6 +19,7 @@ export interface CapabilityDefinitionV1 {
   readonly kind: 'READ_ONLY_TOOL';
   readonly safeLabel: string;
   readonly semanticProfiles: readonly CapabilitySemanticMetadataV1[];
+  readonly followUpSemanticEvidence?: Readonly<{ readonly version: '1'; readonly targetTerms: readonly string[] }>;
   readonly parameters: readonly CapabilityParameterDefinitionV1[];
 }
 
@@ -142,6 +143,14 @@ export type CapabilityResolutionResultV1 =
       readonly version: '1';
       readonly outcome: 'NEEDS_CLARIFICATION';
       readonly reasonCode: 'CAPABILITY_NOT_RECOGNIZED';
+      readonly missingParameters: readonly [];
+      readonly invalidParameters: readonly [];
+      readonly conflictingParameters: readonly [];
+    }
+  | {
+      readonly version: '1';
+      readonly outcome: 'NEEDS_CLARIFICATION';
+      readonly reasonCode: 'LLM_NO_MATCH' | 'LLM_NO_ALLOWED_TOOL' | 'LLM_SELECTION_FAILED';
       readonly missingParameters: readonly [];
       readonly invalidParameters: readonly [];
       readonly conflictingParameters: readonly [];

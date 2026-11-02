@@ -13,6 +13,22 @@ import {
 } from '../../src/tools/tool-registry.types';
 
 describe('AssistantReadonlyRuntimeService', () => {
+  it('[CORE_CONTRACT] rechecks query scope on every direct runtime attempt after permission and before ToolCall', async () => {
+    const permission = jest.fn().mockResolvedValue({ allowed: true });
+    const scope = jest.fn().mockResolvedValue({ outcome: 'DENY', reason: 'QUERY_SCOPE_TARGET_UNVERIFIED' });
+    const startToolCall = jest.fn();
+    const registrySelect = jest.fn();
+    const service = createRuntimeService({ checkResolvedCustomerTool: permission,
+      queryScopeEvaluate: scope, startToolCall, registrySelect });
+    const input = runtimeInput();
+    await service.execute(input);
+    await service.execute(input);
+    expect(permission).toHaveBeenCalledTimes(2);
+    expect(scope).toHaveBeenCalledTimes(2);
+    expect(startToolCall).not.toHaveBeenCalled();
+    expect(registrySelect).not.toHaveBeenCalled();
+  });
+
   it('rejects a version-pinned contract drift before creating any ToolCall or selecting a Connector', async () => {
     const resolveExactToolForCustomer = jest.fn().mockResolvedValue({ deniedReason: 'tool_not_registered' });
     const resolveToolForCustomer = jest.fn().mockResolvedValue({ resolved: {
@@ -754,7 +770,8 @@ describe('ToolCallService', () => {
     ));
     const scope = createCustomerScopeFromIdentityContext(identityContext());
     const service = new ToolCallService(
-      { db: { toolCall: { findFirst } } } as unknown as PrismaService,
+      { db: { assistantSession: { findFirst: jest.fn().mockResolvedValue({ id: 'session-001' }) },
+        toolCall: { findFirst } } } as unknown as PrismaService,
       { appendCustomerToolEvent: jest.fn() } as never
     );
 
@@ -769,7 +786,10 @@ describe('ToolCallService', () => {
     const foreign = { id: 'tool-call-private', customerId: 'customer-b', sessionId: 'session-001', messageId: 'message-001', outputSummary: { secret: 'never-disclose' }, errorCode: 'PRIVATE', status: ToolCallStatus.failed };
     const findFirst = jest.fn().mockResolvedValue(null);
     const scope = createCustomerScopeFromIdentityContext({ ...identityContext(), customer: { customerId, integrationId: 'integration-erp' } });
-    const service = new ToolCallService({ db: { toolCall: { findFirst } } } as unknown as PrismaService, { appendCustomerToolEvent: jest.fn() } as never);
+    const service = new ToolCallService({ db: {
+      assistantSession: { findFirst: jest.fn().mockResolvedValue({ id: sessionId }) },
+      toolCall: { findFirst }
+    } } as unknown as PrismaService, { appendCustomerToolEvent: jest.fn() } as never);
 
     await expect(service.getVisibleToolCall({ customerScope: scope, toolCallId: foreign.id, sessionId, messageId })).rejects.toMatchObject({ status: 404, response: { error: 'NOT_FOUND' } });
     expect(JSON.stringify((await findFirst.mock.results[0].value) ?? {})).not.toContain('never-disclose');
@@ -792,6 +812,7 @@ function createRuntimeService(overrides?: {
   failToolCall?: jest.Mock;
   blockToolCall?: jest.Mock;
   projectorProject?: jest.Mock;
+  queryScopeEvaluate?: jest.Mock;
 }) {
   const selectedAdapterExecute = overrides?.connectorExecute ?? jest.fn().mockResolvedValue({
     status: 'succeeded',
@@ -860,7 +881,8 @@ function createRuntimeService(overrides?: {
         overrides?.projectorProject ??
         jest.fn().mockReturnValue({ projected: true, result: safeProjectedResult({ status: 'picking' }) })
     } as never,
-    { select: registrySelect } as never
+    { select: registrySelect } as never,
+    { evaluate: overrides?.queryScopeEvaluate ?? jest.fn().mockResolvedValue({ outcome: 'NOT_APPLICABLE' }) } as never
   );
 }
 
@@ -977,7 +999,8 @@ function createMismatchRuntimeHarness() {
       permissionPrecheck as unknown as ConstructorParameters<typeof AssistantReadonlyRuntimeService>[1],
       toolCallService as unknown as ConstructorParameters<typeof AssistantReadonlyRuntimeService>[2],
       { project: jest.fn() } as unknown as ConstructorParameters<typeof AssistantReadonlyRuntimeService>[3],
-      dataAdapterRegistry as unknown as ConstructorParameters<typeof AssistantReadonlyRuntimeService>[4]
+      dataAdapterRegistry as unknown as ConstructorParameters<typeof AssistantReadonlyRuntimeService>[4],
+      { evaluate: jest.fn().mockResolvedValue({ outcome: 'NOT_APPLICABLE' }) } as never
     ),
     toolRegistry,
     dataAdapterRegistry,

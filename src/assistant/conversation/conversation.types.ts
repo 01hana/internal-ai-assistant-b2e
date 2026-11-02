@@ -99,6 +99,8 @@ export interface SafeCompletedConversationExchange {
   readonly semanticFrame?: ConversationSemanticFrame;
   readonly capabilityFrame?: CapabilityFollowUpFrameV1;
   readonly evidenceRefIds: readonly string[];
+  readonly groundingVerified?: boolean;
+  readonly selectionPreviouslyModelCalled?: boolean;
 }
 
 export interface BoundedConversationContext {

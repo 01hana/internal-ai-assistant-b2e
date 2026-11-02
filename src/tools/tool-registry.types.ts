@@ -14,7 +14,9 @@ export type ToolPermissionDeniedReason =
   | 'customer_policy_denied'
   | 'schema_invalid'
   | 'tool_contract_mismatch'
-  | 'idempotency_required';
+  | 'idempotency_required'
+  | 'query_scope_denied'
+  | 'query_scope_clarification_required';
 
 export interface ToolJsonSchema {
   required: string[];

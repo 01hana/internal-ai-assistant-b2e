@@ -157,7 +157,7 @@ function setAtPath(root: Record<string, SafeConversationValue>, path: string, va
 }
 
 function sameScope(expected: ConversationScope, actual: ConversationScope): boolean {
-  return ['customerId', 'sessionId', 'organizationId', 'hostApp', 'actorId']
+  return ['customerId', 'integrationId', 'sessionId', 'organizationId', 'hostApp', 'actorId']
     .every((key) => expected[key as keyof ConversationScope] === actual[key as keyof ConversationScope]);
 }
 function sameIntegration(scope: GenerationProjectionScope, prior: { customerId: string; integrationId: string; hostApp: string } | undefined): boolean {

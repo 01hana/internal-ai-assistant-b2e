@@ -5,10 +5,11 @@ import {
   CapabilityParameterResolverService,
   freezeCapabilityResolutionResultV1
 } from './capability-parameter-resolver.service';
-import { CapabilitySemanticResolverService } from './capability-semantic-resolver.service';
+import { CapabilitySemanticResolverService, normalizeCapabilitySemanticText } from './capability-semantic-resolver.service';
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerScope } from '../identity/customer-scope.types';
 import type { CapabilityFollowUpFrameV1 } from '../assistant/conversation/conversation.types';
+import type { PreCandidateQueryScopeApplicabilityV1 } from '../query-scope/query-scope.types';
 
 export interface CapabilityResolutionAuditMetadataV1 {
   readonly auditContext?: Readonly<{ customerScope: CustomerScope; requestId: string; sessionId: string; messageId: string }>;
@@ -68,6 +69,46 @@ export class CapabilityResolutionService {
       throw new Error('CAPABILITY_RESOLUTION_AUDIT_FAILED');
     }
     return closed;
+  }
+
+  /** Reuses current-turn scoped semantics without resolving or releasing a Tool candidate. */
+  resolvePreCandidateScopeApplicability(input: Readonly<{
+    scope: CapabilityCatalogScope; text: string; sourceMessageId: string;
+  }>): PreCandidateQueryScopeApplicabilityV1 | undefined {
+    const selected = this.registry.resolveCatalog(input.scope);
+    if (!selected.available) return undefined;
+    const catalog = selected.catalog;
+    const signals: Record<string, readonly string[]> = {};
+    for (const capability of catalog.capabilities) {
+      if (!capability.active) continue;
+      signals[capability.capabilityKey] = this.parameters.resolve({ capability,
+        capabilityRef: { packId: catalog.packId, packVersion: catalog.packVersion,
+          capabilityKey: capability.capabilityKey, safeLabel: capability.safeLabel },
+        text: input.text }).validatedParameterNames;
+    }
+    const match = this.semantic.resolve({ catalog, text: input.text,
+      validatedParameterSignalsByCapability: signals });
+    if (match.outcome !== 'MATCHED') return undefined;
+    const normalizedText = normalizeCapabilitySemanticText(input.text);
+    const explicitTargets = catalog.capabilities.filter((entry) => entry.active &&
+      [...(entry.followUpSemanticEvidence?.targetTerms ?? []),
+        ...(entry.semanticProfiles.find((profile) => profile.locale === 'zh-TW')?.aliases ?? [])]
+        .some((term) => normalizedText.includes(normalizeCapabilitySemanticText(term))));
+    if (explicitTargets.length !== 1 || explicitTargets[0].capabilityKey !== match.capability.capabilityKey) return undefined;
+    const capability = catalog.capabilities.find((entry) => entry.active &&
+      entry.capabilityKey === match.capability.capabilityKey);
+    if (!capability) return undefined;
+    const parameters = this.parameters.resolve({ capability, capabilityRef: match.capability,
+      text: input.text });
+    if (parameters.status !== 'VALID') return undefined;
+    const binding = this.bindings.resolveApplicableBindingMetadata(catalog, capability.capabilityKey,
+      parameters.parameters);
+    if (!binding) return undefined;
+    return Object.freeze({ version: '1', scope: Object.freeze({ customerId: catalog.customerId,
+      integrationId: catalog.integrationId, hostApp: catalog.hostApp }),
+    packId: catalog.packId, packVersion: catalog.packVersion, capabilityKey: capability.capabilityKey,
+    ...binding, sourceMessageId: input.sourceMessageId,
+    evidenceSource: 'CURRENT_SCOPED_SEMANTIC' });
   }
 
   private async resolveSelectedCatalog(

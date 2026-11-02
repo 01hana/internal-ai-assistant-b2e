@@ -36,6 +36,9 @@ import { GroundedAnswerFinalizerService } from '../generation/grounded-answer-fi
 import { LlmExecutionService } from '../../llm/llm-execution.service';
 import type { LlmProviderMetadata } from '../../llm/llm-provider.interface';
 import { createSseEvent } from '../../common/sse/sse-event.helper';
+import { QueryScopeValidationService } from '../../query-scope/query-scope-validation.service';
+import type { QueryScopeDecision } from '../../query-scope/query-scope.types';
+import { extractExplicitPriorEvidenceRecall } from '../../capabilities/follow-up-semantic-evidence';
 
 @Injectable()
 export class AssistantMessageService {
@@ -65,7 +68,8 @@ export class AssistantMessageService {
     private readonly generationContextProjector: GenerationContextProjectorService,
     private readonly generationPrompt: GroundedGenerationPromptService,
     private readonly groundedAnswerFinalizer: GroundedAnswerFinalizerService,
-    private readonly llmExecution: LlmExecutionService
+    private readonly llmExecution: LlmExecutionService,
+    private readonly queryScopeValidation: QueryScopeValidationService
   ) {}
 
   async sendMessage(input: SendAssistantMessageInput): Promise<AssistantSseEventRecord[]> {
@@ -92,6 +96,7 @@ export class AssistantMessageService {
 
     const latestContextState = await this.contextStateService.loadLatest(customerScope, session.id);
     const planningResult = await this.planningService.createPlan({
+      identityContext: input.identityContext,
       customerScope,
       requestId: input.requestId,
       sessionId: session.id,
@@ -116,7 +121,79 @@ export class AssistantMessageService {
     });
     this.assertResponseMessageOwnership(assistantMessage, customerScope.customerId, session.id);
 
+    const plannedCandidate = Array.isArray(planningResult.executionPlan.candidateTools)
+      ? planningResult.executionPlan.candidateTools[0] : undefined;
+    let scopeDecision: QueryScopeDecision | undefined;
+    if (plannedCandidate && typeof plannedCandidate === 'object' && !Array.isArray(plannedCandidate)) {
+      const candidate = plannedCandidate as Record<string, unknown>;
+      if (typeof candidate.key === 'string' && typeof candidate.version === 'string') {
+        scopeDecision = await this.queryScopeValidation.evaluate({
+          customerScope, identityContext: input.identityContext,
+          integrationId: input.hostIntegrationContext.integrationId, hostApp: input.hostIntegrationContext.hostApp,
+          requestId: input.requestId, sessionId: session.id, sourceMessageId: userMessage.id,
+          capabilityKey: typeof candidate.capabilityKey === 'string' ? candidate.capabilityKey : undefined,
+          bindingId: typeof candidate.bindingId === 'string' ? candidate.bindingId : undefined,
+          toolKey: candidate.key, toolVersion: candidate.version, query: input.message
+        });
+      }
+    } else if (planningResult.queryUnderstanding.preCandidateScopeApplicability &&
+      Array.isArray(planningResult.executionPlan.candidateTools) &&
+      planningResult.executionPlan.candidateTools.length === 0) {
+      scopeDecision = await this.queryScopeValidation.evaluatePreCandidate({
+        customerScope, identityContext: input.identityContext,
+        integrationId: input.hostIntegrationContext.integrationId, hostApp: input.hostIntegrationContext.hostApp,
+        requestId: input.requestId, sessionId: session.id, sourceMessageId: userMessage.id,
+        applicability: planningResult.queryUnderstanding.preCandidateScopeApplicability,
+        query: input.message
+      });
+    }
+    if (scopeDecision?.outcome === 'DENY' || scopeDecision?.outcome === 'CLARIFY') {
+      const clarify = scopeDecision.outcome === 'CLARIFY';
+      const answer = clarify
+        ? '請明確指定目前已授權的查詢範圍；尚未確認的範圍無法執行。'
+        : '目前無法驗證所指定範圍的查詢權限，因此不能執行此查詢。';
+      const clarification = clarify ? await this.clarificationQuestionService.create({
+        customerScope, requestId: input.requestId, sessionId: session.id, messageId: assistantMessage.id,
+        identityContext: input.identityContext, question: answer,
+        reason: scopeDecision.reason ?? 'QUERY_SCOPE_AMBIGUOUS', candidateRefs: [], blocking: true,
+        confidence: planningResult.queryUnderstanding.confidence
+      }) : undefined;
+      const result = await this.answerDecisionService.recordSafeDecision({
+        customerScope, requestId: input.requestId, messageId: assistantMessage.id,
+        status: clarify ? AnswerDecisionStatus.clarification_required : AnswerDecisionStatus.permission_denied,
+        ...(clarification ? { clarificationQuestionId: clarification.id } : {}),
+        ...(!clarify ? { noAnswerReason: NoAnswerReason.permission_denied } : {}),
+        answer: { text: answer, delta: answer },
+        metadata: toJsonInput({ reason: scopeDecision.reason })
+      });
+      await this.messageRepository.completeAssistantMessage({
+        customerScope, messageId: assistantMessage.id, content: answer, answerDecision: result.status
+      });
+      return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId,
+        sessionId: session.id, messageId: assistantMessage.id, answerDelta: answer,
+        finalData: { answerDecision: result.status, answer, evidenceRefs: [] } });
+    }
+
     const preRuntimeGate = this.noAnswerGateService.evaluatePreRuntime(planningResult);
+    if (preRuntimeGate?.kind === 'no_answer') {
+      const resolution = planningResult.queryUnderstanding.capabilityResolution;
+      const selectionReason = resolution?.outcome === 'NEEDS_CLARIFICATION' ? resolution.reasonCode : undefined;
+      const answerDecision = await this.answerDecisionService.recordSafeDecision({
+        customerScope, requestId: input.requestId, messageId: assistantMessage.id,
+        status: preRuntimeGate.status, noAnswerReason: preRuntimeGate.noAnswerReason,
+        answer: { text: preRuntimeGate.answer, delta: preRuntimeGate.delta },
+        metadata: toJsonInput({ reason: selectionReason })
+      });
+      await this.messageRepository.completeAssistantMessage({ customerScope,
+        messageId: assistantMessage.id, content: answerDecision.answer.text, answerDecision: answerDecision.status });
+      await this.auditWriter.append({ customerScope, requestId: input.requestId, sessionId: session.id,
+        messageId: assistantMessage.id, eventType: 'answer_generated', decision: answerDecision.status,
+        evidenceRefIds: [], metadata: toJsonInput({ answerDecisionId: answerDecision.answerDecisionId,
+          reason: selectionReason }) });
+      return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId,
+        sessionId: session.id, messageId: assistantMessage.id, answerDelta: answerDecision.answer.delta,
+        finalData: { answerDecision: answerDecision.status, answer: answerDecision.answer.text, evidenceRefs: [] } });
+    }
     if (
       preRuntimeGate?.kind === 'clarification' &&
       shouldApplyPreRuntimeClarificationGate(planningResult.executionPlan.riskAssessment, input.pageContext, preRuntimeGate.clarificationReason)
@@ -990,7 +1067,10 @@ export class AssistantMessageService {
     const plan = planningResult.groundedRetrievalPlan!;
     await this.groundedAudit.recordPlan({ customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId,
       plan, durationMs: Math.max(0, Date.now() - startedAt) });
-    const prior = (planningResult.priorConversationContext?.evidenceRefs.length ?? 0) > 0 ? await this.priorGroundedContext.resolve({
+    const freshToolSelected = plan.mode === 'TOOL' &&
+      planningResult.queryUnderstanding.candidateTools.length > 0 &&
+      !extractExplicitPriorEvidenceRecall(input.message);
+    const prior = !freshToolSelected && (planningResult.priorConversationContext?.evidenceRefs.length ?? 0) > 0 ? await this.priorGroundedContext.resolve({
       plan, context: planningResult.priorConversationContext, customerScope, identityContext: input.identityContext,
       requestId: input.requestId, sessionId, sourceMessageId: userMessageId, responseMessageId: assistantMessageId
     }) : { complete: false, needResults: Object.freeze([]), evidence: Object.freeze([]), citations: Object.freeze([]) };

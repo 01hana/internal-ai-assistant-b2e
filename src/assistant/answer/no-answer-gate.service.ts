@@ -31,6 +31,15 @@ export type AssistantSafeGateDecision =
 @Injectable()
 export class NoAnswerGateService {
   evaluatePreRuntime(planningResult: AssistantPlanningResult): AssistantSafeGateDecision | undefined {
+    const resolution = planningResult.queryUnderstanding.capabilityResolution;
+    const selectionReason = resolution?.outcome === 'NEEDS_CLARIFICATION' ? resolution.reasonCode : undefined;
+    if (selectionReason === 'LLM_NO_MATCH' || selectionReason === 'LLM_NO_ALLOWED_TOOL' || selectionReason === 'LLM_SELECTION_FAILED') {
+      const answer = selectionReason === 'LLM_SELECTION_FAILED'
+        ? '目前無法安全選擇查詢工具，因此不能回答這個問題。'
+        : '目前沒有可用的已授權資料能回答這個問題。';
+      return { kind: 'no_answer', status: AnswerDecisionStatus.no_answer,
+        noAnswerReason: NoAnswerReason.no_evidence, answer, delta: answer };
+    }
     const blockingNeed = planningResult.queryUnderstanding.clarificationNeeds.find((need) => need.blocking);
     const shouldClarifyReadOnly =
       planningResult.executionPlan.riskAssessment === RiskLevel.low &&
