@@ -49,6 +49,29 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
 
   async understand(input: QueryUnderstandingInput): Promise<QueryUnderstandingOutput> {
     const normalizedText = normalizeQueryText(input.text);
+    const conversationalIntent = classifyControlledConversation(normalizedText);
+    if (conversationalIntent) {
+      let reply: string;
+      if (conversationalIntent === 'greeting') {
+        reply = /謝謝|感謝/.test(normalizedText)
+          ? '不客氣！如果還有需要查詢的資訊，可以再告訴我。'
+          : '你好！我是系統內的 AI 助理。你可以問我目前能查詢哪些資料。';
+      } else if (conversationalIntent === 'assistant_help') {
+        reply = '我是系統內的 AI 助理。你可以直接用自然語言描述想查詢的資訊；我會依目前支援的功能及你的權限提供協助。你也可以問我「目前能查詢哪些資料？」。';
+      } else {
+        const available = input.identityContext && this.llmToolSelection
+          ? await this.llmToolSelection.describeAvailable(input.hostIntegrationContext).catch(() => []) : [];
+        reply = available.length > 0
+          ? `依目前權限可使用的查詢功能：${available.join('；')}。請直接用自然語言提問；實際查詢仍會驗證資料範圍。`
+          : '目前無法確認你有可使用的查詢功能。';
+      }
+      return {
+        taskType: conversationalIntent, sentences: splitQuerySentences(normalizedText), tokens: [], phrases: [],
+        normalizedTerms: [], timeRanges: [], resolvedReferences: [], entityCandidates: [], subTasks: [],
+        candidateTools: [], riskLevel: RiskLevel.low, confidence: 1, clarificationNeeds: [], requiredEvidence: [],
+        conversationReply: { kind: conversationalIntent, text: reply }
+      };
+    }
     const sentences = splitQuerySentences(normalizedText);
     const tokenResult = await this.tokenizerAdapter.tokenize({
       requestId: input.requestId,
@@ -314,6 +337,17 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
       preCandidateScopeApplicability
     };
   }
+}
+
+/** Intentionally recognizes only complete, low-risk utterances. Mixed or uncertain requests use the existing gates. */
+function classifyControlledConversation(text: string): 'greeting' | 'assistant_help' | 'capability_discovery' | undefined {
+  const value = text.trim().replace(/[。！!？?]+$/u, '').trim();
+  if (/^(哈囉|你好|您好|嗨|謝謝|感謝|多謝)$/u.test(value)) return 'greeting';
+  if (/^(你是誰|你是什麼|怎麼使用(?:你|助理|Assistant)|我要怎麼使用(?:你|助理|Assistant)|我要怎麼問你問題|怎麼問你問題)$/iu.test(value)) return 'assistant_help';
+  if (/^(我可以查什麼|我能查詢哪些資料|我可以查詢哪些資料|你能夠查詢什麼資料|你能查詢什麼資料|你可以幫我做什麼|你能做什麼|目前支援哪些功能|目前有哪些查詢功能|目前能查詢哪些資料|可以查詢哪些資料|有什麼問題可以問你)$/u.test(value)) return 'capability_discovery';
+  if (/^(?:我要)?怎麼查詢[^，。；、?？!！]{1,24}$/u.test(value) &&
+    !/(多少|幾筆|幾張|目前|今天|昨天|本週|上週|本月|上月|上個月|跟|比較|順便|還有|以及)/u.test(value)) return 'capability_discovery';
+  return undefined;
 }
 
 function sameRecallTopic(left: ConversationSemanticFrame, right: ConversationSemanticFrame): boolean {

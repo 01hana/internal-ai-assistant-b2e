@@ -74,7 +74,8 @@ describe('Feature 012 final grounded-answer acceptance', () => {
     expect(state.toolCalls).toHaveLength(before + 1);
     expect(result.evidence).toEqual([expect.objectContaining({ sourceType: 'structured_record', toolCallId: result.toolCalls[0].id })]);
     expect(result.decision?.metadata).toEqual(expect.objectContaining({ coverage: 'COMPLETE' }));
-    expect(result.assistant?.content).toContain(`[${firstCitation(prompts[0])}]`);
+    expect(result.assistant?.content).toContain('資料來源：內部資料查詢');
+    expect(result.assistant?.content).not.toContain(`[${firstCitation(prompts[0])}]`);
     expect(prompts).toHaveLength(1);
     expect(promptText(prompts[0])).toContain('SERVER_PROJECTED_TOOL_EVIDENCE');
     expect(promptText(prompts[0])).not.toMatch(/connectorContextRef|credentialHandle|Authorization/);
@@ -143,7 +144,8 @@ describe('Feature 012 final grounded-answer acceptance', () => {
     expect(promptText(prompts[0])).toContain('80');
     expect(current.assistant?.content).toContain('80');
     expect(current.assistant?.content).not.toContain('100');
-    expect(current.assistant?.content).toContain(`[${firstCitation(prompts[0])}]`);
+    expect(current.assistant?.content).toContain('資料來源：內部資料查詢');
+    expect(current.assistant?.content).not.toContain(`[${firstCitation(prompts[0])}]`);
   });
 
   it('does not project colliding Customer B text, capability frame, or source into Customer A generation', async () => {

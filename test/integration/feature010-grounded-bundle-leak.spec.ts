@@ -20,8 +20,11 @@ const FORBIDDEN = /secret-token-sentinel|proof-sentinel|credential-sentinel|conn
 describe('Feature 010 grounded bundle cross-boundary leak prevention (T077)', () => {
   let app: INestApplication;
   let state: Us1TestState;
+  let previousMode: string | undefined;
 
   beforeEach(async () => {
+    previousMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     ({ app, state } = await createUs1TestAppWithState());
     jest.spyOn(app.get(LlmExecutionService, { strict: false }), 'generateAnswer').mockResolvedValue({
       content: '核准證據顯示結果。', finishReason: 'stop',
@@ -30,7 +33,11 @@ describe('Feature 010 grounded bundle cross-boundary leak prevention (T077)', ()
     state.customerToolPolicies.push({ customerId: 'customer-a', toolDefinitionId: 'tool-definition-inventory-001', enabled: true,
       requiredRoles: [], requiredPermissionScopes: [] });
   });
-  afterEach(async () => app.close());
+  afterEach(async () => {
+    await app.close();
+    if (previousMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousMode;
+  });
 
   it.each([
     ['token', 'secret-token-sentinel'], ['proof', 'proof-sentinel'], ['credentials', 'credential-sentinel'],
@@ -107,7 +114,7 @@ describe('Feature 010 grounded bundle cross-boundary leak prevention (T077)', ()
     const unsafePrior = { ...owned, id: 'evidence-unsafe-prior', customerId: 'customer-a',
       summary: { fields: { quantity: 17 }, rawResponse: 'LEAK_RAW_RESPONSE_SENTINEL', permissionSnapshot: 'LEAK_PERMISSION_SENTINEL' } };
     state.evidenceRefs.push(unsafePrior);
-    const context = await app.get(ConversationContextLoaderService).load({ scope: { customerId: 'customer-a',
+    const context = await app.get(ConversationContextLoaderService).load({ scope: { customerId: 'customer-a', integrationId: 'integration-erp',
       sessionId: 'session-owned-001', organizationId: 'org-001', hostApp: 'erp', actorId: 'actor-001' } });
     expect(JSON.stringify(context)).not.toMatch(FORBIDDEN);
     expect(context.evidenceRefIds).not.toContain('evidence-unsafe-prior');

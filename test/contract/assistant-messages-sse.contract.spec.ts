@@ -19,12 +19,15 @@ import { request as httpRequest } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 describe('assistant message SSE contract', () => {
+  const previousToolSelection = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
   const identityFixture = createInternalIdentityJwtFixture();
   const ownedClaims = identityFixture.canonicalClaims.customerA;
   let app: INestApplication;
   let state: Us1TestState;
 
   beforeAll(async () => {
+    // These synthetic Tool fixtures exercise the existing semantic path, not live model selection.
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     const testApp = await createUs1TestAppWithState({
       internalIdentity: {
         issuer: TEST_GATEWAY_ISSUER,
@@ -48,6 +51,57 @@ describe('assistant message SSE contract', () => {
 
   afterAll(async () => {
     await app.close();
+    if (previousToolSelection === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousToolSelection;
+  });
+
+  it('streams and persists a greeting without ToolCall or fabricated Evidence', async () => {
+    const beforeTools = state.toolCalls.length;
+    const beforeEvidence = state.evidenceRefs.length;
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/assistant/sessions/session-owned-001/messages')
+      .set(createAuthorizedInternalIdentityHeaders(identityFixture, { claims: ownedClaims,
+        requestId: 'req-us1-controlled-greeting' }))
+      .send({ message: '哈囉' });
+    expect(response.status).toBe(200);
+    const events = parseSseResponse(response.text);
+    expect(events.map((event) => event.event)).toEqual(['answer_delta', 'final']);
+    const delta = events[0].data.data.delta;
+    const final = events[1].data.data;
+    expect(delta).toBe(final.answer);
+    expect(final.evidenceRefs).toEqual([]);
+    expect(final.answer).not.toContain('資料來源');
+    expect(state.toolCalls).toHaveLength(beforeTools);
+    expect(state.evidenceRefs).toHaveLength(beforeEvidence);
+    expect(state.messages.find((message) => message.requestId === 'req-us1-controlled-greeting' &&
+      message.role === 'assistant')?.content).toBe(final.answer);
+    expect(state.groundingChecks.find((check) => check.requestId === 'req-us1-controlled-greeting'))
+      .toMatchObject({ covered: false, evidenceRefIds: [] });
+    expect(state.answerDecisions.find((decision) => decision.requestId === 'req-us1-controlled-greeting')?.metadata)
+      .toMatchObject({ answerType: 'controlled_conversation' });
+    const history = await request(app.getHttpServer())
+      .get('/api/v1/assistant/sessions/session-owned-001/messages')
+      .set(createAuthorizedInternalIdentityHeaders(identityFixture, { claims: ownedClaims,
+        requestId: 'req-us1-controlled-greeting-history' }));
+    expect(history.status).toBe(200);
+    expect(history.body.data.messages).toEqual(expect.arrayContaining([
+      expect.objectContaining({ content: final.answer })
+    ]));
+  });
+
+  it.each(['你能做什麼？', '我要怎麼使用你？'])('keeps %s on the controlled answer-only SSE path', async (message) => {
+    const beforeTools = state.toolCalls.length;
+    const requestId = message.startsWith('你') ? 'req-us1-capability-help' : 'req-us1-assistant-help';
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/assistant/sessions/session-owned-001/messages')
+      .set(createAuthorizedInternalIdentityHeaders(identityFixture, { claims: ownedClaims, requestId }))
+      .send({ message });
+    expect(response.status).toBe(200);
+    const events = parseSseResponse(response.text);
+    expect(events.map((event) => event.event)).toEqual(['answer_delta', 'final']);
+    expect(events[0].data.data.delta).toBe(events[1].data.data.answer);
+    expect(events[1].data.data.evidenceRefs).toEqual([]);
+    expect(state.toolCalls).toHaveLength(beforeTools);
   });
 
   it('streams Customer-owned structured ToolCall success after T056', async () => {

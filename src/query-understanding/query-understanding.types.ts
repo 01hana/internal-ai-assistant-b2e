@@ -104,6 +104,8 @@ export interface QueryUnderstandingToolCandidate {
 }
 
 export interface QueryUnderstandingOutput {
+  /** A controlled reply that makes no claim about customer business data. */
+  conversationReply?: { kind: 'greeting' | 'assistant_help' | 'capability_discovery'; text: string };
   taskType: string;
   sentences: QueryUnderstandingSentence[];
   tokens: QueryUnderstandingToken[];

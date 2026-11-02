@@ -1,6 +1,6 @@
 import { ConversationContextRepository } from '../../src/assistant/conversation/conversation-context.repository';
 
-const scope = { customerId: 'customer-a', sessionId: 'session-1', organizationId: 'org-1', hostApp: 'erp', actorId: 'actor-1' };
+const scope = { customerId: 'customer-a', integrationId: 'integration-erp', sessionId: 'session-1', organizationId: 'org-1', hostApp: 'erp', actorId: 'actor-1' };
 
 describe('Feature 012 completed assistant answer source', () => {
   it.each([
@@ -11,6 +11,7 @@ describe('Feature 012 completed assistant answer source', () => {
   ])('%s exposes only durable completion and finalization', async (_name, decision, messageDecision, content, finalized, included) => {
     const prisma = { db: {
       assistantSession: { findFirst: jest.fn().mockResolvedValue({ status: 'active' }) },
+      auditEvent: { findMany: jest.fn().mockResolvedValue([]) },
       assistantMessage: { findMany: jest.fn().mockResolvedValue([
         { id: 'user', requestId: 'request-1', role: 'user', content: 'question', createdAt: new Date('2026-10-03T00:00:00Z') },
         { id: 'assistant', requestId: 'request-1', role: 'assistant', content, answerDecision: messageDecision,

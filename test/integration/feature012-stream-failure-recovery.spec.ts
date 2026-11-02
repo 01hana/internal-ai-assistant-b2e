@@ -18,7 +18,7 @@ import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_I
 const question = { message: '查詢訂單目前狀態 訂單號 SO-10001', pageContext: {
   module: 'orders', entityType: 'order', entityId: 'SO-10001', visibleColumns: ['status']
 } };
-const scope = { customerId: 'customer-a', sessionId: 'session-owned-001', organizationId: 'org-shared', hostApp: 'erp', actorId: 'actor-shared' };
+const scope = { customerId: 'customer-a', integrationId: 'integration-erp', sessionId: 'session-owned-001', organizationId: 'org-shared', hostApp: 'erp', actorId: 'actor-shared' };
 const metadata = { provider: 'openai', model: 'test-model', fallbackUsed: false };
 
 describe('Feature 012 streaming failure recovery', () => {
@@ -27,8 +27,11 @@ describe('Feature 012 streaming failure recovery', () => {
   let state: Us1TestState;
   let llm: LlmExecutionService;
   let originalStream: LlmExecutionService['streamAnswer'];
+  let previousSelectionMode: string | undefined;
 
   beforeAll(async () => {
+    previousSelectionMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     ({ app, state } = await createUs1TestAppWithState({ internalIdentity: {
       issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: identity.jwks
     } }));
@@ -36,7 +39,11 @@ describe('Feature 012 streaming failure recovery', () => {
     originalStream = llm.streamAnswer;
   });
   afterEach(() => { jest.restoreAllMocks(); llm.streamAnswer = originalStream; });
-  afterAll(async () => { await app.close(); });
+  afterAll(async () => {
+    await app.close();
+    if (previousSelectionMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousSelectionMode;
+  });
 
   async function post(requestId: string) {
     return request(app.getHttpServer()).post('/api/v1/assistant/sessions/session-owned-001/messages')

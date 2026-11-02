@@ -278,7 +278,7 @@ describe('structured API evidence through HTTP Message, Tool, SSE, and History',
     expect(adapter.connectorStages).toEqual(['manifest', 'operation', 'bounded_json', 'extracted']);
     expect(state.evidenceRefs.filter((item) => item.requestId === requestId)).toHaveLength(1);
     expect(prompt).toBeDefined();
-    expect(final).toBe(`${expected} [citation-need-1-1]`);
+    expect(final).toBe(`${expected}\n\n資料來源：內部資料查詢`);
     expect(deltas).toBe(final);
     expect(state.auditEvents.find((event) => event.requestId === requestId && event.eventType === 'llm_tool_selection_completed')?.metadata)
       .toEqual(expect.objectContaining({ modelCalled: true, reason: 'SELECTED' }));

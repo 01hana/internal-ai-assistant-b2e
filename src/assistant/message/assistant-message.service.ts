@@ -121,6 +121,29 @@ export class AssistantMessageService {
     });
     this.assertResponseMessageOwnership(assistantMessage, customerScope.customerId, session.id);
 
+    const controlledReply = planningResult.queryUnderstanding.conversationReply;
+    if (controlledReply && Array.isArray(planningResult.executionPlan.candidateTools) &&
+      planningResult.executionPlan.candidateTools.length === 0 &&
+      planningResult.executionPlan.riskAssessment === RiskLevel.low) {
+      const decision = await this.answerDecisionService.recordSafeDecision({
+        customerScope, requestId: input.requestId, messageId: assistantMessage.id,
+        status: AnswerDecisionStatus.answered,
+        answer: { text: controlledReply.text, delta: controlledReply.text },
+        metadata: toJsonInput({ answerType: 'controlled_conversation', kind: controlledReply.kind }),
+        grounding: { covered: false, evidenceRefIds: [], metadata: toJsonInput({
+          controlledConversation: true, noBusinessEvidence: true }) }
+      });
+      await this.messageRepository.completeAssistantMessage({ customerScope, messageId: assistantMessage.id,
+        content: controlledReply.text, answerDecision: decision.status });
+      await this.auditWriter.append({ customerScope, requestId: input.requestId, sessionId: session.id,
+        messageId: assistantMessage.id, eventType: 'answer_generated', decision: decision.status,
+        evidenceRefIds: [], metadata: toJsonInput({ answerDecisionId: decision.answerDecisionId,
+          kind: controlledReply.kind, controlledConversation: true }) });
+      return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId,
+        sessionId: session.id, messageId: assistantMessage.id, answerDelta: controlledReply.text,
+        finalData: { answerDecision: decision.status, answer: controlledReply.text, evidenceRefs: [] } });
+    }
+
     const plannedCandidate = Array.isArray(planningResult.executionPlan.candidateTools)
       ? planningResult.executionPlan.candidateTools[0] : undefined;
     let scopeDecision: QueryScopeDecision | undefined;
@@ -1168,12 +1191,14 @@ export class AssistantMessageService {
         for (const event of prelude) await emit(event);
         let accumulated = '';
         let completed = false;
+        const citationStream = this.groundedAnswerFinalizer.createStream(generationContext);
         for await (const event of this.llmExecution.streamAnswer(prompt, {
           identityContext: input.identityContext, sessionId, messageId: assistantMessageId
         }, { signal: input.abortSignal ?? new AbortController().signal })) {
           if (event.type === 'text_delta') {
             accumulated += event.text;
-            await emit(makeEvent('answer_delta', ++sequence, { delta: event.text }));
+            const delta = citationStream.push(event.text);
+            if (delta) await emit(makeEvent('answer_delta', ++sequence, { delta }));
           } else {
             providerMetadata = event.metadata;
             completed = true;
@@ -1182,6 +1207,9 @@ export class AssistantMessageService {
         if (!completed) throw new Error('LLM_STREAM_INCOMPLETE');
         failureReason = 'INVALID_OUTPUT';
         const text = this.groundedAnswerFinalizer.finalize({ content: accumulated, finishReason: 'stop', metadata: providerMetadata }, generationContext);
+        const rendered = citationStream.finish();
+        if (rendered.text !== text) throw new Error('GENERATION_OUTPUT_INVALID');
+        if (rendered.tail) await emit(makeEvent('answer_delta', ++sequence, { delta: rendered.tail }));
         failureReason = 'CORE_PERSISTENCE_FAILED';
         const answerDecision = await this.answerDecisionService.completeGeneratedAnswer({
           customerScope, requestId: input.requestId, sessionId, messageId: assistantMessageId, text,

@@ -87,7 +87,8 @@ export class AssistantHistoryService {
           message,
           toolCalls.filter((toolCall) => toolCall.messageId === message.id),
           evidenceRefs.filter((evidenceRef) => evidenceRef.messageId === message.id),
-          input.identityContext.actor.permissionScopes
+          input.identityContext.actor.permissionScopes,
+          message.answerDecisions?.[0]?.metadata
         )
       ),
       nextCursor: nextMessage ? visibleMessages.at(-1)?.id ?? null : null

@@ -7,7 +7,7 @@ import type { FollowUpResolutionDecision } from '../conversation/conversation.ty
 import type { RetrievalMode } from '../../retrieval/grounded-retrieval.types';
 
 export interface AnswerPlan {
-  answerType: 'grounded_text' | 'clarification' | 'no_answer';
+  answerType: 'grounded_text' | 'controlled_conversation' | 'clarification' | 'no_answer';
   expectedAnswerShape: unknown;
   selectedEvidenceRefs: string[];
   allowedClaims: string[];

@@ -176,7 +176,8 @@ export class AnswerDecisionService {
             input.status === AnswerDecisionStatus.clarification_required
               ? 'clarification'
               : input.status === AnswerDecisionStatus.answered
-                ? 'grounded_text'
+                ? toRecord(input.metadata)?.answerType === 'controlled_conversation'
+                  ? 'controlled_conversation' : 'grounded_text'
                 : 'no_answer'
         })
       }
@@ -189,7 +190,8 @@ export class AnswerDecisionService {
           input.status === AnswerDecisionStatus.clarification_required
             ? 'clarification'
             : input.status === AnswerDecisionStatus.answered
-              ? 'grounded_text'
+              ? toRecord(input.metadata)?.answerType === 'controlled_conversation'
+                ? 'controlled_conversation' : 'grounded_text'
               : 'no_answer',
         expectedAnswerShape: null,
         selectedEvidenceRefs: input.grounding?.evidenceRefIds ?? [],
