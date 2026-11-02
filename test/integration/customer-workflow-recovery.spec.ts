@@ -123,6 +123,89 @@ describe('US4 Customer-scoped workflow finalization recovery expected-red', () =
     });
   });
 
+  it.each([
+    { originalStatus: 'failed', originalExecutionStatus: 'failed', expectedHttp: 200, expectedDraftStatus: 'failed' },
+    { originalStatus: 'pending', originalExecutionStatus: 'in_progress', expectedHttp: 409, expectedDraftStatus: 'waiting_confirmation' },
+    { originalStatus: 'success', originalExecutionStatus: 'failed', expectedHttp: 409, expectedDraftStatus: 'waiting_confirmation' },
+    { originalStatus: 'success', originalExecutionStatus: 'executed', executedAt: null, expectedHttp: 409, expectedDraftStatus: 'waiting_confirmation' }
+  ] as const)('does not invent success for a $originalExecutionStatus original ToolCall', async (caseData) => {
+    const actionDraftId = 'action-draft-waiting-001';
+    const idempotencyKey = `idem-us4-action-${caseData.originalExecutionStatus}-${caseData.originalStatus}`;
+    const connectorExecute = jest.spyOn(connector, 'execute');
+    state.toolCalls.push({
+      ...state.toolCalls[0],
+      id: `tool-call-${idempotencyKey}`,
+      requestId: 'req-original',
+      toolDefinitionId: 'tool-definition-orders-update-001',
+      toolName: 'mock.orders.status.update',
+      toolVersion: '1.0.0',
+      inputSummary: { sourceType: 'action_draft', sourceId: actionDraftId, entityId: 'SO-10001' },
+      status: caseData.originalStatus,
+      executionStatus: caseData.originalExecutionStatus,
+      executedAt: 'executedAt' in caseData ? caseData.executedAt ?? null : state.toolCalls[0].executedAt,
+      idempotencyKey
+    });
+    const before = state.toolCalls.length;
+
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/assistant/action-drafts/${actionDraftId}/confirm`)
+      .set(headers('customerA', `req-us4-${caseData.originalExecutionStatus}`))
+      .send({ idempotencyKey });
+
+    expect(response.status).toBe(caseData.expectedHttp);
+    expect(byId(state.actionDrafts, actionDraftId).status).toBe(caseData.expectedDraftStatus);
+    expect(state.toolCalls).toHaveLength(before);
+    expect(connectorExecute).not.toHaveBeenCalled();
+  });
+
+  it('does not reuse a successful ToolCall for a different Action Draft with the same idempotency key', async () => {
+    const idempotencyKey = 'idem-us4-wrong-source';
+    state.toolCalls.push({
+      ...state.toolCalls[0],
+      id: 'tool-call-wrong-source',
+      toolDefinitionId: 'tool-definition-orders-update-001',
+      toolName: 'mock.orders.status.update',
+      inputSummary: { sourceType: 'action_draft', sourceId: 'another-action-draft', entityId: 'SO-10001' },
+      idempotencyKey
+    });
+    const connectorExecute = jest.spyOn(connector, 'execute');
+    const before = state.toolCalls.length;
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
+      .set(headers('customerA', 'req-us4-wrong-source'))
+      .send({ idempotencyKey });
+
+    expect(response.status).toBe(404);
+    expect(byId(state.actionDrafts, 'action-draft-waiting-001').status).toBe('waiting_confirmation');
+    expect(state.toolCalls).toHaveLength(before);
+    expect(connectorExecute).not.toHaveBeenCalled();
+  });
+
+  it('does not repeat an executed Action Draft when finalization is retried with a different key', async () => {
+    const sourceId = 'action-draft-waiting-001';
+    state.toolCalls.push({
+      ...state.toolCalls[0],
+      id: 'tool-call-prior-action',
+      toolDefinitionId: 'tool-definition-orders-update-001',
+      toolName: 'mock.orders.status.update',
+      inputSummary: { sourceType: 'action_draft', sourceId, entityId: 'SO-10001' },
+      idempotencyKey: 'idem-original-action'
+    });
+    const connectorExecute = jest.spyOn(connector, 'execute');
+    const before = state.toolCalls.length;
+
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/assistant/action-drafts/${sourceId}/confirm`)
+      .set(headers('customerA', 'req-us4-different-key'))
+      .send({ idempotencyKey: 'idem-different-action' });
+
+    expect(response.status).toBe(409);
+    expect(byId(state.actionDrafts, sourceId).status).toBe('waiting_confirmation');
+    expect(state.toolCalls).toHaveLength(before);
+    expect(connectorExecute).not.toHaveBeenCalled();
+  });
+
   function headers(customer: 'customerA' | 'customerB', requestId: string) {
     return createAuthorizedInternalIdentityHeaders(jwt, {
       claims: {

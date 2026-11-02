@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { ToolOperation } from '../../src/generated/prisma/enums';
+import { MockConnectorAdapter } from '../../src/connectors/mock/mock-connector.adapter';
 import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, Us1TestState } from '../support/us1-test-app.helper';
 import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
 
@@ -55,6 +56,87 @@ describe('US3 side-effect execution guard', () => {
       ])
     );
     expect(JSON.stringify(state.auditEvents)).not.toContain('idem-us3-duplicate-confirm');
+  });
+
+  it('rejects a missing exact connector before creating a ToolCall', async () => {
+    const empty = await createUs1TestAppWithState({
+      dataAdapterRegistrations: [],
+      internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: jwt.jwks }
+    });
+    const response = await request(empty.app.getHttpServer())
+      .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
+      .set(headers('req-us3-no-connector', ['orders:read', 'orders:update']))
+      .send({ idempotencyKey: 'idem-us3-no-connector' });
+    expect(response.status).toBe(503);
+    expect(empty.state.toolCalls).toHaveLength(state.toolCalls.length);
+    expect(empty.state.actionDrafts.find((draft) => draft.id === 'action-draft-waiting-001')?.status).toBe('waiting_confirmation');
+    expect(empty.state.auditEvents).toEqual(expect.arrayContaining([
+      expect.objectContaining({ eventType: 'side_effect_execution_denied', metadata: expect.objectContaining({ deniedReason: 'DATA_ADAPTER_UNAVAILABLE' }) })
+    ]));
+    await empty.app.close();
+  });
+
+  it('keeps a reserved ToolCall in an unknown outcome when the selected adapter throws', async () => {
+    jest.spyOn(app.get(MockConnectorAdapter), 'execute').mockRejectedValueOnce(new Error('connectorSecret'));
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm')
+      .set(headers('req-us3-adapter-throws', ['orders:read', 'orders:update']))
+      .send({ idempotencyKey: 'idem-us3-adapter-throws' });
+    expect(response.status).toBe(409);
+    expect(state.toolCalls).toEqual(expect.arrayContaining([expect.objectContaining({ status: 'pending', executionStatus: 'in_progress', executedAt: null })]));
+    expect(state.auditEvents).toEqual(expect.arrayContaining([expect.objectContaining({ eventType: 'side_effect_execution_outcome_unknown' })]));
+    expect(JSON.stringify(response.body)).not.toContain('connectorSecret');
+  });
+
+  it('does not retry an action when the adapter completes after the timeout', async () => {
+    const definition = state.toolDefinitions.find((tool) => tool.id === 'tool-definition-orders-update-001')!;
+    definition.timeoutMs = 10;
+    let finish!: (value: any) => void;
+    const pending = new Promise<any>((resolve) => { finish = resolve; });
+    const connectorExecute = jest.spyOn(app.get(MockConnectorAdapter), 'execute').mockReturnValueOnce(pending);
+    const initialCount = state.toolCalls.length;
+    const endpoint = '/api/v1/assistant/action-drafts/action-draft-waiting-001/confirm';
+
+    const first = await request(app.getHttpServer()).post(endpoint)
+      .set(headers('req-us3-timeout-first', ['orders:read', 'orders:update']))
+      .send({ idempotencyKey: 'idem-us3-timeout-first' });
+    expect(first.status).toBe(409);
+    expect(state.toolCalls.slice(initialCount)).toEqual([
+      expect.objectContaining({ status: 'pending', executionStatus: 'in_progress', executedAt: null })
+    ]);
+
+    const sameKey = await request(app.getHttpServer()).post(endpoint)
+      .set(headers('req-us3-timeout-same-key', ['orders:read', 'orders:update']))
+      .send({ idempotencyKey: 'idem-us3-timeout-first' });
+    const otherKey = await request(app.getHttpServer()).post(endpoint)
+      .set(headers('req-us3-timeout-other-key', ['orders:read', 'orders:update']))
+      .send({ idempotencyKey: 'idem-us3-timeout-other' });
+    expect([sameKey.status, otherKey.status]).toEqual([409, 409]);
+
+    finish({ status: 'succeeded', data: {} });
+    await Promise.resolve();
+    expect(connectorExecute).toHaveBeenCalledTimes(1);
+    expect(state.toolCalls.slice(initialCount)).toEqual([
+      expect.objectContaining({ status: 'pending', executionStatus: 'in_progress', executedAt: null })
+    ]);
+  });
+
+  it('keeps Approval pending when its side-effect outcome is unknown', async () => {
+    const connectorExecute = jest.spyOn(app.get(MockConnectorAdapter), 'execute').mockRejectedValueOnce(new Error('late-approval-result'));
+    const endpoint = '/api/v1/assistant/approval-requests/approval-request-pending-approve-001/approve';
+    const first = await request(app.getHttpServer()).post(endpoint)
+      .set(headers('req-us3-approval-unknown', ['orders:read', 'orders:approve'], { roles: ['approver'] }))
+      .send({ idempotencyKey: 'idem-us3-approval-unknown' });
+    const retry = await request(app.getHttpServer()).post(endpoint)
+      .set(headers('req-us3-approval-unknown-retry', ['orders:read', 'orders:approve'], { roles: ['approver'] }))
+      .send({ idempotencyKey: 'idem-us3-approval-unknown-other' });
+
+    expect([first.status, retry.status]).toEqual([409, 409]);
+    expect(state.approvalRequests.find((item) => item.id === 'approval-request-pending-approve-001')?.status).toBe('pending');
+    expect(connectorExecute).toHaveBeenCalledTimes(1);
+    expect(state.toolCalls).toEqual(expect.arrayContaining([
+      expect.objectContaining({ status: 'pending', executionStatus: 'in_progress', executedAt: null })
+    ]));
   });
 
   it('does not execute duplicate ApprovalRequest approves with the same idempotency key', async () => {

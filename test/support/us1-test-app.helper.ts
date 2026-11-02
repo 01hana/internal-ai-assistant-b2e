@@ -26,6 +26,7 @@ import {
   ToolOperation,
   RetrievalStrategy
 } from '../../src/generated/prisma/enums';
+import { Prisma } from '../../src/generated/prisma/client';
 import { GlobalExceptionFilter } from '../../src/common/errors/global-exception.filter';
 import { RequestIdInterceptor } from '../../src/common/request-id/request-id.interceptor';
 import { ResponseEnvelopeInterceptor } from '../../src/common/response/response-envelope.interceptor';
@@ -490,13 +491,13 @@ export async function createUs1TestAppWithState(
 
   const { AppModule } = await import('../../src/app.module');
   const { DATA_ADAPTER_REGISTRATIONS } = await import('../../src/connectors/data-adapter-registration');
-  const { MOCK_DATA_ADAPTER_REGISTRATIONS } = await import('../../src/connectors/mock/mock-connector.module');
+  const { MOCK_DATA_ADAPTER_REGISTRATIONS, MockConnectorModule } = await import('../../src/connectors/mock/mock-connector.module');
   const { MockConnectorAdapter } = await import('../../src/connectors/mock/mock-connector.adapter');
   const { createStaticInternalIdentityTokenVerifier } = await import('../../src/identity/internal-identity-token-verifier');
   const { INTERNAL_IDENTITY_CONFIG, INTERNAL_IDENTITY_TOKEN_VERIFIER } = await import('../../src/identity/identity-token.types');
   const { PrismaService } = await import('../../src/prisma/prisma.service');
   const builder = Test.createTestingModule({
-    imports: [AppModule],
+    imports: [AppModule, MockConnectorModule],
     providers: [{ provide: INTERNAL_IDENTITY_TEST_CONFIG, useValue: internalIdentity }]
   })
     .overrideProvider(INTERNAL_IDENTITY_CONFIG)
@@ -512,7 +513,19 @@ export async function createUs1TestAppWithState(
       onModuleDestroy: jest.fn(),
       db: prismaMock
     });
-  const testMockAdapter = new MockConnectorAdapter();
+  // Side-effect capabilities are available only in the explicit synthetic test graph.
+  const baseMockMetadata = new MockConnectorAdapter().metadata;
+  class TestMockConnectorAdapter extends MockConnectorAdapter {
+    override readonly metadata = Object.freeze({
+      ...baseMockMetadata,
+      supportedCapabilities: Object.freeze([
+        ...baseMockMetadata.supportedCapabilities,
+        'mock.orders.status.update',
+        'mock.orders.cancel'
+      ])
+    });
+  }
+  const testMockAdapter = new TestMockConnectorAdapter();
   const testMockRegistrations: DataAdapterRegistrations = Object.freeze(
     MOCK_DATA_ADAPTER_REGISTRATIONS.map((registration) => Object.freeze({
       ...registration,
@@ -1223,8 +1236,13 @@ function createPrismaMock(state: MockState) {
     },
     toolCall: {
       create: jest.fn(async ({ data }: { data: Partial<ToolCallRecord> }) => {
+        if (data.id && state.toolCalls.some((call) => call.id === data.id)) {
+          throw new Prisma.PrismaClientKnownRequestError('ToolCall primary key already reserved', {
+            code: 'P2002', clientVersion: 'test'
+          });
+        }
         const record: ToolCallRecord = {
-          id: `tool-call-${state.toolCalls.length + 1}`,
+          id: data.id ?? `tool-call-${state.toolCalls.length + 1}`,
           customerId: data.customerId,
           requestId: data.requestId ?? 'req-generated',
           sessionId: data.sessionId ?? 'session-owned-001',

@@ -1,6 +1,6 @@
 import { SideEffectExecutionGuardService } from '../../src/approvals/side-effect-execution-guard.service';
 import { AuditWriterService } from '../../src/audit/audit-writer.service';
-import { MockConnectorAdapter } from '../../src/connectors/mock/mock-connector.adapter';
+import { DataAdapterRegistry } from '../../src/connectors/data-adapter-registry.service';
 import { RiskLevel, ToolCallStatus, ToolExecutionStatus, ToolOperation } from '../../src/generated/prisma/enums';
 import { ToolPermissionPrecheckService } from '../../src/permissions/tool-permission-precheck.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
@@ -13,7 +13,7 @@ const describeUs3 = process.env.RUN_CUSTOMER_US3_TESTS === 'true' ? describe : d
 
 describeUs3('Customer-scoped side-effect idempotency contract', () => {
   it('replays a same-Customer key only after parent, tool, policy, permission, and contract rechecks', async () => {
-    const harness = createHarness('customer-a', { id: 'tool-call-a', customerId: 'customer-a', sessionId: 'session-owned-001', messageId: 'message-owned-assistant-001' });
+    const harness = createHarness('customer-a', validDuplicate('customer-a'));
 
     const result = await harness.service.execute(sideEffectInput('customer-a'));
 
@@ -35,6 +35,20 @@ describeUs3('Customer-scoped side-effect idempotency contract', () => {
     expect(harness.toolCallFindFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { customerId: 'customer-b', idempotencyKey: 'shared-tool-idempotency-key' } }));
     expect(harness.toolCallCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ customerId: 'customer-b', idempotencyKey: 'shared-tool-idempotency-key' }) }));
     expect(harness.connector.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a timed-out ToolCall as an unknown, non-retryable outcome', async () => {
+    const harness = createHarness('customer-a', null);
+    harness.toolRegistry.resolveToolForCustomer.mockResolvedValue({
+      resolved: { tool: { ...sideEffectTool(), timeoutMs: 10 }, requiredRoles: [], requiredPermissionScopes: [] }
+    });
+    harness.connector.execute.mockImplementation(() => new Promise(() => undefined));
+
+    const result = await harness.service.execute(sideEffectInput('customer-a'));
+
+    expect(result.executionStatus).toBe(ToolExecutionStatus.in_progress);
+    expect(harness.toolCallUpdate).not.toHaveBeenCalled();
+    expect(harness.audit.appendCustomerToolEvent).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'side_effect_execution_outcome_unknown' }));
   });
 
   it('fails closed when a bad repository returns a foreign duplicate row', async () => {
@@ -69,24 +83,33 @@ function createHarness(
   const sessionFindFirst = jest.fn().mockResolvedValue(session);
   const messageFindFirst = jest.fn().mockResolvedValue(message);
   const toolCallFindFirst = jest.fn().mockResolvedValue(duplicate);
+  const toolCallFindMany = jest.fn().mockResolvedValue([]);
   const toolCallCreate = jest.fn().mockImplementation(async ({ data }) => ({ id: 'tool-call-created', ...data }));
   const toolCallUpdate = jest.fn().mockImplementation(async ({ data }) => ({ id: 'tool-call-created', customerId, sessionId: 'session-owned-001', messageId: 'message-owned-assistant-001', executionStatus: data.executionStatus, ...data }));
   const connector = { execute: jest.fn().mockResolvedValue({ status: 'succeeded', data: {} }) };
   const audit = { appendCustomerToolEvent: jest.fn().mockResolvedValue({ id: 'audit-tool-001' }) };
-  const toolRegistry = { resolveToolForCustomer: jest.fn().mockResolvedValue({ resolved: { tool: sideEffectTool(), requiredRoles: [], requiredPermissionScopes: [] } }) };
+  const toolRegistry = { resolveToolForCustomer: jest.fn().mockResolvedValue({ resolved: { tool: sideEffectTool(), requiredRoles: [], requiredPermissionScopes: [] } }), validateNamedOperation: jest.fn().mockReturnValue({ valid: true, operation: { canonicalToolKey: 'mock.orders.status.update', schemaVersion: '1.0.0', arguments: { entityId: 'SO-10001' } } }) };
+  const registry = { select: jest.fn().mockResolvedValue(connector) };
   const precheck = { checkResolvedCustomerTool: jest.fn().mockResolvedValue({ allowed: true }) };
   const service = new SideEffectExecutionGuardService(
-    { db: { assistantSession: { findFirst: sessionFindFirst }, assistantMessage: { findFirst: messageFindFirst }, toolCall: { findFirst: toolCallFindFirst, create: toolCallCreate, update: toolCallUpdate } } } as unknown as PrismaService,
+    { db: { assistantSession: { findFirst: sessionFindFirst }, assistantMessage: { findFirst: messageFindFirst }, toolCall: { findFirst: toolCallFindFirst, findMany: toolCallFindMany, create: toolCallCreate, update: toolCallUpdate } } } as unknown as PrismaService,
     audit as unknown as AuditWriterService,
     toolRegistry as unknown as ToolRegistryService,
     precheck as unknown as ToolPermissionPrecheckService,
-    connector as unknown as MockConnectorAdapter
+    registry as unknown as DataAdapterRegistry
   );
-  return { service, sessionFindFirst, toolCallFindFirst, toolCallCreate, connector, audit, toolRegistry, precheck };
+  return { service, sessionFindFirst, toolCallFindFirst, toolCallCreate, toolCallUpdate, connector, audit, toolRegistry, precheck };
 }
 
 function validSession(customerId: string) {
-  return { id: 'session-owned-001', customerId, organizationId: 'org-shared', hostApp: 'erp', actorId: 'actor-shared' };
+  return { id: 'session-owned-001', customerId, integrationId: 'integration-erp', organizationId: 'org-shared', hostApp: 'erp', actorId: 'actor-shared' };
+}
+
+function validDuplicate(customerId: string) {
+  return { id: 'tool-call-a', customerId, sessionId: 'session-owned-001', messageId: 'message-owned-assistant-001',
+    toolDefinitionId: 'tool-definition-orders-001', toolName: 'mock.orders.status.update', toolVersion: '1.0.0',
+    inputSummary: { sourceType: 'action_draft', sourceId: 'draft-a', entityId: 'SO-10001' },
+    status: ToolCallStatus.success, executionStatus: ToolExecutionStatus.executed, executedAt: new Date() };
 }
 
 function sideEffectTool(): RegisteredToolDefinition {

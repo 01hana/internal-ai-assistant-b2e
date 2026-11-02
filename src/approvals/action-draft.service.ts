@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { Prisma } from '../generated/prisma/client';
-import { ActionDraftStatus, RiskLevel, ToolOperation } from '../generated/prisma/enums';
+import { ActionDraftStatus, RiskLevel, ToolExecutionStatus, ToolOperation } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
 import { getPageEntityRef } from '../assistant/page-context/page-context.mapper';
@@ -117,9 +117,13 @@ export class ActionDraftService {
           expectedToolContract: extractToolContract(draft.payloadSummary),
           entityId: extractEntityId(draft.payloadSummary),
           idempotencyKey: input.idempotencyKey,
+          replayOnly: true,
           requiresConfirmation: true,
           requiresApproval: false
         });
+        if (!duplicateResult.duplicateSafe || duplicateResult.priorExecutionStatus !== ToolExecutionStatus.executed) {
+          throw new ConflictException('Original action execution could not be verified.');
+        }
         return {
           ...toActionDraftResponse(draft),
           duplicateSafe: duplicateResult.duplicateSafe,
@@ -177,9 +181,14 @@ export class ActionDraftService {
       requiresApproval: false
     });
 
+    const verifiedStatus = execution.duplicateSafe ? execution.priorExecutionStatus : execution.executionStatus;
+    if (verifiedStatus !== ToolExecutionStatus.executed && verifiedStatus !== ToolExecutionStatus.failed) {
+      throw new ConflictException('Original action execution could not be verified.');
+    }
+
     const updated = await this.prisma.db.$transaction(async (database) => {
       const transitioned = await this.transition(database, draft, input.customerScope, {
-        status: ActionDraftStatus.executed,
+        status: verifiedStatus === ToolExecutionStatus.executed ? ActionDraftStatus.executed : ActionDraftStatus.failed,
         confirmedAt: new Date(),
         executedAt: new Date(),
         idempotencyKey: input.idempotencyKey ?? draft.idempotencyKey

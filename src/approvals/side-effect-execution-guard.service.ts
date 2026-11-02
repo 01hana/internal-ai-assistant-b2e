@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { AuditWriterService } from '../audit/audit-writer.service';
-import { MockConnectorAdapter } from '../connectors/mock/mock-connector.adapter';
+import { DataAdapterRegistry } from '../connectors/data-adapter-registry.service';
 import { Prisma } from '../generated/prisma/client';
 import { RiskLevel, ToolCallStatus, ToolExecutionStatus, ToolOperation } from '../generated/prisma/enums';
 import { RequestIdentityContext } from '../identity/identity-context.types';
@@ -32,6 +33,7 @@ interface ExecuteSideEffectInput {
   expectedToolContract?: Partial<PersistedSideEffectToolContract>;
   entityId?: string | null;
   idempotencyKey?: string;
+  replayOnly?: boolean;
   requiresConfirmation: boolean;
   requiresApproval: boolean;
 }
@@ -40,6 +42,7 @@ export interface SideEffectExecutionResult {
   toolCallId?: string;
   duplicateSafe: boolean;
   executionStatus: ToolExecutionStatus;
+  priorExecutionStatus?: typeof ToolExecutionStatus.executed | typeof ToolExecutionStatus.failed;
   idempotencyStatus: 'executed' | 'duplicate';
   recheck: Record<string, string>;
 }
@@ -51,7 +54,7 @@ export class SideEffectExecutionGuardService {
     private readonly auditWriter: AuditWriterService,
     private readonly toolRegistry: ToolRegistryService,
     private readonly permissionPrecheck: ToolPermissionPrecheckService,
-    private readonly mockConnector: MockConnectorAdapter
+    private readonly dataAdapterRegistry: DataAdapterRegistry
   ) {}
 
   async execute(input: ExecuteSideEffectInput): Promise<SideEffectExecutionResult> {
@@ -102,7 +105,11 @@ export class SideEffectExecutionGuardService {
       if (
         duplicateToolCall.customerId !== customerScope.customerId ||
         duplicateToolCall.sessionId !== input.sessionId ||
-        duplicateToolCall.messageId !== (input.messageId ?? null)
+        duplicateToolCall.messageId !== (input.messageId ?? null) ||
+        duplicateToolCall.toolDefinitionId !== tool.id ||
+        duplicateToolCall.toolName !== tool.key ||
+        duplicateToolCall.toolVersion !== tool.version ||
+        !matchesSideEffectSource(duplicateToolCall.inputSummary, input)
       ) {
         throw this.notFound();
       }
@@ -111,38 +118,96 @@ export class SideEffectExecutionGuardService {
         toolCallId: duplicateToolCall.id,
         duplicateSafe: true,
         executionStatus: ToolExecutionStatus.skipped_duplicate,
+        priorExecutionStatus: duplicateToolCall.executedAt && duplicateToolCall.status === ToolCallStatus.success && duplicateToolCall.executionStatus === ToolExecutionStatus.executed
+          ? ToolExecutionStatus.executed
+          : duplicateToolCall.executedAt && duplicateToolCall.status === ToolCallStatus.failed && duplicateToolCall.executionStatus === ToolExecutionStatus.failed
+            ? ToolExecutionStatus.failed
+            : undefined,
         idempotencyStatus: 'duplicate',
         recheck: buildRecheck('passed', 'passed', 'passed', 'duplicate')
       };
     }
 
-    const startedAt = Date.now();
-    const toolCall = await this.prisma.db.toolCall.create({
-      data: {
+    // A different key must not turn the same workflow source into a second
+    // side effect after its first ToolCall was reserved or completed.
+    const priorSourceCalls = await this.prisma.db.toolCall.findMany({
+      where: {
         customerId: customerScope.customerId,
-        requestId: input.requestId,
         sessionId: input.sessionId,
-        messageId: input.messageId ?? null,
-        toolDefinitionId: tool.id,
-        toolName: tool.key,
-        toolVersion: tool.version,
-        inputSummary: toJsonInput({
-          sourceType: input.sourceType,
-          sourceId: input.sourceId,
-          entityId: input.entityId ?? null
-        }),
-        permissionResult: toJsonInput({
-          requiredPermissionScopeCount: tool.requiredPermissionScopes.length
-        }),
-        outputSummary: toJsonInput({}),
-        status: ToolCallStatus.pending,
-        executionStatus: ToolExecutionStatus.in_progress,
-        idempotencyKey: input.idempotencyKey,
-        durationMs: null,
-        errorCode: null,
-        executedAt: null
+        messageId: input.messageId ?? null
       }
     });
+    if (input.replayOnly || priorSourceCalls.some((call) => matchesSideEffectIdentity(call.inputSummary, input))) {
+      throw new ConflictException('Action execution identity does not match a retryable ToolCall.');
+    }
+
+    const connectorArguments = { entityId: input.entityId };
+    const validated = this.toolRegistry.validateNamedOperation(tool, { arguments: connectorArguments });
+    if (!validated.valid) {
+      await this.recordDenied(input, customerScope, 'schema_invalid', tool);
+      throw new ForbiddenException('Side-effect tool arguments are invalid.');
+    }
+    const host = Object.freeze({
+      customerId: input.identityContext.customer.customerId,
+      integrationId: input.identityContext.customer.integrationId,
+      hostApp: input.identityContext.hostApp.hostApp,
+      organizationId: input.identityContext.organization.organizationId,
+      actorId: input.identityContext.actor.actorId,
+      roles: Object.freeze([...input.identityContext.actor.roles]),
+      permissionScopes: Object.freeze([...input.identityContext.actor.permissionScopes]),
+      requestId: input.identityContext.requestId
+    });
+    // Selection is after all authorization/replay gates and before reserving a ToolCall.
+    let adapter;
+    try {
+      adapter = await this.dataAdapterRegistry.select({ host, tool, operation: validated.operation });
+    } catch (error) {
+      await this.recordDenied(input, customerScope, 'DATA_ADAPTER_UNAVAILABLE', tool);
+      throw error;
+    }
+    const startedAt = Date.now();
+    let toolCall;
+    try {
+      toolCall = await this.prisma.db.toolCall.create({
+        data: {
+          id: sideEffectReservationId(customerScope.customerId, input.sourceType, input.sourceId),
+          customerId: customerScope.customerId,
+          requestId: input.requestId,
+          sessionId: input.sessionId,
+          messageId: input.messageId ?? null,
+          toolDefinitionId: tool.id,
+          toolName: tool.key,
+          toolVersion: tool.version,
+          inputSummary: toJsonInput({
+            sourceType: input.sourceType,
+            sourceId: input.sourceId,
+            entityId: input.entityId ?? null
+          }),
+          permissionResult: toJsonInput({
+            requiredPermissionScopeCount: tool.requiredPermissionScopes.length
+          }),
+          outputSummary: toJsonInput({}),
+          status: ToolCallStatus.pending,
+          executionStatus: ToolExecutionStatus.in_progress,
+          idempotencyKey: input.idempotencyKey,
+          durationMs: null,
+          errorCode: null,
+          executedAt: null
+        }
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        // The database primary key is the cross-process source reservation.
+        // A concurrent winner may still be executing; never invoke the adapter again.
+        const existingSource = await this.prisma.db.toolCall.findFirst({ where: {
+          customerId: customerScope.customerId,
+          id: sideEffectReservationId(customerScope.customerId, input.sourceType, input.sourceId)
+        } });
+        if (existingSource) throw new ConflictException('Action execution is already reserved.');
+        throw this.notFound();
+      }
+      throw error;
+    }
     if (
       toolCall.customerId !== customerScope.customerId ||
       toolCall.sessionId !== input.sessionId ||
@@ -151,30 +216,30 @@ export class SideEffectExecutionGuardService {
       throw this.notFound();
     }
 
-    const connectorArguments = { entityId: input.entityId };
-    const connectorResult = await this.mockConnector.execute({
-      requestId: input.requestId,
-      organizationId: customerScope.organizationId,
-      actorId: customerScope.actorId,
-      toolKey: tool.key,
-      arguments: connectorArguments,
-      idempotencyKey: input.idempotencyKey,
-      host: Object.freeze({
-        customerId: input.identityContext.customer.customerId,
-        integrationId: input.identityContext.customer.integrationId,
-        hostApp: input.identityContext.hostApp.hostApp,
-        organizationId: input.identityContext.organization.organizationId,
-        actorId: input.identityContext.actor.actorId,
-        roles: Object.freeze([...input.identityContext.actor.roles]),
-        permissionScopes: Object.freeze([...input.identityContext.actor.permissionScopes]),
-        requestId: input.identityContext.requestId
-      }),
-      operation: Object.freeze({
-        canonicalToolKey: tool.key,
-        schemaVersion: tool.version,
-        arguments: Object.freeze(connectorArguments)
-      })
-    });
+    let connectorResult;
+    try {
+      connectorResult = await executeWithinToolTimeout(adapter.execute({
+        requestId: input.requestId,
+        organizationId: customerScope.organizationId,
+        actorId: customerScope.actorId,
+        toolKey: tool.key,
+        arguments: { ...validated.operation.arguments },
+        idempotencyKey: input.idempotencyKey,
+        host,
+        operation: validated.operation
+      }), tool.timeoutMs);
+    } catch {
+      // A timeout or thrown adapter error does not prove the external action stopped.
+      // Keep the existing in-progress row as the durable, non-retryable unknown outcome.
+      await this.recordOutcomeUnknown(input, customerScope, tool, toolCall.id, Math.max(1, Date.now() - startedAt));
+      return {
+        toolCallId: toolCall.id,
+        duplicateSafe: false,
+        executionStatus: ToolExecutionStatus.in_progress,
+        idempotencyStatus: 'executed',
+        recheck: buildRecheck('passed', 'passed', 'passed', 'reserved')
+      };
+    }
 
     const durationMs = Math.max(1, Date.now() - startedAt);
     if (connectorResult.status !== 'succeeded') {
@@ -254,12 +319,24 @@ export class SideEffectExecutionGuardService {
     });
   }
 
-  private recordDenied(input: ExecuteSideEffectInput, customerScope: CustomerScope, deniedReason: ToolPermissionDeniedReason, tool?: RegisteredToolDefinition) {
+  private recordDenied(input: ExecuteSideEffectInput, customerScope: CustomerScope, deniedReason: ToolPermissionDeniedReason | 'DATA_ADAPTER_UNAVAILABLE', tool?: RegisteredToolDefinition) {
     return this.appendExecutionAudit(input, customerScope, {
       eventType: 'side_effect_execution_denied',
       tool,
       executionStatus: ToolExecutionStatus.not_started,
       deniedReason,
+      idempotencyStatus: 'executed'
+    });
+  }
+
+  private recordOutcomeUnknown(input: ExecuteSideEffectInput, customerScope: CustomerScope, tool: RegisteredToolDefinition, toolCallId: string, durationMs: number) {
+    return this.appendExecutionAudit(input, customerScope, {
+      eventType: 'side_effect_execution_outcome_unknown',
+      tool,
+      toolCallId,
+      durationMs,
+      executionStatus: ToolExecutionStatus.in_progress,
+      deniedReason: 'DATA_ADAPTER_OUTCOME_UNKNOWN',
       idempotencyStatus: 'executed'
     });
   }
@@ -393,4 +470,34 @@ function buildRecheck(permission: string, toolContract: string, freshness: strin
 
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
+}
+
+function sideEffectReservationId(customerId: string, sourceType: SideEffectSourceType, sourceId: string): string {
+  return `side-effect-${createHash('sha256').update(JSON.stringify([customerId, sourceType, sourceId])).digest('hex')}`;
+}
+
+function matchesSideEffectSource(summary: unknown, input: ExecuteSideEffectInput): boolean {
+  if (!matchesSideEffectIdentity(summary, input)) return false;
+  const fields = summary as Record<string, unknown>;
+  return fields.entityId === (input.entityId ?? null);
+}
+
+function matchesSideEffectIdentity(summary: unknown, input: ExecuteSideEffectInput): boolean {
+  if (!summary || typeof summary !== 'object' || Array.isArray(summary)) return false;
+  const fields = summary as Record<string, unknown>;
+  return fields.sourceType === input.sourceType &&
+    fields.sourceId === input.sourceId;
+}
+
+async function executeWithinToolTimeout<T>(execution: Promise<T>, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const boundedTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.min(timeoutMs, 30000) : 1;
+  try {
+    return await Promise.race([
+      execution,
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('adapter timeout')), boundedTimeout); })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }

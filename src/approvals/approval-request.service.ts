@@ -2,7 +2,7 @@ import { ConflictException, ForbiddenException, Injectable, NotFoundException } 
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { getPageEntityRef } from '../assistant/page-context/page-context.mapper';
 import { Prisma } from '../generated/prisma/client';
-import { ApprovalRequestStatus, RiskLevel, ToolOperation } from '../generated/prisma/enums';
+import { ApprovalRequestStatus, RiskLevel, ToolExecutionStatus, ToolOperation } from '../generated/prisma/enums';
 import { RequestIdentityContext } from '../identity/identity-context.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
@@ -181,6 +181,11 @@ export class ApprovalRequestService {
       requiresConfirmation: false,
       requiresApproval: true
     });
+
+    const verifiedStatus = execution.duplicateSafe ? execution.priorExecutionStatus : execution.executionStatus;
+    if (verifiedStatus !== ToolExecutionStatus.executed && verifiedStatus !== ToolExecutionStatus.failed) {
+      throw new ConflictException('Original approval execution could not be verified.');
+    }
 
     const updated = await this.prisma.db.$transaction(async (database) => {
       const transitioned = await this.transition(database, approvalRequest, input.customerScope, {

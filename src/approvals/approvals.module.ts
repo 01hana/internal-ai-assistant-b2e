@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
-import { MockConnectorModule } from '../connectors/mock/mock-connector.module';
+import { ConnectorsModule } from '../connectors/connectors.module';
 import { IdentityModule } from '../identity/identity.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -15,7 +15,7 @@ import { SideEffectExecutionGuardService } from './side-effect-execution-guard.s
 import { SideEffectToolContractResolver } from './side-effect-tool-contract.resolver';
 
 @Module({
-  imports: [AuditModule, IdentityModule, PrismaModule, ToolsModule, PermissionsModule, MockConnectorModule],
+  imports: [AuditModule, IdentityModule, PrismaModule, ToolsModule, PermissionsModule, ConnectorsModule],
   controllers: [ActionDraftController, ApprovalRequestController, EscalationRequestController],
   providers: [
     ActionDraftService,
