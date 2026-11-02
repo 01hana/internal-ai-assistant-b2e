@@ -8,18 +8,27 @@ import { fileURLToPath } from 'node:url';
 import {
   BACKEND_COMPILED_ENTRYPOINT, LocalAssistantError, PORTS, ROOT, STATE_DIR, beginAppliedConfigReconciliation, beginNetworkReconciliation, bridgeBindingDeploymentMatches,
   bridgeBindingRouteMatches, collectDockerCidrs, collectRouteCidrs,
-  commandExists, connectorBridgePrivateTarget, connectorTlsAction, connectorTlsBindingsMatch, detectLanAddress, doctorFailureRootCause,
+  commandExists, compiledFiles, connectorBridgePrivateTarget, connectorTlsAction, connectorTlsBindingsMatch, detectLanAddress, doctorFailureRootCause,
   ensureGatewayKey, generatedIdentityOverride, hostDatabaseUrl, hostsBlockMatches, identityBridgeAction, inspectDockerContainerDns,
-  inspectDockerContainerEnvironment, inspectDockerPublishedBindings,
+  inspectDockerContainerEnvironment, inspectDockerPublishedBindings, isManagedProcessAlive,
   hashFilesAndValues, httpHealthy, loadState, parseCloudflaredHostname, prerequisiteHint, prerequisiteReport, readEnvFile,
-  run, saveState, selectDockerSubnet, startManagedProcess, stopPid, validateRootEnvironment,
+  portOwner, run, saveState, selectDockerSubnet, startManagedProcess, stopPid, validateRootEnvironment,
   verifyHostMappings, waitFor, writeEnvFile
 } from './local-lib.mjs';
+import { assertShinmoneModeSwitchServicesIdle, commitShinmoneSelection, resolveShinmoneStartup } from './local-shinmone-mode.mjs';
 
 const startedThisRun = [];
 let state;
+let startupSelection;
+let selectedToolMode;
+let activationApplied = false;
 try {
   state = loadState();
+  startupSelection = resolveShinmoneStartup(state, process.argv.slice(2));
+  assertShinmoneModeSwitchServicesIdle(startupSelection,
+    Object.values(state.services ?? {}).some(isManagedProcessAlive) ||
+    Object.values(PORTS).some((port) => Boolean(portOwner(port))));
+  selectedToolMode = startupSelection.mode;
   const missing = prerequisiteReport({ needsMkcert: true });
   if (!commandExists('cloudflared')) missing.push('cloudflared');
   if (!commandExists('openssl')) missing.push('openssl');
@@ -65,15 +74,30 @@ try {
   run('npm', ['run', 'build:gateway'], { label: 'Gateway build', rootCause: 'GATEWAY_UNAVAILABLE', stdio: 'inherit' });
   run('npm', ['--prefix', 'apps/customer-connector-runtime', 'run', 'build'], { label: 'Connector Runtime build', rootCause: 'CONNECTOR_RUNTIME_UNAVAILABLE', stdio: 'inherit' });
   run('npm', ['--prefix', 'apps/identity-bridge', 'run', 'build'], { label: 'Identity Bridge build', rootCause: 'IDENTITY_BRIDGE_UNAVAILABLE', stdio: 'inherit' });
+  if (startupSelection.action === 'activate') {
+    runKpiProvision('prepare', databaseUrl);
+  } else if (startupSelection.action === 'rollback') runKpiProvision('rollback', databaseUrl);
+  // verify-demo requires a running, version-verified Backend; it runs after startManagedProcess below.
+  if (selectedToolMode !== 'kpistats-demo') {
+    runKpiProvision(startupSelection.action === 'rollback' ? 'verify-c01' : 'verify-default', databaseUrl);
+  }
 
   const connectorEnv = readEnvFile(join(ROOT, '.local-secrets/connector-local/runtime.env'));
   const connectorCa = join(ROOT, '.local-secrets/connector-local/bridge/combined-local-ca.pem');
+  if (connectorEnv.SHINMONE_LOCAL_TOOL_MODE !== selectedToolMode) {
+    throw new LocalAssistantError('LOCAL_ENV_INVALID', 'Connector tool mode differs from the selected Integration mode.');
+  }
+  const connectorConfigInputs = [join(ROOT, '.local-secrets/connector-local/runtime.env'), connectorCa,
+    ...configuredFilePaths(connectorEnv.CONNECTOR_MANIFEST_FILES, 'Connector manifests'),
+    ...compiledFiles(join(ROOT, 'apps/customer-connector-runtime/dist'))];
   const connectorAction = await startManagedProcess({
     state, name: 'connectorRuntime', command: 'node', args: ['dev/connector-local/start-runtime.mjs'],
     environment: { ...connectorEnv, PORT: String(PORTS.connectorRuntime), NODE_EXTRA_CA_CERTS: connectorCa }, port: PORTS.connectorRuntime,
     health: () => httpHealthy(`http://127.0.0.1:${PORTS.connectorRuntime}/health`, { expect: (body) => body?.status === 'healthy' }),
-    configInputs: [join(ROOT, '.local-secrets/connector-local/runtime.env'), connectorCa, join(ROOT, 'apps/customer-connector-runtime/dist/src/main.js')]
+    configInputs: connectorConfigInputs
   });
+  assertAppliedProcess(state, 'connectorRuntime', 'node', ['dev/connector-local/start-runtime.mjs'],
+    PORTS.connectorRuntime, connectorConfigInputs);
   if (connectorAction !== 'REUSE') startedThisRun.push({ kind: 'process', name: 'connectorRuntime' });
   process.stdout.write(`[${connectorAction}] Customer Connector Runtime\n`);
 
@@ -174,13 +198,22 @@ try {
   process.stdout.write('[PASS] Gateway Feature007 local trust provisioning\n');
 
   const backendEnv = { ...rootEnv, ...readEnvFile(join(ROOT, '.local-secrets/connector-local/backend.env')), ...backendIdentityEnvironment(rootEnv), DATABASE_URL: databaseUrl, PORT: String(PORTS.backend), NODE_EXTRA_CA_CERTS: connectorCa };
+  const backendConfigInputs = [join(ROOT, '.env'), join(ROOT, '.local-secrets/connector-local/backend.env'),
+    ...configuredFilePaths(backendEnv.ASSISTANT_CAPABILITY_PACK_PATHS_JSON, 'Capability Packs'),
+    join(ROOT, BACKEND_COMPILED_ENTRYPOINT), ...compiledFiles(join(ROOT, 'dist/src'))];
   const backendAction = await startManagedProcess({
     state, name: 'backend', command: 'node', args: [BACKEND_COMPILED_ENTRYPOINT], environment: backendEnv, port: PORTS.backend,
     health: () => httpHealthy(`http://127.0.0.1:${PORTS.backend}/api/v1/health`, { expect: (body) => body?.data?.status === 'healthy' || body?.status === 'healthy' }),
-    configInputs: [join(ROOT, '.env'), join(ROOT, '.local-secrets/connector-local/backend.env'), join(ROOT, BACKEND_COMPILED_ENTRYPOINT)]
+    configInputs: backendConfigInputs
   });
+  assertAppliedProcess(state, 'backend', 'node', [BACKEND_COMPILED_ENTRYPOINT], PORTS.backend,
+    backendConfigInputs);
   if (backendAction !== 'REUSE') startedThisRun.push({ kind: 'process', name: 'backend' });
   process.stdout.write(`[${backendAction}] Assistant Backend\n`);
+  if (startupSelection.action === 'activate') {
+    runKpiProvision('activate', databaseUrl);
+    activationApplied = true;
+  }
 
   const gatewayAction = await startManagedProcess({
     state, name: 'gateway', command: 'node', args: ['apps/gateway/dist/main.js'], environment: commonGatewayEnv, port: PORTS.gateway,
@@ -198,10 +231,22 @@ try {
   } else throw new LocalAssistantError('GATEWAY_UNAVAILABLE', 'Gateway signing authority state could not be inspected safely.');
 
   runDoctor(desiredNetwork);
+  if (selectedToolMode === 'kpistats-demo') runKpiProvision('verify-demo', databaseUrl);
+  else runKpiProvision(startupSelection.action === 'rollback' ? 'verify-c01' : 'verify-default', databaseUrl);
+  commitShinmoneSelection(state, startupSelection);
   networkReconciliation.commit(state);
   saveState(state);
+  if (startupSelection.action === 'activate' || startupSelection.action === 'rollback') {
+    process.stdout.write(`[PASS] Shinmone local Tool mode ${startupSelection.action}: ${selectedToolMode}\n`);
+  }
   process.stdout.write('\nLOCAL_ASSISTANT_READY=YES\nROOT_CAUSE=NONE\n');
 } catch (error) {
+  if (activationApplied) {
+    try {
+      const rootEnv = readEnvFile(join(ROOT, '.env'));
+      runKpiProvision('rollback', hostDatabaseUrl(rootEnv.DATABASE_URL));
+    } catch { /* leave affected Assistant traffic blocked; preserve the original failure */ }
+  }
   await rollback();
   const safe = error instanceof LocalAssistantError ? error : new LocalAssistantError('LOCAL_ENV_INVALID', 'Unexpected local orchestration failure.');
   process.stderr.write(`${safe.message}\nLOCAL_ASSISTANT_READY=NO\nROOT_CAUSE=${safe.rootCause}\n`);
@@ -209,6 +254,30 @@ try {
   if (safe.details?.port) process.stderr.write(`CONFLICT_PORT=${safe.details.port}\nCONFLICT_SERVICE=${safe.details.service}\n`);
   process.exitCode = 1;
 }
+
+function runKpiProvision(mode, databaseUrl) {
+  run('npm', ['run', 'kpistats:local:provision', '--', `--${mode}`],
+  { label: `Shinmone KPIStats ${mode}`, rootCause: mode.startsWith('verify-')
+      ? 'KPISTATS_CONFIGURATION_MISMATCH' : 'LOCAL_ENV_INVALID',
+    env: { ...process.env, DATABASE_URL: databaseUrl } });
+}
+
+function assertAppliedProcess(currentState, name, command, args, port, configInputs) {
+  const expectedHash = hashFilesAndValues(configInputs, { command, args, port });
+  const actual = currentState.services[name];
+  if (!isManagedProcessAlive(actual) || actual.configHash !== expectedHash) {
+    throw new LocalAssistantError('LOCAL_ENV_INVALID', `${name} did not load the selected compiled configuration.`);
+  }
+}
+
+function configuredFilePaths(raw, label) {
+  let paths;
+  try { paths = JSON.parse(raw); } catch { throw new LocalAssistantError('LOCAL_ENV_INVALID', `${label} are invalid.`); }
+  if (!Array.isArray(paths) || paths.length === 0 || paths.some((path) => typeof path !== 'string' ||
+      !existsSync(path))) throw new LocalAssistantError('LOCAL_ENV_INVALID', `${label} are missing.`);
+  return paths;
+}
+
 
 async function reconcileHosts(ip) {
   const content = readFileSync('/etc/hosts', 'utf8');
@@ -238,7 +307,9 @@ async function reconcileConnectorMaterial(ip) {
   const caBody = [readFileSync(join(caroot, 'rootCA.pem'), 'utf8').trim(), existsSync(identityCa) ? readFileSync(identityCa, 'utf8').trim() : ''].filter(Boolean).join('\n') + '\n';
   writeFileSync(connectorCa, caBody, { mode: 0o600 });
   chmodSync(key, 0o600);
-  run('node', ['dev/connector-local/generate-local-authority.mjs'], { label: 'Connector local authority generation' });
+  run('node', ['dev/connector-local/generate-local-authority.mjs',
+    ...(selectedToolMode === 'kpistats-demo' ? ['--kpistats-demo'] : [])],
+  { label: 'Connector local authority generation' });
   process.stdout.write('[PASS] Connector local TLS and authority material\n');
 }
 function connectorTlsValid(certificatePath, keyPath) {

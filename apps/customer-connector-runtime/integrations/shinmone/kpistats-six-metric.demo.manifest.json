@@ -1,0 +1,1419 @@
+{
+  "version": "1",
+  "connectorKey": "business",
+  "operations": [
+    {
+      "operationKey": "shinmone.kpistats.snapshot.today",
+      "contractVersion": "1.0.0",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "upstreamServiceRef": "shinmone-scm-api",
+      "request": {
+        "profile": "GET_QUERY_V1",
+        "path": "/Dashboard/KPIStats",
+        "fixedQuery": {
+          "TimeRange": "today"
+        },
+        "argumentMappings": []
+      },
+      "credentialProfileRef": "shinmone-idx-bearer-v1",
+      "readOnly": true,
+      "response": {
+        "validationProfile": "FULL_CLOSED_SCHEMA_V1",
+        "acceptedHttpStatuses": [
+          200
+        ],
+        "acceptedApplicationCodes": [
+          200
+        ],
+        "applicationCodePointer": "/Code",
+        "contentType": "application/json",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "Code": {
+              "type": "integer"
+            },
+            "ExecutionTime": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "Message": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "Data": {
+              "type": "object",
+              "properties": {
+                "NewOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "CompletedOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "InProductionOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "AvgCompletionRate": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "OverdueOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "TodayShipments": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "LastUpdated": {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                "TimeRange": {
+                  "type": "string",
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "NewOrders",
+                "CompletedOrders",
+                "InProductionOrders",
+                "AvgCompletionRate",
+                "OverdueOrders",
+                "TodayShipments",
+                "LastUpdated",
+                "TimeRange"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "Code",
+            "ExecutionTime",
+            "Message",
+            "Data"
+          ],
+          "additionalProperties": false
+        },
+        "extraction": [],
+        "structuredOutputSchema": {
+          "type": "object",
+          "properties": {
+            "Data": {
+              "type": "object",
+              "properties": {
+                "NewOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "CompletedOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "InProductionOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "AvgCompletionRate": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "OverdueOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "TodayShipments": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "LastUpdated": {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                "TimeRange": {
+                  "type": "string",
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "NewOrders",
+                "CompletedOrders",
+                "InProductionOrders",
+                "AvgCompletionRate",
+                "OverdueOrders",
+                "TodayShipments",
+                "LastUpdated",
+                "TimeRange"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "Data"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "limits": {
+        "maxRequestBytes": 1024,
+        "maxResponseBytes": 16384,
+        "maxDepth": 5,
+        "maxItems": 20,
+        "maxStringLength": 512,
+        "timeoutMs": 3500
+      },
+      "errorMap": {},
+      "readinessDependency": "shinmone-scm-api"
+    },
+    {
+      "operationKey": "shinmone.kpistats.snapshot.weekly",
+      "contractVersion": "1.0.0",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "upstreamServiceRef": "shinmone-scm-api",
+      "request": {
+        "profile": "GET_QUERY_V1",
+        "path": "/Dashboard/KPIStats",
+        "fixedQuery": {
+          "TimeRange": "thisWeek"
+        },
+        "argumentMappings": []
+      },
+      "credentialProfileRef": "shinmone-idx-bearer-v1",
+      "readOnly": true,
+      "response": {
+        "validationProfile": "FULL_CLOSED_SCHEMA_V1",
+        "acceptedHttpStatuses": [
+          200
+        ],
+        "acceptedApplicationCodes": [
+          200
+        ],
+        "applicationCodePointer": "/Code",
+        "contentType": "application/json",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "Code": {
+              "type": "integer"
+            },
+            "ExecutionTime": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "Message": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "Data": {
+              "type": "object",
+              "properties": {
+                "NewOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "CompletedOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "InProductionOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "AvgCompletionRate": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "OverdueOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "TodayShipments": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "LastUpdated": {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                "TimeRange": {
+                  "type": "string",
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "NewOrders",
+                "CompletedOrders",
+                "InProductionOrders",
+                "AvgCompletionRate",
+                "OverdueOrders",
+                "TodayShipments",
+                "LastUpdated",
+                "TimeRange"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "Code",
+            "ExecutionTime",
+            "Message",
+            "Data"
+          ],
+          "additionalProperties": false
+        },
+        "extraction": [],
+        "structuredOutputSchema": {
+          "type": "object",
+          "properties": {
+            "Data": {
+              "type": "object",
+              "properties": {
+                "NewOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "CompletedOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "InProductionOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "AvgCompletionRate": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "OverdueOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "TodayShipments": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "LastUpdated": {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                "TimeRange": {
+                  "type": "string",
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "NewOrders",
+                "CompletedOrders",
+                "InProductionOrders",
+                "AvgCompletionRate",
+                "OverdueOrders",
+                "TodayShipments",
+                "LastUpdated",
+                "TimeRange"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "Data"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "limits": {
+        "maxRequestBytes": 1024,
+        "maxResponseBytes": 16384,
+        "maxDepth": 5,
+        "maxItems": 20,
+        "maxStringLength": 512,
+        "timeoutMs": 3500
+      },
+      "errorMap": {},
+      "readinessDependency": "shinmone-scm-api"
+    },
+    {
+      "operationKey": "shinmone.kpistats.snapshot.monthly",
+      "contractVersion": "1.0.0",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "upstreamServiceRef": "shinmone-scm-api",
+      "request": {
+        "profile": "GET_QUERY_V1",
+        "path": "/Dashboard/KPIStats",
+        "fixedQuery": {
+          "TimeRange": "thisMonth"
+        },
+        "argumentMappings": []
+      },
+      "credentialProfileRef": "shinmone-idx-bearer-v1",
+      "readOnly": true,
+      "response": {
+        "validationProfile": "FULL_CLOSED_SCHEMA_V1",
+        "acceptedHttpStatuses": [
+          200
+        ],
+        "acceptedApplicationCodes": [
+          200
+        ],
+        "applicationCodePointer": "/Code",
+        "contentType": "application/json",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "Code": {
+              "type": "integer"
+            },
+            "ExecutionTime": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "Message": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "Data": {
+              "type": "object",
+              "properties": {
+                "NewOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "CompletedOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "InProductionOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "AvgCompletionRate": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "OverdueOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "TodayShipments": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "LastUpdated": {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                "TimeRange": {
+                  "type": "string",
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "NewOrders",
+                "CompletedOrders",
+                "InProductionOrders",
+                "AvgCompletionRate",
+                "OverdueOrders",
+                "TodayShipments",
+                "LastUpdated",
+                "TimeRange"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "Code",
+            "ExecutionTime",
+            "Message",
+            "Data"
+          ],
+          "additionalProperties": false
+        },
+        "extraction": [],
+        "structuredOutputSchema": {
+          "type": "object",
+          "properties": {
+            "Data": {
+              "type": "object",
+              "properties": {
+                "NewOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "CompletedOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "InProductionOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "AvgCompletionRate": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "OverdueOrders": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "TodayShipments": {
+                  "type": "object",
+                  "properties": {
+                    "Current": {
+                      "type": "number"
+                    },
+                    "Previous": {
+                      "type": "number"
+                    },
+                    "Change": {
+                      "type": "number"
+                    },
+                    "Trend": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "ChangePercentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "Current",
+                    "Previous",
+                    "Change",
+                    "Trend",
+                    "ChangePercentage"
+                  ],
+                  "additionalProperties": false
+                },
+                "LastUpdated": {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                "TimeRange": {
+                  "type": "string",
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "NewOrders",
+                "CompletedOrders",
+                "InProductionOrders",
+                "AvgCompletionRate",
+                "OverdueOrders",
+                "TodayShipments",
+                "LastUpdated",
+                "TimeRange"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "Data"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "limits": {
+        "maxRequestBytes": 1024,
+        "maxResponseBytes": 16384,
+        "maxDepth": 5,
+        "maxItems": 20,
+        "maxStringLength": 512,
+        "timeoutMs": 3500
+      },
+      "errorMap": {},
+      "readinessDependency": "shinmone-scm-api"
+    }
+  ]
+}

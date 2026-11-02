@@ -4,6 +4,7 @@ import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understandi
 import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
 import type { ToolResultPolicyResolution } from '../../src/tools/tool-registry.types';
 import { RiskLevel, ToolOperation } from '../../src/generated/prisma/enums';
+import { demoMetricNames, demoPeriods, demoToolOutputSchemaFor } from '../support/shinmone-kpistats-demo.fixture';
 
 const pack = 'customer-capability-packs/shinmone-scm-local/1.0.0.json';
 const host = { customerId: 'customer-shinmone-scm-local', integrationId: 'shinmone-scm-assistant-local',
@@ -61,6 +62,46 @@ describe('LLM Tool Selection with an existing scoped C01 catalog', () => {
         ? { deniedReason: 'customer_policy_denied' } : active(key, version, customerId));
     expect(await service.describeAvailable(host)).toEqual([]);
     expect(generateAnswer).not.toHaveBeenCalled();
+  });
+
+  it('uses the six approved schema metrics from one scoped synthetic Dashboard capability', async () => {
+    const additionalTools = Object.fromEntries(demoPeriods.map((period) => {
+      const key = `demo.shinmone.kpistats.${period.suffix}`;
+      return [key, { customerId: 'customer-a', tool: {
+        id: key, key, name: key, version: '1.0.0', description: '合成儀表板統計',
+        operation: ToolOperation.read, riskLevel: RiskLevel.low, active: true,
+        connectorKey: 'synthetic', timeoutMs: 1000, requiredPermissionScopes: ['dashboard:read'],
+        inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+        outputSchema: demoToolOutputSchemaFor(period.wire),
+        hasSideEffect: false, requiresConfirmation: false, requiresApproval: false
+      } }];
+    }));
+    const harness = await createFeature011DirectHarness(
+      ['test/fixtures/capability-packs/shinmone-kpistats-demo.v1.json'], { additionalTools });
+    const service = new LlmToolSelectionService(harness.registry,
+      { ...harness.tools, isExecutableReadOnly: () => true } as never, harness.binding,
+      { generateAnswer: jest.fn() } as never, { append: jest.fn() } as never);
+    const scoped = { ...host, customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp',
+      permissionScopes: ['dashboard:read'] };
+    const description = (await service.describeAvailable(scoped)).join(' ');
+    for (const metric of demoMetricNames) expect(description).toContain(metric === 'AvgCompletionRate' ? '完工率' : {
+      NewOrders: '新增工單統計', CompletedOrders: '完工工單統計',
+      InProductionOrders: '生產中工單統計', OverdueOrders: '逾期工單統計',
+      TodayShipments: '出貨工單統計'
+    }[metric]);
+    expect(description).toContain('今天');
+    expect(description).toContain('本週');
+    expect(description).toContain('本月');
+    expect(await service.describeAvailable({ ...scoped, permissionScopes: [] })).toEqual([]);
+    expect(await service.describeAvailable({ ...scoped, integrationId: 'integration-other' })).toEqual([]);
+    const active = harness.tools.resolveExactToolForCustomer.getMockImplementation()!;
+    harness.tools.resolveExactToolForCustomer.mockImplementation(async (key: string, version: string, customerId: string) =>
+      key === 'demo.shinmone.kpistats.weekly'
+        ? { deniedReason: 'customer_policy_denied' } : active(key, version, customerId));
+    const withoutWeekly = (await service.describeAvailable(scoped)).join(' ');
+    expect(withoutWeekly).not.toContain('本週');
+    expect(withoutWeekly).toContain('今天');
+    expect(withoutWeekly).toContain('本月');
   });
 
   it.each([

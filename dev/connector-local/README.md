@@ -65,7 +65,7 @@ Use the same `NODE_EXTRA_CA_CERTS` prefix when starting the Connector Runtime an
 
 ## 3. Generate local-only connector authority
 
-Generate separate Central and Bridge binding keypairs, exact-schema local environment files, and a read-only copy of the checked-in manifest:
+Generate separate Central and Bridge binding keypairs, exact-schema local environment files, and read-only copies of the three checked-in period manifests:
 
 ```sh
 node dev/connector-local/generate-local-authority.mjs
@@ -137,7 +137,7 @@ The generator sets `connectorInstanceId` to `shinmone-scm-connector-local-1` and
 ### Central Backend
 
 ```dotenv
-ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON=[{"version":"1","active":true,"customerId":"customer-shinmone-scm-local","integrationId":"shinmone-scm-assistant-local","hostApp":"shinmone-scm","connectorKey":"business","connectorInstanceId":"<UNRESOLVED_CONNECTOR_INSTANCE_ID>","operations":[{"key":"work-orders.monthly-new-count","version":"1.0.0"}]}]
+ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON=[{"version":"1","active":true,"customerId":"customer-shinmone-scm-local","integrationId":"shinmone-scm-assistant-local","hostApp":"shinmone-scm","connectorKey":"business","connectorInstanceId":"<UNRESOLVED_CONNECTOR_INSTANCE_ID>","operations":[{"key":"work-orders.monthly-new-count","version":"1.0.0"},{"key":"work-orders.today-new-count","version":"1.0.0"},{"key":"work-orders.weekly-new-count","version":"1.0.0"}]}]
 ASSISTANT_CONNECTOR_DEPLOYMENTS_JSON=[{"version":"1","customerId":"customer-shinmone-scm-local","integrationId":"shinmone-scm-assistant-local","hostApp":"shinmone-scm","connectorKey":"business","connectorInstanceId":"<UNRESOLVED_CONNECTOR_INSTANCE_ID>","active":true,"invocationUri":"https://connector-runtime.local.test:3443/v1/connector/invocations","serviceAuthProfileKey":"<UNRESOLVED_CENTRAL_SERVICE_AUTH_PROFILE_KEY>","destinationPolicy":{"mode":"allowlisted_networks","allowedCidrs":["<LOCAL_LAN_IP>/32"]},"maxRequestBytes":16384,"maxResponseBytes":16384,"maxTransportMs":4500}]
 ASSISTANT_CONNECTOR_SERVICE_KEYS_JSON=[{"profileKey":"<UNRESOLVED_CENTRAL_SERVICE_AUTH_PROFILE_KEY>","typ":"assistant-connector-service+jwt","subject":"<UNRESOLVED_CENTRAL_SERVICE_SUBJECT>","keyDomain":"<UNRESOLVED_CENTRAL_KEY_DOMAIN>","keys":[{"kid":"<UNRESOLVED_CENTRAL_KEY_ID>","status":"active","publicJwk":"<UNRESOLVED_PUBLIC_JWK>","privateKeyReference":"<UNRESOLVED_PRIVATE_KEY_REFERENCE>"}]}]
 ASSISTANT_CONNECTOR_SERVICE_ISSUER=<UNRESOLVED_CENTRAL_SERVICE_ISSUER>
@@ -151,7 +151,7 @@ CONNECTOR_CENTRAL_TRUST_KEYS_JSON=[{"kind":"central-invocation","profileKey":"<U
 CONNECTOR_BINDING_BOOTSTRAP_PROFILES_JSON=[{"kind":"binding-bootstrap","profileKey":"BRIDGE_BINDING_TRANSPORT_V1","typ":"assistant-connector-binding+jwt","issuer":"<UNRESOLVED_BRIDGE_BINDING_ISSUER>","subject":"<UNRESOLVED_BRIDGE_BINDING_SUBJECT>","audience":"<UNRESOLVED_BRIDGE_BINDING_AUDIENCE>","keyDomain":"<UNRESOLVED_BRIDGE_BINDING_KEY_DOMAIN>","trustedContext":{"customerId":"customer-shinmone-scm-local","integrationId":"shinmone-scm-assistant-local","hostApp":"shinmone-scm","connectorInstanceId":"<UNRESOLVED_CONNECTOR_INSTANCE_ID>"},"keys":[{"kid":"<UNRESOLVED_BRIDGE_BINDING_KEY_ID>","status":"active","publicJwk":"<UNRESOLVED_PUBLIC_JWK>"}],"providerKey":"shinmone-idx-bootstrap-v1"}]
 CONNECTOR_CREDENTIAL_PROFILES_JSON=[{"credentialProfileRef":"shinmone-idx-bearer-v1","credentialProviderKey":"shinmone-idx-bootstrap-v1","applicationStrategyKey":"shinmone-fixed-bearer-v1","credentialKind":"bearer-v1"}]
 CONNECTOR_UPSTREAMS_JSON=[{"upstreamServiceRef":"shinmone-scm-api","origin":"https://shinmone-upstream.local.test:3444","basePath":"/APIs/SCM","addressMode":"allowlisted_networks","allowedCidrs":["<LOCAL_LAN_IP>/32"]}]
-CONNECTOR_MANIFEST_FILES=["<ABSOLUTE_READ_ONLY_MOUNTED_MANIFEST_PATH>"]
+CONNECTOR_MANIFEST_FILES=["<ABSOLUTE_READ_ONLY_MONTHLY_MANIFEST_PATH>","<ABSOLUTE_READ_ONLY_TODAY_MANIFEST_PATH>","<ABSOLUTE_READ_ONLY_WEEKLY_MANIFEST_PATH>"]
 ```
 
 The configured upstream origin is HTTPS. Only Caddy owns the final HTTP hop to `59.125.138.139`.
@@ -168,7 +168,7 @@ BRIDGE_BINDING_REQUEST_TIMEOUT_MS=2000
 
 ## Production transition
 
-Production requires configuration replacement only:
+Production transition requires deployment-owned connector configuration and approved product ToolDefinition plus Customer-scoped CustomerToolPolicy provisioning. A Capability Pack or Connector configuration does not, by itself, grant Customer Tool execution permission:
 
 - replace `https://connector-runtime.local.test:3443` with the real customer Connector Runtime HTTPS origin;
 - replace `https://shinmone-upstream.local.test:3444` with the real Shinmone HTTPS API origin;

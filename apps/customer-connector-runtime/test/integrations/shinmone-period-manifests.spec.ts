@@ -10,6 +10,7 @@ import {
   SHINMONE_TODAY_OPERATION_KEY,
   SHINMONE_WEEKLY_MANIFEST_PATH,
   SHINMONE_WEEKLY_OPERATION_KEY,
+  SHINMONE_KPISTATS_DEMO_MANIFEST_PATH,
   createShinmoneRuntimeIntegration
 } from '../../integrations/shinmone';
 
@@ -22,6 +23,11 @@ const periods = [
 describe('Shinmone exact new-work-order period manifests', () => {
   it('registers all three exact Customer-local operations', () => {
     expect(createShinmoneRuntimeIntegration().manifestFiles).toEqual(periods.map(([path]) => path));
+  });
+
+  it('selects the six-metric manifest only in the explicit local Demo mode', () => {
+    expect(createShinmoneRuntimeIntegration({ toolMode: 'kpistats-demo' }).manifestFiles)
+      .toEqual([SHINMONE_KPISTATS_DEMO_MANIFEST_PATH]);
   });
 
   it.each(periods)('%s fixes a closed GET and extracts only its canonical result', async (path, key, period) => {

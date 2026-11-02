@@ -11,3 +11,4 @@ export const SHINMONE_TODAY_OPERATION_KEY = 'work-orders.today-new-count';
 export const SHINMONE_WEEKLY_OPERATION_KEY = 'work-orders.weekly-new-count';
 export const SHINMONE_TODAY_MANIFEST_PATH = join(__dirname, 'work-orders.today-new-count.manifest.json');
 export const SHINMONE_WEEKLY_MANIFEST_PATH = join(__dirname, 'work-orders.weekly-new-count.manifest.json');
+export const SHINMONE_KPISTATS_DEMO_MANIFEST_PATH = join(__dirname, 'kpistats-six-metric.demo.manifest.json');

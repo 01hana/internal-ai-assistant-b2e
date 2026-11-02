@@ -1,0 +1,997 @@
+{
+  "status": "staged-only",
+  "customerId": "customer-shinmone-scm-local",
+  "integrationId": "shinmone-scm-assistant-local",
+  "requiredPermissionScopes": [
+    "menu:SCM_DASHBOARD:read"
+  ],
+  "tools": [
+    {
+      "name": "shinmone.kpistats.snapshot.today",
+      "version": "1.0.0",
+      "description": "讀取 KPIStats 已核准的六項工單統計與比較欄位；Previous 僅為 API 提供的前期比較值，不等同可直接查詢昨天、上週或上月。OverdueOrders 依 Dashboard 今日結束截止口徑，不代表本期間新增逾期。TodayShipments 的事件日期口徑尚待實際契約確認。",
+      "resource": "work_orders",
+      "operation": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "Data": {
+            "type": "object",
+            "properties": {
+              "NewOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "新增工單統計",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "CompletedOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "完工工單統計",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "InProductionOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "生產中工單統計",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "AvgCompletionRate": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "完工率",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "%"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "%"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "百分點"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "OverdueOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Dashboard 逾期工單統計；今日結束截止，非本期間新增逾期",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "TodayShipments": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "TodayShipments API 統計；事件日期口徑待確認",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "LastUpdated": {
+                "type": "string",
+                "description": "最後更新時間"
+              },
+              "TimeRange": {
+                "type": "string",
+                "enum": [
+                  "today"
+                ],
+                "description": "本次統計期間"
+              }
+            },
+            "required": [
+              "NewOrders",
+              "CompletedOrders",
+              "InProductionOrders",
+              "AvgCompletionRate",
+              "OverdueOrders",
+              "TodayShipments",
+              "LastUpdated",
+              "TimeRange"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "Data"
+        ],
+        "additionalProperties": false,
+        "x-assistant-result-policy": {
+          "version": "1",
+          "allowedFieldPaths": [
+            "Data",
+            "Data.TimeRange"
+          ],
+          "deniedFieldPaths": [],
+          "permissionMasks": [],
+          "limits": {
+            "maxDepth": 4,
+            "maxItems": 100,
+            "maxStringLength": 512,
+            "maxTotalBytes": 16384
+          },
+          "evidenceSafeProvenanceFields": [
+            "Data.TimeRange"
+          ]
+        }
+      },
+      "requiredPermissions": [
+        "menu:SCM_DASHBOARD:read"
+      ],
+      "riskLevel": "low",
+      "hasSideEffect": false,
+      "requiresConfirmation": false,
+      "requiresApproval": false,
+      "connectorKey": "business",
+      "timeoutMs": 5000,
+      "isActive": false
+    },
+    {
+      "name": "shinmone.kpistats.snapshot.weekly",
+      "version": "1.0.0",
+      "description": "讀取 KPIStats 已核准的六項工單統計與比較欄位；Previous 僅為 API 提供的前期比較值，不等同可直接查詢昨天、上週或上月。OverdueOrders 依 Dashboard 今日結束截止口徑，不代表本期間新增逾期。TodayShipments 的事件日期口徑尚待實際契約確認。",
+      "resource": "work_orders",
+      "operation": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "Data": {
+            "type": "object",
+            "properties": {
+              "NewOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "新增工單統計",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "CompletedOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "完工工單統計",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "InProductionOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "生產中工單統計",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "AvgCompletionRate": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "完工率",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "%"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "%"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "百分點"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "OverdueOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Dashboard 逾期工單統計；今日結束截止，非本期間新增逾期",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "TodayShipments": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "TodayShipments API 統計；事件日期口徑待確認",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "LastUpdated": {
+                "type": "string",
+                "description": "最後更新時間"
+              },
+              "TimeRange": {
+                "type": "string",
+                "enum": [
+                  "thisWeek"
+                ],
+                "description": "本次統計期間"
+              }
+            },
+            "required": [
+              "NewOrders",
+              "CompletedOrders",
+              "InProductionOrders",
+              "AvgCompletionRate",
+              "OverdueOrders",
+              "TodayShipments",
+              "LastUpdated",
+              "TimeRange"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "Data"
+        ],
+        "additionalProperties": false,
+        "x-assistant-result-policy": {
+          "version": "1",
+          "allowedFieldPaths": [
+            "Data",
+            "Data.TimeRange"
+          ],
+          "deniedFieldPaths": [],
+          "permissionMasks": [],
+          "limits": {
+            "maxDepth": 4,
+            "maxItems": 100,
+            "maxStringLength": 512,
+            "maxTotalBytes": 16384
+          },
+          "evidenceSafeProvenanceFields": [
+            "Data.TimeRange"
+          ]
+        }
+      },
+      "requiredPermissions": [
+        "menu:SCM_DASHBOARD:read"
+      ],
+      "riskLevel": "low",
+      "hasSideEffect": false,
+      "requiresConfirmation": false,
+      "requiresApproval": false,
+      "connectorKey": "business",
+      "timeoutMs": 5000,
+      "isActive": false
+    },
+    {
+      "name": "shinmone.kpistats.snapshot.monthly",
+      "version": "1.0.0",
+      "description": "讀取 KPIStats 已核准的六項工單統計與比較欄位；Previous 僅為 API 提供的前期比較值，不等同可直接查詢昨天、上週或上月。OverdueOrders 依 Dashboard 今日結束截止口徑，不代表本期間新增逾期。TodayShipments 的事件日期口徑尚待實際契約確認。",
+      "resource": "work_orders",
+      "operation": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "Data": {
+            "type": "object",
+            "properties": {
+              "NewOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "新增工單統計",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "CompletedOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "完工工單統計",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "InProductionOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "生產中工單統計",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "AvgCompletionRate": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "完工率",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "%"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "%"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "百分點"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "OverdueOrders": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Dashboard 逾期工單統計；今日結束截止，非本期間新增逾期",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "TodayShipments": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "TodayShipments API 統計；事件日期口徑待確認",
+                "required": [
+                  "Current",
+                  "Previous",
+                  "Change",
+                  "Trend",
+                  "ChangePercentage"
+                ],
+                "properties": {
+                  "Current": {
+                    "type": "number",
+                    "description": "本期",
+                    "x-unit": "張"
+                  },
+                  "Previous": {
+                    "type": "number",
+                    "description": "前期",
+                    "x-unit": "張"
+                  },
+                  "Change": {
+                    "type": "number",
+                    "description": "本期減前期",
+                    "x-unit": "張"
+                  },
+                  "Trend": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down",
+                      "neutral"
+                    ]
+                  },
+                  "ChangePercentage": {
+                    "type": "number",
+                    "description": "相對變化",
+                    "x-unit": "%"
+                  }
+                }
+              },
+              "LastUpdated": {
+                "type": "string",
+                "description": "最後更新時間"
+              },
+              "TimeRange": {
+                "type": "string",
+                "enum": [
+                  "thisMonth"
+                ],
+                "description": "本次統計期間"
+              }
+            },
+            "required": [
+              "NewOrders",
+              "CompletedOrders",
+              "InProductionOrders",
+              "AvgCompletionRate",
+              "OverdueOrders",
+              "TodayShipments",
+              "LastUpdated",
+              "TimeRange"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "Data"
+        ],
+        "additionalProperties": false,
+        "x-assistant-result-policy": {
+          "version": "1",
+          "allowedFieldPaths": [
+            "Data",
+            "Data.TimeRange"
+          ],
+          "deniedFieldPaths": [],
+          "permissionMasks": [],
+          "limits": {
+            "maxDepth": 4,
+            "maxItems": 100,
+            "maxStringLength": 512,
+            "maxTotalBytes": 16384
+          },
+          "evidenceSafeProvenanceFields": [
+            "Data.TimeRange"
+          ]
+        }
+      },
+      "requiredPermissions": [
+        "menu:SCM_DASHBOARD:read"
+      ],
+      "riskLevel": "low",
+      "hasSideEffect": false,
+      "requiresConfirmation": false,
+      "requiresApproval": false,
+      "connectorKey": "business",
+      "timeoutMs": 5000,
+      "isActive": false
+    }
+  ]
+}

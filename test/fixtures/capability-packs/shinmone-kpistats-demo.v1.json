@@ -1,0 +1,73 @@
+{
+  "version": "1",
+  "packId": "shinmone-kpistats-demo-isolated",
+  "packVersion": "1.0.0",
+  "customerId": "customer-a",
+  "integrationId": "integration-erp",
+  "hostApps": ["erp"],
+  "active": true,
+  "capabilities": [
+    {
+      "version": "1",
+      "capabilityKey": "demo.dashboard.kpistats",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "KPIStats Demo 儀表板統計",
+      "semanticProfiles": [
+        {
+          "version": "1",
+          "locale": "zh-TW",
+          "aliases": ["KPIStats Demo"],
+          "examples": ["讀取 KPIStats Demo 統計"],
+          "resourceTerms": ["KPIStats"],
+          "intentTerms": ["read"],
+          "metricTerms": ["statistics"],
+          "requiredSignalGroups": ["resource"]
+        }
+      ],
+      "parameters": [
+        {
+          "version": "1",
+          "parameterName": "timeRange",
+          "type": "enum",
+          "required": true,
+          "semanticTerms": ["期間"],
+          "values": [
+            { "value": "today", "aliases": ["今天", "今日"] },
+            { "value": "this_week", "aliases": ["本週", "這週"] },
+            { "value": "this_month", "aliases": ["本月", "這個月"] }
+          ]
+        }
+      ]
+    }
+  ],
+  "bindings": [
+    {
+      "version": "1", "bindingId": "demo.kpistats.today", "bindingVersion": "1.0.0", "active": true,
+      "capabilityKey": "demo.dashboard.kpistats",
+      "semanticConstraints": [
+        { "version": "1", "parameterName": "timeRange", "operator": "ENUM_VALUE_IN", "allowedValues": ["today"] }
+      ],
+      "target": { "kind": "TOOL", "toolKey": "demo.shinmone.kpistats.today", "toolVersion": "1.0.0" },
+      "mappings": []
+    },
+    {
+      "version": "1", "bindingId": "demo.kpistats.weekly", "bindingVersion": "1.0.0", "active": true,
+      "capabilityKey": "demo.dashboard.kpistats",
+      "semanticConstraints": [
+        { "version": "1", "parameterName": "timeRange", "operator": "ENUM_VALUE_IN", "allowedValues": ["this_week"] }
+      ],
+      "target": { "kind": "TOOL", "toolKey": "demo.shinmone.kpistats.weekly", "toolVersion": "1.0.0" },
+      "mappings": []
+    },
+    {
+      "version": "1", "bindingId": "demo.kpistats.monthly", "bindingVersion": "1.0.0", "active": true,
+      "capabilityKey": "demo.dashboard.kpistats",
+      "semanticConstraints": [
+        { "version": "1", "parameterName": "timeRange", "operator": "ENUM_VALUE_IN", "allowedValues": ["this_month"] }
+      ],
+      "target": { "kind": "TOOL", "toolKey": "demo.shinmone.kpistats.monthly", "toolVersion": "1.0.0" },
+      "mappings": []
+    }
+  ]
+}

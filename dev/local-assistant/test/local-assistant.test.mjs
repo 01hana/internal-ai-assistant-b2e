@@ -1,9 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { assertShinmoneModeSwitchServicesIdle, commitShinmoneSelection, resolveShinmoneStartup,
+  SHINMONE_DASHBOARD_READ_SCOPE, SHINMONE_LOCAL_SCOPE, shinmoneContractHash } from '../local-shinmone-mode.mjs';
+import { assertDedicatedShinmoneRuntime, mergeLocalCapabilityPaths,
+  mergeLocalServiceKeys, mergeScopedLocalEntries } from '../../connector-local/local-config-merge.mjs';
 import {
   BACKEND_COMPILED_ENTRYPOINT, LocalAssistantError, ROOT, assertSafeState, beginAppliedConfigReconciliation, beginNetworkReconciliation,
+  compiledFiles, hashFilesAndValues,
   bridgeBindingDeploymentMatches, bridgeBindingRouteMatches, connectorTlsAction, connectorTlsBindingsMatch,
   doctorFailureRootCause, doctorRootCauseFor, hostsBlockMatches, identityBridgeAction, idxVerifierRootCause,
   inspectDockerContainerEnvironment, inspectDockerPublishedBindings, missingPrerequisites, networkChanged, parseCloudflaredHostname, parseIpv4Routes,
@@ -21,6 +27,112 @@ test('Backend launchers use the authoritative compiled entrypoint', () => {
   assert.match(localStart, /join\(ROOT, BACKEND_COMPILED_ENTRYPOINT\)/);
   assert.doesNotMatch(localStart, /args: \['dist\/main\.js'\]|join\(ROOT, 'dist\/main\.js'\)/);
   assert.equal(existsSync(join(ROOT, BACKEND_COMPILED_ENTRYPOINT)), true);
+});
+
+test('local start restores the scoped selected mode and forwards it to the existing generator', () => {
+  const localStart = readFileSync(join(ROOT, 'dev/local-assistant/local-start.mjs'), 'utf8');
+  assert.match(localStart, /resolveShinmoneStartup\(state, process\.argv\.slice\(2\)\)/);
+  assert.match(localStart, /selectedToolMode === 'kpistats-demo' \? \['--kpistats-demo'\] : \[\]/);
+  assert.match(localStart, /compiledFiles\(join\(ROOT, 'dist\/src'\)\)/);
+  assert.match(localStart, /compiledFiles\(join\(ROOT, 'apps\/customer-connector-runtime\/dist'\)\)/);
+  const backendStarted = localStart.indexOf('const backendAction = await startManagedProcess');
+  const activation = localStart.indexOf("runKpiProvision('activate', databaseUrl)");
+  const demoVerification = localStart.indexOf("runKpiProvision('verify-demo', databaseUrl)");
+  assert.ok(backendStarted >= 0 && backendStarted < activation && activation < demoVerification);
+});
+
+test('a changed compiled child module invalidates managed Backend reuse', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'assistant-build-'));
+  try {
+    writeFileSync(join(directory, 'main.js'), 'require("./child.js");');
+    writeFileSync(join(directory, 'child.js'), 'module.exports = 1;');
+    const before = hashFilesAndValues(compiledFiles(directory));
+    assert.equal(processAction({ metadata: { configHash: before }, alive: true, healthy: true,
+      configHash: before }), 'REUSE');
+    writeFileSync(join(directory, 'child.js'), 'module.exports = 2;');
+    const after = hashFilesAndValues(compiledFiles(directory));
+    assert.notEqual(after, before);
+    assert.equal(processAction({ metadata: { configHash: before }, alive: true, healthy: true,
+      configHash: after }), 'RESTART');
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('explicit Shinmone selection persists by scope and daily start needs no disclosure file', () => {
+  const customerB = { customerId: 'customer-b', integrationId: 'integration-b', mode: 'inventory' };
+  const state = { localIntegrationSelections: { 'customer-b/integration-b': customerB } };
+  assert.equal(resolveShinmoneStartup(state, []).mode, 'c01');
+  const first = resolveShinmoneStartup(state, ['--kpistats-demo']);
+  assert.equal(first.contractHash, shinmoneContractHash());
+  commitShinmoneSelection(state, first);
+  const selected = state.localIntegrationSelections['customer-shinmone-scm-local/shinmone-scm-assistant-local'];
+  assert.equal(selected.requiredPermissionScope, SHINMONE_DASHBOARD_READ_SCOPE);
+  assert.equal(Number.isFinite(Date.parse(selected.selectedAt)), true);
+  assert.doesNotThrow(() => assertSafeState(state));
+  assert.equal(resolveShinmoneStartup(state, []).mode, 'kpistats-demo');
+  assert.deepEqual(state.localIntegrationSelections['customer-b/integration-b'], customerB);
+  assert.throws(() => resolveShinmoneStartup(state, ['--kpistats-demo']));
+  const rollback = resolveShinmoneStartup(state, ['--rollback-shinmone-kpistats']);
+  commitShinmoneSelection(state, rollback);
+  assert.equal(resolveShinmoneStartup(state, []).mode, 'c01');
+  assert.deepEqual(state.localIntegrationSelections['customer-b/integration-b'], customerB);
+});
+
+test('KPIStats local selection rejects scope, permission basis, contract drift, and obsolete approval arguments', () => {
+  const state = { localIntegrationSelections: {} };
+  const first = resolveShinmoneStartup(state, ['--kpistats-demo']);
+  commitShinmoneSelection(state, first);
+  const selected = state.localIntegrationSelections['customer-shinmone-scm-local/shinmone-scm-assistant-local'];
+  for (const [field, value] of [['customerId', 'customer-b'], ['integrationId', 'integration-b'],
+    ['hostApp', 'other-app'], ['requiredPermissionScope', 'other'], ['contractHash', 'wrong']]) {
+    const original = selected[field];
+    selected[field] = value;
+    assert.throws(() => resolveShinmoneStartup(state, []),
+      (error) => error.rootCause === 'KPISTATS_SELECTION_INVALID');
+    selected[field] = original;
+  }
+  assert.throws(() => resolveShinmoneStartup(state, ['--kpistats-demo', '--approval-file', 'obsolete']));
+});
+
+test('Shinmone mode switch leaves existing local services running', () => {
+  for (const action of ['activate', 'rollback']) {
+    assert.throws(() => assertShinmoneModeSwitchServicesIdle({ action }, true),
+      (error) => error.rootCause === 'KPISTATS_SELECTION_INVALID');
+    assert.doesNotThrow(() => assertShinmoneModeSwitchServicesIdle({ action }, false));
+  }
+  assert.doesNotThrow(() => assertShinmoneModeSwitchServicesIdle({ action: 'daily' }, true));
+  const localStart = readFileSync(join(ROOT, 'dev/local-assistant/local-start.mjs'), 'utf8');
+  assert.ok(localStart.indexOf('assertShinmoneModeSwitchServicesIdle(startupSelection') <
+    localStart.indexOf('await reconcileHosts('));
+  assert.doesNotMatch(localStart, /shared managed Backend stopped/);
+});
+
+test('local config merge replaces only the exact Shinmone scope and refuses a shared runtime', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'assistant-config-'));
+  try {
+    const packA = join(directory, 'a.json');
+    const packB = join(directory, 'b.json');
+    writeFileSync(packA, JSON.stringify({ ...SHINMONE_LOCAL_SCOPE, hostApps: ['shinmone-scm'] }));
+    writeFileSync(packB, JSON.stringify({ customerId: 'customer-b', integrationId: 'integration-b', hostApps: ['b-app'] }));
+    const packs = JSON.parse(mergeLocalCapabilityPaths(JSON.stringify([packA, packB]), packA,
+      SHINMONE_LOCAL_SCOPE, directory));
+    assert.deepEqual(packs, [packB, packA]);
+    const b = { customerId: 'customer-b', integrationId: 'integration-b', hostApp: 'b-app', value: 2 };
+    const oldA = { ...SHINMONE_LOCAL_SCOPE, value: 1 };
+    const newA = { ...SHINMONE_LOCAL_SCOPE, value: 3 };
+    const merged = JSON.parse(mergeScopedLocalEntries(JSON.stringify([oldA, b]), newA,
+      SHINMONE_LOCAL_SCOPE, 'bindings'));
+    assert.deepEqual(merged, [b, newA]);
+    assert.deepEqual(JSON.parse(mergeScopedLocalEntries(JSON.stringify(merged), newA,
+      SHINMONE_LOCAL_SCOPE, 'bindings')), [b, newA]);
+    assert.deepEqual(JSON.parse(mergeLocalServiceKeys(JSON.stringify([{ profileKey: 'b-key' }]),
+      { profileKey: 'shinmone-key' })), [{ profileKey: 'b-key' }, { profileKey: 'shinmone-key' }]);
+    assert.throws(() => mergeLocalServiceKeys(JSON.stringify([{ profileKey: 'shinmone-key', owner: 'customer-b' }]),
+      { profileKey: 'shinmone-key', owner: 'shinmone' }));
+    assert.doesNotThrow(() => assertDedicatedShinmoneRuntime(JSON.stringify([SHINMONE_LOCAL_SCOPE]),
+      SHINMONE_LOCAL_SCOPE));
+    assert.throws(() => assertDedicatedShinmoneRuntime(JSON.stringify([SHINMONE_LOCAL_SCOPE, b]),
+      SHINMONE_LOCAL_SCOPE));
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
 test('route/subnet collision detection selects a deterministic safe subnet', () => {

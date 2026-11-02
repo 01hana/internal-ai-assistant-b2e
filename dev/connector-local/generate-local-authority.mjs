@@ -1,17 +1,33 @@
 import { createPrivateKey, createPublicKey, generateKeyPairSync } from 'node:crypto';
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { isIP } from 'node:net';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
+import { assertDedicatedShinmoneRuntime, mergeLocalCapabilityPaths, mergeLocalServiceKeys,
+  mergeScopedLocalEntries } from './local-config-merge.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const localRoot = join(root, '.local-secrets/connector-local');
 const centralKeyPath = join(localRoot, 'central/central-service-private.pem');
 const bridgeKeyPath = join(localRoot, 'bridge/bridge-binding-private.pem');
-const manifestSource = join(root, 'apps/customer-connector-runtime/integrations/shinmone/work-orders.monthly-new-count.manifest.json');
-const manifestPath = join(localRoot, 'runtime/work-orders.monthly-new-count.manifest.json');
-const capabilityPackPath = join(root, 'customer-capability-packs/shinmone-scm-local/1.0.0.json');
+const c01ManifestNames = [
+  'work-orders.monthly-new-count.manifest.json',
+  'work-orders.today-new-count.manifest.json',
+  'work-orders.weekly-new-count.manifest.json'
+];
+const toolMode = process.argv.length === 3 && process.argv[2] === '--kpistats-demo'
+  ? 'kpistats-demo' : process.argv.length === 2 ? 'c01' : undefined;
+if (!toolMode) throw new Error('Unsupported Shinmone local tool mode.');
+const demoManifestName = 'kpistats-six-metric.demo.manifest.json';
+const manifestNames = toolMode === 'c01' ? c01ManifestNames : [demoManifestName];
+const manifestPaths = manifestNames.map((name) => join(localRoot, 'runtime', name));
+const capabilityPackPath = toolMode === 'c01'
+  ? join(root, 'customer-capability-packs/shinmone-scm-local/1.0.0.json')
+  : join(localRoot, 'runtime', 'shinmone-kpistats-demo-active.pack.json');
+const operationKeys = toolMode === 'c01'
+  ? ['work-orders.monthly-new-count', 'work-orders.today-new-count', 'work-orders.weekly-new-count']
+  : ['shinmone.kpistats.snapshot.today', 'shinmone.kpistats.snapshot.weekly', 'shinmone.kpistats.snapshot.monthly'];
 const overlayEnvironment = readEnvironment(join(root, 'dev/connector-local/.env'));
 const localLanIp = overlayEnvironment.LOCAL_LAN_IP;
 const runtimeFacadePort = overlayEnvironment.LOCAL_CONNECTOR_RUNTIME_HTTPS_PORT;
@@ -26,6 +42,16 @@ const context = Object.freeze({
   hostApp: 'shinmone-scm',
   connectorInstanceId: 'shinmone-scm-connector-local-1'
 });
+const existingRuntime = readEnvironment(join(localRoot, 'runtime.env'), true);
+const existingBackend = readEnvironment(join(localRoot, 'backend.env'), true);
+assertDedicatedShinmoneRuntime(existingRuntime.CONNECTOR_RUNTIME_CONTEXT_JSON, context);
+if (existingRuntime.CONNECTOR_MANIFEST_FILES) {
+  const existingManifests = JSON.parse(existingRuntime.CONNECTOR_MANIFEST_FILES);
+  if (!Array.isArray(existingManifests) || existingManifests.some((path) =>
+    typeof path !== 'string' || ![...c01ManifestNames, demoManifestName].includes(basename(path)))) {
+    throw new Error('The local Connector Runtime has non-Shinmone manifests; mode switch is blocked.');
+  }
+}
 const connectorKey = 'business';
 const localLanCidr = `${localLanIp}/32`;
 const central = Object.freeze({
@@ -47,21 +73,40 @@ const bridge = Object.freeze({
   kid: 'local-shinmone-binding-20260919',
   providerKey: 'shinmone-idx-bootstrap-v1'
 });
+if (existingBackend.ASSISTANT_CONNECTOR_SERVICE_ISSUER &&
+    existingBackend.ASSISTANT_CONNECTOR_SERVICE_ISSUER !== central.issuer) {
+  throw new Error('The shared Backend uses another Connector issuer; Shinmone mode switch is blocked.');
+}
 
 const centralJwk = ensureKey(centralKeyPath, central.kid);
 const bridgeJwk = ensureKey(bridgeKeyPath, bridge.kid);
 if (centralJwk.n === bridgeJwk.n) throw new Error('Local Central and Bridge keys must be distinct.');
 
-mkdirSync(dirname(manifestPath), { recursive: true });
-if (existsSync(manifestPath)) {
-  if (!readFileSync(manifestPath).equals(readFileSync(manifestSource))) throw new Error('Local manifest copy differs from the checked-in manifest.');
-} else {
-  copyFileSync(manifestSource, manifestPath);
+for (const [index, manifestPath] of manifestPaths.entries()) {
+  const manifestSource = join(root, 'apps/customer-connector-runtime/integrations/shinmone', manifestNames[index]);
+  mkdirSync(dirname(manifestPath), { recursive: true });
+  if (existsSync(manifestPath)) {
+    if (!readFileSync(manifestPath).equals(readFileSync(manifestSource))) throw new Error('Local manifest copy differs from the checked-in manifest.');
+  } else {
+    copyFileSync(manifestSource, manifestPath);
+  }
+  chmodSync(manifestPath, 0o444);
 }
-chmodSync(manifestPath, 0o444);
+if (toolMode === 'kpistats-demo') {
+  const staged = JSON.parse(readFileSync(join(root,
+    'customer-capability-packs/shinmone-scm-kpistats-demo/1.0.0.json'), 'utf8'));
+  if (staged.active !== false || staged.customerId !== context.customerId ||
+      staged.integrationId !== context.integrationId ||
+      JSON.stringify(staged.bindings.map((binding) => binding.target.toolKey)) !== JSON.stringify(operationKeys)) {
+    throw new Error('Staged KPIStats Demo pack does not match the local integration.');
+  }
+  writeFileSync(capabilityPackPath, `${JSON.stringify({ ...staged, active: true })}\n`, { mode: 0o600 });
+  chmodSync(capabilityPackPath, 0o600);
+}
 
 const runtimeEnvironment = {
   LOCAL_DEVELOPMENT: '1',
+  SHINMONE_LOCAL_TOOL_MODE: toolMode,
   LOCAL_CONNECTOR_DIAGNOSTICS: '1',
   CONNECTOR_RUNTIME_PROCESS_ROLE: 'single-replica',
   CONNECTOR_REPLAY_CACHE_MAX_ENTRIES: '64',
@@ -105,16 +150,19 @@ const runtimeEnvironment = {
     addressMode: 'allowlisted_networks',
     allowedCidrs: [localLanCidr]
   }]),
-  CONNECTOR_MANIFEST_FILES: json([manifestPath])
+  CONNECTOR_MANIFEST_FILES: json(manifestPaths)
 };
 
 const backendEnvironment = {
-  ASSISTANT_CAPABILITY_PACK_PATHS_JSON: json([capabilityPackPath]),
-  ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON: json([{
+  ASSISTANT_CAPABILITY_PACK_PATHS_JSON: mergeLocalCapabilityPaths(
+    existingBackend.ASSISTANT_CAPABILITY_PACK_PATHS_JSON, capabilityPackPath, context, root),
+  ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON: mergeScopedLocalEntries(
+    existingBackend.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON, {
     version: '1', active: true, ...context, connectorKey,
-    operations: [{ key: 'work-orders.monthly-new-count', version: '1.0.0' }]
-  }]),
-  ASSISTANT_CONNECTOR_DEPLOYMENTS_JSON: json([{
+    operations: operationKeys.map((key) => ({ key, version: '1.0.0' }))
+  }, context, 'Adapter bindings'),
+  ASSISTANT_CONNECTOR_DEPLOYMENTS_JSON: mergeScopedLocalEntries(
+    existingBackend.ASSISTANT_CONNECTOR_DEPLOYMENTS_JSON, {
     version: '1', ...context, connectorKey, active: true,
     invocationUri: `https://connector-runtime.local.test:${runtimeFacadePort}/v1/connector/invocations`,
     serviceAuthProfileKey: central.profileKey,
@@ -122,8 +170,9 @@ const backendEnvironment = {
     maxRequestBytes: 16384,
     maxResponseBytes: 16384,
     maxTransportMs: 4500
-  }]),
-  ASSISTANT_CONNECTOR_SERVICE_KEYS_JSON: json([{
+  }, context, 'Connector deployments'),
+  ASSISTANT_CONNECTOR_SERVICE_KEYS_JSON: mergeLocalServiceKeys(
+    existingBackend.ASSISTANT_CONNECTOR_SERVICE_KEYS_JSON, {
     profileKey: central.profileKey,
     typ: central.typ,
     subject: central.subject,
@@ -134,7 +183,7 @@ const backendEnvironment = {
       publicJwk: centralJwk,
       privateKeyReference: pathToFileURL(centralKeyPath).toString()
     }]
-  }]),
+  }),
   ASSISTANT_CONNECTOR_SERVICE_ISSUER: central.issuer
 };
 
@@ -190,7 +239,8 @@ function writeEnvironment(path, values) {
   chmodSync(path, 0o600);
 }
 
-function readEnvironment(path) {
+function readEnvironment(path, optional = false) {
+  if (optional && !existsSync(path)) return {};
   const entries = readFileSync(path, 'utf8').split(/\r?\n/).filter((line) => !/^\s*(?:#|$)/.test(line)).map((line) => {
     const separator = line.indexOf('=');
     if (separator < 1) throw new Error('Invalid connector-local .env entry.');

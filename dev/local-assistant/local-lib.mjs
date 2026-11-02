@@ -1,5 +1,5 @@
 import { createHash, generateKeyPairSync } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { lookup } from 'node:dns/promises';
 import { networkInterfaces } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -548,6 +548,21 @@ export function hashFilesAndValues(paths, values = {}) {
   const hash = createHash('sha256').update(JSON.stringify(values));
   for (const path of paths) hash.update(path).update(existsSync(path) ? readFileSync(path) : 'MISSING');
   return hash.digest('hex');
+}
+
+export function compiledFiles(root) {
+  if (!existsSync(root)) throw new LocalAssistantError('LOCAL_ENV_INVALID', 'Compiled service output is missing.');
+  const paths = [];
+  const visit = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) visit(path);
+      else if (entry.isFile() && /\.(?:js|json)$/.test(entry.name)) paths.push(path);
+    }
+  };
+  visit(root);
+  if (paths.length === 0) throw new LocalAssistantError('LOCAL_ENV_INVALID', 'Compiled service output is empty.');
+  return paths.sort();
 }
 
 export function generatedIdentityOverride(network) {
