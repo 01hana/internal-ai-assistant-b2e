@@ -81,6 +81,7 @@ export class GroundedToolRetrievalService {
       status: persisted?.status ?? '', executionStatus: persisted?.executionStatus ?? '',
       projectionStatus: 'succeeded', evidenceAttached: true, projectedFacts: runtime.projectedResult.facts,
       declaredFieldPaths: runtime.projectedResult.fieldPaths,
+      ...(runtime.projectedResult.fieldMetadata ? { fieldMetadata: runtime.projectedResult.fieldMetadata } : {}),
       observedAt: attached.observedAt ?? new Date().toISOString()
     });
     return deepFreeze({

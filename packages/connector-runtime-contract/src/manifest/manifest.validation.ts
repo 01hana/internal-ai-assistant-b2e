@@ -15,6 +15,8 @@ import type {
 } from './manifest.types';
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+// Structured fields are later addressed as dotted paths by Result Policy and Evidence.
+const STRUCTURED_FIELD_SEGMENT = /^[A-Za-z][A-Za-z0-9_]{0,127}$/;
 const SEMVER = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 const RELATIVE_PATH = /^\/(?!\/)(?!.*[?#\\:])[A-Za-z0-9._~!$&'()*+,;=@%/-]*$/;
 const JSON_POINTER = /^(?:\/(?:[^~/]|~0|~1)*)+$/;
@@ -97,26 +99,30 @@ function parseMappings(value: unknown, target: 'query' | 'body', schema: ClosedJ
 }
 
 function parseResponse(value: unknown): ConnectorOperationManifestEntryV1['response'] | undefined {
-  if (!isPlainJsonObject(value) || !hasOnlyKeys(value, ['validationProfile', 'acceptedHttpStatuses', 'acceptedApplicationCodes', 'applicationCodePointer', 'contentType', 'schema', 'extraction']) ||
+  if (!isPlainJsonObject(value) || !hasOnlyKeys(value, ['validationProfile', 'acceptedHttpStatuses', 'acceptedApplicationCodes', 'applicationCodePointer', 'contentType', 'schema', 'extraction', 'structuredOutputSchema']) ||
       !['acceptedHttpStatuses', 'acceptedApplicationCodes', 'contentType', 'schema', 'extraction'].every((key) => key in value) ||
       value.contentType !== 'application/json' || !isIntegerArray(value.acceptedHttpStatuses, 100, 599) ||
       !isIntegerArray(value.acceptedApplicationCodes, 0, 999_999) ||
       value.validationProfile !== undefined && !isResponseValidationProfile(value.validationProfile) ||
       value.applicationCodePointer !== undefined && (typeof value.applicationCodePointer !== 'string' || !JSON_POINTER.test(value.applicationCodePointer))) return undefined;
   const schema = parseSchema(value.schema);
-  const extraction = parseExtractions(value.extraction);
-  if (!schema || !extraction) return undefined;
+  const structuredOutputSchema = value.structuredOutputSchema === undefined ? undefined : parseSchema(value.structuredOutputSchema);
+  const extraction = parseExtractions(value.extraction, structuredOutputSchema !== undefined);
+  if (!schema || !extraction || value.structuredOutputSchema !== undefined && !structuredOutputSchema ||
+      structuredOutputSchema && (value.validationProfile !== 'FULL_CLOSED_SCHEMA_V1' || extraction.length !== 0 ||
+        !isSchemaSubset(structuredOutputSchema, schema))) return undefined;
   return deepFreeze({
     ...(value.validationProfile === undefined ? {} : { validationProfile: value.validationProfile }),
     acceptedHttpStatuses: value.acceptedHttpStatuses,
     acceptedApplicationCodes: value.acceptedApplicationCodes,
     ...(value.applicationCodePointer === undefined ? {} : { applicationCodePointer: value.applicationCodePointer }),
-    contentType: 'application/json', schema, extraction
+    contentType: 'application/json', schema, extraction,
+    ...(structuredOutputSchema ? { structuredOutputSchema } : {})
   });
 }
 
-function parseExtractions(value: unknown): readonly DeclarativeExtractionV1[] | undefined {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 64) return undefined;
+function parseExtractions(value: unknown, allowEmpty = false): readonly DeclarativeExtractionV1[] | undefined {
+  if (!Array.isArray(value) || value.length < (allowEmpty ? 0 : 1) || value.length > 64) return undefined;
   const targets = new Set<string>();
   const result: DeclarativeExtractionV1[] = [];
   for (const item of value) {
@@ -136,6 +142,23 @@ function parseExtractions(value: unknown): readonly DeclarativeExtractionV1[] | 
     result.push(item as unknown as DeclarativeExtractionV1);
   }
   return deepFreeze(result);
+}
+
+function isSchemaSubset(output: ClosedJsonSchemaV1, wire: ClosedJsonSchemaV1): boolean {
+  if (output.type !== wire.type) return false;
+  if (output.type === 'object' && wire.type === 'object') {
+    const wireFields = new Map(wire.properties.map((item) => [item.name, item.schema]));
+    return output.properties.every((item) => {
+      if (!STRUCTURED_FIELD_SEGMENT.test(item.name) ||
+        /(?:authorization|cookie|credential|password|secret|token|api[_-]?key|rawresponse|connectorcontext)/i.test(item.name)) return false;
+      const source = wireFields.get(item.name);
+      return source !== undefined && isSchemaSubset(item.schema, source);
+    });
+  }
+  if (output.type === 'array' && wire.type === 'array') {
+    return output.maxItems <= wire.maxItems && isSchemaSubset(output.items, wire.items);
+  }
+  return true;
 }
 
 function parseLimits(value: unknown): ConnectorOperationManifestEntryV1['limits'] | undefined {
@@ -164,7 +187,7 @@ function parseSchema(value: unknown, depth = 0): ClosedJsonSchemaV1 | undefined 
         !Array.isArray(value.required) || !value.required.every(isIdentifier) || new Set(value.required).size !== value.required.length) return undefined;
     const properties: { name: string; schema: ClosedJsonSchemaV1 }[] = [];
     for (const [key, schema] of Object.entries(value.properties)) {
-      if (!isIdentifier(key)) return undefined;
+      if (!isIdentifier(key) || ['__proto__', 'prototype', 'constructor'].includes(key)) return undefined;
       const parsed = parseSchema(schema, depth + 1);
       if (!parsed) return undefined;
       properties.push({ name: key, schema: parsed });

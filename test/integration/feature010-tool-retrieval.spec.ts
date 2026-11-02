@@ -2,15 +2,24 @@ import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
+import { LlmProviderService } from '../../src/llm/llm-provider.service';
 
 describe('Feature 010 Tool-only grounded retrieval (T055)', () => {
   let app: INestApplication;
   let state: Us1TestState;
+  let generate: jest.SpyInstance;
   beforeAll(async () => {
     ({ app, state } = await createUs1TestAppWithState());
+    generate = jest.spyOn(app.get(LlmProviderService).getSelectedProvider(), 'generateAnswer').mockResolvedValue({
+      content: 'SKU-DEMO-RED 的庫存可用量已由查詢結果確認。', finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'deterministic-test', fallbackUsed: false }
+    });
     state.customerToolPolicies.push({ customerId: 'customer-a', toolDefinitionId: 'tool-definition-inventory-001', enabled: true, requiredRoles: [], requiredPermissionScopes: [] });
   });
-  afterAll(async () => app.close());
+  afterAll(async () => {
+    await app.close();
+    jest.restoreAllMocks();
+  });
 
   it('uses current discovery and authority for exactly one projected Tool evidence item', async () => {
     const before = { tools: state.toolCalls.length, retrievals: state.retrievalRuns.length };
@@ -20,9 +29,18 @@ describe('Feature 010 Tool-only grounded retrieval (T055)', () => {
     ]);
     expect(state.toolCalls).toHaveLength(before.tools + 1);
     expect(state.retrievalRuns).toHaveLength(before.retrievals);
+    expect(state.executionPlans.at(-1)?.candidateTools).toEqual([
+      expect.objectContaining({ key: 'mock.inventory.availability.lookup', version: '1.0.0', arguments: { entityId: 'SKU-DEMO-RED' } })
+    ]);
     expect(state.evidenceRefs.filter((item) => item.requestId === 'req-f010-tool-lane')).toEqual([
       expect.objectContaining({ sourceType: 'structured_record', fieldPaths: ['availableQuantity', 'incomingQuantity'] })
     ]);
+    expect(state.toolCalls.at(-1)).toEqual(expect.objectContaining({ status: 'success', executionStatus: 'executed' }));
+    expect(generate).toHaveBeenCalledWith(expect.objectContaining({
+      requestId: 'req-f010-tool-lane', messages: expect.arrayContaining([
+        expect.objectContaining({ role: 'tool', content: expect.stringContaining('<SERVER_PROJECTED_TOOL_EVIDENCE>') })
+      ])
+    }));
     expect(state.answerDecisions.find((item) => item.requestId === 'req-f010-tool-lane')?.metadata)
       .toEqual(expect.objectContaining({ mode: 'TOOL', coverage: 'COMPLETE' }));
   });

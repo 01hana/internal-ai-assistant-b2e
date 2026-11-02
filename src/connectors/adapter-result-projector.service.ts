@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { LlmInputSanitizerService } from '../permissions/llm-input-sanitizer.service';
 import { applyFieldPathMasks } from '../permissions/masking.util';
+import { isResultPolicyProjectableForActor } from '../tools/tool-result-policy';
 import {
   AdapterResultProjectionResult,
   RegisteredToolDefinition,
@@ -34,6 +35,9 @@ export class AdapterResultProjectorService {
 
       const rawRecord = input.rawResult as Record<string, unknown>;
       const policy = input.resultPolicy.policy;
+      if (!isResultPolicyProjectableForActor(policy, input.permissionScopes)) {
+        return PROJECTION_FAILED;
+      }
       const projected: Record<string, unknown> = {};
       for (const fieldPath of policy.allowedFieldPaths) {
         if (isDeniedPath(fieldPath, policy.deniedFieldPaths)) continue;
@@ -66,12 +70,24 @@ export class AdapterResultProjectorService {
       const facts = narrowForPresentation(minimized, input.presentationFieldPaths);
       if (!withinTotalBytes({ facts, evidenceProvenance }, policy.limits.maxTotalBytes)) return PROJECTION_FAILED;
       const fieldPaths = Object.freeze(leafFieldPaths(facts).sort());
+      const fieldMetadata: Record<string, { description?: string; unit?: string; period?: string }> = {};
+      for (const path of fieldPaths) {
+        const schema = schemaAtPath(input.tool.outputSchema, path);
+        if (!isRecord(schema)) return PROJECTION_FAILED;
+        const description = metadataText(schema.description, 160);
+        const unit = metadataText(schema['x-unit'], 48);
+        const period = metadataText(schema['x-period'], 160);
+        if (description || unit || period) fieldMetadata[path] = { ...(description ? { description } : {}),
+          ...(unit ? { unit } : {}), ...(period ? { period } : {}) };
+      }
+      if (!withinTotalBytes({ facts, evidenceProvenance, fieldMetadata }, policy.limits.maxTotalBytes)) return PROJECTION_FAILED;
       const result: SafeProjectedAdapterResult = Object.freeze({
         kind: 'safe_projected_adapter_result',
         canonicalToolKey: input.tool.key,
         schemaVersion: input.tool.version,
         facts: deepFreeze(facts),
         fieldPaths,
+        ...(Object.keys(fieldMetadata).length > 0 ? { fieldMetadata: deepFreeze(fieldMetadata) } : {}),
         evidenceProvenance: deepFreeze(evidenceProvenance)
       });
 
@@ -80,6 +96,14 @@ export class AdapterResultProjectorService {
       return PROJECTION_FAILED;
     }
   }
+}
+
+function metadataText(value: unknown, maximum: number): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || value.trim().length === 0 || value.length > maximum || [...value].some((character) => character.charCodeAt(0) < 32)) {
+    throw new Error('Invalid field metadata.');
+  }
+  return value;
 }
 
 function validateOutputValue(schema: unknown, value: unknown, root = false): boolean {
@@ -97,6 +121,7 @@ function validateOutputType(schema: Record<string, unknown>, value: unknown, exp
   if (expectedType === 'object') {
     if (!isRecord(value) || !isRecord(schema.properties)) return false;
     const properties = schema.properties;
+    if (Object.keys(properties).some((key) => !/^[A-Za-z][A-Za-z0-9_]{0,127}$/.test(key))) return false;
     const required = schema.required === undefined ? [] : schema.required;
     if (!Array.isArray(required) || !required.every((field) => typeof field === 'string' && Object.prototype.hasOwnProperty.call(value, field))) {
       return false;
@@ -131,11 +156,11 @@ function validateOutputType(schema: Record<string, unknown>, value: unknown, exp
 function isProjectableLeaf(schema: unknown, value: unknown): boolean {
   if (!isRecord(schema)) return false;
   const expectedTypes = parseSchemaTypes(schema.type, false);
-  if (!expectedTypes || isRecord(value)) return false;
+  if (!expectedTypes) return false;
+  if (isRecord(value)) return expectedTypes.includes('object') && validateOutputValue(schema, value);
   if (Array.isArray(value)) {
     if (!expectedTypes.includes('array') || !isRecord(schema.items)) return false;
-    const itemTypes = parseSchemaTypes(schema.items.type, false);
-    return Boolean(itemTypes && itemTypes.every((type) => type !== 'object' && type !== 'array'));
+    return validateOutputValue(schema, value);
   }
   return isSafeProjectedScalar(value) && expectedTypes.some((type) => valueMatchesType(value, type));
 }

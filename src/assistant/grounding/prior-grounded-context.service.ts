@@ -109,7 +109,7 @@ export class PriorGroundedContextService {
       messageId: input.responseMessageId, identityContext: input.identityContext, customerScope: input.customerScope, resolvedTool: resolution.resolved })
       : undefined;
     const fieldPaths = [...ref.fieldPaths];
-    if (Object.keys(ref.summary.fields).some((key) => !fieldPaths.includes(key))) return undefined;
+    if (leafPaths(ref.summary.fields).some((key) => !fieldPaths.includes(key))) return undefined;
     const eligibility = this.eligibility.evaluate({
       evidence: { kind: 'TOOL', evidenceRefId: ref.id, needId, scope: currentScope(input), status: call.status,
         executionStatus: call.executionStatus, projectionStatus: 'succeeded', evidenceAttached: true,
@@ -123,6 +123,13 @@ export class PriorGroundedContextService {
     return deepFreeze({ kind: 'TOOL', needId, evidenceRefId: ref.id, toolCallId: call.id, canonicalToolKey: ref.entityType,
       projectedFacts: ref.summary.fields, fieldPaths: Object.freeze(fieldPaths), observedAt: ref.timestamp.toISOString() });
   }
+}
+
+function leafPaths(value: Record<string, unknown>, parent = ''): string[] {
+  return Object.entries(value).flatMap(([key, nested]) => {
+    const path = parent ? `${parent}.${key}` : key;
+    return isRecord(nested) && Object.keys(nested).length > 0 ? leafPaths(nested, path) : [path];
+  });
 }
 
 function currentScope(input: PriorGroundedContextInput) {

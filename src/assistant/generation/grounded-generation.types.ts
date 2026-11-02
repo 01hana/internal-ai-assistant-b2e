@@ -2,6 +2,7 @@ import type { ExecutionDecision, RiskLevel } from '../../generated/prisma/enums'
 import type { AssistantSafeGateDecision } from '../answer/no-answer-gate.service';
 import type { GroundedContextBundleV1 } from '../grounding/grounded-context-bundle.types';
 import type { RetrievalCoverage } from '../../retrieval/grounded-retrieval.types';
+import type { SafeConversationValue } from '../conversation/conversation.types';
 
 export type GenerationEligibilityBlockReason =
   | 'INVALID_GROUNDING'
@@ -52,7 +53,8 @@ export interface GroundedGenerationContextV1 {
     evidenceRefId: string;
     citationId: string;
     trustClass: 'SERVER_PROJECTED_TOOL_EVIDENCE';
-    facts: Readonly<Record<string, string | number | boolean | null>>;
+    facts: Readonly<Record<string, SafeConversationValue>>;
+    fieldMetadata?: Readonly<Record<string, Readonly<{ description?: string; unit?: string; period?: string }>>>;
   }>[];
   readonly unsupportedNeeds: readonly Readonly<{ needId: string; reasonCode: string }>[];
   readonly allowedCitationIds: readonly string[];

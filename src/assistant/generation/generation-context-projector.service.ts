@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConversationSourceGuard } from '../conversation/conversation-source-guard';
+import type { SafeConversationValue } from '../conversation/conversation.types';
 import type { BoundedConversationContext, ConversationScope } from '../conversation/conversation.types';
 import type { GroundedContextBundleV1, GroundedDocumentEvidence, GroundedToolEvidence } from '../grounding/grounded-context-bundle.types';
 import type { PriorGroundedContextResult } from '../grounding/prior-grounded-context.service';
@@ -119,17 +120,40 @@ function projectDocument(guard: ConversationSourceGuard, evidence: GroundedDocum
 }
 
 function projectTool(guard: ConversationSourceGuard, evidence: GroundedToolEvidence, citationId: string) {
-  const facts: Record<string, string | number | boolean | null> = {};
+  const facts: Record<string, SafeConversationValue> = {};
   for (const field of [...evidence.fieldPaths].sort()) {
-    if (!Object.prototype.hasOwnProperty.call(evidence.projectedFacts, field)) continue;
-    const value = evidence.projectedFacts[field];
-    if (value !== null && typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') invalid();
-    const checked = guard.guard({ [field]: value });
+    const value = valueAtPath(evidence.projectedFacts, field);
+    if (value === undefined) invalid();
+    const checked = guard.guard(value);
     if (!checked.accepted) invalid();
-    facts[field] = value as string | number | boolean | null;
+    setAtPath(facts, field, checked.value);
   }
   if (Object.keys(facts).length === 0) invalid();
-  return { evidenceRefId: evidence.evidenceRefId, citationId, trustClass: 'SERVER_PROJECTED_TOOL_EVIDENCE' as const, facts };
+  if (!guard.guard(facts).accepted) invalid();
+  const fieldMetadata = evidence.fieldMetadata;
+  if (fieldMetadata && !guard.guard(fieldMetadata).accepted) invalid();
+  return { evidenceRefId: evidence.evidenceRefId, citationId, trustClass: 'SERVER_PROJECTED_TOOL_EVIDENCE' as const,
+    facts, ...(fieldMetadata ? { fieldMetadata } : {}) };
+}
+
+function valueAtPath(root: Readonly<Record<string, unknown>>, path: string): unknown {
+  let current: unknown = root;
+  for (const segment of path.split('.')) {
+    if (!current || typeof current !== 'object' || Array.isArray(current) ||
+        !Object.prototype.hasOwnProperty.call(current, segment)) return undefined;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return current;
+}
+
+function setAtPath(root: Record<string, SafeConversationValue>, path: string, value: SafeConversationValue): void {
+  const segments = path.split('.');
+  let current: Record<string, SafeConversationValue> = root;
+  for (const segment of segments.slice(0, -1)) {
+    if (!current[segment]) current[segment] = {};
+    current = current[segment] as Record<string, SafeConversationValue>;
+  }
+  current[segments[segments.length - 1]] = value;
 }
 
 function sameScope(expected: ConversationScope, actual: ConversationScope): boolean {

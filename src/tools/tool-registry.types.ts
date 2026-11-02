@@ -147,6 +147,7 @@ export interface SafeProjectedAdapterResult {
   readonly schemaVersion: string;
   readonly facts: Readonly<Record<string, unknown>>;
   readonly fieldPaths: readonly string[];
+  readonly fieldMetadata?: Readonly<Record<string, Readonly<{ description?: string; unit?: string; period?: string }>>>;
   readonly evidenceProvenance: Readonly<Record<string, SafeProjectedScalar>>;
 }
 

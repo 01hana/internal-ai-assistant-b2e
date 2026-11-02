@@ -79,6 +79,8 @@ export interface ConnectorOperationManifestEntryV1 {
     contentType: 'application/json';
     schema: ClosedJsonSchemaV1;
     extraction: readonly DeclarativeExtractionV1[];
+    /** Opt-in closed subset of the validated response; never selected by the caller. */
+    structuredOutputSchema?: ClosedJsonSchemaV1;
   }>;
   readonly limits: Readonly<{
     maxRequestBytes: number;

@@ -31,7 +31,7 @@ describe('US4 evidence conflict runtime gate', () => {
         })
       )
       .send({
-        message: '請查 SO-10003 訂單狀態',
+        message: '查詢訂單目前狀態 SO-10003',
         pageContext: {
           module: 'orders',
           entityType: 'order',

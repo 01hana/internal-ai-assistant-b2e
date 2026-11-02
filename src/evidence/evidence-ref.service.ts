@@ -86,7 +86,8 @@ export class EvidenceRefService {
           provenanceFields: Object.keys(input.projectedResult.evidenceProvenance).sort()
         }),
         summary: toJsonInput({
-          fields: summary
+          fields: summary,
+          ...(input.projectedResult.fieldMetadata ? { fieldMetadata: input.projectedResult.fieldMetadata } : {})
         })
       }
     });

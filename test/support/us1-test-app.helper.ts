@@ -437,6 +437,8 @@ export type { InternalIdentityTestConfig } from './internal-identity-test-module
 export type Us1TestAppOptions = {
   /** Opt-in durable history seed; most request-path fixtures start without prior completed turns. */
   seedCompletedHistoryDecision?: boolean;
+  /** Add test-only records before capability bootstrap validates exact Tool bindings. */
+  augmentStateBeforeInit?: (state: Us1TestState) => void;
   capabilityPackPaths?: readonly string[];
   internalIdentity?: InternalIdentityTestConfig;
   /** Retains the production remote-JWKS verifier for transport-level identity tests. */
@@ -472,6 +474,7 @@ export async function createUs1TestAppWithState(
   );
 
   const state = createInitialState();
+  options.augmentStateBeforeInit?.(state);
   if (options.seedCompletedHistoryDecision) {
     state.answerDecisions.push(
       { id: 'answer-decision-owned-seed-001', customerId: 'customer-a', requestId: 'req-history-seed-001',

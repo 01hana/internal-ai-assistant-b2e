@@ -7,7 +7,7 @@ import { resolveAndPin, type DnsResolver } from './pinned-lookup.adapter';
 import { ManifestResponseExtractor } from './response-extractor';
 import { SafeUpstreamHttpClient, type UpstreamDiagnosticContext } from './safe-upstream-http-client';
 
-export type UpstreamExecutionResult = Readonly<{ ok: true; value: Readonly<Record<string, string | number | boolean>> }> |
+export type UpstreamExecutionResult = Readonly<{ ok: true; value: Readonly<Record<string, unknown>> }> |
   Readonly<{ ok: false; code: ConnectorErrorCode }>;
 
 export class UpstreamExecutionService {

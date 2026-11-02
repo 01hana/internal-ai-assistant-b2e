@@ -31,6 +31,7 @@ export interface GroundedToolEvidence {
   readonly canonicalToolKey: string;
   readonly projectedFacts: Readonly<Record<string, unknown>>;
   readonly fieldPaths: readonly string[];
+  readonly fieldMetadata?: Readonly<Record<string, Readonly<{ description?: string; unit?: string; period?: string }>>>;
   readonly observedAt: string;
 }
 

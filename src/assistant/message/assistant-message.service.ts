@@ -1369,8 +1369,7 @@ function toNormalizedEvidenceFacts(evidence: {
   }
 
   return Object.entries(evidence.summary).flatMap(([fieldPath, value]) => {
-    const values = Array.isArray(value) ? value : [value];
-    return values.map((item) => ({
+    return conflictComparableValues(value).map((item) => ({
       evidenceRefId: evidence.id,
       sourceType: 'structured_record' as const,
       entityType: evidence.entityType as string,
@@ -1384,12 +1383,17 @@ function toNormalizedEvidenceFacts(evidence: {
 function toNormalizedGroundedToolFacts(evidence: import('../grounding/grounded-context-bundle.types').GroundedToolEvidence): NormalizedEvidenceFact[] {
   const entityId = ['orderId', 'itemSku', 'sku', 'workOrderId', 'partnerId']
     .map((field) => evidence.projectedFacts[field]).find((value) => typeof value === 'string') ?? evidence.toolCallId;
-  return Object.entries(evidence.projectedFacts).flatMap(([fieldPath, value]) =>
-    (Array.isArray(value) ? value : [value]).map((item) => ({
+  return Object.entries(evidence.projectedFacts).flatMap(([fieldPath, value]) => conflictComparableValues(value).map((item) => ({
       evidenceRefId: evidence.evidenceRefId, sourceType: 'structured_record' as const,
       entityType: evidence.canonicalToolKey, entityId: String(entityId), fieldPath,
       normalizedValue: normalizeEvidenceValue(item)
     })));
+}
+
+function conflictComparableValues(value: unknown): readonly unknown[] {
+  // Existing scalar-array conflict checks stay intact. Structured rows form one ordered field value.
+  return Array.isArray(value) && value.every((item) => item === null || typeof item !== 'object')
+    ? value : [value];
 }
 
 function normalizeEvidenceValue(value: unknown): string {

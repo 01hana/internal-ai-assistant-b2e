@@ -3,7 +3,7 @@ import type { GroundedCitation, GroundedToolEvidence } from './grounded-context-
 
 const ALLOWED_KEYS = new Set([
   'needId', 'evidenceRefId', 'toolCallId', 'canonicalToolKey', 'status', 'executionStatus',
-  'projectionStatus', 'evidenceAttached', 'projectedFacts', 'declaredFieldPaths', 'observedAt'
+  'projectionStatus', 'evidenceAttached', 'projectedFacts', 'declaredFieldPaths', 'fieldMetadata', 'observedAt'
 ]);
 
 export class GroundedToolEvidenceNormalizationError extends Error {
@@ -24,6 +24,7 @@ export interface GroundedToolEvidenceNormalizationInput {
   readonly evidenceAttached: boolean;
   readonly projectedFacts: Readonly<Record<string, unknown>>;
   readonly declaredFieldPaths: readonly string[];
+  readonly fieldMetadata?: Readonly<Record<string, Readonly<{ description?: string; unit?: string; period?: string }>>>;
   readonly observedAt: string;
 }
 
@@ -52,14 +53,16 @@ export class GroundedToolEvidenceNormalizer {
       throw rejected('TOOL_PROJECTION_INVALID');
     }
     const declared = [...new Set(input.declaredFieldPaths)];
-    const fields = Object.keys(input.projectedFacts).sort();
+    const fields = leafPaths(input.projectedFacts).sort();
     if (declared.length === 0 || fields.length !== declared.length || fields.some((field) => !declared.includes(field))) {
       throw rejected('UNDECLARED_PROJECTED_FIELD');
     }
     const projectedFacts = cloneSafeFacts(input.projectedFacts);
+    const fieldMetadata = validateFieldMetadata(input.fieldMetadata, declared);
     return deepFreeze({
       kind: 'TOOL', needId, evidenceRefId, toolCallId, canonicalToolKey,
-      projectedFacts, fieldPaths: Object.freeze(declared), observedAt
+      projectedFacts, fieldPaths: Object.freeze(declared),
+      ...(fieldMetadata ? { fieldMetadata } : {}), observedAt
     });
   }
 
@@ -71,10 +74,40 @@ export class GroundedToolEvidenceNormalizer {
   }
 }
 
+function validateFieldMetadata(value: unknown, paths: readonly string[]): GroundedToolEvidence['fieldMetadata'] {
+  if (value === undefined) return undefined;
+  if (!isPlainObject(value) || Object.keys(value).some((path) => !paths.includes(path))) throw rejected('TOOL_METADATA_INVALID');
+  const result: Record<string, { description?: string; unit?: string; period?: string }> = {};
+  for (const [path, item] of Object.entries(value)) {
+    if (!isPlainObject(item) || Object.keys(item).some((key) => !['description', 'unit', 'period'].includes(key))) {
+      throw rejected('TOOL_METADATA_INVALID');
+    }
+    const safe: { description?: string; unit?: string; period?: string } = {};
+    for (const key of ['description', 'unit', 'period'] as const) {
+      const entry = item[key];
+      if (entry === undefined) continue;
+      if (typeof entry !== 'string' || entry.length === 0 || entry.length > 160 || [...entry].some((character) => character.charCodeAt(0) < 32)) {
+        throw rejected('TOOL_METADATA_INVALID');
+      }
+      safe[key] = entry;
+    }
+    result[path] = safe;
+  }
+  return deepFreeze(result);
+}
+
+function leafPaths(value: Record<string, unknown>, parent = ''): string[] {
+  return Object.entries(value).flatMap(([key, nested]) => {
+    const path = parent ? `${parent}.${key}` : key;
+    return isPlainObject(nested) && Object.keys(nested).length > 0
+      ? leafPaths(nested, path) : [path];
+  });
+}
+
 function cloneSafeFacts(value: Record<string, unknown>): Readonly<Record<string, unknown>> {
   const result: Record<string, unknown> = {};
   for (const key of Object.keys(value).sort()) {
-    if (!/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(key) || /token|credential|secret|permission|raw|connector|adapter/i.test(key)) {
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,127}$/.test(key) || /token|credential|secret|permission|raw|connector|adapter/i.test(key)) {
       throw rejected('PROHIBITED_PROJECTED_FIELD');
     }
     result[key] = cloneProjectedValue(value[key], 0);
@@ -89,7 +122,7 @@ function cloneProjectedValue(value: unknown, depth: number): unknown {
   if (isPlainObject(value) && Object.keys(value).length <= 32) {
     const output: Record<string, unknown> = {};
     for (const key of Object.keys(value).sort()) {
-      if (!/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(key) || /token|credential|secret|permission|raw|connector|adapter/i.test(key)) throw rejected('PROHIBITED_PROJECTED_FIELD');
+      if (!/^[A-Za-z][A-Za-z0-9_]{0,127}$/.test(key) || /token|credential|secret|permission|raw|connector|adapter/i.test(key)) throw rejected('PROHIBITED_PROJECTED_FIELD');
       output[key] = cloneProjectedValue(value[key], depth + 1);
     }
     return Object.freeze(output);

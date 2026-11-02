@@ -139,7 +139,7 @@ function proofMatchesBody(claims: Readonly<Record<string, unknown>>, value: Conn
     claims.host_app === value.trustedContext.hostApp && claims.connector_key === value.trustedContext.connectorKey &&
     claims.connector_instance_id === value.trustedContext.connectorInstanceId && claims.operation === value.operation.key && claims.operation_version === value.operation.version;
 }
-function success(requestId: string, result: Readonly<Record<string, string | number | boolean>>): ConnectorInvocationResult {
+function success(requestId: string, result: Readonly<Record<string, unknown>>): ConnectorInvocationResult {
   return validated(200, { version: '1', requestId, status: 'succeeded', result });
 }
 function response(code: ConnectorErrorCode, requestId: string): ConnectorInvocationResult {

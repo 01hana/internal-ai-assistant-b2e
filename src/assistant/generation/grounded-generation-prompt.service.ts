@@ -22,7 +22,8 @@ export class GroundedGenerationPromptService {
       ...context.documentEvidence.map((item) => ({ role: 'tool' as const,
         content: delimit('UNTRUSTED_DOCUMENT_EVIDENCE', `${item.citationId} ${item.evidenceRefId}\n${item.text}`) })),
       ...context.toolEvidence.map((item) => ({ role: 'tool' as const,
-        content: delimit('SERVER_PROJECTED_TOOL_EVIDENCE', `${item.citationId} ${item.evidenceRefId}\n${JSON.stringify(item.facts)}`) }))
+        content: delimit('SERVER_PROJECTED_TOOL_EVIDENCE', `${item.citationId} ${item.evidenceRefId}\n${JSON.stringify(item.facts)}` +
+          (item.fieldMetadata ? `\nFIELD_METADATA ${JSON.stringify(item.fieldMetadata)}` : '')) }))
     ];
     const result: GenerateAnswerInput = {
       ...ids, messages, evidence: [], instructions: `${INSTRUCTIONS}\ncoverage=${context.coverage}\nallowedCitations=${context.allowedCitationIds.join(',')}`,

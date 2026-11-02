@@ -103,6 +103,8 @@ function validOperation(operation: ConnectorOperationManifestEntryV1, profiles: 
 
 function validResponse(operation: ConnectorOperationManifestEntryV1): boolean {
   const declaredPointers = operation.response.validationProfile === 'DECLARED_POINTERS_V1';
+  if (operation.response.structuredOutputSchema &&
+      (operation.response.validationProfile !== 'FULL_CLOSED_SCHEMA_V1' || operation.response.extraction.length !== 0)) return false;
   if (declaredPointers && !operation.response.applicationCodePointer) return false;
   if (operation.response.applicationCodePointer) {
     const applicationCode = schemaAtJsonPointer(operation.response.schema, operation.response.applicationCodePointer);
