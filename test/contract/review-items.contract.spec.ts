@@ -40,6 +40,23 @@ describe('T065 review-item controller Customer contract', () => {
     expect(JSON.stringify(response.body)).not.toContain('review-item-customer-b-shared-001');
   });
 
+  it('preserves authorized review access across actors within one Integration', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/admin/assistant/review-items/review-item-customer-a-shared-001')
+      .set(createAuthorizedInternalIdentityHeaders(jwt, {
+        claims: {
+          ...jwt.canonicalClaims.customerA,
+          sub: 'actor-reviewer-other',
+          roles: ['admin'],
+          permission_scopes: ['assistant:review']
+        },
+        requestId: 'req-t065-contract-cross-actor'
+      }));
+
+    expect(response.status).toBe(200);
+    expect(JSON.stringify(response.body)).toContain('review-item-customer-a-shared-001');
+  });
+
   it('returns safe not-found for a foreign global review ID', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/v1/admin/assistant/review-items/review-item-customer-b-shared-001')

@@ -3,6 +3,7 @@ import { redactSecrets } from '../common/logger/redaction.util';
 import { Prisma, PrismaClient } from '../generated/prisma/client';
 import { CustomerScope } from '../identity/customer-scope.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
 import { AppendAuditEventInput, AppendCustomerToolAuditInput, AppendCustomerWorkflowAuditInput, AuditEventRecord, AuditTransactionClient, AuditWriter } from './audit-writer.interface';
 
 @Injectable()
@@ -61,7 +62,7 @@ export class AuditWriterService implements AuditWriter {
     const { customerScope } = input;
     if (input.sessionId) {
       const session = await database.assistantSession.findFirst({
-        where: { customerId: customerScope.customerId, id: input.sessionId, organizationId: customerScope.organizationId, hostApp: customerScope.hostApp, actorId: customerScope.actorId }
+        where: sessionOwnedByScopePredicate(customerScope, input.sessionId)
       });
       if (!session) throw new Error('Customer workflow audit context not found.');
     }
@@ -104,7 +105,7 @@ async function assertAuditContext(database: AuditDatabase, input: AppendAuditEve
   const { customerScope } = input;
   if (input.sessionId) {
     const session = await database.assistantSession.findFirst({
-      where: { customerId: customerScope.customerId, id: input.sessionId, organizationId: customerScope.organizationId, hostApp: customerScope.hostApp, actorId: customerScope.actorId }
+      where: sessionOwnedByScopePredicate(customerScope, input.sessionId)
     });
     if (!session) throw auditContextNotFound();
   }

@@ -587,6 +587,8 @@ model GatewayIdentityAuditEvent {
 model AssistantSession {
   id             String                 @id @default(cuid())
   customerId     String
+  /// Null only for sessions created before Integration ownership was persisted.
+  integrationId  String?
   hostApp        String
   organizationId String
   actorId        String
@@ -609,6 +611,7 @@ model AssistantSession {
   @@index([organizationId, hostApp, actorId])
   @@index([status, updatedAt])
   @@index([customerId, organizationId, hostApp, actorId])
+  @@index([customerId, integrationId, organizationId, hostApp, actorId], map: "AssistantSession_scope_integration_idx")
   @@index([customerId, status])
   @@index([customerId, updatedAt])
 }

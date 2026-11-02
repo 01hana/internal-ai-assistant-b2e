@@ -3,6 +3,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { Prisma } from '../generated/prisma/client';
 import { ActionDraftStatus, RiskLevel, ToolOperation } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
 import { getPageEntityRef } from '../assistant/page-context/page-context.mapper';
 import { CreateActionDraftInput, ActionDraftDecisionInput, ActionDraftResponse } from './action-draft.types';
 import { SideEffectExecutionGuardService } from './side-effect-execution-guard.service';
@@ -251,13 +252,7 @@ export class ActionDraftService {
     }
 
     const session = await this.prisma.db.assistantSession.findFirst({
-      where: {
-        id: draft.sessionId,
-        customerId: customerScope.customerId,
-        organizationId: customerScope.organizationId,
-        hostApp: customerScope.hostApp,
-        actorId: customerScope.actorId
-      }
+      where: sessionOwnedByScopePredicate(customerScope, draft.sessionId)
     });
     if (!session || draft.actorId !== customerScope.actorId) {
       throw workflowNotFound();

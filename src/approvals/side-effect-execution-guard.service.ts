@@ -7,6 +7,7 @@ import { RequestIdentityContext } from '../identity/identity-context.types';
 import { CustomerScope } from '../identity/customer-scope.types';
 import { ToolPermissionPrecheckService } from '../permissions/tool-permission-precheck.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
 import { RegisteredToolDefinition, ToolPermissionDeniedReason } from '../tools/tool-registry.types';
 import { ToolRegistryService } from '../tools/tool-registry.service';
 import { PersistedSideEffectToolContract } from './side-effect-tool-contract.resolver';
@@ -312,13 +313,7 @@ export class SideEffectExecutionGuardService {
 
   private async assertCustomerParents(input: ExecuteSideEffectInput, scope: CustomerScope): Promise<void> {
     const session = await this.prisma.db.assistantSession.findFirst({
-      where: {
-        customerId: scope.customerId,
-        id: input.sessionId,
-        organizationId: scope.organizationId,
-        hostApp: scope.hostApp,
-        actorId: scope.actorId
-      }
+      where: sessionOwnedByScopePredicate(scope, input.sessionId)
     });
     if (!session) throw this.notFound();
 

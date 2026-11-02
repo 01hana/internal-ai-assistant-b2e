@@ -158,6 +158,7 @@ function hasExactScope(record: Record<string, unknown>, expected: ConversationSc
   const scope = asRecord(record.scope);
   return record.sessionStatus === 'active'
     && scope?.customerId === expected.customerId
+    && scope.integrationId === expected.integrationId
     && scope.sessionId === expected.sessionId
     && scope.organizationId === expected.organizationId
     && scope.hostApp === expected.hostApp

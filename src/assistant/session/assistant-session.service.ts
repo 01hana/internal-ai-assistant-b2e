@@ -5,7 +5,7 @@ import { AuditWriterService } from '../../audit/audit-writer.service';
 import { CustomerScope } from '../../identity/customer-scope.types';
 import { createCustomerScopeFromIdentityContext } from '../../identity/customer-scope.factory';
 import { createCustomerScopeFromHostIntegrationContext } from '../../host-integration/host-integration-request.factory';
-import { customerScopedIdPredicate, customerScopedListPredicate } from '../../prisma/customer-scope.predicate';
+import { customerScopedListPredicate, sessionOwnedByScopePredicate } from '../../prisma/customer-scope.predicate';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AssistantContextStateService } from '../context/assistant-context-state.service';
 import { toPageContextAuditMetadata } from '../page-context/page-context.mapper';
@@ -29,9 +29,11 @@ export class AssistantSessionService {
 
   async createSession(input: CreateAssistantSessionInput): Promise<{ sessionId: string; status: AssistantSessionStatus }> {
     const customerScope = createCustomerScopeFromHostIntegrationContext(input.hostIntegrationContext);
+    if (!customerScope.integrationId?.trim()) throw this.createSessionNotFoundError();
     const session = await this.prisma.db.assistantSession.create({
       data: {
         customerId: customerScope.customerId,
+        integrationId: customerScope.integrationId,
         hostApp: customerScope.hostApp,
         organizationId: customerScope.organizationId,
         actorId: customerScope.actorId,
@@ -98,13 +100,7 @@ export class AssistantSessionService {
   }
 
   async getVisibleSession(sessionId: string, customerScope: CustomerScope): Promise<PersistedSession> {
-    const predicate = customerScopedIdPredicate(customerScope, {
-      id: sessionId,
-      organizationId: customerScope.organizationId,
-      hostApp: customerScope.hostApp,
-      actorId: customerScope.actorId,
-      status: AssistantSessionStatus.active
-    });
+    const predicate = { ...sessionOwnedByScopePredicate(customerScope, sessionId), status: AssistantSessionStatus.active };
     const session = await this.prisma.db.assistantSession.findFirst({
       where: predicate
     });
@@ -118,6 +114,7 @@ export class AssistantSessionService {
 
   async listVisibleSessions(customerScope: CustomerScope): Promise<VisibleAssistantSession[]> {
     const predicate = customerScopedListPredicate(customerScope, {
+      integrationId: customerScope.integrationId,
       organizationId: customerScope.organizationId,
       hostApp: customerScope.hostApp,
       actorId: customerScope.actorId,
@@ -128,13 +125,7 @@ export class AssistantSessionService {
   }
 
   async closeVisibleSession(input: CloseAssistantSessionInput): Promise<CloseAssistantSessionResult> {
-    const predicate = customerScopedIdPredicate(input.customerScope, {
-      id: input.sessionId,
-      organizationId: input.customerScope.organizationId,
-      hostApp: input.customerScope.hostApp,
-      actorId: input.customerScope.actorId,
-      status: AssistantSessionStatus.active
-    });
+    const predicate = { ...sessionOwnedByScopePredicate(input.customerScope, input.sessionId), status: AssistantSessionStatus.active };
     const result = await this.prisma.db.assistantSession.updateMany({
       where: predicate,
       data: { status: AssistantSessionStatus.closed }

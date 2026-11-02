@@ -7,6 +7,7 @@ import { assertCustomerScopeMatchesIdentityContext } from '../identity/customer-
 import { RequestIdentityContext } from '../identity/identity-context.types';
 import { CustomerScope } from '../identity/customer-scope.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
 
 export interface CreateReviewItemFromAssistantOutcomeInput {
   customerScope: CustomerScope;
@@ -93,7 +94,7 @@ export class ReviewItemService {
   }
 
   private async assertParents(database: ReviewTransactionClient, customerScope: CustomerScope, sessionId: string, messageId: string, toolCallIds: string[], evidenceRefIds: string[]) {
-    const session = await database.assistantSession.findFirst({ where: { customerId: customerScope.customerId, id: sessionId, organizationId: customerScope.organizationId, hostApp: customerScope.hostApp, actorId: customerScope.actorId } });
+    const session = await database.assistantSession.findFirst({ where: sessionOwnedByScopePredicate(customerScope, sessionId) });
     const message = await database.assistantMessage.findFirst({ where: { customerId: customerScope.customerId, id: messageId, sessionId } });
     if (!session || !message) throw reviewNotFound();
     const toolIds = [...new Set(toolCallIds)];
@@ -103,13 +104,23 @@ export class ReviewItemService {
   }
 
   private async hasValidSource(item: { sourceType: ReviewSourceType; sourceId: string }, database: ReviewTransactionClient, customerScope: CustomerScope) {
-    if (item.sourceType === ReviewSourceType.negative_feedback) return Boolean(await database.feedbackEvent.findFirst({ where: { customerId: customerScope.customerId, id: item.sourceId } }));
-    if (item.sourceType !== ReviewSourceType.missing_evidence) return Boolean(await database.answerDecision.findFirst({ where: { customerId: customerScope.customerId, id: item.sourceId } }));
-    if (item.sourceType === ReviewSourceType.missing_evidence) {
-      const [feedback, decision] = await Promise.all([database.feedbackEvent.findFirst({ where: { customerId: customerScope.customerId, id: item.sourceId } }), database.answerDecision.findFirst({ where: { customerId: customerScope.customerId, id: item.sourceId } })]);
-      return Boolean(feedback) !== Boolean(decision);
-    }
-    return false;
+    const [feedback, decision] = await Promise.all([
+      database.feedbackEvent.findFirst({ where: { customerId: customerScope.customerId, id: item.sourceId } }),
+      database.answerDecision.findFirst({ where: { customerId: customerScope.customerId, id: item.sourceId } })
+    ]);
+    const source = item.sourceType === ReviewSourceType.negative_feedback
+      ? feedback
+      : item.sourceType === ReviewSourceType.missing_evidence
+        ? Boolean(feedback) !== Boolean(decision) ? feedback ?? decision : null
+        : decision;
+    if (!source) return false;
+    const message = await database.assistantMessage.findFirst({ where: { customerId: customerScope.customerId, id: source.messageId } });
+    if (!message) return false;
+    // Reviewers may inspect another actor's items, but never another Integration's Session.
+    return Boolean(await database.assistantSession.findFirst({ where: {
+      customerId: customerScope.customerId, integrationId: customerScope.integrationId,
+      organizationId: customerScope.organizationId, hostApp: customerScope.hostApp, id: message.sessionId
+    } }));
   }
 }
 

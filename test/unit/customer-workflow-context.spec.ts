@@ -15,6 +15,7 @@ describe('customer workflow create parent context', () => {
       where: {
         customerId: 'customer-a',
         id: 'session-a',
+        integrationId: 'integration-erp',
         organizationId: 'org-shared',
         hostApp: 'erp',
         actorId: 'actor-shared'
@@ -80,6 +81,7 @@ describe('customer workflow create parent context', () => {
       where: {
         customerId: 'customer-a',
         id: 'session-a',
+        integrationId: 'integration-erp',
         organizationId: 'org-shared',
         hostApp: 'erp',
         actorId: 'actor-shared'
@@ -87,10 +89,19 @@ describe('customer workflow create parent context', () => {
     });
     expect(harness.assistantMessage.findFirst).not.toHaveBeenCalled();
   });
+
+  it('rejects another Integration and legacy NULL ownership before workflow writes', async () => {
+    for (const integrationId of ['integration-other', null]) {
+      const harness = createDatabaseHarness([], { id: 'session-a', integrationId });
+      await expect(assertCustomerWorkflowCreateParents(createInput(harness.db))).rejects.toBeInstanceOf(NotFoundException);
+      expect(harness.assistantMessage.findFirst).not.toHaveBeenCalled();
+    }
+  });
 });
 
-function createDatabaseHarness(messageResults: Array<object | null>, sessionResult: object | null = { id: 'session-a' }) {
-  const assistantSession = { findFirst: jest.fn().mockResolvedValue(sessionResult) };
+function createDatabaseHarness(messageResults: Array<object | null>, sessionResult: { id: string; integrationId?: string | null } | null = { id: 'session-a', integrationId: 'integration-erp' }) {
+  const assistantSession = { findFirst: jest.fn(async ({ where }: { where: { integrationId: string } }) =>
+    sessionResult && sessionResult.integrationId === where.integrationId ? sessionResult : null) };
   const assistantMessage = {
     findFirst: jest.fn(async () => messageResults.shift() ?? null)
   };

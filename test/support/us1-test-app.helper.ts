@@ -48,6 +48,7 @@ import type { ToolRegistryService } from '../../src/tools/tool-registry.service'
 type SessionRecord = {
   id: string;
   customerId?: string;
+  integrationId: string | null;
   hostApp: string;
   organizationId: string;
   actorId: string;
@@ -720,6 +721,7 @@ function createPrismaMock(state: MockState) {
         const record: SessionRecord = {
           id: `session-created-${state.sessions.length + 1}`,
           customerId: data.customerId,
+          integrationId: data.integrationId ?? null,
           hostApp: data.hostApp ?? 'erp',
           organizationId: data.organizationId ?? 'org-001',
           actorId: data.actorId ?? 'actor-001',
@@ -1720,6 +1722,7 @@ function createInitialState(): MockState {
       {
         id: 'session-owned-001',
         customerId: 'customer-a',
+        integrationId: 'integration-erp',
         hostApp: 'erp',
         organizationId: 'org-shared',
         actorId: 'actor-shared',
@@ -1731,6 +1734,7 @@ function createInitialState(): MockState {
       {
         id: 'session-hidden-001',
         customerId: 'customer-b',
+        integrationId: 'integration-erp',
         hostApp: 'erp',
         organizationId: 'org-shared',
         actorId: 'actor-shared',
@@ -1742,6 +1746,7 @@ function createInitialState(): MockState {
       {
         id: 'session-closed-001',
         customerId: 'customer-a',
+        integrationId: 'integration-erp',
         hostApp: 'erp',
         organizationId: 'org-shared',
         actorId: 'actor-shared',
@@ -1753,6 +1758,7 @@ function createInitialState(): MockState {
       {
         id: 'session-expired-001',
         customerId: 'customer-a',
+        integrationId: 'integration-erp',
         hostApp: 'erp',
         organizationId: 'org-shared',
         actorId: 'actor-shared',
@@ -1764,6 +1770,7 @@ function createInitialState(): MockState {
       {
         id: 'session-flow-error-001',
         customerId: 'customer-a',
+        integrationId: 'integration-erp',
         hostApp: 'erp',
         organizationId: 'org-shared',
         actorId: 'actor-shared',

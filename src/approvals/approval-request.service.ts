@@ -5,6 +5,7 @@ import { Prisma } from '../generated/prisma/client';
 import { ApprovalRequestStatus, RiskLevel, ToolOperation } from '../generated/prisma/enums';
 import { RequestIdentityContext } from '../identity/identity-context.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
 import {
   ApprovalRequestDecisionInput,
   ApprovalRequestListFilters,
@@ -108,13 +109,7 @@ export class ApprovalRequestService {
     const visibleItems = [];
     for (const item of items) {
       const session = await this.prisma.db.assistantSession.findFirst({
-        where: {
-          id: item.sessionId,
-          customerId: input.customerScope.customerId,
-          organizationId: input.customerScope.organizationId,
-          hostApp: input.customerScope.hostApp,
-          actorId: item.requesterActorId
-        }
+        where: sessionOwnedByScopePredicate(input.customerScope, item.sessionId, item.requesterActorId)
       });
       if (session && isApprovalVisibleToActor(item, input.customerScope)) {
         visibleItems.push(item);
@@ -293,13 +288,7 @@ export class ApprovalRequestService {
     }
 
     const session = await this.prisma.db.assistantSession.findFirst({
-      where: {
-        id: approvalRequest.sessionId,
-        customerId: customerScope.customerId,
-        organizationId: customerScope.organizationId,
-        hostApp: customerScope.hostApp,
-        actorId: approvalRequest.requesterActorId
-      }
+      where: sessionOwnedByScopePredicate(customerScope, approvalRequest.sessionId, approvalRequest.requesterActorId)
     });
     if (!session || !isApprovalVisibleToActor(approvalRequest, customerScope)) {
       throw workflowNotFound();

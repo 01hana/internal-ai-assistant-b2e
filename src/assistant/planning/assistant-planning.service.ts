@@ -44,6 +44,7 @@ export class AssistantPlanningService {
       ? await this.conversationContextLoader.load({
           scope: {
             customerId: input.customerScope.customerId,
+            integrationId: input.customerScope.integrationId,
             sessionId: input.sessionId,
             organizationId: input.customerScope.organizationId,
             hostApp: input.customerScope.hostApp,

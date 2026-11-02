@@ -44,6 +44,20 @@ describe('T058 Customer A/B approval isolation expected-red', () => {
     expect(a.customerId).not.toBe(b.customerId);
   });
 
+  it('does not expose or change an Approval Request across Integrations of the same actor', async () => {
+    const id = 'approval-request-pending-reject-001';
+    const item = state.approvalRequests.find((row) => row.id === id)!;
+    const before = { status: item.status, audits: state.auditEvents.length, toolCalls: state.toolCalls.length };
+    const other = createAuthorizedInternalIdentityHeaders(jwt, { claims: {
+      ...jwt.canonicalClaims.customerA, integration_id: 'integration-other',
+      roles: ['approver'], permission_scopes: ['orders:read', 'orders:approve']
+    }, requestId: 'approval-other-integration' });
+    expect((await request(app.getHttpServer()).get(`/api/v1/assistant/approval-requests/${id}`).set(other)).status).toBe(404);
+    expect((await request(app.getHttpServer()).post(`/api/v1/assistant/approval-requests/${id}/reject`).set(other).send({ reason: 'test' })).status).toBe(404);
+    expect({ status: item.status, audits: state.auditEvents.length, toolCalls: state.toolCalls.length }).toEqual(before);
+    expect((await request(app.getHttpServer()).get(`/api/v1/assistant/approval-requests/${id}`).set(header('customerA', 'approval-owner'))).status).toBe(200);
+  });
+
   it('rejects a foreign execution plan and parent before workflow creation or audit', async () => {
     const identityContext = await verifiedIdentityContext('customerA', 'req-t058-foreign-parent');
     const customerScope = createCustomerScopeFromIdentityContext(identityContext);

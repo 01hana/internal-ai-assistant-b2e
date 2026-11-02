@@ -36,6 +36,20 @@ export function customerScopedUniquePredicate<T extends Record<string, unknown>>
   return createCustomerScopedPredicate(scope, unique);
 }
 
+/** Exact persisted Session owner. Callers must obtain scope from verified identity. */
+export function sessionOwnedByScopePredicate(scope: CustomerScope, sessionId: string, ownerActorId = scope.actorId) {
+  if (!scope.integrationId?.trim() || !ownerActorId?.trim()) {
+    throw new Error('Session ownership requires Integration and Actor.');
+  }
+  return customerScopedIdPredicate(scope, {
+    id: sessionId,
+    integrationId: scope.integrationId,
+    organizationId: scope.organizationId,
+    hostApp: scope.hostApp,
+    actorId: ownerActorId
+  });
+}
+
 function createCustomerScopedPredicate<T extends Record<string, unknown>>(
   scope: CustomerScope,
   predicate: CustomerOverrideForbidden<T>

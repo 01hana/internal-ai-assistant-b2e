@@ -7,6 +7,7 @@ import { assertCustomerScopeMatchesIdentityContext } from '../identity/customer-
 import { RequestIdentityContext } from '../identity/identity-context.types';
 import { CustomerScope } from '../identity/customer-scope.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
 import { ReviewItemService } from './review-item.service';
 
 export interface SubmitFeedbackInput {
@@ -83,7 +84,7 @@ export class FeedbackEventService {
     const { customerScope } = input;
     const message = await this.prisma.db.assistantMessage.findFirst({ where: { customerId: customerScope.customerId, id: input.messageId } });
     if (!message) throw feedbackNotFound();
-    const session = await this.prisma.db.assistantSession.findFirst({ where: { customerId: customerScope.customerId, id: message.sessionId, organizationId: customerScope.organizationId, hostApp: customerScope.hostApp, actorId: customerScope.actorId } });
+    const session = await this.prisma.db.assistantSession.findFirst({ where: sessionOwnedByScopePredicate(customerScope, message.sessionId) });
     if (!session || session.status !== 'active') throw feedbackNotFound();
     if (message.role !== AssistantMessageRole.assistant) throw new BadRequestException('Feedback can only be submitted for assistant messages.');
     if (!message.answerDecision) throw new BadRequestException('Feedback requires an assistant answer decision.');

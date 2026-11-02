@@ -5,6 +5,25 @@ import { PrismaService } from '../../src/prisma/prisma.service';
 import { SafeProjectedAdapterResult } from '../../src/tools/tool-registry.types';
 
 describe('ToolCallService safe summary boundary', () => {
+  it('checks persisted Session Integration before exposing a ToolCall', async () => {
+    const sessionLookup = jest.fn(async ({ where }: { where: { integrationId: string } }) =>
+      where.integrationId === 'integration-erp' ? { id: 'session-008' } : null);
+    const toolLookup = jest.fn().mockResolvedValue({ id: 'tool-call-008', customerId: 'customer-a' });
+    const service = new ToolCallService({ db: {
+      assistantSession: { findFirst: sessionLookup }, toolCall: { findFirst: toolLookup }
+    } } as unknown as PrismaService, { appendCustomerToolEvent: jest.fn() } as never);
+    const owner = lifecycleInput();
+    const foreign = { ...owner, customerScope: { ...owner.customerScope, integrationId: 'integration-other' },
+      toolCallId: 'tool-call-008' };
+    await expect(service.getVisibleToolCall(foreign)).rejects.toMatchObject({ status: 404 });
+    expect(toolLookup).not.toHaveBeenCalled();
+    expect(sessionLookup).toHaveBeenCalledWith({ where: expect.objectContaining({
+      customerId: 'customer-a', integrationId: 'integration-other', id: 'session-008'
+    }) });
+    await expect(service.getVisibleToolCall({ ...owner, toolCallId: 'tool-call-008' }))
+      .resolves.toMatchObject({ id: 'tool-call-008' });
+  });
+
   it('persists a closed output summary derived only from SafeProjectedAdapterResult', async () => {
     const create = jest.fn().mockImplementation(async ({ data }) => ({ id: 'tool-call-008', ...data }));
     const findFirst = jest.fn().mockImplementation(async ({ where }) => ({

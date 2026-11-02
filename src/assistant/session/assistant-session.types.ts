@@ -25,6 +25,7 @@ export interface AssistantSessionSummary {
 export interface PersistedSession {
   id: string;
   customerId: string;
+  integrationId: string | null;
   status: AssistantSessionStatus;
   organizationId: string;
   hostApp: string;

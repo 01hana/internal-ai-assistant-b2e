@@ -1,5 +1,6 @@
 import { INestApplication, NotFoundException } from '@nestjs/common';
 import { FeedbackEventService } from '../../src/feedback/feedback-event.service';
+import { ReviewItemService } from '../../src/feedback/review-item.service';
 import { FeedbackRating } from '../../src/generated/prisma/enums';
 import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
 import { validateVerifiedInternalIdentityClaims } from '../../src/identity/identity-context.validator';
@@ -67,6 +68,42 @@ describe('T064 Customer A/B FeedbackEvent isolation expected-red', () => {
     expect(snapshot()).toEqual(before);
     expect(prismaMock.feedbackEvent.create).not.toHaveBeenCalled();
     expect(prismaMock.toolCall.findMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects the same Customer and Actor from another Integration without writing feedback', async () => {
+    const identityContext = await verifiedIdentityContext('customerA', 'req-feedback-other-integration', 'integration-other');
+    const before = snapshot();
+    await expect(app.get(FeedbackEventService).submitFeedback({
+      customerScope: createCustomerScopeFromIdentityContext(identityContext), requestId: identityContext.requestId,
+      messageId: 'message-owned-assistant-001', identityContext, rating: FeedbackRating.negative, intent: 'unsafe'
+    })).rejects.toBeInstanceOf(NotFoundException);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it('rejects a legacy Session without Integration ownership', async () => {
+    state.sessions.find((session) => session.id === 'session-owned-001')!.integrationId = null;
+    const identityContext = await verifiedIdentityContext('customerA', 'req-feedback-legacy');
+    const before = snapshot();
+    await expect(app.get(FeedbackEventService).submitFeedback({
+      customerScope: createCustomerScopeFromIdentityContext(identityContext), requestId: identityContext.requestId,
+      messageId: 'message-owned-assistant-001', identityContext, rating: FeedbackRating.positive, intent: 'other'
+    })).rejects.toBeInstanceOf(NotFoundException);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it('keeps Review Items in their original Integration and leaves state unchanged on denial', async () => {
+    const reviewer = await verifiedIdentityContext('customerA', 'req-review-other-integration', 'integration-other');
+    const scope = createCustomerScopeFromIdentityContext(reviewer);
+    const before = snapshot();
+    const service = app.get(ReviewItemService);
+    expect(await service.getForReview({ customerScope: scope, identityContext: reviewer,
+      reviewItemId: 'review-item-open-feedback-001' })).toBeNull();
+    expect(await service.markResolved({ customerScope: scope, identityContext: reviewer,
+      requestId: reviewer.requestId, reviewItemId: 'review-item-open-feedback-001' })).toBeNull();
+    expect((await service.listForReview({ customerScope: scope, identityContext: reviewer }))
+      .some((item) => item.reviewItemId === 'review-item-open-feedback-001')).toBe(false);
+    expect(snapshot()).toEqual(before);
+    expect(state.reviewItems.find((item) => item.id === 'review-item-open-feedback-001')?.status).toBe('open');
   });
 
   it('qualifies ToolCall and Evidence lookup by Customer before using a same-message foreign relation', async () => {
@@ -159,8 +196,10 @@ describe('T064 Customer A/B FeedbackEvent isolation expected-red', () => {
     };
   }
 
-  async function verifiedIdentityContext(customer: 'customerA' | 'customerB', requestId: string) {
-    const authorization = createAuthorizedInternalIdentityHeaders(jwt, { claims: jwt.canonicalClaims[customer] }).authorization;
+  async function verifiedIdentityContext(customer: 'customerA' | 'customerB', requestId: string, integrationId?: string) {
+    const authorization = createAuthorizedInternalIdentityHeaders(jwt, { claims: {
+      ...jwt.canonicalClaims[customer], ...(integrationId ? { integration_id: integrationId } : {})
+    } }).authorization;
     const verifier = app.get<InternalIdentityTokenVerifier>(INTERNAL_IDENTITY_TOKEN_VERIFIER);
     const verified = await verifier.verify({ authorization });
     return { ...validateVerifiedInternalIdentityClaims(verified), requestId };

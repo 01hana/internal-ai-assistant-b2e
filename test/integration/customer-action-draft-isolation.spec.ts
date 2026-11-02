@@ -37,6 +37,20 @@ describe('T059 Customer A/B action draft isolation expected-red', () => {
     expect(state.actionDrafts.at(-1)).toEqual(expect.objectContaining({ customerId: 'customer-a' }));
   });
 
+  it('does not expose or confirm a Draft across Integrations of the same actor', async () => {
+    const id = 'action-draft-waiting-001';
+    const item = state.actionDrafts.find((row) => row.id === id)!;
+    const before = { status: item.status, audits: state.auditEvents.length, toolCalls: state.toolCalls.length };
+    const other = createAuthorizedInternalIdentityHeaders(jwt, { claims: {
+      ...jwt.canonicalClaims.customerA, integration_id: 'integration-other',
+      permission_scopes: ['orders:read', 'orders:update']
+    }, requestId: 'draft-other-integration' });
+    expect((await request(app.getHttpServer()).get(`/api/v1/assistant/action-drafts/${id}`).set(other)).status).toBe(404);
+    expect((await request(app.getHttpServer()).post(`/api/v1/assistant/action-drafts/${id}/confirm`).set(other).send({ idempotencyKey: 'other-integration' })).status).toBe(404);
+    expect({ status: item.status, audits: state.auditEvents.length, toolCalls: state.toolCalls.length }).toEqual(before);
+    expect((await request(app.getHttpServer()).get(`/api/v1/assistant/action-drafts/${id}`).set(header('customerA', 'draft-owner'))).status).toBe(200);
+  });
+
   it('requires a foreign duplicate row to leave connector, ToolCall, and state untouched', async () => {
     const foreign = state.actionDrafts.find((item) => item.customerId === 'customer-b')!;
     const before = { status: foreign.status, toolCalls: state.toolCalls.length, audits: state.auditEvents.length, creates: prismaMock.toolCall.create.mock.calls.length };

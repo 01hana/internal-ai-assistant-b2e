@@ -27,6 +27,7 @@ export type AggregateAssistantSession = {
 export type AssistantSessionMinAggregateOutputType = {
   id: string | null
   customerId: string | null
+  integrationId: string | null
   hostApp: string | null
   organizationId: string | null
   actorId: string | null
@@ -39,6 +40,7 @@ export type AssistantSessionMinAggregateOutputType = {
 export type AssistantSessionMaxAggregateOutputType = {
   id: string | null
   customerId: string | null
+  integrationId: string | null
   hostApp: string | null
   organizationId: string | null
   actorId: string | null
@@ -51,6 +53,7 @@ export type AssistantSessionMaxAggregateOutputType = {
 export type AssistantSessionCountAggregateOutputType = {
   id: number
   customerId: number
+  integrationId: number
   hostApp: number
   organizationId: number
   actorId: number
@@ -65,6 +68,7 @@ export type AssistantSessionCountAggregateOutputType = {
 export type AssistantSessionMinAggregateInputType = {
   id?: true
   customerId?: true
+  integrationId?: true
   hostApp?: true
   organizationId?: true
   actorId?: true
@@ -77,6 +81,7 @@ export type AssistantSessionMinAggregateInputType = {
 export type AssistantSessionMaxAggregateInputType = {
   id?: true
   customerId?: true
+  integrationId?: true
   hostApp?: true
   organizationId?: true
   actorId?: true
@@ -89,6 +94,7 @@ export type AssistantSessionMaxAggregateInputType = {
 export type AssistantSessionCountAggregateInputType = {
   id?: true
   customerId?: true
+  integrationId?: true
   hostApp?: true
   organizationId?: true
   actorId?: true
@@ -174,6 +180,7 @@ export type AssistantSessionGroupByArgs<ExtArgs extends runtime.Types.Extensions
 export type AssistantSessionGroupByOutputType = {
   id: string
   customerId: string
+  integrationId: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -207,6 +214,7 @@ export type AssistantSessionWhereInput = {
   NOT?: Prisma.AssistantSessionWhereInput | Prisma.AssistantSessionWhereInput[]
   id?: Prisma.StringFilter<"AssistantSession"> | string
   customerId?: Prisma.StringFilter<"AssistantSession"> | string
+  integrationId?: Prisma.StringNullableFilter<"AssistantSession"> | string | null
   hostApp?: Prisma.StringFilter<"AssistantSession"> | string
   organizationId?: Prisma.StringFilter<"AssistantSession"> | string
   actorId?: Prisma.StringFilter<"AssistantSession"> | string
@@ -228,6 +236,7 @@ export type AssistantSessionWhereInput = {
 export type AssistantSessionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
+  integrationId?: Prisma.SortOrderInput | Prisma.SortOrder
   hostApp?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
@@ -253,6 +262,7 @@ export type AssistantSessionWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.AssistantSessionWhereInput[]
   NOT?: Prisma.AssistantSessionWhereInput | Prisma.AssistantSessionWhereInput[]
   customerId?: Prisma.StringFilter<"AssistantSession"> | string
+  integrationId?: Prisma.StringNullableFilter<"AssistantSession"> | string | null
   hostApp?: Prisma.StringFilter<"AssistantSession"> | string
   organizationId?: Prisma.StringFilter<"AssistantSession"> | string
   actorId?: Prisma.StringFilter<"AssistantSession"> | string
@@ -274,6 +284,7 @@ export type AssistantSessionWhereUniqueInput = Prisma.AtLeast<{
 export type AssistantSessionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
+  integrationId?: Prisma.SortOrderInput | Prisma.SortOrder
   hostApp?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
@@ -292,6 +303,7 @@ export type AssistantSessionScalarWhereWithAggregatesInput = {
   NOT?: Prisma.AssistantSessionScalarWhereWithAggregatesInput | Prisma.AssistantSessionScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"AssistantSession"> | string
   customerId?: Prisma.StringWithAggregatesFilter<"AssistantSession"> | string
+  integrationId?: Prisma.StringNullableWithAggregatesFilter<"AssistantSession"> | string | null
   hostApp?: Prisma.StringWithAggregatesFilter<"AssistantSession"> | string
   organizationId?: Prisma.StringWithAggregatesFilter<"AssistantSession"> | string
   actorId?: Prisma.StringWithAggregatesFilter<"AssistantSession"> | string
@@ -303,6 +315,7 @@ export type AssistantSessionScalarWhereWithAggregatesInput = {
 
 export type AssistantSessionCreateInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -324,6 +337,7 @@ export type AssistantSessionCreateInput = {
 export type AssistantSessionUncheckedCreateInput = {
   id?: string
   customerId: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -343,6 +357,7 @@ export type AssistantSessionUncheckedCreateInput = {
 
 export type AssistantSessionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -364,6 +379,7 @@ export type AssistantSessionUpdateInput = {
 export type AssistantSessionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -384,6 +400,7 @@ export type AssistantSessionUncheckedUpdateInput = {
 export type AssistantSessionCreateManyInput = {
   id?: string
   customerId: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -395,6 +412,7 @@ export type AssistantSessionCreateManyInput = {
 
 export type AssistantSessionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -407,6 +425,7 @@ export type AssistantSessionUpdateManyMutationInput = {
 export type AssistantSessionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -434,6 +453,7 @@ export type AssistantSessionCustomerIdIdCompoundUniqueInput = {
 export type AssistantSessionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
+  integrationId?: Prisma.SortOrder
   hostApp?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
@@ -446,6 +466,7 @@ export type AssistantSessionCountOrderByAggregateInput = {
 export type AssistantSessionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
+  integrationId?: Prisma.SortOrder
   hostApp?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
@@ -458,6 +479,7 @@ export type AssistantSessionMaxOrderByAggregateInput = {
 export type AssistantSessionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
+  integrationId?: Prisma.SortOrder
   hostApp?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
@@ -639,6 +661,7 @@ export type AssistantSessionUpdateOneRequiredWithoutEscalationRequestsNestedInpu
 
 export type AssistantSessionCreateWithoutCustomerInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -658,6 +681,7 @@ export type AssistantSessionCreateWithoutCustomerInput = {
 
 export type AssistantSessionUncheckedCreateWithoutCustomerInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -707,6 +731,7 @@ export type AssistantSessionScalarWhereInput = {
   NOT?: Prisma.AssistantSessionScalarWhereInput | Prisma.AssistantSessionScalarWhereInput[]
   id?: Prisma.StringFilter<"AssistantSession"> | string
   customerId?: Prisma.StringFilter<"AssistantSession"> | string
+  integrationId?: Prisma.StringNullableFilter<"AssistantSession"> | string | null
   hostApp?: Prisma.StringFilter<"AssistantSession"> | string
   organizationId?: Prisma.StringFilter<"AssistantSession"> | string
   actorId?: Prisma.StringFilter<"AssistantSession"> | string
@@ -718,6 +743,7 @@ export type AssistantSessionScalarWhereInput = {
 
 export type AssistantSessionCreateWithoutMessagesInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -738,6 +764,7 @@ export type AssistantSessionCreateWithoutMessagesInput = {
 export type AssistantSessionUncheckedCreateWithoutMessagesInput = {
   id?: string
   customerId: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -772,6 +799,7 @@ export type AssistantSessionUpdateToOneWithWhereWithoutMessagesInput = {
 
 export type AssistantSessionUpdateWithoutMessagesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -792,6 +820,7 @@ export type AssistantSessionUpdateWithoutMessagesInput = {
 export type AssistantSessionUncheckedUpdateWithoutMessagesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -810,6 +839,7 @@ export type AssistantSessionUncheckedUpdateWithoutMessagesInput = {
 
 export type AssistantSessionCreateWithoutContextStatesInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -830,6 +860,7 @@ export type AssistantSessionCreateWithoutContextStatesInput = {
 export type AssistantSessionUncheckedCreateWithoutContextStatesInput = {
   id?: string
   customerId: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -864,6 +895,7 @@ export type AssistantSessionUpdateToOneWithWhereWithoutContextStatesInput = {
 
 export type AssistantSessionUpdateWithoutContextStatesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -884,6 +916,7 @@ export type AssistantSessionUpdateWithoutContextStatesInput = {
 export type AssistantSessionUncheckedUpdateWithoutContextStatesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -902,6 +935,7 @@ export type AssistantSessionUncheckedUpdateWithoutContextStatesInput = {
 
 export type AssistantSessionCreateWithoutExecutionPlansInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -922,6 +956,7 @@ export type AssistantSessionCreateWithoutExecutionPlansInput = {
 export type AssistantSessionUncheckedCreateWithoutExecutionPlansInput = {
   id?: string
   customerId: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -956,6 +991,7 @@ export type AssistantSessionUpdateToOneWithWhereWithoutExecutionPlansInput = {
 
 export type AssistantSessionUpdateWithoutExecutionPlansInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -976,6 +1012,7 @@ export type AssistantSessionUpdateWithoutExecutionPlansInput = {
 export type AssistantSessionUncheckedUpdateWithoutExecutionPlansInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -994,6 +1031,7 @@ export type AssistantSessionUncheckedUpdateWithoutExecutionPlansInput = {
 
 export type AssistantSessionCreateWithoutToolCallsInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1014,6 +1052,7 @@ export type AssistantSessionCreateWithoutToolCallsInput = {
 export type AssistantSessionUncheckedCreateWithoutToolCallsInput = {
   id?: string
   customerId: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1048,6 +1087,7 @@ export type AssistantSessionUpdateToOneWithWhereWithoutToolCallsInput = {
 
 export type AssistantSessionUpdateWithoutToolCallsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1068,6 +1108,7 @@ export type AssistantSessionUpdateWithoutToolCallsInput = {
 export type AssistantSessionUncheckedUpdateWithoutToolCallsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1086,6 +1127,7 @@ export type AssistantSessionUncheckedUpdateWithoutToolCallsInput = {
 
 export type AssistantSessionCreateWithoutAuditEventsInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1106,6 +1148,7 @@ export type AssistantSessionCreateWithoutAuditEventsInput = {
 export type AssistantSessionUncheckedCreateWithoutAuditEventsInput = {
   id?: string
   customerId: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1140,6 +1183,7 @@ export type AssistantSessionUpdateToOneWithWhereWithoutAuditEventsInput = {
 
 export type AssistantSessionUpdateWithoutAuditEventsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1160,6 +1204,7 @@ export type AssistantSessionUpdateWithoutAuditEventsInput = {
 export type AssistantSessionUncheckedUpdateWithoutAuditEventsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1178,6 +1223,7 @@ export type AssistantSessionUncheckedUpdateWithoutAuditEventsInput = {
 
 export type AssistantSessionCreateWithoutApprovalRequestsInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1198,6 +1244,7 @@ export type AssistantSessionCreateWithoutApprovalRequestsInput = {
 export type AssistantSessionUncheckedCreateWithoutApprovalRequestsInput = {
   id?: string
   customerId: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1232,6 +1279,7 @@ export type AssistantSessionUpdateToOneWithWhereWithoutApprovalRequestsInput = {
 
 export type AssistantSessionUpdateWithoutApprovalRequestsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1252,6 +1300,7 @@ export type AssistantSessionUpdateWithoutApprovalRequestsInput = {
 export type AssistantSessionUncheckedUpdateWithoutApprovalRequestsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1270,6 +1319,7 @@ export type AssistantSessionUncheckedUpdateWithoutApprovalRequestsInput = {
 
 export type AssistantSessionCreateWithoutActionDraftsInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1290,6 +1340,7 @@ export type AssistantSessionCreateWithoutActionDraftsInput = {
 export type AssistantSessionUncheckedCreateWithoutActionDraftsInput = {
   id?: string
   customerId: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1324,6 +1375,7 @@ export type AssistantSessionUpdateToOneWithWhereWithoutActionDraftsInput = {
 
 export type AssistantSessionUpdateWithoutActionDraftsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1344,6 +1396,7 @@ export type AssistantSessionUpdateWithoutActionDraftsInput = {
 export type AssistantSessionUncheckedUpdateWithoutActionDraftsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1362,6 +1415,7 @@ export type AssistantSessionUncheckedUpdateWithoutActionDraftsInput = {
 
 export type AssistantSessionCreateWithoutEscalationRequestsInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1382,6 +1436,7 @@ export type AssistantSessionCreateWithoutEscalationRequestsInput = {
 export type AssistantSessionUncheckedCreateWithoutEscalationRequestsInput = {
   id?: string
   customerId: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1416,6 +1471,7 @@ export type AssistantSessionUpdateToOneWithWhereWithoutEscalationRequestsInput =
 
 export type AssistantSessionUpdateWithoutEscalationRequestsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1436,6 +1492,7 @@ export type AssistantSessionUpdateWithoutEscalationRequestsInput = {
 export type AssistantSessionUncheckedUpdateWithoutEscalationRequestsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1454,6 +1511,7 @@ export type AssistantSessionUncheckedUpdateWithoutEscalationRequestsInput = {
 
 export type AssistantSessionCreateManyCustomerInput = {
   id?: string
+  integrationId?: string | null
   hostApp: string
   organizationId: string
   actorId: string
@@ -1465,6 +1523,7 @@ export type AssistantSessionCreateManyCustomerInput = {
 
 export type AssistantSessionUpdateWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1484,6 +1543,7 @@ export type AssistantSessionUpdateWithoutCustomerInput = {
 
 export type AssistantSessionUncheckedUpdateWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1503,6 +1563,7 @@ export type AssistantSessionUncheckedUpdateWithoutCustomerInput = {
 
 export type AssistantSessionUncheckedUpdateManyWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  integrationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hostApp?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1609,6 +1670,7 @@ export type AssistantSessionCountOutputTypeCountAuditEventsArgs<ExtArgs extends 
 export type AssistantSessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   customerId?: boolean
+  integrationId?: boolean
   hostApp?: boolean
   organizationId?: boolean
   actorId?: boolean
@@ -1631,6 +1693,7 @@ export type AssistantSessionSelect<ExtArgs extends runtime.Types.Extensions.Inte
 export type AssistantSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   customerId?: boolean
+  integrationId?: boolean
   hostApp?: boolean
   organizationId?: boolean
   actorId?: boolean
@@ -1644,6 +1707,7 @@ export type AssistantSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Ty
 export type AssistantSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   customerId?: boolean
+  integrationId?: boolean
   hostApp?: boolean
   organizationId?: boolean
   actorId?: boolean
@@ -1657,6 +1721,7 @@ export type AssistantSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Ty
 export type AssistantSessionSelectScalar = {
   id?: boolean
   customerId?: boolean
+  integrationId?: boolean
   hostApp?: boolean
   organizationId?: boolean
   actorId?: boolean
@@ -1666,7 +1731,7 @@ export type AssistantSessionSelectScalar = {
   lastMessageAt?: boolean
 }
 
-export type AssistantSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "hostApp" | "organizationId" | "actorId" | "status" | "createdAt" | "updatedAt" | "lastMessageAt", ExtArgs["result"]["assistantSession"]>
+export type AssistantSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "integrationId" | "hostApp" | "organizationId" | "actorId" | "status" | "createdAt" | "updatedAt" | "lastMessageAt", ExtArgs["result"]["assistantSession"]>
 export type AssistantSessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   messages?: boolean | Prisma.AssistantSession$messagesArgs<ExtArgs>
@@ -1702,6 +1767,10 @@ export type $AssistantSessionPayload<ExtArgs extends runtime.Types.Extensions.In
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     customerId: string
+    /**
+     * Null only for sessions created before Integration ownership was persisted.
+     */
+    integrationId: string | null
     hostApp: string
     organizationId: string
     actorId: string
@@ -2143,6 +2212,7 @@ export interface Prisma__AssistantSessionClient<T, Null = never, ExtArgs extends
 export interface AssistantSessionFieldRefs {
   readonly id: Prisma.FieldRef<"AssistantSession", 'String'>
   readonly customerId: Prisma.FieldRef<"AssistantSession", 'String'>
+  readonly integrationId: Prisma.FieldRef<"AssistantSession", 'String'>
   readonly hostApp: Prisma.FieldRef<"AssistantSession", 'String'>
   readonly organizationId: Prisma.FieldRef<"AssistantSession", 'String'>
   readonly actorId: Prisma.FieldRef<"AssistantSession", 'String'>

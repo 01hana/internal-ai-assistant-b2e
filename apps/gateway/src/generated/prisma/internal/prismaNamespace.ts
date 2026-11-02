@@ -3294,6 +3294,7 @@ export type GatewayIdentityAuditEventScalarFieldEnum = (typeof GatewayIdentityAu
 export const AssistantSessionScalarFieldEnum = {
   id: 'id',
   customerId: 'customerId',
+  integrationId: 'integrationId',
   hostApp: 'hostApp',
   organizationId: 'organizationId',
   actorId: 'actorId',

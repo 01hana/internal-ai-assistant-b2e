@@ -23,6 +23,7 @@ describe('AssistantSessionService', () => {
     expect(harness.prismaMock.assistantSession.create).toHaveBeenCalledWith({
       data: {
         customerId: 'customer-a',
+        integrationId: 'integration-erp',
         organizationId: 'org-001',
         hostApp: 'erp',
         actorId: 'actor-001',
@@ -57,6 +58,16 @@ describe('AssistantSessionService', () => {
 
     expect(harness.contextStateMock.createInitialState).not.toHaveBeenCalled();
     expect(harness.auditMock.append).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing Integration before creating a session or writing context', async () => {
+    const harness = createService();
+    await expect(harness.service.createSession({
+      requestId: 'req-missing-integration',
+      hostIntegrationContext: { ...hostContextFor('customer-a'), integrationId: '' }
+    })).rejects.toMatchObject({ status: 404 });
+    expect(harness.prismaMock.assistantSession.create).not.toHaveBeenCalled();
+    expect(harness.contextStateMock.createInitialState).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -265,7 +276,7 @@ function hostContextFor(customerId: string) {
 }
 
 function sessionRecord(customerId: string, id: string, status: AssistantSessionStatus = AssistantSessionStatus.active) {
-  return { id, customerId, organizationId: 'org-001', hostApp: 'erp', actorId: 'actor-001', status };
+  return { id, customerId, integrationId: 'integration-erp', organizationId: 'org-001', hostApp: 'erp', actorId: 'actor-001', status };
 }
 
 function contextState() {
@@ -281,6 +292,7 @@ function contextState() {
 function visibleSessionPredicate(customerId: string, id: string) {
   return {
     customerId,
+    integrationId: 'integration-erp',
     id,
     organizationId: 'org-001',
     hostApp: 'erp',
@@ -292,6 +304,7 @@ function visibleSessionPredicate(customerId: string, id: string) {
 function visibleSessionListPredicate(customerId: string) {
   return {
     customerId,
+    integrationId: 'integration-erp',
     organizationId: 'org-001',
     hostApp: 'erp',
     actorId: 'actor-001',

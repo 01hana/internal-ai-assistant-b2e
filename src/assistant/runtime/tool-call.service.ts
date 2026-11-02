@@ -177,6 +177,7 @@ export class ToolCallService {
   }
 
   async getVisibleToolCall(input: VisibleToolCallInput): Promise<ToolCall> {
+    await this.assertVisibleSession(input);
     const where = this.visibleToolCallWhere(input);
     const toolCall = await this.prisma.db.toolCall.findFirst({ where });
     if (!toolCall || toolCall.customerId !== input.customerScope.customerId) {
@@ -208,10 +209,19 @@ export class ToolCallService {
   }
 
   private async assertCustomerParents(input: StartToolCallInput | BlockToolCallInput): Promise<void> {
+    await this.assertVisibleSession(input);
     const scope = input.customerScope;
-    const session = await this.prisma.db.assistantSession.findFirst({ where: { customerId: scope.customerId, id: input.sessionId, organizationId: scope.organizationId, hostApp: scope.hostApp, actorId: scope.actorId } });
     const message = await this.prisma.db.assistantMessage.findFirst({ where: { customerId: scope.customerId, id: input.messageId, sessionId: input.sessionId } });
-    if (!session || !message) throw new NotFoundException({ error: 'NOT_FOUND', message: 'Tool call context not found.' });
+    if (!message) throw new NotFoundException({ error: 'NOT_FOUND', message: 'Tool call context not found.' });
+  }
+
+  private async assertVisibleSession(input: Pick<VisibleToolCallInput, 'customerScope' | 'sessionId'>): Promise<void> {
+    const scope = input.customerScope;
+    const session = await this.prisma.db.assistantSession.findFirst({ where: {
+      customerId: scope.customerId, integrationId: scope.integrationId, id: input.sessionId,
+      organizationId: scope.organizationId, hostApp: scope.hostApp, actorId: scope.actorId
+    } });
+    if (!session) throw new NotFoundException({ error: 'NOT_FOUND', message: 'Tool call context not found.' });
   }
 
   private async transition(input: CompleteToolCallInput | FailToolCallInput, data: Prisma.ToolCallUpdateManyMutationInput): Promise<ToolCall> {

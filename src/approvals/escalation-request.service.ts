@@ -11,6 +11,7 @@ import {
 } from '../generated/prisma/enums';
 import { RequestIdentityContext } from '../identity/identity-context.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
 import {
   CreateEscalationRequestInput,
   EscalationRequestDecisionInput,
@@ -75,13 +76,8 @@ export class EscalationRequestService {
     const visibleItems = [];
     for (const item of items) {
       const session = await this.prisma.db.assistantSession.findFirst({
-        where: {
-          id: item.sessionId,
-          customerId: input.customerScope.customerId,
-          organizationId: input.customerScope.organizationId,
-          hostApp: input.customerScope.hostApp,
-          actorId: extractSummaryString(item.summary, 'requesterActorId') ?? input.customerScope.actorId
-        }
+        where: sessionOwnedByScopePredicate(input.customerScope, item.sessionId,
+          extractSummaryString(item.summary, 'requesterActorId') ?? input.customerScope.actorId)
       });
       if (
         session &&
@@ -175,13 +171,8 @@ export class EscalationRequestService {
 
     const requesterActorId = extractSummaryString(escalationRequest.summary, 'requesterActorId');
     const session = await this.prisma.db.assistantSession.findFirst({
-      where: {
-        id: escalationRequest.sessionId,
-        customerId: customerScope.customerId,
-        organizationId: customerScope.organizationId,
-        hostApp: customerScope.hostApp,
-        actorId: requesterActorId ?? customerScope.actorId
-      }
+      where: sessionOwnedByScopePredicate(customerScope, escalationRequest.sessionId,
+        requesterActorId ?? customerScope.actorId)
     });
     if (!session || !isEscalationVisibleToActor(escalationRequest.summary, customerScope)) {
       throw workflowNotFound();

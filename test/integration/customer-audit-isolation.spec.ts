@@ -92,6 +92,15 @@ describe('T066 generic AuditWriter Customer boundary', () => {
     await expectAuditContextRejected({ sessionId: 'session-owned-001', messageId: 'message-a-other-session-001' });
   });
 
+  it('rejects the same Session from another Integration before audit writes', async () => {
+    const identityContext = await verifiedIdentityContext('customerA', 'req-audit-other-integration', 'integration-other');
+    const customerScope = createCustomerScopeFromIdentityContext(identityContext);
+    const before = state.auditEvents.length;
+    await expect(app.get(AuditWriterService).append({ customerScope, requestId: identityContext.requestId,
+      eventType: 'other_integration_audit', sessionId: 'session-owned-001' })).rejects.toThrow('Audit context not found.');
+    expect(state.auditEvents).toHaveLength(before);
+  });
+
   it('rejects a same-Customer ToolCall that belongs to another session', async () => {
     state.sessions.push({ ...state.sessions.find((item) => item.id === 'session-owned-001')!, id: 'session-a-other-001' });
     state.toolCalls.push({ ...state.toolCalls.find((item) => item.id === 'tool-call-owned-001')!, id: 'tool-call-a-other-session-001', sessionId: 'session-a-other-001' });
@@ -137,8 +146,10 @@ describe('T066 generic AuditWriter Customer boundary', () => {
     expect(prismaMock.auditEvent.create).not.toHaveBeenCalled();
   }
 
-  async function verifiedIdentityContext(customer: 'customerA' | 'customerB', requestId: string): Promise<RequestIdentityContext> {
-    const authorization = createAuthorizedInternalIdentityHeaders(jwt, { claims: jwt.canonicalClaims[customer] }).authorization;
+  async function verifiedIdentityContext(customer: 'customerA' | 'customerB', requestId: string, integrationId?: string): Promise<RequestIdentityContext> {
+    const authorization = createAuthorizedInternalIdentityHeaders(jwt, { claims: {
+      ...jwt.canonicalClaims[customer], ...(integrationId ? { integration_id: integrationId } : {})
+    } }).authorization;
     const verifier = app.get<InternalIdentityTokenVerifier>(INTERNAL_IDENTITY_TOKEN_VERIFIER);
     const verified = await verifier.verify({ authorization });
     return { ...validateVerifiedInternalIdentityClaims(verified), requestId };

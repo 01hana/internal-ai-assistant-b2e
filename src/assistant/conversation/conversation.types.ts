@@ -57,6 +57,7 @@ export interface FollowUpResolutionDecision {
 
 export interface ConversationScope {
   readonly customerId: string;
+  readonly integrationId: string;
   readonly sessionId: string;
   readonly organizationId: string;
   readonly hostApp: string;

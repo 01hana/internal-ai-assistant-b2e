@@ -64,7 +64,7 @@ describe('Feature 010 Phase 2 bounded conversation-context contract (T022)', () 
     'keeps nested EvidenceRef identity surfaces within the global bound of %s',
     async (maxEvidenceRefs) => {
       const scope = Object.freeze({
-        customerId: 'customer-a', sessionId: 'session-1', organizationId: 'org-1', hostApp: 'erp', actorId: 'actor-1'
+        customerId: 'customer-a', integrationId: 'integration-erp', sessionId: 'session-1', organizationId: 'org-1', hostApp: 'erp', actorId: 'actor-1'
       });
       const evidence = Array.from({ length: 6 }, (_, index) => ({
         id: `evidence-${index + 1}`, sourceType: 'document_chunk', sourceId: `chunk-${index + 1}`

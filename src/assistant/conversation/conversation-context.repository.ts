@@ -18,6 +18,7 @@ export class ConversationContextRepository {
     const session = await this.prisma.db.assistantSession.findFirst({
       where: {
         customerId: scope.customerId,
+        integrationId: scope.integrationId,
         id: scope.sessionId,
         organizationId: scope.organizationId,
         hostApp: scope.hostApp,

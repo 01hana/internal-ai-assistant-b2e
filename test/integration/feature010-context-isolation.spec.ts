@@ -5,6 +5,7 @@ import { createUs1TestAppWithState, Us1TestState } from '../support/us1-test-app
 
 const ACTIVE_SCOPE = Object.freeze({
   customerId: 'customer-a',
+  integrationId: 'integration-erp',
   sessionId: 'session-owned-001',
   organizationId: 'org-shared',
   hostApp: 'erp',
@@ -45,6 +46,7 @@ describe('Feature 010 active conversation-context isolation (T019)', () => {
 
   it.each([
     ['customerId', 'customer-missing'],
+    ['integrationId', 'integration-other'],
     ['sessionId', 'session-hidden-001'],
     ['organizationId', 'org-missing'],
     ['hostApp', 'wms'],

@@ -101,6 +101,41 @@ describe('assistant sessions contract', () => {
     );
   });
 
+  it('keeps a legacy NULL-Integration session but returns the same 404 as a missing session', async () => {
+    const session = state.sessions.find((item) => item.id === 'session-owned-001')!;
+    const originalIntegrationId = session.integrationId;
+    const beforeAuditCount = state.auditEvents.length;
+    const beforeMessageCount = state.messages.length;
+    session.integrationId = null;
+    try {
+      const headers = createAuthorizedInternalIdentityHeaders(identityFixture, {
+        claims: ownedClaims, requestId: 'req-legacy-session-denied'
+      });
+      const legacy = await request(app.getHttpServer())
+        .get('/api/v1/assistant/sessions/session-owned-001').set(headers);
+      const missing = await request(app.getHttpServer())
+        .get('/api/v1/assistant/sessions/session-does-not-exist').set(headers);
+      const history = await request(app.getHttpServer())
+        .get('/api/v1/assistant/sessions/session-owned-001/messages').set(headers);
+      const message = await request(app.getHttpServer())
+        .post('/api/v1/assistant/sessions/session-owned-001/messages').set(headers)
+        .send({ message: '查詢訂單' });
+
+      expect(legacy.status).toBe(404);
+      expect({ status: legacy.status, code: legacy.body.error?.code }).toEqual({
+        status: missing.status, code: missing.body.error?.code
+      });
+      expect(history.status).toBe(404);
+      expect(message.status).toBe(404);
+      expect(state.sessions).toContain(session);
+      expect(session.integrationId).toBeNull();
+      expect(state.auditEvents).toHaveLength(beforeAuditCount);
+      expect(state.messages).toHaveLength(beforeMessageCount);
+    } finally {
+      session.integrationId = originalIntegrationId;
+    }
+  });
+
   it('rejects non-visible sessions with a consistent error envelope across actor, host app, and organization boundaries', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/v1/assistant/sessions/session-owned-001')

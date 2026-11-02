@@ -12,6 +12,31 @@ describe('US4 workflow transition audit rollback expected-red', () => {
   beforeEach(async () => ({ app, state } = await createUs1TestAppWithState({ internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: jwt.jwks } })));
   afterEach(async () => app?.close());
 
+  it('rejects escalation state changes from another Integration of the same actor', async () => {
+    const id = 'escalation-request-open-001';
+    const item = state.escalationRequests.find((row) => row.id === id)!;
+    const before = { status: item.status, audits: state.auditEvents.length, toolCalls: state.toolCalls.length };
+    const other = createAuthorizedInternalIdentityHeaders(jwt, { claims: {
+      ...jwt.canonicalClaims.customerA, integration_id: 'integration-other', roles: ['approver'],
+      permission_scopes: ['orders:read', 'orders:approve', 'orders:update']
+    }, requestId: 'escalation-other-integration' });
+    expect((await request(app.getHttpServer()).get(`/api/v1/assistant/escalation-requests/${id}`).set(other)).status).toBe(404);
+    expect((await request(app.getHttpServer()).post(`/api/v1/assistant/escalation-requests/${id}/resolve`).set(other).send({ reason: 'test' })).status).toBe(404);
+    expect({ status: item.status, audits: state.auditEvents.length, toolCalls: state.toolCalls.length }).toEqual(before);
+  });
+
+  it('rejects legacy Sessions with no Integration owner across workflow reads', async () => {
+    state.sessions.find((row) => row.id === 'session-owned-001')!.integrationId = null;
+    const before = { audits: state.auditEvents.length, toolCalls: state.toolCalls.length };
+    expect((await request(app.getHttpServer()).get('/api/v1/assistant/approval-requests/approval-request-pending-get-001')
+      .set(headers('customerA', 'legacy-approval', true))).status).toBe(404);
+    expect((await request(app.getHttpServer()).get('/api/v1/assistant/action-drafts/action-draft-waiting-001')
+      .set(headers('customerA', 'legacy-draft'))).status).toBe(404);
+    expect((await request(app.getHttpServer()).get('/api/v1/assistant/escalation-requests/escalation-request-open-001')
+      .set(headers('customerA', 'legacy-escalation', true))).status).toBe(404);
+    expect({ audits: state.auditEvents.length, toolCalls: state.toolCalls.length }).toEqual(before);
+  });
+
   it.each([
     ['approval reject', 'approvalRequests', 'approval-request-pending-reject-001', 'approval_request_rejected', '/api/v1/assistant/approval-requests/approval-request-pending-reject-001/reject', 'customerA', true],
     ['approval cancel', 'approvalRequests', 'approval-request-pending-cancel-001', 'approval_request_cancelled', '/api/v1/assistant/approval-requests/approval-request-pending-cancel-001/cancel', 'customerA', true],

@@ -4,6 +4,7 @@ import { PrismaClient } from '../generated/prisma/client';
 import { CustomerScope } from '../identity/customer-scope.types';
 import { RequestIdentityContext } from '../identity/identity-context.types';
 import { assertCustomerScopeMatchesIdentityContext } from '../identity/customer-scope-consistency';
+import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
 
 type WorkflowParentDatabase = Pick<PrismaClient, 'assistantSession' | 'assistantMessage'>;
 
@@ -23,13 +24,7 @@ export async function assertCustomerWorkflowCreateParents(input: {
   }
 
   const session = await input.db.assistantSession.findFirst({
-    where: {
-      customerId: customerScope.customerId,
-      id: input.sessionId,
-      organizationId: customerScope.organizationId,
-      hostApp: customerScope.hostApp,
-      actorId: customerScope.actorId
-    }
+    where: sessionOwnedByScopePredicate(customerScope, input.sessionId)
   });
   if (!session) throw workflowNotFound();
 
