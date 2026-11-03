@@ -1,5 +1,6 @@
 import { MODULE_METADATA } from '@nestjs/common/constants';
 import { Test } from '@nestjs/testing';
+import { AppModule } from '../../src/app.module';
 import { RiskLevel, ToolOperation } from '../../src/generated/prisma/enums';
 import { DataAdapter, DataAdapterExecuteInput } from '../../src/connectors/data-adapter.interface';
 import {
@@ -12,11 +13,11 @@ import { AdapterResultProjectorService } from '../../src/connectors/adapter-resu
 import { ConnectorsModule } from '../../src/connectors/connectors.module';
 import { PermissionsModule } from '../../src/permissions/permissions.module';
 import {
-  MOCK_CONNECTOR_ADAPTER,
   MOCK_DATA_ADAPTER_REGISTRATIONS,
   MockConnectorModule
 } from '../../src/connectors/mock/mock-connector.module';
 import { AppConfigModule } from '../../src/common/config/app-config.module';
+import { PrismaService } from '../../src/prisma/prisma.service';
 import { ToolsModule } from '../../src/tools/tools.module';
 import {
   ProductizedBusinessConnectorModule,
@@ -31,27 +32,22 @@ describe('ConnectorsModule', () => {
     if (originalProductizedBindings === undefined) delete process.env.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON;
     else process.env.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON = originalProductizedBindings;
   });
-  it('provides one frozen combined registration array while preserving exact mocks', async () => {
+  it('initializes with an empty frozen registration array when no Customer binding is configured', async () => {
+    process.env.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON = '[]';
     const moduleRef = await Test.createTestingModule({ imports: [AppConfigModule, ConnectorsModule] }).compile();
-    const registrations = moduleRef.get<DataAdapterRegistrations>(DATA_ADAPTER_REGISTRATIONS);
-
-    expect(registrations).toHaveLength(2);
-    expect(registrations).toEqual(MOCK_DATA_ADAPTER_REGISTRATIONS);
-    expect(registrations.map(({ customerId, integrationId, hostApp, connectorKey }) => ({
-      customerId,
-      integrationId,
-      hostApp,
-      connectorKey
-    }))).toEqual([
-      { customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp', connectorKey: 'mock' },
-      { customerId: 'customer-b', integrationId: 'integration-erp', hostApp: 'erp', connectorKey: 'mock' }
-    ]);
-    expect(registrations.every((registration) => registration.adapter === MOCK_CONNECTOR_ADAPTER)).toBe(true);
-    expect(Object.isFrozen(registrations)).toBe(true);
-    expect(moduleRef.get(DataAdapterRegistry)).toBeInstanceOf(DataAdapterRegistry);
+    const app = moduleRef.createNestApplication();
+    try {
+      await app.init();
+      const registrations = app.get<DataAdapterRegistrations>(DATA_ADAPTER_REGISTRATIONS);
+      expect(registrations).toEqual([]);
+      expect(Object.isFrozen(registrations)).toBe(true);
+      expect(app.get(DataAdapterRegistry)).toBeInstanceOf(DataAdapterRegistry);
+    } finally {
+      await app.close();
+    }
   });
 
-  it('combines trusted productized registrations with mocks through one factory provider', () => {
+  it('assembles only trusted productized registrations through one factory provider', () => {
     const providers = (Reflect.getMetadata(MODULE_METADATA.PROVIDERS, ConnectorsModule) ?? []) as unknown[];
     const imports = (Reflect.getMetadata(MODULE_METADATA.IMPORTS, ConnectorsModule) ?? []) as unknown[];
     const registrationProviders = providers.filter(
@@ -64,7 +60,8 @@ describe('ConnectorsModule', () => {
     expect(registrationProviders[0]).not.toHaveProperty('multi');
     expect(registrationProviders[0]).not.toHaveProperty('useValue');
     expect(registrationProviders[0]).not.toHaveProperty('useClass');
-    expect(imports).toEqual(expect.arrayContaining([PermissionsModule, MockConnectorModule, ToolsModule]));
+    expect(imports).toEqual(expect.arrayContaining([PermissionsModule, ToolsModule]));
+    expect(imports).not.toContain(MockConnectorModule);
     expect(imports.some((entry) => isRecord(entry) && entry.module === ProductizedBusinessConnectorModule)).toBe(true);
     expect(providers).toEqual(expect.arrayContaining([registrationProviders[0], DataAdapterRegistry, AdapterResultProjectorService]));
   });
@@ -97,7 +94,7 @@ describe('ConnectorsModule', () => {
     expect(second.execute).not.toHaveBeenCalled();
   });
 
-  it('composes the exact reference binding beside unchanged mock registrations', async () => {
+  it('composes the exact reference binding without synthetic mock registrations', async () => {
     process.env.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON = JSON.stringify([shinmoneAdapterBinding()]);
     const transport = {
       executionConstraints: jest.fn(() => ({ ok: true, maxTransportMs: 4500, productionReady: true })),
@@ -108,11 +105,65 @@ describe('ConnectorsModule', () => {
       .useValue(transport)
       .compile();
     const registrations = moduleRef.get<DataAdapterRegistrations>(DATA_ADAPTER_REGISTRATIONS);
-    expect(registrations.slice(0, 2)).toEqual(MOCK_DATA_ADAPTER_REGISTRATIONS);
-    expect(registrations[2]).toMatchObject({
+    expect(registrations).toHaveLength(1);
+    expect(registrations[0]).toMatchObject({
       customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp',
       connectorKey: 'business', active: true, adapter: { key: 'productized-business' }
     });
+  });
+
+  it('allows test composition to explicitly install the existing exact Customer A/B mock bindings', async () => {
+    process.env.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON = '[]';
+    const moduleRef = await Test.createTestingModule({ imports: [AppConfigModule, ConnectorsModule] })
+      .overrideProvider(DATA_ADAPTER_REGISTRATIONS)
+      .useValue(MOCK_DATA_ADAPTER_REGISTRATIONS)
+      .compile();
+    const registrations = moduleRef.get<DataAdapterRegistrations>(DATA_ADAPTER_REGISTRATIONS);
+    expect(registrations).toBe(MOCK_DATA_ADAPTER_REGISTRATIONS);
+    expect(registrations.map(({ customerId, integrationId, hostApp, connectorKey }) => ({
+      customerId, integrationId, hostApp, connectorKey
+    }))).toEqual([
+      { customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp', connectorKey: 'mock' },
+      { customerId: 'customer-b', integrationId: 'integration-erp', hostApp: 'erp', connectorKey: 'mock' }
+    ]);
+  });
+
+  it('does not install synthetic Customer A/B bindings in production AppModule composition', async () => {
+    const keys = [
+      'DATABASE_URL', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'LLM_MODEL', 'OPENAI_API_KEY',
+      'INTERNAL_IDENTITY_JWT_ISSUER', 'INTERNAL_IDENTITY_JWT_AUDIENCE', 'INTERNAL_IDENTITY_JWKS_URI',
+      'ASSISTANT_CAPABILITY_PACK_PATHS_JSON', 'ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON',
+      'SHINMONE_C01_QUERY_SCOPE_POLICY_ENABLED'
+    ];
+    const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+    Object.assign(process.env, {
+      DATABASE_URL: 'postgresql://assistant:test@localhost:5432/assistant_test',
+      POSTGRES_USER: 'assistant', POSTGRES_PASSWORD: 'test', POSTGRES_DB: 'assistant_test',
+      LLM_MODEL: 'test-model', OPENAI_API_KEY: 'placeholder-openai-api-key',
+      INTERNAL_IDENTITY_JWT_ISSUER: 'https://gateway.test.internal',
+      INTERNAL_IDENTITY_JWT_AUDIENCE: 'internal-assistant-core-test',
+      INTERNAL_IDENTITY_JWKS_URI: 'https://gateway.test.internal/.well-known/jwks.json',
+      ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]', ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON: '[]'
+    });
+    delete process.env.SHINMONE_C01_QUERY_SCOPE_POLICY_ENABLED;
+    try {
+      const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+        .overrideProvider(PrismaService)
+        .useValue({ onModuleInit: jest.fn(), onModuleDestroy: jest.fn(), db: {} })
+        .compile();
+      const app = moduleRef.createNestApplication();
+      try {
+        await app.init();
+        expect(app.get<DataAdapterRegistrations>(DATA_ADAPTER_REGISTRATIONS)).toEqual([]);
+      } finally {
+        await app.close();
+      }
+    } finally {
+      for (const [key, value] of Object.entries(original)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
   });
 });
 

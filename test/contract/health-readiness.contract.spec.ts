@@ -9,6 +9,7 @@ import { CapabilityCatalogRegistry } from '../../src/capabilities/capability-cat
 import { CapabilitiesModule } from '../../src/capabilities/capabilities.module';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { ToolRegistryService } from '../../src/tools/tool-registry.service';
+import { MockConnectorAdapter } from '../../src/connectors/mock/mock-connector.adapter';
 import { createUs1TestAppWithState, Us1TestState } from '../support/us1-test-app.helper';
 
 describe('health and readiness contract', () => {
@@ -104,10 +105,9 @@ describe('health and readiness contract', () => {
     await capabilityApp.close();
   });
 
-  it('reports degraded readiness with a safe connector reason when the registry has no active mock tools', async () => {
-    state.toolDefinitions.length = 0;
-
-    const response = await request(app.getHttpServer())
+  it('reports degraded readiness with a safe connector reason when no connector is registered', async () => {
+    const empty = await createUs1TestAppWithState({ dataAdapterRegistrations: [] });
+    const response = await request(empty.app.getHttpServer())
       .get('/api/v1/readiness')
       .set('x-request-id', 'req-health-readiness-degraded');
 
@@ -126,6 +126,87 @@ describe('health and readiness contract', () => {
         })
       })
     );
+    await empty.app.close();
+  });
+
+  it.each([
+    ['one unavailable', 'degraded', 'connector_degraded', false],
+    ['all unavailable', 'unavailable', 'connector_unavailable', true]
+  ])('reports %s registered connectors without leaking probe details', async (_case, status, reason, allUnavailable) => {
+    const testApp = await createUs1TestAppWithState({
+      dataAdapterRegistrationsFactory: ({ mockRegistrations }) => mockRegistrations.map((registration, index) => {
+        const adapter = new MockConnectorAdapter();
+        jest.spyOn(adapter, 'healthCheck').mockResolvedValue({
+          dependency: 'connector', status: allUnavailable || index === 1 ? 'unavailable' : 'healthy',
+          checkedAt: new Date().toISOString()
+        });
+        return { ...registration, adapter };
+      })
+    });
+    const response = await request(testApp.app.getHttpServer()).get('/api/v1/readiness');
+    expect(response.status).toBe(200);
+    expect(response.body.data.dependencies.connector).toEqual(expect.objectContaining({ status, reason }));
+    expect(JSON.stringify(response.body)).not.toContain('connectorSecret');
+    await testApp.app.close();
+  });
+
+  it('fails readiness safely for duplicate exact connector bindings without probing them', async () => {
+    const healthCheck = jest.fn();
+    const testApp = await createUs1TestAppWithState({
+      dataAdapterRegistrationsFactory: ({ mockRegistrations }) => {
+        const adapter = new MockConnectorAdapter();
+        jest.spyOn(adapter, 'healthCheck').mockImplementation(healthCheck);
+        return [
+          { ...mockRegistrations[0], adapter },
+          { ...mockRegistrations[0], adapter }
+        ];
+      }
+    });
+    const response = await request(testApp.app.getHttpServer()).get('/api/v1/readiness');
+    expect(response.body.data.dependencies.connector).toEqual(expect.objectContaining({ status: 'unavailable', reason: 'connector_unavailable' }));
+    expect(healthCheck).not.toHaveBeenCalled();
+    await testApp.app.close();
+  });
+
+  it('reports a connector probe exception without exposing its details', async () => {
+    const testApp = await createUs1TestAppWithState({
+      dataAdapterRegistrationsFactory: ({ mockRegistrations }) => {
+        const adapter = new MockConnectorAdapter();
+        jest.spyOn(adapter, 'healthCheck').mockRejectedValue(new Error('connectorSecret private probe failure'));
+        return [{ ...mockRegistrations[0], adapter }];
+      }
+    });
+    try {
+      const response = await request(testApp.app.getHttpServer()).get('/api/v1/readiness');
+      expect(response.status).toBe(200);
+      expect(response.body.data.dependencies.connector).toEqual(expect.objectContaining({
+        status: 'unavailable', reason: 'connector_unavailable'
+      }));
+      expect(JSON.stringify(response.body)).not.toContain('connectorSecret');
+    } finally {
+      await testApp.app.close();
+    }
+  });
+
+  it('bounds a connector probe that never settles', async () => {
+    const testApp = await createUs1TestAppWithState({
+      dataAdapterRegistrationsFactory: ({ mockRegistrations }) => {
+        const adapter = new MockConnectorAdapter();
+        jest.spyOn(adapter, 'healthCheck').mockImplementation(async () => new Promise<never>(() => {}));
+        return [{ ...mockRegistrations[0], adapter }];
+      }
+    });
+    try {
+      const startedAt = Date.now();
+      const response = await request(testApp.app.getHttpServer()).get('/api/v1/readiness');
+      expect(response.status).toBe(200);
+      expect(response.body.data.dependencies.connector).toEqual(expect.objectContaining({
+        status: 'unavailable', reason: 'connector_unavailable'
+      }));
+      expect(Date.now() - startedAt).toBeLessThan(4_500);
+    } finally {
+      await testApp.app.close();
+    }
   });
 
   it('reports unavailable readiness for a database probe failure without exposing raw failure details', async () => {

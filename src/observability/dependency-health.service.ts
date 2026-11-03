@@ -1,14 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ActionDraftService } from '../approvals/action-draft.service';
 import { ApprovalRequestService } from '../approvals/approval-request.service';
 import { EscalationRequestService } from '../approvals/escalation-request.service';
 import { EnvironmentVariables } from '../common/config/env.validation';
-import { MockConnectorAdapter } from '../connectors/mock/mock-connector.adapter';
+import { DATA_ADAPTER_REGISTRATIONS, DataAdapterRegistrations } from '../connectors/data-adapter-registration';
 import { LlmExecutionService } from '../llm/llm-execution.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RetrievalService } from '../retrieval/retrieval.service';
-import { ToolRegistryService } from '../tools/tool-registry.service';
 import { DependencyHealthSnapshot, DependencyHealthStatus } from './dependency-health.types';
 
 @Injectable()
@@ -18,8 +17,7 @@ export class DependencyHealthService {
     private readonly configService: ConfigService<EnvironmentVariables, true>,
     private readonly llmExecutionService: LlmExecutionService,
     private readonly retrievalService: RetrievalService,
-    private readonly mockConnector: MockConnectorAdapter,
-    private readonly toolRegistry: ToolRegistryService,
+    @Inject(DATA_ADAPTER_REGISTRATIONS) private readonly registrations: DataAdapterRegistrations,
     private readonly actionDraftService: ActionDraftService,
     private readonly approvalRequestService: ApprovalRequestService,
     private readonly escalationRequestService: EscalationRequestService
@@ -70,22 +68,43 @@ export class DependencyHealthService {
   private async checkConnector(): Promise<DependencyHealthStatus> {
     const startedAt = Date.now();
     try {
-      const [connectorStatus, tools] = await Promise.all([this.mockConnector.healthCheck(), this.toolRegistry.listTools()]);
-      const activeMockTools = tools.filter((tool) => tool.active && tool.connectorKey === this.mockConnector.key);
-      const checkedAt = new Date().toISOString();
-      const durationMs = Math.max(0, Date.now() - startedAt);
-
-      if (connectorStatus.status === 'unavailable') {
-        return { status: 'unavailable', reason: 'connector_unavailable', checkedAt, durationMs };
+      if (this.registrations.some((registration) => typeof registration.active !== 'boolean')) {
+        return this.unavailable('connector_unavailable', startedAt);
       }
-      if (activeMockTools.length === 0) {
-        return { status: 'degraded', reason: 'connector_registry_empty', checkedAt, durationMs };
+      const active = this.registrations.filter((registration) => registration.active);
+      if (active.length === 0) {
+        return { status: 'degraded', reason: 'connector_registry_empty', checkedAt: new Date().toISOString(), durationMs: Math.max(0, Date.now() - startedAt) };
       }
-      if (connectorStatus.status === 'degraded') {
-        return { status: 'degraded', reason: 'connector_degraded', checkedAt, durationMs };
+      const bindings = new Set<string>();
+      for (const registration of active) {
+        const binding = [registration.customerId, registration.integrationId, registration.hostApp, registration.connectorKey];
+        if (binding.some((value) => typeof value !== 'string' || !value.trim() || value === '*') || !registration.adapter || typeof registration.adapter.healthCheck !== 'function') {
+          return this.unavailable('connector_unavailable', startedAt);
+        }
+        const key = JSON.stringify(binding);
+        if (bindings.has(key)) {
+          return this.unavailable('connector_unavailable', startedAt);
+        }
+        bindings.add(key);
       }
-
-      return { status: 'healthy', checkedAt, durationMs };
+      const statuses = await Promise.all(active.map(async (registration) => {
+        try {
+          const probe = await boundedConnectorProbe(registration.adapter.healthCheck());
+          return probe.status === 'healthy' || probe.status === 'degraded' || probe.status === 'unavailable'
+            ? probe.status : 'unavailable';
+        } catch {
+          return 'unavailable';
+        }
+      }));
+      const resultAt = new Date().toISOString();
+      const elapsed = Math.max(0, Date.now() - startedAt);
+      if (statuses.every((status) => status === 'healthy')) {
+        return { status: 'healthy', checkedAt: resultAt, durationMs: elapsed };
+      }
+      if (statuses.every((status) => status === 'unavailable')) {
+        return { status: 'unavailable', reason: 'connector_unavailable', checkedAt: resultAt, durationMs: elapsed };
+      }
+      return { status: 'degraded', reason: 'connector_degraded', checkedAt: resultAt, durationMs: elapsed };
     } catch {
       return this.unavailable('dependency_probe_failed', startedAt);
     }
@@ -120,5 +139,17 @@ export class DependencyHealthService {
       checkedAt: new Date().toISOString(),
       durationMs: Math.max(0, Date.now() - startedAt)
     };
+  }
+}
+
+async function boundedConnectorProbe<T>(probe: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      probe,
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('probe timeout')), 3000); })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }

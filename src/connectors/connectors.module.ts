@@ -6,10 +6,6 @@ import {
 import { DataAdapterRegistry } from './data-adapter-registry.service';
 import { AdapterResultProjectorService } from './adapter-result-projector.service';
 import { PermissionsModule } from '../permissions/permissions.module';
-import {
-  MOCK_DATA_ADAPTER_REGISTRATIONS,
-  MockConnectorModule
-} from './mock/mock-connector.module';
 import { ToolsModule } from '../tools/tools.module';
 import { ToolRegistryService } from '../tools/tool-registry.service';
 import {
@@ -26,7 +22,6 @@ export const EMPTY_DATA_ADAPTER_REGISTRATIONS: DataAdapterRegistrations = Object
 @Module({
   imports: [
     PermissionsModule,
-    MockConnectorModule,
     ToolsModule,
     ProductizedBusinessConnectorModule.register()
   ],
@@ -41,10 +36,7 @@ export const EMPTY_DATA_ADAPTER_REGISTRATIONS: DataAdapterRegistrations = Object
     },
     {
       provide: DATA_ADAPTER_REGISTRATIONS,
-      useFactory: (productized: DataAdapterRegistrations): DataAdapterRegistrations => Object.freeze([
-        ...MOCK_DATA_ADAPTER_REGISTRATIONS,
-        ...productized
-      ]),
+      useFactory: (productized: DataAdapterRegistrations): DataAdapterRegistrations => Object.freeze([...productized]),
       inject: [PRODUCTIZED_DATA_ADAPTER_REGISTRATIONS]
     },
     DataAdapterRegistry,

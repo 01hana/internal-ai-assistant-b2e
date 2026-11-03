@@ -16,7 +16,7 @@ describe('productized adapter exact registration', () => {
     else process.env[ENV_KEY] = original;
   });
 
-  it('adds one exact trusted registration beside unchanged mocks', async () => {
+  it('adds only the exact trusted registration without synthetic mock bindings', async () => {
     process.env[ENV_KEY] = JSON.stringify([binding()]);
     const transport = transportBoundary(true);
     const moduleRef = await Test.createTestingModule({ imports: [AppConfigModule, ConnectorsModule] })
@@ -25,13 +25,12 @@ describe('productized adapter exact registration', () => {
       .compile();
     const registrations = moduleRef.get<DataAdapterRegistrations>(DATA_ADAPTER_REGISTRATIONS);
 
-    expect(registrations).toHaveLength(3);
-    expect(registrations.slice(0, 2).map(({ adapter }) => adapter.key)).toEqual(['mock', 'mock']);
-    expect(registrations[2]).toMatchObject({
+    expect(registrations).toHaveLength(1);
+    expect(registrations[0]).toMatchObject({
       customerId: 'customer-b', integrationId: 'inventory-b', hostApp: 'customer-b-inventory',
       connectorKey: 'business', active: true, adapter: { key: 'productized-business' }
     });
-    await expect(moduleRef.get(DataAdapterRegistry).select(selection())).resolves.toBe(registrations[2].adapter);
+    await expect(moduleRef.get(DataAdapterRegistry).select(selection())).resolves.toBe(registrations[0].adapter);
   });
 
   it('never falls back to a mock for wrong dimensions or unavailable exact deployment', async () => {
