@@ -241,7 +241,8 @@ describe('AssistantPlanningService', () => {
       requiresMultiStepToolUse: false, decision: ExecutionDecision.continue, createdAt: new Date()
     });
     const context = Object.freeze({
-      scope: Object.freeze({ customerId: 'customer-a', sessionId: 'session-001', organizationId: 'org-001', hostApp: 'erp', actorId: 'actor-001' }),
+      scope: Object.freeze({ customerId: 'customer-a', integrationId: customerScope.integrationId,
+        sessionId: 'session-001', organizationId: 'org-001', hostApp: 'erp', actorId: 'actor-001' }),
       selectedExchangeIdsNewestFirst: Object.freeze(['exchange-1']), chronologicalExchangeIds: Object.freeze(['exchange-1']),
       exchanges: Object.freeze([]), semanticFrames: Object.freeze([]), evidenceRefs: Object.freeze([]),
       evidenceRefIds: Object.freeze([]), rejectedReasonCodes: Object.freeze([])
@@ -262,7 +263,8 @@ describe('AssistantPlanningService', () => {
     });
 
     expect(load).toHaveBeenCalledWith({ scope: {
-      customerId: 'customer-a', sessionId: 'session-001', organizationId: customerScope.organizationId,
+      customerId: 'customer-a', integrationId: customerScope.integrationId,
+      sessionId: 'session-001', organizationId: customerScope.organizationId,
       hostApp: customerScope.hostApp, actorId: customerScope.actorId
     } });
     expect(understandAndPersist).toHaveBeenCalledWith(expect.objectContaining({ priorConversationContext: context }));
