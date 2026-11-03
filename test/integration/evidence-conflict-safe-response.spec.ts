@@ -3,10 +3,12 @@ import request = require('supertest');
 import { createIdentityHeaders, createUs1TestAppWithState, parseSseResponse, Us1TestState } from '../support/us1-test-app.helper';
 
 describe('US4 evidence conflict runtime gate', () => {
+  const previousSelectionFlag = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
   let app: INestApplication;
   let state: Us1TestState;
 
   beforeAll(async () => {
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     const testApp = await createUs1TestAppWithState();
     app = testApp.app;
     state = testApp.state;
@@ -14,6 +16,8 @@ describe('US4 evidence conflict runtime gate', () => {
 
   afterAll(async () => {
     await app.close();
+    if (previousSelectionFlag === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousSelectionFlag;
   });
 
   it('returns no_answer and review item from endpoint runtime when structured evidence facts conflict', async () => {

@@ -166,6 +166,7 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
       backend: {
         environment: {
           ...centralEnvironment(privateKeyPath, centralJwk, (runtimeServer.address() as AddressInfo).port),
+          ASSISTANT_LLM_TOOL_SELECTION_ENABLED: 'false',
           ASSISTANT_CAPABILITY_PACK_PATHS_JSON: JSON.stringify([
             resolve('test/fixtures/capability-packs/shinmone-reference-vertical.v1.json')
           ]),

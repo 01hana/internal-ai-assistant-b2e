@@ -49,10 +49,17 @@ const CONTEXT: ConnectorBindingTrustedContextV1 = Object.freeze({
 const API_KEY = 'customer-b-api-key-sentinel';
 
 describe('Feature 009 Synthetic Customer B portability', () => {
+  let previousSelectionMode: string | undefined;
   beforeAll(async () => { tlsFixture = await createEphemeralTlsTestFixture(); });
   afterAll(async () => { await tlsFixture.dispose(); });
+  beforeEach(() => { previousSelectionMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED; });
+  afterEach(() => {
+    if (previousSelectionMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousSelectionMode;
+  });
 
   it('executes the natural-language POST-query vertical with no Shinmone registration in the topology', async () => {
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     const upstreamRequests: Array<Readonly<{
       method?: string; url?: string; apiKey?: string; authorization?: string; body: string
     }>> = [];
@@ -158,9 +165,14 @@ describe('Feature 009 Synthetic Customer B portability', () => {
       expect(assistant.state.toolCalls.at(-1)?.errorCode).toBeNull();
       expect(assistant.state.toolCalls.at(-1)).toMatchObject({ status: 'success', executionStatus: 'executed' });
       const events = parseSseResponse(response.text);
-      expect(events.map(({ event }) => event)).toEqual([
-        'tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final'
+      expect(events.slice(0, 3).map(({ event }) => event)).toEqual([
+        'tool_call_started', 'tool_call_completed', 'evidence_attached'
       ]);
+      expect(events.at(-1)?.event).toBe('final');
+      const answerDeltas = events.slice(3, -1);
+      expect(answerDeltas.length).toBeGreaterThan(0);
+      expect(answerDeltas.every(({ event }) => event === 'answer_delta')).toBe(true);
+      expect(answerDeltas.map(({ data }) => data.data.delta).join('')).toBe(events.at(-1)?.data.data.answer);
       expect(upstreamRequests).toEqual([{
         method: 'POST', url: '/inventory/stock/query', apiKey: API_KEY,
         authorization: undefined, body: '{"scope":"available","sku":"SKU-B-001"}'

@@ -1,10 +1,13 @@
 import { RiskLevel } from '../../src/generated/prisma/enums';
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
-import { createToolDiscoveryFixtureService } from '../support/tool-discovery.fixture';
+import { createCapabilityResolutionFixtureService } from '../support/tool-discovery.fixture';
 
 describe('US2 tool risk classification and selection', () => {
-  const service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
+  let service: RuleBasedQueryUnderstandingPipeline;
+  beforeAll(async () => {
+    service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), await createCapabilityResolutionFixtureService());
+  });
   const hostIntegrationContext = {
     requestId: 'req-us2-tools',
     customerId: 'customer-a',
@@ -21,7 +24,7 @@ describe('US2 tool risk classification and selection', () => {
       requestId: 'req-us2-tools-order',
       sessionId: 'session-001',
       messageId: 'message-001',
-      text: '請查 SO-10001 訂單狀態',
+      text: '查詢訂單目前狀態 SO-10001',
       hostIntegrationContext
     });
 

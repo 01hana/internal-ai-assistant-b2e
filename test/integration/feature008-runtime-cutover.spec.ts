@@ -6,6 +6,8 @@ import { DataAdapterRegistry } from '../../src/connectors/data-adapter-registry.
 import { AdapterResultProjectorService } from '../../src/connectors/adapter-result-projector.service';
 import { ToolCallService } from '../../src/assistant/runtime/tool-call.service';
 import { ToolRegistryService } from '../../src/tools/tool-registry.service';
+import { LlmProviderService } from '../../src/llm/llm-provider.service';
+import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 import * as groundedAnswer from '../../src/assistant/runtime/grounded-answer-input.types';
 import {
   createAuthorizedInternalIdentityHeaders,
@@ -30,6 +32,11 @@ describe('Feature 008 registry runtime cutover', () => {
     const adapter = createAdapter();
     const { app, state } = await createScenario(registrations(adapter));
     const project = jest.spyOn(app.get(AdapterResultProjectorService), 'project');
+    const stream = jest.spyOn(app.get(LlmExecutionService), 'streamAnswer');
+    const generate = jest.spyOn(app.get(LlmProviderService).getSelectedProvider(), 'generateAnswer').mockResolvedValue({
+      content: '訂單 SO-10001 目前為 picking。', finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'deterministic-test', fallbackUsed: false }
+    });
 
     const response = await sendOrderRequest(app, 'req-phase5-success');
 
@@ -50,11 +57,39 @@ describe('Feature 008 registry runtime cutover', () => {
       result: expect.objectContaining({ kind: 'safe_projected_adapter_result' })
     }));
     expect(state.evidenceRefs.at(-1)).toEqual(expect.objectContaining({ sourceId: 'SO-10001' }));
+    expect(stream).toHaveBeenCalledTimes(1);
+    expect(generate).toHaveBeenCalledTimes(1);
     expect(parseSseResponse(response.text).at(-1)?.data?.data).toEqual(expect.objectContaining({
       answerDecision: 'answered',
       answer: expect.stringContaining('picking')
     }));
     assertReferenceAbsentFromSinks(state, response);
+  });
+
+  it('keeps provider failure after Tool evidence out of final answers and public error detail', async () => {
+    const adapter = createAdapter();
+    const { app, state } = await createScenario(registrations(adapter));
+    const stream = jest.spyOn(app.get(LlmExecutionService), 'streamAnswer');
+    const generate = jest.spyOn(app.get(LlmProviderService).getSelectedProvider(), 'generateAnswer').mockResolvedValue({
+      content: '', finishReason: 'error',
+      metadata: { provider: 'openai', model: 'deterministic-test', fallbackUsed: true, fallbackReason: 'provider_error' }
+    });
+
+    const response = await sendOrderRequest(app, 'req-phase5-provider-failure');
+
+    expect(response.status).toBe(200);
+    expect(adapter.execute).toHaveBeenCalledTimes(1);
+    expect(state.evidenceRefs.at(-1)).toEqual(expect.objectContaining({ sourceId: 'SO-10001' }));
+    expect(stream).toHaveBeenCalledTimes(1);
+    expect(generate).toHaveBeenCalledTimes(1);
+    const events = parseSseResponse(response.text);
+    expect(events.map(({ event }) => event)).toEqual([
+      'tool_call_started', 'tool_call_completed', 'evidence_attached', 'error'
+    ]);
+    expect(events.at(-1)?.data?.data).toEqual({ code: 'ERROR', message: 'Assistant message processing failed.' });
+    expect(state.answerDecisions.filter(({ requestId }) => requestId === 'req-phase5-provider-failure')).toHaveLength(0);
+    expect(response.text).not.toContain('provider_error');
+    expect(state.auditEvents.at(-1)).toMatchObject({ eventType: 'llm_generation_terminated', metadata: { outcome: 'FAILED', reasonCode: 'INVALID_OUTPUT' } });
   });
 
   it.each([

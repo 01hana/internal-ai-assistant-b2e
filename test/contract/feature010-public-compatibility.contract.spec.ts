@@ -12,11 +12,13 @@ import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-ident
 const INTERNAL_KEYS = /GroundedContextBundle|GroundedGenerationContext|generationEligibility|providerMetadata|promptContext|groundedRetrievalPlan|requestedNeeds|needResults|resolvedFrame|boundedRecentTurns|citations|unsupportedNeeds|canonicalToolKey|permissionResult|permissionSnapshot|rawResponse|preProjectionData|transientConnectorContext/i;
 
 describe('Feature 010 public compatibility contract (T075)', () => {
+  const previousMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
   let app: INestApplication;
   let state: Us1TestState;
   let generateAnswer: jest.SpyInstance;
 
   beforeAll(async () => {
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     ({ app, state } = await createUs1TestAppWithState({ forceMessageServiceErrorForSessionId: 'session-flow-error-001' }));
     generateAnswer = jest.spyOn(app.get(LlmExecutionService, { strict: false }), 'generateAnswer').mockResolvedValue({
       content: '核准證據顯示結果。', finishReason: 'stop',
@@ -25,7 +27,11 @@ describe('Feature 010 public compatibility contract (T075)', () => {
     state.customerToolPolicies.push({ customerId: 'customer-a', toolDefinitionId: 'tool-definition-inventory-001', enabled: true,
       requiredRoles: [], requiredPermissionScopes: [] });
   });
-  afterAll(async () => app.close());
+  afterAll(async () => {
+    await app.close();
+    if (previousMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousMode;
+  });
 
   it.each([
     ['document', 'req-f010-public-doc', '退貨流程 SOP 怎麼說？', { module: 'orders', visibleColumns: ['status'] }, ['answer_delta', 'final']],

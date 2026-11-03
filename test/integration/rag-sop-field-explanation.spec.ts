@@ -7,22 +7,37 @@ import {
   Us1TestState
 } from '../support/us1-test-app.helper';
 import { createInternalIdentityJwtFixture, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
+import { LlmProviderService } from '../../src/llm/llm-provider.service';
 
 describe('US4 deterministic document retrieval integration', () => {
   const fixture = createInternalIdentityJwtFixture();
   let app: INestApplication;
   let state: Us1TestState;
+  const previousToolSelection = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
 
   beforeAll(async () => {
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     const testApp = await createUs1TestAppWithState({
       internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: fixture.jwks }
     });
     app = testApp.app;
     state = testApp.state;
+    jest.spyOn(app.get(LlmProviderService).getSelectedProvider(), 'generateAnswer').mockImplementation(async (input) => ({
+      content: input.requestId === 'req-us4-retrieval-field'
+        ? 'status 欄位代表訂單目前狀態。'
+        : input.requestId === 'req-us4-retrieval-sop'
+          ? '退貨流程須依已授權 SOP 確認訂單狀態及收貨紀錄。'
+          : '核准證據顯示訂單狀態。',
+      finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'deterministic-test', fallbackUsed: false }
+    }));
   });
 
   afterAll(async () => {
     await app.close();
+    jest.restoreAllMocks();
+    if (previousToolSelection === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousToolSelection;
   });
 
   it('answers SOP questions from document_chunk evidence without tool execution', async () => {
@@ -95,7 +110,7 @@ describe('US4 deterministic document retrieval integration', () => {
       .post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(createAuthorizedInternalIdentityHeaders(fixture, { claims: fixture.canonicalClaims.customerA, requestId: 'req-us4-structured-regression' }))
       .send({
-        message: '請查 SO-10001 訂單狀態',
+        message: '查詢訂單目前狀態 SO-10001',
         pageContext: {
           module: 'orders',
           entityType: 'order',

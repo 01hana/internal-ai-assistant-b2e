@@ -107,6 +107,7 @@ describe('query understanding persistence integration', () => {
     const now = new Date('2026-09-25T00:00:00.000Z');
     const repository = new ConversationContextRepository({ db: {
       assistantSession: { findFirst: jest.fn().mockResolvedValue({ status: 'active' }) },
+      auditEvent: { findMany: jest.fn().mockResolvedValue([]) },
       assistantMessage: { findMany: jest.fn().mockResolvedValue([
         { id: 'assistant-1', requestId: 'req-1', role: 'assistant', content: 'completed answer', answerDecision: 'answered',
           createdAt: now, answerDecisions: [{ id: 'decision-1', status: 'answered', groundingCheckId: 'grounding-1' }], groundingChecks: [], evidenceRefs: [] },
@@ -118,7 +119,7 @@ describe('query understanding persistence integration', () => {
     } } as unknown as PrismaService);
 
     const records = await repository.loadScopedContext({ scope: {
-      customerId: 'customer-a', sessionId: 'session-a', organizationId: 'org-a', hostApp: 'host-a', actorId: 'actor-a'
+      customerId: 'customer-a', integrationId: 'integration-a', sessionId: 'session-a', organizationId: 'org-a', hostApp: 'host-a', actorId: 'actor-a'
     } });
     expect(records[0].queryUnderstanding).toMatchObject({ resolvedReferences: [], capabilityFollowUpFrame: capabilityFrame() });
   });

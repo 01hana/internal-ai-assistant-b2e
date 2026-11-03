@@ -90,11 +90,43 @@ describe('health and readiness contract', () => {
       customerId: 'customer-a', integrationId: 'integration-a', hostApp: 'host-a'
     })).toEqual({
       available: true,
-      catalog: expect.objectContaining({ packId: 'customer-a.pack' })
+      catalog: expect.objectContaining({
+        packId: 'customer-a.pack', customerId: 'customer-a', integrationId: 'integration-a', hostApp: 'host-a',
+        bindings: [expect.objectContaining({
+          target: { kind: 'TOOL', toolKey: 'work-orders.monthly-new-count', toolVersion: '1.0.0' }
+        })]
+      })
     });
+    expect(capabilityApp.get(CapabilityCatalogRegistry).resolveCatalog({
+      customerId: 'customer-b', integrationId: 'integration-a', hostApp: 'host-a'
+    })).toEqual({ available: false, reasonCode: 'NO_ACTIVE_CAPABILITY_PACK' });
     const tools = capabilityApp.get(ToolRegistryService);
     expect(tools.resolveExactExecutableTool).toHaveBeenCalledWith('work-orders.monthly-new-count', '1.0.0');
-    expect(tools.resolveExactToolForCustomer).toHaveBeenCalledWith('work-orders.monthly-new-count', '1.0.0', 'customer-a');
+    expect(tools.resolveExactExecutableTool).toHaveBeenCalledTimes(2);
+    await capabilityApp.close();
+  });
+
+  it('rejects a scoped capability release when its exact Tool target is missing', async () => {
+    const packPath = await capabilityPackFile(validCapabilityPack());
+    const capabilityApp = await createCapabilityBootstrapApp(JSON.stringify([packPath]), { toolAvailable: false });
+    await expect(capabilityApp.init()).rejects.toThrow('CAPABILITY_PACK_INVALID');
+    expect(capabilityApp.get(ToolRegistryService).resolveExactExecutableTool)
+      .toHaveBeenCalledWith('work-orders.monthly-new-count', '1.0.0');
+    expect(capabilityApp.get(CapabilityCatalogRegistry).resolveCatalog({
+      customerId: 'customer-a', integrationId: 'integration-a', hostApp: 'host-a'
+    })).toEqual({ available: false, reasonCode: 'NO_ACTIVE_CAPABILITY_PACK' });
+    await capabilityApp.close();
+  });
+
+  it('rejects a scoped capability release when its Tool version is not registered', async () => {
+    const packPath = await capabilityPackFile(validCapabilityPack('9.9.9'));
+    const capabilityApp = await createCapabilityBootstrapApp(JSON.stringify([packPath]));
+    await expect(capabilityApp.init()).rejects.toThrow('CAPABILITY_PACK_INVALID');
+    expect(capabilityApp.get(ToolRegistryService).resolveExactExecutableTool)
+      .toHaveBeenCalledWith('work-orders.monthly-new-count', '9.9.9');
+    expect(capabilityApp.get(CapabilityCatalogRegistry).resolveCatalog({
+      customerId: 'customer-a', integrationId: 'integration-a', hostApp: 'host-a'
+    })).toEqual({ available: false, reasonCode: 'NO_ACTIVE_CAPABILITY_PACK' });
     await capabilityApp.close();
   });
 
@@ -249,7 +281,7 @@ async function capabilityPackFile(value: unknown): Promise<string> {
   return path;
 }
 
-function validCapabilityPack(): Record<string, unknown> {
+function validCapabilityPack(toolVersion = '1.0.0'): Record<string, unknown> {
   return {
     version: '1', packId: 'customer-a.pack', packVersion: '1.0.0', customerId: 'customer-a',
     integrationId: 'integration-a', hostApps: ['host-a'], active: true,
@@ -269,12 +301,12 @@ function validCapabilityPack(): Record<string, unknown> {
       capabilityKey: 'work-orders.count', semanticConstraints: [{
         version: '1', parameterName: 'timeRange', operator: 'ENUM_VALUE_IN', allowedValues: ['this_month']
       }],
-      target: { kind: 'TOOL', toolKey: 'work-orders.monthly-new-count', toolVersion: '1.0.0' }, mappings: []
+      target: { kind: 'TOOL', toolKey: 'work-orders.monthly-new-count', toolVersion }, mappings: []
     }]
   };
 }
 
-async function createCapabilityBootstrapApp(pathsJson: string): Promise<INestApplication> {
+async function createCapabilityBootstrapApp(pathsJson: string, options: { toolAvailable?: boolean } = {}): Promise<INestApplication> {
   const tool = {
     key: 'work-orders.monthly-new-count', version: '1.0.0', active: true,
     operation: 'read', hasSideEffect: false,
@@ -287,9 +319,8 @@ async function createCapabilityBootstrapApp(pathsJson: string): Promise<INestApp
     .useValue({ onModuleInit: jest.fn(), onModuleDestroy: jest.fn(), db: {} })
     .overrideProvider(ToolRegistryService)
     .useValue({
-      resolveExactExecutableTool: jest.fn(async () => ({ tool })),
-      resolveExactToolForCustomer: jest.fn(async () => ({
-        resolved: { tool, requiredRoles: [], requiredPermissionScopes: [] }
+      resolveExactExecutableTool: jest.fn(async (key: string, version: string) => ({
+        tool: options.toolAvailable === false || key !== tool.key || version !== tool.version ? undefined : tool
       }))
     })
     .compile();

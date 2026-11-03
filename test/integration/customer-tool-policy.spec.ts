@@ -14,11 +14,18 @@ describe('Current scoped CustomerToolPolicy request-path contract', () => {
   let app: INestApplication;
   let state: Awaited<ReturnType<typeof createUs1TestAppWithState>>['state'];
   let prismaMock: Awaited<ReturnType<typeof createUs1TestAppWithState>>['prismaMock'];
+  let previousSelectionMode: string | undefined;
 
   beforeEach(async () => {
+    previousSelectionMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     ({ app, state, prismaMock } = await createUs1TestAppWithState({ internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: fixture.jwks } }));
   });
-  afterEach(async () => app.close());
+  afterEach(async () => {
+    await app.close();
+    if (previousSelectionMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousSelectionMode;
+  });
 
   const supported = {
     customerA: { customerId: 'customer-a', toolDefinitionId: CUSTOMER_TOOL_PHASE6.toolDefinitionId,

@@ -1,6 +1,6 @@
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
-import { createToolDiscoveryFixtureService } from '../support/tool-discovery.fixture';
+import { createCapabilityResolutionFixtureService } from '../support/tool-discovery.fixture';
 
 const hostIntegrationContext = {
   requestId: 'req-normalization-001',
@@ -16,7 +16,10 @@ const hostIntegrationContext = {
 const fixedNow = new Date('2026-06-21T04:00:00.000Z');
 
 describe('query normalization and time range parsing', () => {
-  const service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
+  let service: RuleBasedQueryUnderstandingPipeline;
+  beforeAll(async () => {
+    service = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), await createCapabilityResolutionFixtureService());
+  });
 
   it('normalizes ERP/MES/WMS/SCM/CRM domain terms with traceable metadata', async () => {
     const result = await service.understand({

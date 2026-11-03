@@ -3,7 +3,7 @@ import request = require('supertest');
 import { MockConnectorAdapter } from '../../src/connectors/mock/mock-connector.adapter';
 import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 import { LlmObservabilityService } from '../../src/llm/llm-observability.service';
-import { LlmProvider } from '../../src/llm/llm-provider.interface';
+import { GenerateAnswerInput, LlmProvider, LlmStreamEvent, LlmStreamOptions } from '../../src/llm/llm-provider.interface';
 import { LlmProviderService } from '../../src/llm/llm-provider.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { RetrievalService } from '../../src/retrieval/retrieval.service';
@@ -19,8 +19,11 @@ import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-ident
 describe('non-functional safety boundaries', () => {
   let app: INestApplication;
   let state: Us1TestState;
+  let previousSelectionMode: string | undefined;
 
   beforeEach(async () => {
+    previousSelectionMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     const testApp = await createUs1TestAppWithState();
     app = testApp.app;
     state = testApp.state;
@@ -28,11 +31,13 @@ describe('non-functional safety boundaries', () => {
 
   afterEach(async () => {
     await app.close();
+    if (previousSelectionMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousSelectionMode;
   });
 
   it('reports readiness degradation and database unavailability with safe dependency reasons', async () => {
-    state.toolDefinitions.length = 0;
-    const degradedResponse = await request(app.getHttpServer())
+    const empty = await createUs1TestAppWithState({ dataAdapterRegistrations: [] });
+    const degradedResponse = await request(empty.app.getHttpServer())
       .get('/api/v1/readiness')
       .set('x-request-id', 'req-nonfunctional-readiness-degraded');
 
@@ -48,6 +53,7 @@ describe('non-functional safety boundaries', () => {
         })
       })
     );
+    await empty.app.close();
 
     const prisma = app.get(PrismaService) as unknown as { db: { $queryRaw: jest.Mock } };
     prisma.db.$queryRaw.mockRejectedValueOnce(new Error('postgresql://user:database-password@db.internal/assistant'));
@@ -135,7 +141,7 @@ describe('non-functional safety boundaries', () => {
     const result = await sendAssistantMessage({
       requestId: 'req-nonfunctional-connector-failure',
       headers: { 'x-permission-scopes': 'orders:read' },
-      message: '請查 SO-10001 訂單狀態',
+      message: '查詢訂單目前狀態 SO-10001',
       pageContext: {
         module: 'orders',
         entityType: 'order',
@@ -171,6 +177,11 @@ describe('non-functional safety boundaries', () => {
     const provider: LlmProvider = {
       key: 'openai',
       getMetadata: jest.fn(),
+      streamAnswer: jest.fn(async function* (_input: GenerateAnswerInput, { signal }: LlmStreamOptions): AsyncIterable<LlmStreamEvent> {
+        if (signal.aborted) return;
+        yield { type: 'completed' as const, finishReason: 'stop' as const,
+          metadata: { provider: 'openai', model: 'local-placeholder-model', fallbackUsed: true } };
+      }),
       generateAnswer: jest.fn().mockResolvedValue({
         content: '',
         finishReason: 'error',

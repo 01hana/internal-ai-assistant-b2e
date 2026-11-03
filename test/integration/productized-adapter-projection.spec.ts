@@ -48,7 +48,8 @@ describe('productized adapter Feature 008 projection boundary', () => {
       { checkResolvedCustomerTool: jest.fn().mockResolvedValue({ allowed: true }) } as never,
       { startToolCall, completeToolCall, failToolCall } as never,
       projector,
-      registry
+      registry,
+      { evaluate: jest.fn().mockResolvedValue({ outcome: 'NOT_APPLICABLE' }) } as never
     );
 
     const result = await runtime.execute(runtimeInput());
@@ -103,7 +104,8 @@ describe('productized adapter Feature 008 projection boundary', () => {
         failToolCall
       } as never,
       projector,
-      registry
+      registry,
+      { evaluate: jest.fn().mockResolvedValue({ outcome: 'NOT_APPLICABLE' }) } as never
     );
 
     const result = await runtime.execute(runtimeInput());

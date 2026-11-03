@@ -61,6 +61,7 @@ function createConfigValues(): EnvironmentVariables {
     INTERNAL_IDENTITY_JWT_CLOCK_TOLERANCE_SECONDS: 30,
     LLM_PROVIDER: 'openai',
     LLM_MODEL: 'test-model',
+    ASSISTANT_LLM_TOOL_SELECTION_ENABLED: 'false',
     OPENAI_API_KEY: 'placeholder-openai-api-key',
     ENABLE_RUNTIME_DEBUG: false,
     ENABLE_REDIS: false,

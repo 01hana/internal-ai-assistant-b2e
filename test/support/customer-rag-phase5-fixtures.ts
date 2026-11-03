@@ -5,6 +5,7 @@ import {
   KnowledgeVisibility
 } from '../../src/generated/prisma/enums';
 import { Us1TestState } from './us1-test-app.helper';
+import { CUSTOMER_SCOPE_FIXTURES } from './customer-scope-fixtures';
 
 export const PHASE5_RAG_FIXTURE_IDS = Object.freeze({
   customerWide: {
@@ -49,6 +50,7 @@ export function installPhase5CustomerRagFixtures(state: Us1TestState): void {
     {
       id: PHASE5_RAG_FIXTURE_IDS.sessions.alternateOrganization,
       customerId: 'customer-a',
+      integrationId: CUSTOMER_SCOPE_FIXTURES.customerA.integrationId,
       organizationId: 'org-customer-a-alt',
       hostApp: 'erp',
       actorId: 'actor-shared',
@@ -60,6 +62,7 @@ export function installPhase5CustomerRagFixtures(state: Us1TestState): void {
     {
       id: PHASE5_RAG_FIXTURE_IDS.sessions.alternateHostApp,
       customerId: 'customer-a',
+      integrationId: CUSTOMER_SCOPE_FIXTURES.customerA.integrationId,
       organizationId: 'org-shared',
       hostApp: 'warehouse',
       actorId: 'actor-shared',

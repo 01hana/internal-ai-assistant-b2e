@@ -28,12 +28,12 @@ describe('Feature 010 follow-up authority guard (T036)', () => {
   });
 
   it('passes only reconstructed semantic signals into current Tool discovery', async () => {
-    const discover = jest.fn().mockResolvedValue({
-      candidates: [{ key: 'inventory.stock-on-hand', arguments: { sku: 'SKU-B-002' }, reason: 'metadata_discovery' }],
-      taskType: 'inventory_stock_lookup', requiredEvidence: ['identity_context', 'structured_record'],
-      matchConfidence: 0.95, clarificationNeeds: [], discoveredTaskTypes: ['inventory_stock_lookup']
-    });
-    const pipeline = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), { discover } as never);
+    const resolve = jest.fn().mockResolvedValue({ version: '1', outcome: 'RESOLVED',
+      capability: { packId: 'customer-b-inventory', packVersion: '1.0.0', capabilityKey: 'inventory.stock', safeLabel: '庫存現量' },
+      parameters: { itemRef: 'SKU-B-002' }, bindingRef: { bindingId: 'inventory.stock-on-hand', bindingVersion: '1.0.0' },
+      toolCandidate: { key: 'inventory.stock-on-hand', version: '1.0.0', arguments: { sku: 'SKU-B-002' },
+        reason: 'customer_capability_binding' } });
+    const pipeline = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), { resolve } as never);
     const maliciousPrior = {
       resource: dim('inventory'), intent: dim('read'), metricOrAspect: dim('availability'),
       entity: { ...dim('SKU-B-001'), entityType: 'itemSku' }, topicKey: 'inventory:itemSku:SKU-B-001',
@@ -42,31 +42,31 @@ describe('Feature 010 follow-up authority guard (T036)', () => {
     const output = await pipeline.understand({
       requestId: 'req-authority', sessionId: 'session-a', messageId: 'message-current', text: 'SKU-B-002 呢？',
       hostIntegrationContext: host(), priorConversationContext: {
-        scope: { customerId: 'customer-b', sessionId: 'session-a', organizationId: 'org-a', hostApp: 'erp', actorId: 'actor-a' },
+        scope: { customerId: 'customer-b', integrationId: 'integration-erp', sessionId: 'session-a', organizationId: 'org-a', hostApp: 'erp', actorId: 'actor-a' },
         selectedExchangeIdsNewestFirst: [], chronologicalExchangeIds: [], exchanges: [], semanticFrames: [maliciousPrior],
         evidenceRefs: [], evidenceRefIds: [], rejectedReasonCodes: []
       }
     });
     expect(output.followUpResolution).toMatchObject({ kind: 'REPLACE' });
     expect(output.candidateTools).toEqual([expect.objectContaining({ key: 'inventory.stock-on-hand', arguments: { sku: 'SKU-B-002' } })]);
-    expect(JSON.stringify(discover.mock.calls)).not.toMatch(/prior\.tool|permissionResult|rawResponse|999/);
+    expect(JSON.stringify(resolve.mock.calls)).not.toMatch(/prior\.tool|permissionResult|rawResponse|999/);
   });
 
   it('retains legacy independent-request behavior for this_month without prior context', async () => {
-    const discover = jest.fn().mockResolvedValue({
-      candidates: [{ key: 'work-orders.monthly-new-count', arguments: {}, reason: 'metadata_discovery' }],
-      taskType: 'work_order_monthly_new_count', requiredEvidence: ['identity_context', 'structured_record'],
-      matchConfidence: 0.95, clarificationNeeds: [], discoveredTaskTypes: ['work_order_monthly_new_count']
-    });
+    const resolve = jest.fn().mockResolvedValue({ version: '1', outcome: 'RESOLVED',
+      capability: { packId: 'customer-b-inventory', packVersion: '1.0.0', capabilityKey: 'work-orders.new-count', safeLabel: '新增工單' },
+      parameters: { timeRange: 'this_month' }, bindingRef: { bindingId: 'work-orders.monthly-new-count', bindingVersion: '1.0.0' },
+      toolCandidate: { key: 'work-orders.monthly-new-count', version: '1.0.0', arguments: {},
+        reason: 'customer_capability_binding' } });
     const output = await new RuleBasedQueryUnderstandingPipeline(
-      new DefaultTokenizerAdapter(), { discover } as never
+      new DefaultTokenizerAdapter(), { resolve } as never
     ).understand({
       requestId: 'req-independent', sessionId: 'session-a', messageId: 'message-independent',
       text: '請查這個月新增工單數', hostIntegrationContext: host()
     });
     expect(output.followUpResolution).toBeUndefined();
     expect(output.candidateTools).toEqual([expect.objectContaining({ key: 'work-orders.monthly-new-count' })]);
-    expect(discover).toHaveBeenCalledTimes(1);
+    expect(resolve).toHaveBeenCalledTimes(1);
   });
 });
 

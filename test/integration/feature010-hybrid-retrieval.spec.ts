@@ -8,6 +8,15 @@ import { GroundedDocumentRetrievalService } from '../../src/retrieval/grounded-d
 import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 
 describe('Feature 010 explicit Hybrid coordination (T060)', () => {
+  let previousToolSelection: string | undefined;
+  beforeAll(() => {
+    previousToolSelection = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
+  });
+  afterAll(() => {
+    if (previousToolSelection === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousToolSelection;
+  });
   let app: INestApplication;
   let state: Us1TestState;
   beforeEach(async () => {

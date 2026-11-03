@@ -3,7 +3,8 @@ import request = require('supertest');
 import { RiskLevel } from '../../src/generated/prisma/enums';
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
-import { createToolDiscoveryFixtureService } from '../support/tool-discovery.fixture';
+import { CapabilityResolutionService } from '../../src/capabilities/capability-resolution.service';
+import { createFeature011DirectHarness } from '../support/feature011-direct.fixture';
 import {
   createAuthorizedInternalIdentityHeaders,
   createIdentityHeaders,
@@ -38,7 +39,10 @@ describe('internal assistant core deterministic eval baseline', () => {
   };
 
   it('query-understanding-routing-and-entities', async () => {
-    const pipeline = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), createToolDiscoveryFixtureService());
+    const harness = await createFeature011DirectHarness(['test/fixtures/capability-packs/customer-a-reference.v1.json']);
+    const resolver = new CapabilityResolutionService(harness.registry, harness.semantic,
+      harness.parameters, harness.binding, harness.audit);
+    const pipeline = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(), resolver);
 
     const structuredInput = {
       requestId: 'req-eval-query-understanding-structured',
@@ -73,11 +77,13 @@ describe('internal assistant core deterministic eval baseline', () => {
         expect.objectContaining({ type: 'itemSku', value: 'SKU-ABC-001' })
       ])
     );
-    expect(structuredResult.candidateTools.map((tool) => tool.key)).toEqual(
-      expect.arrayContaining(['mock.orders.status.lookup', 'mock.inventory.availability.lookup'])
-    );
+    expect(structuredResult.candidateTools).toEqual([]);
+    expect(structuredResult.capabilityResolution).toMatchObject({ outcome: 'NEEDS_CLARIFICATION' });
+    expect(structuredResult.clarificationNeeds).toContainEqual(expect.objectContaining({
+      type: 'capability', blocking: true
+    }));
     expect(structuredResult.requiredEvidence).toContain('structured_record');
-    expect(structuredResult.subTasks.length).toBeGreaterThanOrEqual(2);
+    expect(structuredResult.subTasks.length).toBeGreaterThanOrEqual(1);
     expect(documentResult.requiredEvidence).toContain('document_chunk');
     expect(documentResult.candidateTools).toEqual([]);
     expect(documentResult.riskLevel).toBe(RiskLevel.low);
@@ -85,20 +91,26 @@ describe('internal assistant core deterministic eval baseline', () => {
 
   describe('endpoint routing and safety eval cases', () => {
     let testApp: TestApp;
+    let previousSelectionFlag: string | undefined;
 
     beforeEach(async () => {
+      previousSelectionFlag = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+      process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
       testApp = await createUs1TestAppWithState();
+      installDeterministicAnswer(testApp.app);
     });
 
     afterEach(async () => {
       await testApp.app.close();
+      if (previousSelectionFlag === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+      else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousSelectionFlag;
     });
 
     it('live-order-status-uses-tool-not-retrieval', async () => {
       const { response, finalData, eventNames, newState } = await sendAssistantMessage(testApp, {
         requestId: 'req-eval-live-structured',
         headers: { 'x-permission-scopes': 'orders:read' },
-        message: '請查 SO-10001 訂單狀態',
+        message: '查詢訂單目前狀態 SO-10001',
         pageContext: {
           module: 'orders',
           entityType: 'order',
@@ -106,9 +118,8 @@ describe('internal assistant core deterministic eval baseline', () => {
           visibleColumns: ['status', 'customerName']
         }
       });
-
       expect(response.status).toBe(200);
-      expect(eventNames).toEqual(['tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final']);
+      expect(eventNames).toEqual(['tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'answer_delta', 'final']);
       expect(finalData).toEqual(
         expect.objectContaining({
           answerDecision: 'answered',
@@ -146,8 +157,9 @@ describe('internal assistant core deterministic eval baseline', () => {
         }
       });
 
+
       expect(response.status).toBe(200);
-      expect(eventNames).toEqual(['answer_delta', 'final']);
+      expect(eventNames).toEqual(['answer_delta', 'answer_delta', 'final']);
       expect(eventNames).not.toContain('tool_call_started');
       expect(finalData).toEqual(
         expect.objectContaining({
@@ -218,7 +230,7 @@ describe('internal assistant core deterministic eval baseline', () => {
       const { response, finalData, eventNames, newState } = await sendAssistantMessage(testApp, {
         requestId: 'req-eval-no-evidence',
         headers: { 'x-permission-scopes': 'orders:read' },
-        message: '請查 SO-10001 訂單狀態',
+        message: '查詢訂單目前狀態 SO-10001',
         pageContext: {
           module: 'orders',
           entityType: 'order',
@@ -265,7 +277,7 @@ describe('internal assistant core deterministic eval baseline', () => {
           },
           requestId: 'req-eval-permission-denied'
         }),
-        message: '請查 SO-10001 訂單狀態',
+        message: '查詢訂單目前狀態 SO-10001',
         pageContext: {
           module: 'orders',
           entityType: 'order',
@@ -300,7 +312,7 @@ describe('internal assistant core deterministic eval baseline', () => {
       const { response, finalData, eventNames, newState } = await sendAssistantMessage(testApp, {
         requestId: 'req-eval-tool-failure',
         headers: { 'x-permission-scopes': 'orders:read' },
-        message: '請查 SO-99999 訂單狀態',
+        message: '查詢訂單目前狀態 SO-99999',
         pageContext: {
           module: 'orders',
           entityType: 'order',
@@ -336,7 +348,7 @@ describe('internal assistant core deterministic eval baseline', () => {
       const { response, finalData, eventNames, newState } = await sendAssistantMessage(testApp, {
         requestId: 'req-eval-evidence-conflict',
         headers: { 'x-permission-scopes': 'orders:read' },
-        message: '請查 SO-10003 訂單狀態',
+        message: '查詢訂單目前狀態 SO-10003',
         pageContext: {
           module: 'orders',
           entityType: 'order',
@@ -346,6 +358,8 @@ describe('internal assistant core deterministic eval baseline', () => {
       });
 
       expect(response.status).toBe(200);
+      expect(newState.auditEvents.find((item) => item.eventType === 'capability_resolution_completed')?.metadata)
+        .toEqual(expect.objectContaining({ outcome: 'RESOLVED' }));
       expect(eventNames).toEqual(['tool_call_started', 'tool_call_completed', 'answer_delta', 'final']);
       expect(eventNames).not.toContain('evidence_attached');
       expect(finalData).toEqual(
@@ -541,41 +555,51 @@ describe('Feature 010 grounded retrieval acceptance matrix (T078)', () => {
 
 describe('Feature 010 endpoint orchestration acceptance evals (T078)', () => {
   let fixture: TestApp;
+  let previousSelectionFlag: string | undefined;
   beforeEach(async () => {
+    previousSelectionFlag = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     fixture = await createUs1TestAppWithState();
+    installDeterministicAnswer(fixture.app);
     fixture.state.customerToolPolicies.push({ customerId: 'customer-a', toolDefinitionId: 'tool-definition-inventory-001',
       enabled: true, requiredRoles: [], requiredPermissionScopes: [] });
   });
-  afterEach(async () => fixture.app.close());
+  afterEach(async () => {
+    await fixture.app.close();
+    if (previousSelectionFlag === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousSelectionFlag;
+  });
 
-  it('executes document-only, Tool-only, and Hybrid COMPLETE with exact lane deltas and zero LLM calls', async () => {
+  it('executes document-only, Tool-only, and Hybrid COMPLETE with exact lane deltas and grounded generation only', async () => {
     const llm = llmSpies();
     let before = counts();
     await send('req-eval-f010-document', '退貨流程 SOP 怎麼說？');
     expect(counts()).toEqual({ retrievals: before.retrievals + 1, tools: before.tools });
     expect(metadata('req-eval-f010-document')).toEqual(expect.objectContaining({ mode: 'RAG', coverage: 'COMPLETE' }));
     before = counts();
-    await send('req-eval-f010-tool', '請查 SKU-DEMO-RED 目前庫存');
+    await send('req-eval-f010-tool', '查詢庫存可用量 料號 SKU-DEMO-RED');
     expect(counts()).toEqual({ retrievals: before.retrievals, tools: before.tools + 1 });
     expect(metadata('req-eval-f010-tool')).toEqual(expect.objectContaining({ mode: 'TOOL', coverage: 'COMPLETE' }));
     before = counts();
-    await send('req-eval-f010-hybrid', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式');
+    await send('req-eval-f010-hybrid', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式');
     expect(counts()).toEqual({ retrievals: before.retrievals + 1, tools: before.tools + 1 });
     expect(metadata('req-eval-f010-hybrid')).toEqual(expect.objectContaining({ mode: 'HYBRID', coverage: 'COMPLETE' }));
-    expectNoLlm(llm);
+    expect(llm[0]).toHaveBeenCalledTimes(3);
+    expect(llm[1]).not.toHaveBeenCalled();
+    expect(llm[2]).not.toHaveBeenCalled();
   });
 
   it('evaluates both PARTIAL directions, INSUFFICIENT, CLARIFY, and multi-Tool zero execution', async () => {
     fixture.state.knowledgeDocuments.splice(0); fixture.state.knowledgeChunks.splice(0);
-    await send('req-eval-f010-partial-doc', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式');
+    await send('req-eval-f010-partial-doc', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式');
     expect(metadata('req-eval-f010-partial-doc')).toEqual(expect.objectContaining({ coverage: 'PARTIAL' }));
 
     fixture = await replaceFixture(fixture);
     fixture.state.customerToolPolicies.find((item) => item.toolDefinitionId === 'tool-definition-inventory-001')!.enabled = false;
-    await send('req-eval-f010-partial-tool', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式');
+    await send('req-eval-f010-partial-tool', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式');
     expect(metadata('req-eval-f010-partial-tool')).toEqual(expect.objectContaining({ coverage: 'PARTIAL' }));
     fixture.state.knowledgeDocuments.splice(0); fixture.state.knowledgeChunks.splice(0);
-    await send('req-eval-f010-insufficient', '請查 SKU-DEMO-BLUE 目前庫存，並依退貨流程 SOP 說明處理方式');
+    await send('req-eval-f010-insufficient', '查詢庫存可用量 料號 SKU-DEMO-BLUE，並依退貨流程 SOP 說明處理方式', 'SKU-DEMO-BLUE');
     expect(metadata('req-eval-f010-insufficient')).toEqual(expect.objectContaining({ coverage: 'INSUFFICIENT' }));
     const beforeClarify = counts();
     await send('req-eval-f010-clarify', '那個呢？');
@@ -600,9 +624,9 @@ describe('Feature 010 endpoint orchestration acceptance evals (T078)', () => {
     expect(metadata('req-eval-f010-doc-follow')).toEqual(expect.objectContaining({ mode: 'RAG' }));
 
     fixture = await replaceFixture(fixture);
-    await send('req-eval-f010-tool-follow-seed', '請查 SKU-DEMO-RED 目前庫存');
+    await send('req-eval-f010-tool-follow-seed', '查詢庫存可用量 料號 SKU-DEMO-RED');
     before = counts();
-    await send('req-eval-f010-tool-follow', 'SKU-DEMO-BLUE 呢？');
+    await send('req-eval-f010-tool-follow', 'SKU-DEMO-BLUE 呢？', 'SKU-DEMO-BLUE');
     expect(counts().tools).toBe(before.tools + 1);
 
     fixture = await replaceFixture(fixture);
@@ -629,21 +653,21 @@ describe('Feature 010 endpoint orchestration acceptance evals (T078)', () => {
     expect(counts().retrievals).toBe(before.retrievals + 1);
 
     fixture = await replaceFixture(fixture);
-    await send('req-eval-f010-tool-recall-seed', '請查 SKU-DEMO-RED 目前庫存');
+    await send('req-eval-f010-tool-recall-seed', '查詢庫存可用量 料號 SKU-DEMO-RED');
     before = counts();
     await send('req-eval-f010-tool-recall', '你剛說庫存是多少？');
     expect(counts()).toEqual(before);
     expect(metadata('req-eval-f010-tool-recall')).toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
 
     fixture = await replaceFixture(fixture);
-    await send('req-eval-f010-tool-stale-seed', '請查 SKU-DEMO-RED 目前庫存');
+    await send('req-eval-f010-tool-stale-seed', '查詢庫存可用量 料號 SKU-DEMO-RED');
     fixture.state.evidenceRefs.find((item) => item.requestId === 'req-eval-f010-tool-stale-seed')!.timestamp = new Date('2020-01-01T00:00:00.000Z');
     before = counts();
     await send('req-eval-f010-tool-stale', '你剛說庫存是多少？');
     expect(counts().tools).toBe(before.tools + 1);
 
     fixture = await replaceFixture(fixture);
-    await send('req-eval-f010-tool-permission-seed', '請查 SKU-DEMO-RED 目前庫存');
+    await send('req-eval-f010-tool-permission-seed', '查詢庫存可用量 料號 SKU-DEMO-RED');
     before = counts();
     await sendWithScopes('req-eval-f010-tool-permission', '你剛說庫存是多少？', ['orders:read']);
     expect(counts().tools).toBe(before.tools + 1);
@@ -651,7 +675,7 @@ describe('Feature 010 endpoint orchestration acceptance evals (T078)', () => {
     expect(metadata('req-eval-f010-tool-permission')).not.toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
 
     fixture = await replaceFixture(fixture);
-    await send('req-eval-f010-tool-policy-seed', '請查 SKU-DEMO-RED 目前庫存');
+    await send('req-eval-f010-tool-policy-seed', '查詢庫存可用量 料號 SKU-DEMO-RED');
     fixture.state.customerToolPolicies.find((item) => item.toolDefinitionId === 'tool-definition-inventory-001')!.enabled = false;
     before = counts();
     await send('req-eval-f010-tool-policy', '你剛說庫存是多少？');
@@ -660,7 +684,7 @@ describe('Feature 010 endpoint orchestration acceptance evals (T078)', () => {
     expect(metadata('req-eval-f010-tool-policy')).not.toEqual(expect.objectContaining({ mode: 'CONTEXT_ONLY' }));
 
     fixture = await replaceFixture(fixture);
-    await send('req-eval-f010-hybrid-recall-seed', '請查 SKU-DEMO-RED 目前庫存，並依退貨流程 SOP 說明處理方式');
+    await send('req-eval-f010-hybrid-recall-seed', '查詢庫存可用量 料號 SKU-DEMO-RED，並依退貨流程 SOP 說明處理方式');
     before = counts();
     await send('req-eval-f010-hybrid-recall', '把剛才的庫存和 SOP 證據再列一次');
     expect(counts()).toEqual(before);
@@ -670,15 +694,14 @@ describe('Feature 010 endpoint orchestration acceptance evals (T078)', () => {
   function counts() { return { retrievals: fixture.state.retrievalRuns.length, tools: fixture.state.toolCalls.length }; }
   function metadata(requestId: string): any { return fixture.state.answerDecisions.find((item) => item.requestId === requestId)?.metadata; }
   function llmSpies() { const llm = fixture.app.get(LlmExecutionService, { strict: false }); return [jest.spyOn(llm, 'generateAnswer'), jest.spyOn(llm, 'classifyIntent'), jest.spyOn(llm, 'summarize')] as const; }
-  function expectNoLlm(spies: readonly jest.SpyInstance[]) { for (const spy of spies) expect(spy).not.toHaveBeenCalled(); }
-  function send(requestId: string, message: string) {
-    return sendWithScopes(requestId, message, ['orders:read', 'inventory:read']);
+  function send(requestId: string, message: string, entityId = 'SKU-DEMO-RED') {
+    return sendWithScopes(requestId, message, ['orders:read', 'inventory:read'], entityId);
   }
-  function sendWithScopes(requestId: string, message: string, permissionScopes: string[]) {
+  function sendWithScopes(requestId: string, message: string, permissionScopes: string[], entityId = 'SKU-DEMO-RED') {
     return request(fixture.app.getHttpServer()).post('/api/v1/assistant/sessions/session-owned-001/messages')
       .set(createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, { claims: {
         ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA, permission_scopes: permissionScopes
-      }, requestId })).send({ message, pageContext: { module: 'inventory', entityType: 'item', entityId: 'SKU-DEMO-RED',
+      }, requestId })).send({ message, pageContext: { module: 'inventory', entityType: 'item', entityId,
         visibleColumns: ['availableQuantity', 'incomingQuantity'] } });
   }
 });
@@ -686,9 +709,20 @@ describe('Feature 010 endpoint orchestration acceptance evals (T078)', () => {
 async function replaceFixture(previous: TestApp): Promise<TestApp> {
   await previous.app.close();
   const next = await createUs1TestAppWithState();
+  installDeterministicAnswer(next.app);
   next.state.customerToolPolicies.push({ customerId: 'customer-a', toolDefinitionId: 'tool-definition-inventory-001',
     enabled: true, requiredRoles: [], requiredPermissionScopes: [] });
   return next;
+}
+
+function installDeterministicAnswer(app: INestApplication): void {
+  const llm = app.get(LlmExecutionService, { strict: false });
+  jest.spyOn(llm, 'generateAnswer').mockImplementation(async (input) => {
+    const citation = input.instructions?.split('allowedCitations=')[1]?.split(',')[0]?.trim();
+    if (!citation) throw new Error('EVAL_CITATION_MISSING');
+    return { content: `核准證據顯示結果。[${citation}]`, finishReason: 'stop',
+      metadata: { provider: 'openai', model: 'deterministic-eval', fallbackUsed: false } };
+  });
 }
 
 async function sendInIsolatedApp(input: {
