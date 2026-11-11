@@ -66,6 +66,7 @@ function createConfigValues(): EnvironmentVariables {
     ENABLE_RUNTIME_DEBUG: false,
     ENABLE_REDIS: false,
     ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]',
+    ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON: '[]',
     ENABLE_SWAGGER_DOCS: false,
     SWAGGER_PATH: 'docs'
   };

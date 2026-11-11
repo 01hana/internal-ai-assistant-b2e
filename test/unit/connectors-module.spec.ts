@@ -133,7 +133,7 @@ describe('ConnectorsModule', () => {
       'DATABASE_URL', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'LLM_MODEL', 'OPENAI_API_KEY',
       'INTERNAL_IDENTITY_JWT_ISSUER', 'INTERNAL_IDENTITY_JWT_AUDIENCE', 'INTERNAL_IDENTITY_JWKS_URI',
       'ASSISTANT_CAPABILITY_PACK_PATHS_JSON', 'ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON',
-      'SHINMONE_C01_QUERY_SCOPE_POLICY_ENABLED'
+      'ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON'
     ];
     const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
     Object.assign(process.env, {
@@ -145,7 +145,7 @@ describe('ConnectorsModule', () => {
       INTERNAL_IDENTITY_JWKS_URI: 'https://gateway.test.internal/.well-known/jwks.json',
       ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]', ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON: '[]'
     });
-    delete process.env.SHINMONE_C01_QUERY_SCOPE_POLICY_ENABLED;
+    delete process.env.ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON;
     try {
       const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
         .overrideProvider(PrismaService)

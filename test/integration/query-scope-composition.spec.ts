@@ -14,13 +14,14 @@ import {
   QueryScopeRegistration
 } from '../../src/query-scope/query-scope.types';
 import { createUs1TestAppWithState } from '../support/us1-test-app.helper';
+import { SYNTHETIC_QUERY_SCOPE_POLICY_PATH } from '../support/query-scope.fixture';
 
 describe('Query Scope application composition', () => {
-  const originalActivation = process.env.SHINMONE_C01_QUERY_SCOPE_POLICY_ENABLED;
+  const originalPolicyPaths = process.env.ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON;
 
   afterEach(() => {
-    if (originalActivation === undefined) delete process.env.SHINMONE_C01_QUERY_SCOPE_POLICY_ENABLED;
-    else process.env.SHINMONE_C01_QUERY_SCOPE_POLICY_ENABLED = originalActivation;
+    if (originalPolicyPaths === undefined) delete process.env.ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON;
+    else process.env.ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON = originalPolicyPaths;
   });
 
   it('compiles and initializes the generic AssistantModule without a Customer composition', async () => {
@@ -38,7 +39,7 @@ describe('Query Scope application composition', () => {
       INTERNAL_IDENTITY_JWKS_URI: 'https://gateway.test.internal/.well-known/jwks.json',
       ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]'
     });
-    delete process.env.SHINMONE_C01_QUERY_SCOPE_POLICY_ENABLED;
+    delete process.env.ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON;
     try {
       const moduleRef = await Test.createTestingModule({ imports: [AppConfigModule, AssistantModule.register()] })
         .overrideProvider(PrismaService)
@@ -62,7 +63,7 @@ describe('Query Scope application composition', () => {
   });
 
   it('initializes the core with no Customer policy and resolves the same validator at both security gates', async () => {
-    delete process.env.SHINMONE_C01_QUERY_SCOPE_POLICY_ENABLED;
+    delete process.env.ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON;
     const { app } = await createUs1TestAppWithState({ capabilityPackPaths: [] });
     try {
       expect(app.get<readonly QueryScopeActivation[]>(QUERY_SCOPE_ACTIVATIONS)).toEqual([]);
@@ -75,8 +76,8 @@ describe('Query Scope application composition', () => {
     }
   });
 
-  it('installs only the explicitly enabled Shinmone exact registrations in the AssistantModule DI scope', async () => {
-    process.env.SHINMONE_C01_QUERY_SCOPE_POLICY_ENABLED = 'true';
+  it('installs only the exact registrations from configured policy files in the AssistantModule DI scope', async () => {
+    process.env.ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON = JSON.stringify([SYNTHETIC_QUERY_SCOPE_POLICY_PATH]);
     const { app } = await createUs1TestAppWithState({ capabilityPackPaths: [] });
     try {
       const registrations = app.get<readonly QueryScopeRegistration[]>(QUERY_SCOPE_REGISTRATIONS);
@@ -85,9 +86,9 @@ describe('Query Scope application composition', () => {
       expect(activations).toEqual(registrations);
       expect(registrations.map(({ customerId, integrationId, hostApp, toolKey }) => ({ customerId, integrationId, hostApp, toolKey })))
         .toEqual(['today', 'weekly', 'monthly'].map((period) => ({
-          customerId: 'customer-shinmone-scm-local',
-          integrationId: 'shinmone-scm-assistant-local',
-          hostApp: 'shinmone-scm',
+          customerId: 'customer-a',
+          integrationId: 'integration-erp',
+          hostApp: 'erp',
           toolKey: `work-orders.${period}-new-count`
         })));
       expect(registrations.every((registration) => typeof registration.policy?.evaluate === 'function')).toBe(true);
@@ -99,5 +100,13 @@ describe('Query Scope application composition', () => {
   it('keeps the generic AssistantModule free of Customer registration imports', () => {
     const source = readFileSync(resolve('src/assistant/assistant.module.ts'), 'utf8');
     expect(source).not.toMatch(/customer-query-scope|shinmone/i);
+  });
+
+  it('keeps Core Query Scope composition free of Customer vocabulary and Customer imports', () => {
+    for (const file of ['src/app.module.ts', 'src/query-scope/company-scope.policy.ts', 'src/query-scope/query-scope-config.ts']) {
+      const source = readFileSync(resolve(file), 'utf8');
+      expect({ file, match: source.match(/customer-query-scope|customers\/|shinmone|公司|工單|廠商/i)?.[0] })
+        .toEqual({ file, match: undefined });
+    }
   });
 });

@@ -3,13 +3,13 @@ import { CapabilityCatalogRegistry } from '../../src/capabilities/capability-cat
 import { parseCustomerCapabilityPackV1 } from '../../src/capabilities/capability-pack.parser';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createShinmoneC01QueryScopeRegistration } from '../../src/customer-query-scope/shinmone-c01.policy';
+import { syntheticQueryScopeRegistration } from '../support/query-scope.fixture';
 import type { PreCandidateQueryScopeApplicabilityV1, QueryScopeEvaluationInput, QueryScopeRegistration } from '../../src/query-scope/query-scope.types';
 import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
 
 // CORE_CONTRACT: exact scoped activation, fail-closed errors, bounded audit; no HTTP authority claim.
 describe('[CORE_CONTRACT] QueryScopeValidationService', () => {
-  const registration = createShinmoneC01QueryScopeRegistration({
+  const registration = syntheticQueryScopeRegistration({
     customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp'
   });
   const identityContext = {
@@ -40,16 +40,57 @@ describe('[CORE_CONTRACT] QueryScopeValidationService', () => {
     integrationId: input.integrationId, hostApp: input.hostApp, requestId: input.requestId,
     sessionId: input.sessionId, sourceMessageId: input.sourceMessageId, applicability };
 
-  function harness(registrations: readonly QueryScopeRegistration[], activations = registrations) {
-    const findFirst = jest.fn().mockResolvedValue({ content: '查另一家公司的本月新增工單數' });
+  function harness(registrations: readonly QueryScopeRegistration[], activations = registrations, options: Readonly<{
+    content?: string; previousOutcomes?: readonly string[];
+  }> = {}) {
+    const findFirst = jest.fn().mockResolvedValue({ content: options.content ?? '查另一家公司的本月新增工單數' });
+    const findMany = jest.fn().mockResolvedValue(options.previousOutcomes
+      ? [{ id: input.sourceMessageId }, { id: 'message-previous' }] : [{ id: input.sourceMessageId }]);
+    const auditFindMany = jest.fn().mockResolvedValue((options.previousOutcomes ?? [])
+      .map((outcome) => ({ metadata: { outcome } })));
     const append = jest.fn().mockResolvedValue({});
     const catalogs = new CapabilityCatalogRegistry();
     catalogs.installRelease([catalog]);
     const service = new QueryScopeValidationService(activations, registrations,
-      { db: { assistantMessage: { findFirst } } } as never,
+      { db: { assistantMessage: { findFirst, findMany }, auditEvent: { findMany: auditFindMany } } } as never,
       { append } as never, catalogs);
-    return { service, findFirst, append };
+    return { service, findFirst, findMany, auditFindMany, append };
   }
+
+  describe('previous-turn scope outcome', () => {
+    it.each([
+      ['no previous scoped turn', undefined, '這個月新增幾張工單？', 'ALLOW'],
+      ['a previously allowed turn', ['ALLOW'], '那這個月呢？', 'ALLOW'],
+      ['a previously denied turn', ['DENY'], '那這個月呢？', 'CLARIFY'],
+      ['a previously ambiguous turn', ['CLARIFY'], '那本月新增工單數呢？', 'CLARIFY'],
+      ['a denied turn followed by an explicit current-company follow-up', ['DENY'], '那本公司這個月呢？', 'ALLOW'],
+      ['a denied turn followed by another other-company follow-up', ['DENY'], '那另一家公司這個月呢？', 'DENY']
+    ] as const)('classifies a follow-up after %s', async (_label, previousOutcomes, content, outcome) => {
+      const { service, findMany, auditFindMany } = harness([registration], [registration],
+        { content, ...(previousOutcomes ? { previousOutcomes } : {}) });
+      expect((await service.evaluate(input)).outcome).toBe(outcome);
+      expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: { customerId: 'customer-a', sessionId: input.sessionId, role: 'user' }, take: 2 }));
+      if (previousOutcomes) {
+        expect(auditFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
+          customerId: 'customer-a', sessionId: input.sessionId, messageId: 'message-previous',
+          eventType: 'query_scope_validation_completed' }) }));
+      } else expect(auditFindMany).not.toHaveBeenCalled();
+    });
+
+    it('does not look back when the current message is not the latest user turn', async () => {
+      const { service, findMany, auditFindMany } = harness([registration], [registration], { content: '那這個月呢？' });
+      findMany.mockResolvedValue([{ id: 'message-newer' }, { id: input.sourceMessageId }]);
+      expect((await service.evaluate(input)).outcome).toBe('ALLOW');
+      expect(auditFindMany).not.toHaveBeenCalled();
+    });
+
+    it('fails closed when the previous turn cannot be read', async () => {
+      const { service, findMany } = harness([registration], [registration], { content: '那這個月呢？' });
+      findMany.mockRejectedValue(new Error('offline'));
+      expect(await service.evaluate(input)).toEqual({ outcome: 'DENY', reason: 'QUERY_SCOPE_POLICY_UNAVAILABLE' });
+    });
+  });
 
   it('denies only with current scoped and exact pre-candidate evidence', async () => {
     const { service, append } = harness([registration]);

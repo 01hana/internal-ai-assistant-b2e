@@ -15,6 +15,7 @@ shell commands, and other important information, read the current plan
 customers/<customer>/
   README.md               客戶範圍（customerId / integrationId / hostApp）、檔案索引、尚未搬入的例外
   capability-packs/       Capability Pack（<packId>/<version>.json），部署時掛到容器的 /app/customer-capability-packs
+  query-scope/            公司範圍規則設定（company-scope.<environment>.v1.json），由 ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON 載入
   docs/                   onboarding 紀錄：來源清單、業務語意目錄、Human Review 問題與結論、驗收紀錄
   scripts/                僅供此客戶使用的 provisioning / 維運腳本
   test/
@@ -70,6 +71,5 @@ Core 指 `src/`、`test/`（客戶以外的測試）、`scripts/`、`packages/`�
 
 以下是第一個客戶（新模 / Shinmone）在本規則建立前留下的位置（不含 1-1 節列出的正常位置）。新客戶不得照這些位置放檔案，也不得新增同類例外。清單維護在 `customers/shinmone/README.md`：
 
-- `src/customer-query-scope/`（新模的公司範圍規則寫在 Core；之後應改為由客戶設定驅動）
 - `deploy/demo/`、`dev/`（Demo 部署與本機工具）
 - 部分 Core 測試使用新模 fixture 當測試資料（例：`test/unit/connectors-module.spec.ts`、`test/integration/feature011-*.spec.ts`）

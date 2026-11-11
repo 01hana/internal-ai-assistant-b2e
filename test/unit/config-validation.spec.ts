@@ -56,6 +56,19 @@ describe('validateEnvironment', () => {
     );
   });
 
+  it('defaults missing query-scope policy path configuration to an empty JSON array', () => {
+    expect(validateEnvironment(validEnv)).toMatchObject({ ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON: '[]' });
+  });
+
+  it.each([
+    ['malformed JSON', '['],
+    ['non-array JSON', '{"path":"/policies/a.json"}'],
+    ['non-string array element', '["/policies/a.json",1]']
+  ])('rejects %s for query-scope policy path configuration', (_case, value) => {
+    expect(() => validateEnvironment({ ...validEnv, ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON: value }))
+      .toThrow(/ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON/);
+  });
+
   it('defaults missing capability-pack path configuration to an empty JSON array', () => {
     expect(validateEnvironment(validEnv)).toMatchObject({
       ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]'

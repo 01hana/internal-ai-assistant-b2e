@@ -24,6 +24,12 @@ export interface QueryScopePolicyInput {
   readonly bindingId: string;
   readonly toolKey: string;
   readonly toolVersion: string;
+  /**
+   * Set when the previous user turn of the same session was denied or sent back for
+   * clarification by Query Scope. A policy may then refuse to let a target-less
+   * follow-up silently fall back to the current company.
+   */
+  readonly previousTurnScopeOutcome?: 'DENY' | 'CLARIFY';
 }
 
 export interface QueryScopeActivation {

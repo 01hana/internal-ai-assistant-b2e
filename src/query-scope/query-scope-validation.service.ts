@@ -53,6 +53,10 @@ export class QueryScopeValidationService {
       toolVersion: evidence.toolVersion }, true);
   }
 
+  private previousTurnScopeOutcome(input: QueryScopeEvaluationInput): Promise<'DENY' | 'CLARIFY' | undefined> {
+    return previousTurnScopeOutcomeFor(this.prisma, input);
+  }
+
   private async evaluateExact(input: QueryScopeEvaluationInput, denyOnly: boolean): Promise<QueryScopeDecision> {
     const applicable = this.activations.filter((entry) =>
       entry.customerId === input.customerScope.customerId &&
@@ -74,6 +78,8 @@ export class QueryScopeValidationService {
         where: { customerId: input.customerScope.customerId, sessionId: input.sessionId,
           id: input.sourceMessageId, role: AssistantMessageRole.user }
       });
+      const previousTurnScopeOutcome = activation && registration?.policy && source
+        ? await this.previousTurnScopeOutcome(input) : undefined;
       if (activation && registration?.policy && source && typeof source.content === 'string' && source.content.length <= 4_000 &&
         input.customerScope.customerId === input.identityContext.customer.customerId &&
         input.customerScope.integrationId === input.identityContext.customer.integrationId &&
@@ -90,7 +96,8 @@ export class QueryScopeValidationService {
         const candidate = await registration.policy.evaluate({ query: source.content,
           customerScope: input.customerScope, identityContext: input.identityContext,
           capabilityKey: registration.capabilityKey, bindingId: registration.bindingId,
-          toolKey: registration.toolKey, toolVersion: registration.toolVersion });
+          toolKey: registration.toolKey, toolVersion: registration.toolVersion,
+          ...(previousTurnScopeOutcome ? { previousTurnScopeOutcome } : {}) });
         if (isValidDecision(candidate)) decision = candidate;
       }
     } catch {
@@ -105,6 +112,25 @@ export class QueryScopeValidationService {
         ...(denyOnly ? { mode: 'pre_candidate_deny_only' } : {}) } });
     return decision;
   }
+}
+
+/** Scope outcome of the user turn immediately before the current one, from this service's own audit trail. */
+async function previousTurnScopeOutcomeFor(prisma: PrismaService, input: QueryScopeEvaluationInput): Promise<'DENY' | 'CLARIFY' | undefined> {
+  const recent = await prisma.db.assistantMessage.findMany({
+    where: { customerId: input.customerScope.customerId, sessionId: input.sessionId, role: AssistantMessageRole.user },
+    orderBy: { createdAt: 'desc' }, take: 2, select: { id: true }
+  });
+  // Only the latest user turn may look back; anything else has no reliable "previous turn".
+  if (recent.length < 2 || recent[0].id !== input.sourceMessageId) return undefined;
+  const events = await prisma.db.auditEvent.findMany({
+    where: { customerId: input.customerScope.customerId, sessionId: input.sessionId, messageId: recent[1].id,
+      eventType: 'query_scope_validation_completed' },
+    select: { metadata: true }
+  });
+  const outcomes = events.map((event) => (event.metadata as { outcome?: unknown } | null)?.outcome);
+  if (outcomes.includes('DENY')) return 'DENY';
+  if (outcomes.includes('CLARIFY')) return 'CLARIFY';
+  return undefined;
 }
 
 function isValidDecision(value: unknown): value is QueryScopeDecision {

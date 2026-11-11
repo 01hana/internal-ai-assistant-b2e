@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse } from '../../../../test/support/us1-test-app.helper';
 import { createInternalIdentityJwtFixture, DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../../../../test/support/internal-identity-jwt.helper';
-import { createShinmoneC01QueryScopeRegistration } from '../../../../src/customer-query-scope/shinmone-c01.policy';
+import { shinmoneC01QueryScopeRegistration } from '../support/shinmone-query-scope.fixture';
 import { MockConnectorAdapter } from '../../../../src/connectors/mock/mock-connector.adapter';
 import { DataAdapterRegistry } from '../../../../src/connectors/data-adapter-registry.service';
 import type { DataAdapter } from '../../../../src/connectors/data-adapter.interface';
@@ -36,7 +36,7 @@ describe('[HTTP_RUNTIME][MOCK_ONLY] Shinmone Assistant-side Dashboard trust nega
         'customers/shinmone/test/fixtures/capability-packs/shinmone-trust-negative.v1.json',
         'test/fixtures/capability-packs/customer-b-inventory.v1.json'
       ],
-      queryScopeRegistrations: [createShinmoneC01QueryScopeRegistration({
+      queryScopeRegistrations: [shinmoneC01QueryScopeRegistration({
         customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp'
       })]
     }));
@@ -207,7 +207,7 @@ describe('[HTTP_RUNTIME][MOCK_ONLY] Shinmone Assistant-side Dashboard trust nega
   ])('fails closed when the required Customer policy is %s', async (_label, policy) => {
     await app.close();
     const registration: QueryScopeRegistration = {
-      ...createShinmoneC01QueryScopeRegistration({ customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp' }),
+      ...shinmoneC01QueryScopeRegistration({ customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp' }),
       policy
     };
     ({ app, state } = await createUs1TestAppWithState({
@@ -344,7 +344,7 @@ describe('[HTTP_RUNTIME][MOCK_ONLY] Shinmone Assistant-side Dashboard trust nega
         'test/fixtures/capability-packs/customer-a-monthly-followup.v1.json',
         'test/fixtures/capability-packs/customer-b-inventory.v1.json'
       ],
-      queryScopeRegistrations: [createShinmoneC01QueryScopeRegistration({
+      queryScopeRegistrations: [shinmoneC01QueryScopeRegistration({
         customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp'
       })],
       dataAdapterRegistrationsFactory: ({ mockRegistrations }) => Object.freeze([

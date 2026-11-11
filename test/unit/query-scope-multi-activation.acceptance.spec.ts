@@ -26,7 +26,8 @@ describe('Final acceptance: exact Query Scope activation selection', () => {
   function service(activations: QueryScopeActivation[], registrations: QueryScopeRegistration[]) {
     const append = jest.fn().mockResolvedValue({});
     const instance = new QueryScopeValidationService(activations, registrations,
-      { db: { assistantMessage: { findFirst: jest.fn().mockResolvedValue({ content: '另一家公司數量' }) } } } as never,
+      { db: { assistantMessage: { findFirst: jest.fn().mockResolvedValue({ content: '另一家公司數量' }),
+        findMany: jest.fn().mockResolvedValue([]) }, auditEvent: { findMany: jest.fn().mockResolvedValue([]) } } } as never,
       { append } as never, new CapabilityCatalogRegistry());
     return { instance, append };
   }

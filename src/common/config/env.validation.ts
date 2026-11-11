@@ -95,6 +95,10 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   ASSISTANT_CAPABILITY_PACK_PATHS_JSON = '[]';
+
+  @IsOptional()
+  @IsString()
+  ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON = '[]';
 }
 
 export function validateEnvironment(config: Record<string, unknown>) {
@@ -113,6 +117,10 @@ export function validateEnvironment(config: Record<string, unknown>) {
 
   if (!isJsonStringArray(validatedConfig.ASSISTANT_CAPABILITY_PACK_PATHS_JSON)) {
     throw new Error('Invalid environment configuration. Check required fields: ASSISTANT_CAPABILITY_PACK_PATHS_JSON');
+  }
+
+  if (!isJsonStringArray(validatedConfig.ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON)) {
+    throw new Error('Invalid environment configuration. Check required fields: ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON');
   }
 
   return validatedConfig;
