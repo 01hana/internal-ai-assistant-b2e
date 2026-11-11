@@ -29,7 +29,7 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "ts-node --project tsconfig.scripts.json scripts/seed.ts",
-    "kpistats:local:provision": "ts-node --project tsconfig.scripts.json scripts/provision-shinmone-kpistats-local.ts",
+    "kpistats:local:provision": "ts-node --project tsconfig.scripts.json customers/shinmone/scripts/provision-shinmone-kpistats-local.ts",
     "test:db:init": "ts-node --project tsconfig.scripts.json scripts/test-db-init.ts"
   },
   "dependencies": {

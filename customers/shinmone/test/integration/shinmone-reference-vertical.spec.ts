@@ -8,27 +8,27 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Test } from '@nestjs/testing';
 import request = require('supertest');
-import { CustomerConnectorRuntimeModule } from '../../apps/customer-connector-runtime/src/customer-connector-runtime.module';
-import { UpstreamExecutionService } from '../../apps/customer-connector-runtime/src/upstream/upstream-execution.service';
-import { ConnectorDestinationPolicy } from '../../apps/customer-connector-runtime/src/upstream/connector-destination-policy';
-import { SafeUpstreamHttpClient } from '../../apps/customer-connector-runtime/src/upstream/safe-upstream-http-client';
-import { RuntimeReadinessRegistry } from '../../apps/customer-connector-runtime/src/health/readiness.service';
-import { createShinmoneRuntimeIntegration } from '../../apps/customer-connector-runtime/integrations/shinmone';
-import { BridgeModule } from '../../apps/identity-bridge/src/bridge.module';
-import { BridgeConfigService } from '../../apps/identity-bridge/src/config/bridge-config.service';
-import { BRIDGE_ENVIRONMENT } from '../../apps/identity-bridge/src/config/bridge-config.service';
-import { ConnectorBindingClient } from '../../apps/identity-bridge/src/connector-binding/connector-binding.client';
-import { bindingEnvironment } from '../../apps/identity-bridge/test/connector-binding/binding-fixtures';
-import { menu, node, response as menuDetailResponse } from '../../apps/identity-bridge/test/fixtures/idx-semantic.vectors';
-import { MenuDetailTransport } from '../../apps/identity-bridge/src/idx/transport/menu-detail.transport';
-import { ProductizedBusinessConnectorTransportService } from '../../src/connectors/productized-business/productized-business-connector.module';
-import { createPrismaClient } from '../../src/prisma/prisma-client.factory';
-import { seedCoreData } from '../../scripts/seed';
-import { createGatewayBackendTrustChainHarness } from '../support/gateway-backend-trust-chain-harness';
-import { createGatewayUpstreamTestAuthority } from '../support/gateway-upstream-test-authority';
-import { parseSseResponse } from '../support/us1-test-app.helper';
+import { CustomerConnectorRuntimeModule } from '../../../../apps/customer-connector-runtime/src/customer-connector-runtime.module';
+import { UpstreamExecutionService } from '../../../../apps/customer-connector-runtime/src/upstream/upstream-execution.service';
+import { ConnectorDestinationPolicy } from '../../../../apps/customer-connector-runtime/src/upstream/connector-destination-policy';
+import { SafeUpstreamHttpClient } from '../../../../apps/customer-connector-runtime/src/upstream/safe-upstream-http-client';
+import { RuntimeReadinessRegistry } from '../../../../apps/customer-connector-runtime/src/health/readiness.service';
+import { createShinmoneRuntimeIntegration } from '../../../../apps/customer-connector-runtime/integrations/shinmone';
+import { BridgeModule } from '../../../../apps/identity-bridge/src/bridge.module';
+import { BridgeConfigService } from '../../../../apps/identity-bridge/src/config/bridge-config.service';
+import { BRIDGE_ENVIRONMENT } from '../../../../apps/identity-bridge/src/config/bridge-config.service';
+import { ConnectorBindingClient } from '../../../../apps/identity-bridge/src/connector-binding/connector-binding.client';
+import { bindingEnvironment } from '../../../../apps/identity-bridge/test/connector-binding/binding-fixtures';
+import { menu, node, response as menuDetailResponse } from '../../../../apps/identity-bridge/test/fixtures/idx-semantic.vectors';
+import { MenuDetailTransport } from '../../../../apps/identity-bridge/src/idx/transport/menu-detail.transport';
+import { ProductizedBusinessConnectorTransportService } from '../../../../src/connectors/productized-business/productized-business-connector.module';
+import { createPrismaClient } from '../../../../src/prisma/prisma-client.factory';
+import { seedCoreData } from '../../../../scripts/seed';
+import { createGatewayBackendTrustChainHarness } from '../../../../test/support/gateway-backend-trust-chain-harness';
+import { createGatewayUpstreamTestAuthority } from '../../../../test/support/gateway-upstream-test-authority';
+import { parseSseResponse } from '../../../../test/support/us1-test-app.helper';
 import { shinmoneAdapterBinding, shinmoneConnectorDeployment } from '../support/shinmone-reference.fixture';
-import { createEphemeralTlsTestFixture, type EphemeralTlsTestFixture } from '../../apps/customer-connector-runtime/test/fixtures/ephemeral-tls-test-fixture';
+import { createEphemeralTlsTestFixture, type EphemeralTlsTestFixture } from '../../../../apps/customer-connector-runtime/test/fixtures/ephemeral-tls-test-fixture';
 
 const TLS_HOST = 'phase6-upstream.test';
 let tlsFixture: EphemeralTlsTestFixture;
@@ -168,7 +168,7 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
           ...centralEnvironment(privateKeyPath, centralJwk, (runtimeServer.address() as AddressInfo).port),
           ASSISTANT_LLM_TOOL_SELECTION_ENABLED: 'false',
           ASSISTANT_CAPABILITY_PACK_PATHS_JSON: JSON.stringify([
-            resolve('test/fixtures/capability-packs/shinmone-reference-vertical.v1.json')
+            resolve('customers/shinmone/test/fixtures/capability-packs/shinmone-reference-vertical.v1.json')
           ]),
           ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON: JSON.stringify([shinmoneAdapterBinding({
             integrationId: 'integration-a', hostApp: 'admin'
@@ -185,7 +185,7 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
         }
       }
     });
-    const { LlmExecutionService } = await import('../../src/llm/llm-execution.service');
+    const { LlmExecutionService } = await import('../../../../src/llm/llm-execution.service');
     jest.spyOn(gateway.backend.get(LlmExecutionService, { strict: false }), 'streamAnswer').mockImplementation(async function* () {
       yield { type: 'text_delta', text: '核准證據顯示新增工單數為 17。' };
       yield { type: 'completed', finishReason: 'stop', metadata: { provider: 'test', model: 'shinmone-fixture', fallbackUsed: false } };

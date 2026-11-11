@@ -1,13 +1,13 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
-import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse } from '../support/us1-test-app.helper';
-import { createInternalIdentityJwtFixture, DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../support/internal-identity-jwt.helper';
-import { createShinmoneC01QueryScopeRegistration } from '../../src/customer-query-scope/shinmone-c01.policy';
-import { MockConnectorAdapter } from '../../src/connectors/mock/mock-connector.adapter';
-import { DataAdapterRegistry } from '../../src/connectors/data-adapter-registry.service';
-import type { DataAdapter } from '../../src/connectors/data-adapter.interface';
-import { LlmExecutionService } from '../../src/llm/llm-execution.service';
-import type { QueryScopeRegistration } from '../../src/query-scope/query-scope.types';
+import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse } from '../../../../test/support/us1-test-app.helper';
+import { createInternalIdentityJwtFixture, DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, TEST_BACKEND_AUDIENCE, TEST_GATEWAY_ISSUER } from '../../../../test/support/internal-identity-jwt.helper';
+import { createShinmoneC01QueryScopeRegistration } from '../../../../src/customer-query-scope/shinmone-c01.policy';
+import { MockConnectorAdapter } from '../../../../src/connectors/mock/mock-connector.adapter';
+import { DataAdapterRegistry } from '../../../../src/connectors/data-adapter-registry.service';
+import type { DataAdapter } from '../../../../src/connectors/data-adapter.interface';
+import { LlmExecutionService } from '../../../../src/llm/llm-execution.service';
+import type { QueryScopeRegistration } from '../../../../src/query-scope/query-scope.types';
 
 // Existing C01 is the only executable Shinmone Tool in this fixture. These are
 // runtime-boundary regression tests, not evidence that C02-C06 are provisioned.
@@ -33,7 +33,7 @@ describe('[HTTP_RUNTIME][MOCK_ONLY] Shinmone Assistant-side Dashboard trust nega
       // The helper's default Customer A pack has no work-orders.count capability.
       // This scoped fixture binds the existing C01 Tool so the negative reaches precheck.
       capabilityPackPaths: [
-        'test/fixtures/capability-packs/shinmone-trust-negative.v1.json',
+        'customers/shinmone/test/fixtures/capability-packs/shinmone-trust-negative.v1.json',
         'test/fixtures/capability-packs/customer-b-inventory.v1.json'
       ],
       queryScopeRegistrations: [createShinmoneC01QueryScopeRegistration({
@@ -212,7 +212,7 @@ describe('[HTTP_RUNTIME][MOCK_ONLY] Shinmone Assistant-side Dashboard trust nega
     };
     ({ app, state } = await createUs1TestAppWithState({
       internalIdentity: { issuer: TEST_GATEWAY_ISSUER, audience: TEST_BACKEND_AUDIENCE, jwks: fixture.jwks },
-      capabilityPackPaths: ['test/fixtures/capability-packs/shinmone-trust-negative.v1.json'],
+      capabilityPackPaths: ['customers/shinmone/test/fixtures/capability-packs/shinmone-trust-negative.v1.json'],
       queryScopeActivations: [registration],
       queryScopeRegistrations: _label === 'absent registration' ? [] : [registration]
     }));

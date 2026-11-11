@@ -1,12 +1,12 @@
 import { parseConnectorInvocationRequestV1, parseConnectorOperationManifestV1 } from '@internal-ai-assistant/connector-runtime-contract';
-import { OperationManifestRegistry } from '../../apps/customer-connector-runtime/src/manifest/operation-manifest.registry';
-import { BoundedJsonResponse } from '../../apps/customer-connector-runtime/src/upstream/bounded-json-response';
-import { ManifestResponseExtractor } from '../../apps/customer-connector-runtime/src/upstream/response-extractor';
-import { AdapterResultProjectorService } from '../../src/connectors/adapter-result-projector.service';
-import { LlmInputSanitizerService } from '../../src/permissions/llm-input-sanitizer.service';
-import { ToolRegistryService } from '../../src/tools/tool-registry.service';
-import type { RegisteredToolDefinition } from '../../src/tools/tool-registry.types';
-import { approvedOutputSummary } from '../../src/query-understanding/tool-capability-summary';
+import { OperationManifestRegistry } from '../../../../apps/customer-connector-runtime/src/manifest/operation-manifest.registry';
+import { BoundedJsonResponse } from '../../../../apps/customer-connector-runtime/src/upstream/bounded-json-response';
+import { ManifestResponseExtractor } from '../../../../apps/customer-connector-runtime/src/upstream/response-extractor';
+import { AdapterResultProjectorService } from '../../../../src/connectors/adapter-result-projector.service';
+import { LlmInputSanitizerService } from '../../../../src/permissions/llm-input-sanitizer.service';
+import { ToolRegistryService } from '../../../../src/tools/tool-registry.service';
+import type { RegisteredToolDefinition } from '../../../../src/tools/tool-registry.types';
+import { approvedOutputSummary } from '../../../../src/query-understanding/tool-capability-summary';
 import { demoManifest, demoMetricNames, demoPeriods, demoResponse, demoToolOutputSchemaFor } from '../support/shinmone-kpistats-demo.fixture';
 
 const parsed = parseConnectorOperationManifestV1(demoManifest);

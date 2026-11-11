@@ -24,7 +24,7 @@ function sourceFiles(directory: string): string[] {
 
 function discoveredAnchors(): Map<string, AnchorCounts> {
   const found = new Map<string, AnchorCounts>();
-  for (const relative of ['src', 'test', 'scripts'].flatMap(sourceFiles)) {
+  for (const relative of ['src', 'test', 'scripts', 'customers'].flatMap(sourceFiles)) {
     const source = readFileSync(join(root, relative), 'utf8');
     const counts: AnchorCounts = {};
     for (const [category, pattern] of Object.entries(categories) as [keyof typeof categories, RegExp][]) {
@@ -45,7 +45,7 @@ function declaredAnchors(markdown: string): Map<string, AnchorCounts> {
     const match = /^\| `([^`]+)` \| `([^`]+)` \|$/.exec(line);
     if (!match) throw new Error('Invalid inventory anchor row');
     const [, relative, spec] = match;
-    if (!/^(src|test|scripts)\/[A-Za-z0-9._/-]+\.tsx?$/.test(relative) || relative.includes('..') || relative.includes('*')) {
+    if (!/^(src|test|scripts|customers)\/[A-Za-z0-9._/-]+\.tsx?$/.test(relative) || relative.includes('..') || relative.includes('*')) {
       throw new Error('Wildcard or invalid inventory path');
     }
     if (declared.has(relative)) throw new Error('Duplicate inventory path');
@@ -84,7 +84,7 @@ function assertClassifiedInventory(markdown: string): void {
       'BLOCKER_REQUIRES_PACK_BEFORE_CUTOVER'
     ]).toContain(cells[2]);
     expect(row).not.toMatch(/\*\*|`\*`|catch.all/i);
-    const evidence = [...row.matchAll(/`((?:src|test|scripts|customer-capability-packs)\/[A-Za-z0-9._/-]+)`/g)].map((match) => match[1]);
+    const evidence = [...row.matchAll(/`((?:src|test|scripts|customer-capability-packs|customers)\/[A-Za-z0-9._/-]+)`/g)].map((match) => match[1]);
     expect(evidence.length).toBeGreaterThanOrEqual(2);
     for (const relative of evidence) expect(existsSync(join(root, relative))).toBe(true);
     const toolTarget = /`([A-Za-z0-9._-]+)@1\.0\.0`/.exec(row)?.[1];

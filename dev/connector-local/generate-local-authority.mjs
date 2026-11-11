@@ -23,7 +23,7 @@ const demoManifestName = 'kpistats-six-metric.demo.manifest.json';
 const manifestNames = toolMode === 'c01' ? c01ManifestNames : [demoManifestName];
 const manifestPaths = manifestNames.map((name) => join(localRoot, 'runtime', name));
 const capabilityPackPath = toolMode === 'c01'
-  ? join(root, 'customer-capability-packs/shinmone-scm-local/1.0.0.json')
+  ? join(root, 'customers/shinmone/capability-packs/shinmone-scm-local/1.0.0.json')
   : join(localRoot, 'runtime', 'shinmone-kpistats-demo-active.pack.json');
 const operationKeys = toolMode === 'c01'
   ? ['work-orders.monthly-new-count', 'work-orders.today-new-count', 'work-orders.weekly-new-count']
@@ -94,7 +94,7 @@ for (const [index, manifestPath] of manifestPaths.entries()) {
 }
 if (toolMode === 'kpistats-demo') {
   const staged = JSON.parse(readFileSync(join(root,
-    'customer-capability-packs/shinmone-scm-kpistats-demo/1.0.0.json'), 'utf8'));
+    'customers/shinmone/capability-packs/shinmone-scm-kpistats-demo/1.0.0.json'), 'utf8'));
   if (staged.active !== false || staged.customerId !== context.customerId ||
       staged.integrationId !== context.integrationId ||
       JSON.stringify(staged.bindings.map((binding) => binding.target.toolKey)) !== JSON.stringify(operationKeys)) {

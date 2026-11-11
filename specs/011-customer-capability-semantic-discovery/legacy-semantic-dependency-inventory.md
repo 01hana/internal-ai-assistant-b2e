@@ -12,7 +12,7 @@ One row is one scoped, repository-observed semantic path. A `MIGRATED` row requi
 
 | ID | Classification | Scoped legacy behavior and target | Legacy evidence | Pack/direct acceptance evidence or gap |
 | --- | --- | --- | --- | --- |
-| P01 | MIGRATED_TO_CUSTOMER_CAPABILITY_PACK | Shinmone local monthly new work-order count → `work-orders.monthly-new-count@1.0.0` | `test/integration/shinmone-reference-vertical.spec.ts`; `scripts/seed.ts` | `customer-capability-packs/shinmone-scm-local/1.0.0.json`; `test/integration/feature011-capability-resolution.spec.ts` covers the same monthly question, `this_month`, exact binding, empty arguments. |
+| P01 | MIGRATED_TO_CUSTOMER_CAPABILITY_PACK | Shinmone local monthly new work-order count → `work-orders.monthly-new-count@1.0.0` | `customers/shinmone/test/integration/shinmone-reference-vertical.spec.ts`; `scripts/seed.ts` | `customers/shinmone/capability-packs/shinmone-scm-local/1.0.0.json`; `test/integration/feature011-capability-resolution.spec.ts` covers the same monthly question, `this_month`, exact binding, empty arguments. |
 | P02 | EXPLICITLY_NOT_A_CURRENT_SUPPORTED_SEMANTIC_PATH | Customer A ERP order status, “請幫我查 SO-10001 訂單目前狀態” → `mock.orders.status.lookup@1.0.0` | `test/integration/tool-discovery-mock-equivalence.spec.ts`; `test/integration/authorized-evidence-answer.spec.ts`; `scripts/seed.ts` | `test/fixtures/capability-packs/customer-a-reference.v1.json` has an order capability; exact wording currently returns `CAPABILITY_NOT_RECOGNIZED` in direct resolution. Synthetic test-only Customer scope for portability/isolation/regression, never a deployed support commitment; retain both test paths. |
 | P03 | EXPLICITLY_NOT_A_CURRENT_SUPPORTED_SEMANTIC_PATH | Customer A ERP work-order progress, “請查 WO-20002 工單進度” → `mock.work-orders.progress.lookup@1.0.0` | `test/integration/tool-discovery-mock-equivalence.spec.ts`; `scripts/seed.ts` | `test/fixtures/capability-packs/customer-a-reference.v1.json` and `test/integration/feature011-customer-b-portability.spec.ts` cover the same progress meaning, identifier and target. Synthetic test-only Customer scope for portability/isolation/regression, never a deployed support commitment; retain tests. |
 | P04 | EXPLICITLY_NOT_A_CURRENT_SUPPORTED_SEMANTIC_PATH | Customer A ERP inventory *availability*, “請查 SKU-DEMO-RED 庫存可用量” → `mock.inventory.availability.lookup@1.0.0` | `test/integration/tool-discovery-mock-equivalence.spec.ts`; `scripts/seed.ts` | `test/fixtures/capability-packs/customer-a-reference.v1.json` and `test/integration/feature011-customer-b-portability.spec.ts` cover this wording and `itemRef` mapping. Synthetic test-only Customer scope for portability/isolation/regression, never a deployed support commitment; retain tests. |
@@ -45,37 +45,36 @@ One row is one scoped, repository-observed semantic path. A `MIGRATED` row requi
 
 ## Dependency anchors
 
-The architecture guard treats each line below as a stable `relative path + named dependency category + occurrence count` declaration. It rescans `src`, `test`, and `scripts` (excluding the guard itself), rejects a new/unregistered anchor, count drift, duplicate entry or wildcard; this is not a whole-tree hash or line-number guard. Categories cover direct discovery, extension metadata, generic-owned vocabulary, identifiers, Customer-specific branches and legacy argument binding.
+The architecture guard treats each line below as a stable `relative path + named dependency category + occurrence count` declaration. It rescans `src`, `test`, `scripts`, and `customers` (excluding the guard itself), rejects a new/unregistered anchor, count drift, duplicate entry or wildcard; this is not a whole-tree hash or line-number guard. Categories cover direct discovery, extension metadata, generic-owned vocabulary, identifiers, Customer-specific branches and legacy argument binding.
 
 | Relative path | Anchor counts |
 | --- | --- |
-| `scripts/seed.ts` | `metadata=3,bindings=1` |
-| `src/assistant/planning/assistant-planning.service.ts` | `branches=1` |
+| `scripts/seed.ts` | `metadata=4,bindings=1` |
 | `src/query-understanding/clarification-need.generator.ts` | `branches=1` |
 | `src/query-understanding/default-tokenizer.adapter.ts` | `vocabulary=6,identifiers=2` |
 | `src/query-understanding/domain-lexicon.ts` | `vocabulary=7,branches=1` |
 | `src/query-understanding/entity-extractor.ts` | `identifiers=6` |
 | `src/query-understanding/query-normalizer.ts` | `vocabulary=2` |
-| `src/query-understanding/rule-based-query-understanding.pipeline.ts` | `discovery=3,branches=8` |
+| `src/query-understanding/rule-based-query-understanding.pipeline.ts` | `branches=2` |
 | `src/query-understanding/time-range.parser.ts` | `branches=1` |
 | `src/tools/tool-discovery.service.ts` | `discovery=2,metadata=4,bindings=6` |
 | `src/tools/tool-registry.service.ts` | `discovery=1` |
 | `src/tools/tool-registry.types.ts` | `bindings=3` |
 | `src/tools/tools.module.ts` | `discovery=3` |
 | `test/eval/feature011-capability-resolution.eval.spec.ts` | `branches=1` |
+| `test/integration/capability-followup-semantic-compatibility.spec.ts` | `branches=2` |
 | `test/integration/feature010-followup-routing.spec.ts` | `branches=1` |
+| `test/integration/feature011-feature010-cutover.spec.ts` | `metadata=1,branches=1` |
+| `test/integration/feature011-test-migration-fixtures.spec.ts` | `branches=3` |
 | `test/integration/query-understanding-persistence.spec.ts` | `metadata=1` |
-| `test/integration/tool-discovery-mock-equivalence.spec.ts` | `metadata=1` |
+| `test/integration/tool-discovery-mock-equivalence.spec.ts` | `discovery=2` |
 | `test/support/tool-discovery.fixture.ts` | `discovery=4,metadata=1,bindings=1` |
 | `test/support/us1-test-app.helper.ts` | `metadata=2,bindings=1` |
 | `test/unit/assistant-context-state.spec.ts` | `branches=2` |
 | `test/unit/assistant-readonly-runtime.service.spec.ts` | `metadata=3` |
 | `test/unit/capability-follow-up-frame.spec.ts` | `branches=1` |
 | `test/unit/chinese-tokenizer.spec.ts` | `vocabulary=2` |
-| `test/unit/follow-up-retrieval-authority.guard.spec.ts` | `metadata=2` |
-| `test/unit/query-understanding-pipeline-wiring.spec.ts` | `discovery=4` |
-| `test/unit/query-understanding-placeholder.spec.ts` | `metadata=1` |
-| `test/unit/query-understanding.service.spec.ts` | `metadata=2` |
+| `test/unit/query-understanding-pipeline-wiring.spec.ts` | `discovery=3` |
 | `test/unit/tool-discovery-equivalence.spec.ts` | `metadata=2` |
 | `test/unit/tool-discovery.service.spec.ts` | `discovery=4,metadata=13,bindings=5` |
 | `test/unit/tool-registry.service.spec.ts` | `discovery=1` |

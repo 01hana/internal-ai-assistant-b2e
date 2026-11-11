@@ -26,7 +26,7 @@ describe('[CORE_CONTRACT] QueryScopeValidationService', () => {
     bindingId: 'work-orders.monthly-new-count', toolKey: 'work-orders.monthly-new-count',
     toolVersion: '1.0.0'
   } satisfies QueryScopeEvaluationInput;
-  const pack = parseCustomerCapabilityPackV1(JSON.parse(readFileSync(resolve('test/fixtures/capability-packs/shinmone-trust-negative.v1.json'), 'utf8')));
+  const pack = parseCustomerCapabilityPackV1(JSON.parse(readFileSync(resolve('customers/shinmone/test/fixtures/capability-packs/shinmone-trust-negative.v1.json'), 'utf8')));
   const { hostApps: _hostApps, active: _active, ...catalogDefinition } = pack;
   const catalog = { ...catalogDefinition, hostApp: 'erp' };
   const applicability: PreCandidateQueryScopeApplicabilityV1 = {

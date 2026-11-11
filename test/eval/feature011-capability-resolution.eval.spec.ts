@@ -23,7 +23,7 @@ describe('Feature 011 direct capability resolution eval', () => {
     ['這個月新增幾張工單？', 'this_month', 'work-orders.monthly-new-count'],
     ['本月份新開多少工單？', 'this_month', 'work-orders.monthly-new-count']
   ])('uses the scoped Shinmone pack for %s', async (text, timeRange, toolKey) => {
-    const harness = await createFeature011DirectHarness(['customer-capability-packs/shinmone-scm-local/1.0.0.json']);
+    const harness = await createFeature011DirectHarness(['customers/shinmone/capability-packs/shinmone-scm-local/1.0.0.json']);
     const service = new CapabilityResolutionService(harness.registry, harness.semantic, harness.parameters, harness.binding, harness.audit);
     const result = await service.resolve({
       scope: { customerId: 'customer-shinmone-scm-local', integrationId: 'shinmone-scm-assistant-local', hostApp: 'shinmone-scm' },

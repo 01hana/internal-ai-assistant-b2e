@@ -11,8 +11,8 @@ export const SHINMONE_DASHBOARD_READ_SCOPE = 'menu:SCM_DASHBOARD:read';
 const scopeKey = `${SHINMONE_LOCAL_SCOPE.customerId}/${SHINMONE_LOCAL_SCOPE.integrationId}`;
 const contractFiles = [
   'apps/customer-connector-runtime/integrations/shinmone/kpistats-six-metric.demo.manifest.json',
-  'customer-capability-packs/shinmone-scm-kpistats-demo/1.0.0.json',
-  'test/fixtures/shinmone-kpistats-demo-tool-catalog.json'
+  'customers/shinmone/capability-packs/shinmone-scm-kpistats-demo/1.0.0.json',
+  'customers/shinmone/test/fixtures/shinmone-kpistats-demo-tool-catalog.json'
 ].map((path) => join(ROOT, path));
 
 export function shinmoneContractHash() {

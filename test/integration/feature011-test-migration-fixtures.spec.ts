@@ -4,7 +4,7 @@ import type { CapabilityFollowUpFrameV1 } from '../../src/assistant/conversation
 import { createFeature011DirectHarness } from '../support/feature011-direct.fixture';
 
 const erpPack = 'test/fixtures/capability-packs/customer-a-monthly-followup.v1.json';
-const adminPack = 'test/fixtures/capability-packs/shinmone-reference-vertical.v1.json';
+const adminPack = 'customers/shinmone/test/fixtures/capability-packs/shinmone-reference-vertical.v1.json';
 const erpScope = Object.freeze({ customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp' });
 const adminScope = Object.freeze({ customerId: 'customer-a', integrationId: 'integration-a', hostApp: 'admin' });
 const productionScope = Object.freeze({

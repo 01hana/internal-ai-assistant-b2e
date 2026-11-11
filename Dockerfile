@@ -16,6 +16,6 @@ COPY package*.json ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY prisma ./prisma
-COPY --chmod=0444 customer-capability-packs ./customer-capability-packs
+COPY --chmod=0444 customers/shinmone/capability-packs ./customer-capability-packs
 EXPOSE 3000
 CMD ["npm", "run", "start:prod"]

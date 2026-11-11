@@ -2,7 +2,7 @@ import { CapabilityResolutionService } from '../../src/capabilities/capability-r
 import { CapabilityCatalogRegistry } from '../../src/capabilities/capability-catalog.registry';
 import { createFeature011DirectHarness } from '../support/feature011-direct.fixture';
 
-const shinmonePack = 'customer-capability-packs/shinmone-scm-local/1.0.0.json';
+const shinmonePack = 'customers/shinmone/capability-packs/shinmone-scm-local/1.0.0.json';
 const scope = Object.freeze({
   customerId: 'customer-shinmone-scm-local',
   integrationId: 'shinmone-scm-assistant-local',
@@ -21,7 +21,7 @@ describe('Feature 011 Shinmone pack-backed direct resolution', () => {
     ['今天新增多少工單？', 'today', 'work-orders.today-new-count'],
     ['本週新增多少工單？', 'this_week', 'work-orders.weekly-new-count']
   ])('keeps the synthetic vertical pack aligned for %s', async (text, timeRange, toolKey) => {
-    const harness = await createFeature011DirectHarness(['test/fixtures/capability-packs/shinmone-reference-vertical.v1.json']);
+    const harness = await createFeature011DirectHarness(['customers/shinmone/test/fixtures/capability-packs/shinmone-reference-vertical.v1.json']);
     const service = new CapabilityResolutionService(harness.registry, harness.semantic, harness.parameters, harness.binding, harness.audit);
     expect(await service.resolve({ scope: { customerId: 'customer-a', integrationId: 'integration-a', hostApp: 'admin' }, text }))
       .toMatchObject({ outcome: 'RESOLVED', parameters: { timeRange }, toolCandidate: { key: toolKey, arguments: {} } });

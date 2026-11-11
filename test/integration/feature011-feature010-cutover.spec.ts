@@ -6,7 +6,7 @@ import { HybridRetrievalCoordinatorService } from '../../src/assistant/grounding
 import { RetrievalCoverageService } from '../../src/assistant/grounding/retrieval-coverage.service';
 import { createFeature011DirectHarness } from '../support/feature011-direct.fixture';
 
-const packPath = 'customer-capability-packs/shinmone-scm-local/1.0.0.json';
+const packPath = 'customers/shinmone/capability-packs/shinmone-scm-local/1.0.0.json';
 const host = Object.freeze({
   requestId: 'req-f011-cutover', customerId: 'customer-shinmone-scm-local',
   integrationId: 'shinmone-scm-assistant-local', hostApp: 'shinmone-scm',

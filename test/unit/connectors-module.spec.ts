@@ -24,7 +24,7 @@ import {
   ProductizedBusinessConnectorTransportService
 } from '../../src/connectors/productized-business/productized-business-connector.module';
 import { PRODUCTIZED_DATA_ADAPTER_REGISTRATIONS } from '../../src/connectors/productized-business/productized-adapter-binding.registry';
-import { shinmoneAdapterBinding } from '../support/shinmone-reference.fixture';
+import { shinmoneAdapterBinding } from '../../customers/shinmone/test/support/shinmone-reference.fixture';
 
 describe('ConnectorsModule', () => {
   const originalProductizedBindings = process.env.ASSISTANT_PRODUCTIZED_ADAPTER_BINDINGS_JSON;

@@ -1,5 +1,5 @@
-import { createPrismaClient } from '../../src/prisma/prisma-client.factory';
-import { seedProductOwnedData } from '../../scripts/seed';
+import { createPrismaClient } from '../../../../src/prisma/prisma-client.factory';
+import { seedProductOwnedData } from '../../../../scripts/seed';
 import { loadLocalKpiCatalog, runLocalKpiProvisioning } from '../../scripts/provision-shinmone-kpistats-local';
 
 const url = process.env.ASSISTANT_ISOLATED_PG_URL;

@@ -4,9 +4,9 @@ import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understandi
 import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
 import type { ToolResultPolicyResolution } from '../../src/tools/tool-registry.types';
 import { RiskLevel, ToolOperation } from '../../src/generated/prisma/enums';
-import { demoMetricNames, demoPeriods, demoToolOutputSchemaFor } from '../support/shinmone-kpistats-demo.fixture';
+import { demoMetricNames, demoPeriods, demoToolOutputSchemaFor } from '../../customers/shinmone/test/support/shinmone-kpistats-demo.fixture';
 
-const pack = 'customer-capability-packs/shinmone-scm-local/1.0.0.json';
+const pack = 'customers/shinmone/capability-packs/shinmone-scm-local/1.0.0.json';
 const host = { customerId: 'customer-shinmone-scm-local', integrationId: 'shinmone-scm-assistant-local',
   hostApp: 'shinmone-scm', organizationId: 'org', actorId: 'actor', roles: [],
   permissionScopes: ['menu:SCM_DASHBOARD:read'], requestId: 'request' };
@@ -77,7 +77,7 @@ describe('LLM Tool Selection with an existing scoped C01 catalog', () => {
       } }];
     }));
     const harness = await createFeature011DirectHarness(
-      ['test/fixtures/capability-packs/shinmone-kpistats-demo.v1.json'], { additionalTools });
+      ['customers/shinmone/test/fixtures/capability-packs/shinmone-kpistats-demo.v1.json'], { additionalTools });
     const service = new LlmToolSelectionService(harness.registry,
       { ...harness.tools, isExecutableReadOnly: () => true } as never, harness.binding,
       { generateAnswer: jest.fn() } as never, { append: jest.fn() } as never);

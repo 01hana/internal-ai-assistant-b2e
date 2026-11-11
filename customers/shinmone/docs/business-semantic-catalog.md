@@ -24,7 +24,7 @@ The following roots are local source references, not copied runtime artifacts:
 
 - `B = /Users/evalin/Documents/my proj/B2E/idx-shinmone-scm-backend/.ai-onboarding-analysis/`
 - `F = /Users/evalin/Documents/ideaxpress proj/idx-shinmone-scm-frontend/.ai-onboarding-analysis/frontend-semantic-crosscheck/`
-- `A = docs/customer-onboarding/shinmone/` in this repository.
+- `A = customers/shinmone/docs/` in this repository.
 
 | ID | Existing artifact / purpose | Current or historical; can establish | Cannot establish |
 | --- | --- | --- | --- |
@@ -35,7 +35,7 @@ The following roots are local source references, not copied runtime artifacts:
 | F2 | `F/ui-vocabulary.yaml`, `F/capability-crosscheck.yaml`, `F/frontend-review-findings.md` — vocabulary and unresolved mappings | Historical wording, six initial candidate cross-checks, `/Dashboard*`, `/Log/Login`, `/Outsource*` usage and source conflicts. | Synonym equivalence, deployed source owner, business meaning, production acceptance. Its local lint failure was pre-existing in that Frontend analysis, not this catalog's validation. |
 | A1 | [`work-orders-count-authority-resolution.md`](./work-orders-count-authority-resolution.md) — pre-implementation gap analysis | Historical decision trail, CreatedDate/company-scope questions, prior route-casing conflict. | Current day/week support or current E2E status. |
 | A2 | [`work-orders-count-acceptance.md`](./work-orders-count-acceptance.md) — human E2E closure | Current accepted scope, approved count semantics, three periods and human-reported matching Dashboard results. | Exact deployed Backend Git commit, approval of other KPI fields or permissions. |
-| P1 | [Capability Pack](../../../customer-capability-packs/shinmone-scm-local/1.0.0.json), [Tool seed](../../../scripts/seed.ts), [three manifests](../../../apps/customer-connector-runtime/integrations/shinmone/) and [Customer tests](../../../test/integration/feature011-capability-resolution.spec.ts) | Current repository's exact `work-orders.count` semantics/bindings, read-only Tool definitions, fixed operation mapping, automated regression. | Other KPI Tool/Binding existence; real account's permissions; other raw response fields' disclosure approval. |
+| P1 | [Capability Pack](../capability-packs/shinmone-scm-local/1.0.0.json), [Tool seed](../../../scripts/seed.ts), [three manifests](../../../apps/customer-connector-runtime/integrations/shinmone/) and [Customer tests](../../../test/integration/feature011-capability-resolution.spec.ts) | Current repository's exact `work-orders.count` semantics/bindings, read-only Tool definitions, fixed operation mapping, automated regression. | Other KPI Tool/Binding existence; real account's permissions; other raw response fields' disclosure approval. |
 
 No Backend or Frontend source tree was recrawled. `TARGETED_SOURCE_LOOKUP_COUNT=0`: existing artifacts supplied the technical shape used below. Source conflicts are retained rather than silently reconciled.
 

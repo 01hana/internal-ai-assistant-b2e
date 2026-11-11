@@ -1,18 +1,18 @@
 import type { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { parseConnectorInvocationRequestV1, parseConnectorOperationManifestV1 } from '@internal-ai-assistant/connector-runtime-contract';
-import { OperationManifestRegistry } from '../../apps/customer-connector-runtime/src/manifest/operation-manifest.registry';
-import { BoundedJsonResponse } from '../../apps/customer-connector-runtime/src/upstream/bounded-json-response';
-import { ManifestResponseExtractor } from '../../apps/customer-connector-runtime/src/upstream/response-extractor';
-import type { DataAdapter, DataAdapterCompatibilityInput, DataAdapterExecuteInput } from '../../src/connectors/data-adapter.interface';
-import type { ConnectorExecuteResult, ConnectorToolDefinition, DependencyStatus } from '../../src/connectors/connector-adapter.interface';
-import { PrismaService } from '../../src/prisma/prisma.service';
-import { createPrismaClient } from '../../src/prisma/prisma-client.factory';
-import { LlmExecutionService } from '../../src/llm/llm-execution.service';
-import { ConversationContextLoaderService } from '../../src/assistant/conversation/conversation-context-loader.service';
+import { OperationManifestRegistry } from '../../../../apps/customer-connector-runtime/src/manifest/operation-manifest.registry';
+import { BoundedJsonResponse } from '../../../../apps/customer-connector-runtime/src/upstream/bounded-json-response';
+import { ManifestResponseExtractor } from '../../../../apps/customer-connector-runtime/src/upstream/response-extractor';
+import type { DataAdapter, DataAdapterCompatibilityInput, DataAdapterExecuteInput } from '../../../../src/connectors/data-adapter.interface';
+import type { ConnectorExecuteResult, ConnectorToolDefinition, DependencyStatus } from '../../../../src/connectors/connector-adapter.interface';
+import { PrismaService } from '../../../../src/prisma/prisma.service';
+import { createPrismaClient } from '../../../../src/prisma/prisma-client.factory';
+import { LlmExecutionService } from '../../../../src/llm/llm-execution.service';
+import { ConversationContextLoaderService } from '../../../../src/assistant/conversation/conversation-context-loader.service';
 import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse,
-  type Us1TestState } from '../support/us1-test-app.helper';
-import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
+  type Us1TestState } from '../../../../test/support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../../../../test/support/internal-identity-jwt.helper';
 import { demoManifest, demoPeriods, demoResponse, demoToolOutputSchemaFor } from '../support/shinmone-kpistats-demo.fixture';
 
 const databaseUrl = process.env.ASSISTANT_ISOLATED_PG_URL;
@@ -102,7 +102,7 @@ describeIsolated('KPIStats HTTP follow-up with isolated PostgreSQL persistence',
     adapter = new SyntheticKpiAdapter();
     const result = await createUs1TestAppWithState({
       isolatedDatabaseUrl: databaseUrl,
-      capabilityPackPaths: ['test/fixtures/capability-packs/shinmone-kpistats-demo.v1.json'],
+      capabilityPackPaths: ['customers/shinmone/test/fixtures/capability-packs/shinmone-kpistats-demo.v1.json'],
       augmentStateBeforeInit: (state) => {
         const prototype = state.toolDefinitions.find((tool) => tool.name === 'mock.orders.status.lookup');
         if (!prototype) throw new Error('DEMO_TOOL_PROTOTYPE_MISSING');

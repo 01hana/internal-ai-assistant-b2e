@@ -17,7 +17,7 @@ describe('isolated real-model C01 selection; no Assistant Runtime or Connector',
     if (!/^sk-[A-Za-z0-9_-]{20,}$/.test(key) || !model || /placeholder|example|dummy/i.test(model)) {
       throw new Error('LIVE_LLM_TEST_CONFIGURATION_MISSING');
     }
-    const harness = await createFeature011DirectHarness(['customer-capability-packs/shinmone-scm-local/1.0.0.json']);
+    const harness = await createFeature011DirectHarness(['customers/shinmone/capability-packs/shinmone-scm-local/1.0.0.json']);
     const descriptions: Record<string, string> = {
       'work-orders.monthly-new-count': 'Count new work orders for the current month through a configured Customer-local connector.',
       'work-orders.today-new-count': 'Count new work orders for the current server-local day.',

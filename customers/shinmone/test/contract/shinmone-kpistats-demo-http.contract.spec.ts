@@ -1,19 +1,19 @@
 import type { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { parseConnectorInvocationRequestV1, parseConnectorOperationManifestV1 } from '@internal-ai-assistant/connector-runtime-contract';
-import { OperationManifestRegistry } from '../../apps/customer-connector-runtime/src/manifest/operation-manifest.registry';
-import { BoundedJsonResponse } from '../../apps/customer-connector-runtime/src/upstream/bounded-json-response';
-import { ManifestResponseExtractor } from '../../apps/customer-connector-runtime/src/upstream/response-extractor';
-import type { DataAdapter, DataAdapterCompatibilityInput, DataAdapterExecuteInput } from '../../src/connectors/data-adapter.interface';
-import type { ConnectorExecuteResult, ConnectorToolDefinition, DependencyStatus } from '../../src/connectors/connector-adapter.interface';
-import { MockConnectorAdapter } from '../../src/connectors/mock/mock-connector.adapter';
-import { LlmExecutionService } from '../../src/llm/llm-execution.service';
-import { ConversationContextLoaderService } from '../../src/assistant/conversation/conversation-context-loader.service';
-import { AssistantSessionService } from '../../src/assistant/session/assistant-session.service';
-import { createCustomerScopeFromHostIntegrationContext } from '../../src/host-integration/host-integration-request.factory';
+import { OperationManifestRegistry } from '../../../../apps/customer-connector-runtime/src/manifest/operation-manifest.registry';
+import { BoundedJsonResponse } from '../../../../apps/customer-connector-runtime/src/upstream/bounded-json-response';
+import { ManifestResponseExtractor } from '../../../../apps/customer-connector-runtime/src/upstream/response-extractor';
+import type { DataAdapter, DataAdapterCompatibilityInput, DataAdapterExecuteInput } from '../../../../src/connectors/data-adapter.interface';
+import type { ConnectorExecuteResult, ConnectorToolDefinition, DependencyStatus } from '../../../../src/connectors/connector-adapter.interface';
+import { MockConnectorAdapter } from '../../../../src/connectors/mock/mock-connector.adapter';
+import { LlmExecutionService } from '../../../../src/llm/llm-execution.service';
+import { ConversationContextLoaderService } from '../../../../src/assistant/conversation/conversation-context-loader.service';
+import { AssistantSessionService } from '../../../../src/assistant/session/assistant-session.service';
+import { createCustomerScopeFromHostIntegrationContext } from '../../../../src/host-integration/host-integration-request.factory';
 import { createAuthorizedInternalIdentityHeaders, createUs1TestAppWithState, parseSseResponse,
-  type Us1TestState } from '../support/us1-test-app.helper';
-import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
+  type Us1TestState } from '../../../../test/support/us1-test-app.helper';
+import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../../../../test/support/internal-identity-jwt.helper';
 import { demoManifest, demoMetricNames, demoPeriods, demoResponse, demoToolOutputSchemaFor } from '../support/shinmone-kpistats-demo.fixture';
 
 const metadata = { provider: 'stub', model: 'isolated-demo', fallbackUsed: false };
@@ -123,7 +123,7 @@ describe('isolated KPIStats Demo through HTTP, SSE and History', () => {
     adapter = new DemoConnectorAdapter();
     inventoryAdapter = new IsolatedInventoryAdapter();
     ({ app, state } = await createUs1TestAppWithState({
-      capabilityPackPaths: ['test/fixtures/capability-packs/shinmone-kpistats-demo.v1.json',
+      capabilityPackPaths: ['customers/shinmone/test/fixtures/capability-packs/shinmone-kpistats-demo.v1.json',
         'test/fixtures/capability-packs/customer-b-context-isolation.v1.json'],
       augmentStateBeforeInit: (fixture) => {
         const prototype = fixture.toolDefinitions.find((item) => item.name === 'mock.orders.status.lookup');

@@ -1,6 +1,6 @@
-import { shinmoneC01QueryScopePolicy } from '../../src/customer-query-scope/shinmone-c01.policy';
-import { customerQueryScopeRegistrations } from '../../src/customer-query-scope/registrations';
-import type { QueryScopePolicyInput } from '../../src/query-scope/query-scope.types';
+import { shinmoneC01QueryScopePolicy } from '../../../../src/customer-query-scope/shinmone-c01.policy';
+import { customerQueryScopeRegistrations } from '../../../../src/customer-query-scope/registrations';
+import type { QueryScopePolicyInput } from '../../../../src/query-scope/query-scope.types';
 
 // CUSTOMER_POLICY: deterministic Customer-owned semantics; not real company authorization proof.
 describe('[CUSTOMER_POLICY] Shinmone C01 query scope policy', () => {

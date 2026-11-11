@@ -1,5 +1,5 @@
-import { ConnectorDeploymentRegistry } from '../../src/connectors/productized-business/connector-deployment.registry';
-import { parseProductizedAdapterBindings } from '../../src/connectors/productized-business/productized-adapter-binding.registry';
+import { ConnectorDeploymentRegistry } from '../../../../src/connectors/productized-business/connector-deployment.registry';
+import { parseProductizedAdapterBindings } from '../../../../src/connectors/productized-business/productized-adapter-binding.registry';
 import {
   SHINMONE_REFERENCE_AUTHORITY,
   shinmoneAdapterBinding,

@@ -4,10 +4,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { parseConnectorOperationManifestV1 } from '@internal-ai-assistant/connector-runtime-contract';
-import { parseCustomerCapabilityPackV1 } from '../src/capabilities/capability-pack.parser';
-import { Prisma, type PrismaClient } from '../src/generated/prisma/client';
-import { RiskLevel, ToolOperation } from '../src/generated/prisma/enums';
-import { createPrismaClient } from '../src/prisma/prisma-client.factory';
+import { parseCustomerCapabilityPackV1 } from '../../../src/capabilities/capability-pack.parser';
+import { Prisma, type PrismaClient } from '../../../src/generated/prisma/client';
+import { RiskLevel, ToolOperation } from '../../../src/generated/prisma/enums';
+import { createPrismaClient } from '../../../src/prisma/prisma-client.factory';
 
 const customerId = 'customer-shinmone-scm-local';
 const integrationId = 'shinmone-scm-assistant-local';
@@ -16,9 +16,9 @@ const permission = 'menu:SCM_DASHBOARD:read';
 const c01Keys = ['work-orders.monthly-new-count', 'work-orders.today-new-count', 'work-orders.weekly-new-count'];
 const demoKeys = ['shinmone.kpistats.snapshot.today', 'shinmone.kpistats.snapshot.weekly', 'shinmone.kpistats.snapshot.monthly'];
 const wirePeriods = ['today', 'thisWeek', 'thisMonth'];
-const catalogPath = resolve('test/fixtures/shinmone-kpistats-demo-tool-catalog.json');
+const catalogPath = resolve('customers/shinmone/test/fixtures/shinmone-kpistats-demo-tool-catalog.json');
 const manifestPath = resolve('apps/customer-connector-runtime/integrations/shinmone/kpistats-six-metric.demo.manifest.json');
-const packPath = resolve('customer-capability-packs/shinmone-scm-kpistats-demo/1.0.0.json');
+const packPath = resolve('customers/shinmone/capability-packs/shinmone-scm-kpistats-demo/1.0.0.json');
 
 type Mode = 'dry-run' | 'prepare' | 'activate' | 'rollback' | 'verify-demo' | 'verify-c01' | 'verify-default';
 type VerifiedBackend = Readonly<{ startedAt: Date }>;
@@ -191,7 +191,7 @@ export async function runLocalKpiProvisioning(
 
 /** The local manager's recorded hash proves the running PID loaded the current compiled tree. */
 export async function verifyCurrentManagedBackend(): Promise<VerifiedBackend> {
-  const manager = require('../dev/local-assistant/local-lib.mjs') as LocalManager;
+  const manager = require('../../../dev/local-assistant/local-lib.mjs') as LocalManager;
   const state: unknown = JSON.parse(readFileSync(manager.STATE_FILE, 'utf8'));
   if (!record(state) || !record(state.services) || !record(state.services.backend)) invalid();
   const backend = state.services.backend;

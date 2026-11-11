@@ -1,6 +1,6 @@
 # Reusable Customer Capability Artifact Map
 
-This is a documentation map extracted from the [Shinmone `work-orders.count` acceptance](./shinmone/work-orders-count-acceptance.md), not another registry or runtime schema. It complements the [onboarding guide](./onboarding-guide.md), [process checklist](./capability-onboarding-checklist.md), and [release review checklist](./review-checklist.md). A second Customer normally supplies scoped artifacts and approved provisioning; it does not fork Generic Core.
+This is a documentation map extracted from the [Shinmone `work-orders.count` acceptance](../../customers/shinmone/docs/work-orders-count-acceptance.md), not another registry or runtime schema. It complements the [onboarding guide](./onboarding-guide.md), [process checklist](./capability-onboarding-checklist.md), and [release review checklist](./review-checklist.md). A second Customer normally supplies scoped artifacts and approved provisioning; it does not fork Generic Core.
 
 ## Ownership by Layer
 

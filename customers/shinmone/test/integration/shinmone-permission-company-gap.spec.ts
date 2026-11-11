@@ -1,14 +1,14 @@
 import { NotFoundException } from '@nestjs/common';
 import { readFileSync } from 'node:fs';
-import { HostIntegrationRequestFactory } from '../../src/host-integration/host-integration-request.factory';
-import { createCustomerScopeFromIdentityContext } from '../../src/identity/customer-scope.factory';
-import type { RequestIdentityContext } from '../../src/identity/identity-context.types';
-import { ToolPermissionPrecheckService } from '../../src/permissions/tool-permission-precheck.service';
-import { RiskLevel, ToolOperation } from '../../src/generated/prisma/enums';
-import { IdxMenuDetailValidator } from '../../apps/identity-bridge/src/idx/menu-detail.validator';
-import { IdxPermissionNormalizer } from '../../apps/identity-bridge/src/idx/permission-normalizer';
-import { ScopeProjector } from '../../apps/identity-bridge/src/idx/scope-projector';
-import { menu, response } from '../../apps/identity-bridge/test/fixtures/idx-semantic.vectors';
+import { HostIntegrationRequestFactory } from '../../../../src/host-integration/host-integration-request.factory';
+import { createCustomerScopeFromIdentityContext } from '../../../../src/identity/customer-scope.factory';
+import type { RequestIdentityContext } from '../../../../src/identity/identity-context.types';
+import { ToolPermissionPrecheckService } from '../../../../src/permissions/tool-permission-precheck.service';
+import { RiskLevel, ToolOperation } from '../../../../src/generated/prisma/enums';
+import { IdxMenuDetailValidator } from '../../../../apps/identity-bridge/src/idx/menu-detail.validator';
+import { IdxPermissionNormalizer } from '../../../../apps/identity-bridge/src/idx/permission-normalizer';
+import { ScopeProjector } from '../../../../apps/identity-bridge/src/idx/scope-projector';
+import { menu, response } from '../../../../apps/identity-bridge/test/fixtures/idx-semantic.vectors';
 
 const dashboardRead = 'menu:SCM_DASHBOARD:read';
 
@@ -24,7 +24,7 @@ function identity(scopes: string[]): RequestIdentityContext {
 }
 
 function resolvedTool() {
-  const catalog = JSON.parse(readFileSync('test/fixtures/shinmone-kpistats-demo-tool-catalog.json', 'utf8')) as {
+  const catalog = JSON.parse(readFileSync('customers/shinmone/test/fixtures/shinmone-kpistats-demo-tool-catalog.json', 'utf8')) as {
     tools: Array<Record<string, unknown> & { name: string; requiredPermissions: string[] }>
   };
   const staged = catalog.tools.find((entry) => entry.name === 'shinmone.kpistats.snapshot.today');

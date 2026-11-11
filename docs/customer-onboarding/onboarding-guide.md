@@ -13,7 +13,7 @@ For a first read-only business capability, use the
 the execution sequence and [`customer-artifact-map.md`](./customer-artifact-map.md)
 for artifact ownership. The
 [`review-checklist.md`](./review-checklist.md) remains the release review gate;
-the [Shinmone acceptance record](./shinmone/work-orders-count-acceptance.md)
+the [Shinmone acceptance record](../../customers/shinmone/docs/work-orders-count-acceptance.md)
 is one bounded Customer example, not a template of business rules.
 
 Keep one Customer and one reviewed integration scope per onboarding record.

@@ -21,7 +21,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./customer-capability-packs:/app/customer-capability-packs:ro
+      - ./customers/shinmone/capability-packs:/app/customer-capability-packs:ro
     depends_on:
       postgres:
         condition: service_healthy
