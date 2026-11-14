@@ -35,6 +35,7 @@ COPY --from=build /app/packages/connector-runtime-contract/dist ./packages/conne
 COPY --from=build /app/dist ./dist
 COPY prisma ./prisma
 COPY prisma.config.ts ./prisma.config.ts
-COPY --chmod=0444 customers/shinmone/capability-packs ./customer-capability-packs
+# Capability Packs are customer data: each deployment mounts its approved pack directory
+# at /app/customer-capability-packs (see deploy/demo/compose.yaml and docker-compose.yml).
 EXPOSE 3000
 CMD ["npm", "run", "start:prod"]
