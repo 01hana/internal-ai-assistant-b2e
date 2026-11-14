@@ -12,13 +12,18 @@ import {
   TEST_BACKEND_AUDIENCE,
   TEST_GATEWAY_ISSUER
 } from '../support/internal-identity-jwt.helper';
+import { isolateIntegrationLlm, stubGroundedIntegrationAnswer } from '../support/isolated-integration-llm.helper';
 
 describe('analytics-ready raw event records', () => {
   const identityFixture = createInternalIdentityJwtFixture();
   let app: INestApplication;
   let state: Us1TestState;
+  let isolated: ReturnType<typeof isolateIntegrationLlm>;
+  let previousMode: string | undefined;
 
   beforeEach(async () => {
+    previousMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     const testApp = await createUs1TestAppWithState({
       internalIdentity: {
         issuer: TEST_GATEWAY_ISSUER,
@@ -28,17 +33,25 @@ describe('analytics-ready raw event records', () => {
     });
     app = testApp.app;
     state = testApp.state;
+    isolated = isolateIntegrationLlm(app);
   });
 
   afterEach(async () => {
-    await app.close();
+    try {
+      await app.close();
+      jest.restoreAllMocks();
+    } finally {
+      if (previousMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+      else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousMode;
+    }
   });
 
   it('keeps answered structured lookup records traceable by request, message, tool call, and evidence ref', async () => {
+    stubGroundedIntegrationAnswer(isolated.llm, '"status":"picking"', '訂單狀態為 picking。');
     const requestId = 'req-analytics-structured';
     const result = await sendAssistantMessage({
       requestId,
-      message: '請查 SO-10001 訂單狀態',
+      message: '查詢訂單目前狀態 訂單號 SO-10001',
       pageContext: {
         module: 'orders',
         entityType: 'order',
@@ -108,6 +121,7 @@ describe('analytics-ready raw event records', () => {
   });
 
   it('keeps document retrieval run, candidate, and document evidence records traceable', async () => {
+    stubGroundedIntegrationAnswer(isolated.llm, '退貨流程須先確認訂單狀態', '退貨流程須先確認訂單狀態。');
     const requestId = 'req-analytics-retrieval';
     const result = await sendAssistantMessage({
       requestId,
@@ -171,6 +185,9 @@ describe('analytics-ready raw event records', () => {
     const selectedChunk = state.knowledgeChunks.find((chunk) => chunk.id === selectedCandidate?.chunkId);
     expect(JSON.stringify(result.records.auditEvents)).not.toContain(selectedChunk?.content ?? '');
     expectNoSensitivePayload(result.records);
+    expect(isolated.providerGenerate).not.toHaveBeenCalled();
+    expect(isolated.providerStream).not.toHaveBeenCalled();
+    expect(isolated.outboundFetch).not.toHaveBeenCalled();
   });
 
   it('keeps failed tool and no-answer review records traceable without raw failure details', async () => {
@@ -178,7 +195,7 @@ describe('analytics-ready raw event records', () => {
     const result = await sendAssistantMessage({
       requestId,
       permissionScopes: ['orders:read'],
-      message: '請查 SO-99999 訂單狀態',
+      message: '查詢訂單目前狀態 訂單號 SO-99999',
       pageContext: {
         module: 'orders',
         entityType: 'order',
@@ -309,10 +326,11 @@ describe('analytics-ready raw event records', () => {
     expectAuditEvents(approvalResult.records.auditEvents, approvalRequestId, ['approval_request_created', 'answer_generated']);
     expectNoSensitivePayload([approvalRequest?.actionSummary, approvalRequest?.payloadSummary, approvalResult.records.auditEvents]);
 
+    stubGroundedIntegrationAnswer(isolated.llm, '"status":"picking"', '訂單狀態為 picking。');
     const answeredResult = await sendAssistantMessage({
       requestId: 'req-analytics-feedback-answer',
       permissionScopes: ['orders:read'],
-      message: '請查 SO-10001 訂單狀態',
+      message: '查詢訂單目前狀態 訂單號 SO-10001',
       pageContext: {
         module: 'orders',
         entityType: 'order',

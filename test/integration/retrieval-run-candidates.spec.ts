@@ -6,19 +6,32 @@ import {
   parseSseResponse,
   Us1TestState
 } from '../support/us1-test-app.helper';
+import { isolateIntegrationLlm, stubGroundedIntegrationAnswer } from '../support/isolated-integration-llm.helper';
 
 describe('US4 retrieval run and candidate observability', () => {
   let app: INestApplication;
   let state: Us1TestState;
+  let isolated: ReturnType<typeof isolateIntegrationLlm>;
+  let previousMode: string | undefined;
 
   beforeAll(async () => {
+    previousMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     const testApp = await createUs1TestAppWithState();
     app = testApp.app;
     state = testApp.state;
+    isolated = isolateIntegrationLlm(app);
+    stubGroundedIntegrationAnswer(isolated.llm, '退貨流程須先確認訂單狀態', '退貨流程須先確認訂單狀態。');
   });
 
   afterAll(async () => {
-    await app.close();
+    try {
+      await app.close();
+      jest.restoreAllMocks();
+    } finally {
+      if (previousMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+      else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousMode;
+    }
   });
 
   it('persists retrieval run, candidates, selected document evidence, and minimized audit', async () => {
@@ -91,6 +104,9 @@ describe('US4 retrieval run and candidate observability', () => {
       })
     );
     expect(serializedAudit).not.toContain('退貨流程須先確認訂單狀態');
+    expect(isolated.providerGenerate).not.toHaveBeenCalled();
+    expect(isolated.providerStream).not.toHaveBeenCalled();
+    expect(isolated.outboundFetch).not.toHaveBeenCalled();
   });
 
   it('returns no_answer and creates review item when document retrieval has no selected chunk', async () => {

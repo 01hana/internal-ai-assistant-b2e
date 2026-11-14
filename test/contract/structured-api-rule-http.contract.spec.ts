@@ -76,10 +76,12 @@ class StructuredInventoryAdapter extends MockConnectorAdapter {
 }
 
 describe('structured API evidence through rule-based HTTP path', () => {
+  const previousToolSelectionMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
   let app: INestApplication;
   const adapter = new StructuredInventoryAdapter();
   let state: Awaited<ReturnType<typeof createUs1TestAppWithState>>['state'];
   beforeAll(async () => {
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     ({ app, state } = await createUs1TestAppWithState({
       dataAdapterRegistrationsFactory: ({ mockRegistrations }) => mockRegistrations.map((entry) => ({ ...entry, adapter })),
       augmentStateBeforeInit: (fixture) => {
@@ -101,7 +103,15 @@ describe('structured API evidence through rule-based HTTP path', () => {
       metadata: { provider: 'openai', model: 'synthetic-test', fallbackUsed: false }
     });
   });
-  afterAll(async () => { await app.close(); jest.restoreAllMocks(); });
+  afterAll(async () => {
+    try {
+      await app?.close();
+    } finally {
+      jest.restoreAllMocks();
+      if (previousToolSelectionMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+      else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousToolSelectionMode;
+    }
+  });
 
   async function send(requestId: string, claims = { ...DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE.canonicalClaims.customerA,
     permission_scopes: ['orders:read', 'inventory:read'] }) {

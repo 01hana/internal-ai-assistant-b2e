@@ -7,9 +7,11 @@ import { StructuredLoggerService } from '../../src/common/logger/structured-logg
 import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 import { LlmInputSanitizerService } from '../../src/permissions/llm-input-sanitizer.service';
 import * as observabilityMetadata from '../../src/observability/observability-metadata.helper';
+import { isolateIntegrationLlm, stubGroundedIntegrationAnswer } from '../support/isolated-integration-llm.helper';
 import {
   createIdentityHeaders,
   createUs1TestAppWithState,
+  parseSseResponse,
   Us1TestState
 } from '../support/us1-test-app.helper';
 
@@ -32,19 +34,28 @@ describe('Feature 008 transient ingress boundary', () => {
   describe('prohibited downstream surfaces', () => {
     let app: INestApplication;
     let state: Us1TestState;
+    let previousMode: string | undefined;
 
     beforeAll(async () => {
+      previousMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+      process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
       ({ app, state } = await createUs1TestAppWithState());
     });
 
     afterAll(async () => {
-      await app.close();
+      try { await app.close(); }
+      finally {
+        if (previousMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+        else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousMode;
+      }
     });
 
     it('keeps reference, native credentials, and raw Browser records out of persistence, audit, evidence, ToolCall, SSE, and public output', async () => {
       const reference = 'ccr_TRANSIENT_SENTINEL_8f4c3a91';
       const nativeCredential = 'sk-native-credential-sentinel-9e3c5a771234';
       const rawRecord = 'RAW_BROWSER_RECORD_SENTINEL_6dcb024f';
+      const isolated = isolateIntegrationLlm(app);
+      const stream = stubGroundedIntegrationAnswer(isolated.llm, '"status":"picking"', '訂單狀態為 picking。');
       const structuredLogWrite = jest.spyOn(StructuredLoggerService.prototype, 'write');
       const observabilityInput = jest.spyOn(observabilityMetadata, 'createRuntimeDecisionMetadata');
       const modelInputSanitizer = jest.spyOn(app.get(LlmInputSanitizerService), 'sanitize');
@@ -56,7 +67,7 @@ describe('Feature 008 transient ingress boundary', () => {
         .post('/api/v1/assistant/sessions/session-owned-001/messages')
         .set(createIdentityHeaders({ 'x-request-id': 'req-feature008-transient' }))
         .send({
-          message: '這張訂單目前狀態？',
+          message: '查詢訂單目前狀態 訂單號 SO-10001',
           pageContext: {
             connectorContextRef: reference,
             module: 'orders',
@@ -71,6 +82,14 @@ describe('Feature 008 transient ingress boundary', () => {
         });
 
       expect(response.status).toBe(200);
+      const events = parseSseResponse(response.text);
+      expect(events.filter((event) => event.event !== 'answer_delta').map((event) => event.event)).toEqual([
+        'tool_call_started', 'tool_call_completed', 'evidence_attached', 'final'
+      ]);
+      expect(events.filter((event) => event.event === 'answer_delta').map((event) => event.data.data.delta).join(''))
+        .toBe(events.at(-1)?.data.data.answer);
+      expect(state.toolCalls.at(-1)).toEqual(expect.objectContaining({ status: 'success' }));
+      expect(state.evidenceRefs.at(-1)).toEqual(expect.objectContaining({ sourceId: 'SO-10001' }));
       const persistedAndPublic = JSON.stringify({
         messages: state.messages,
         contextStates: state.contextStates,
@@ -80,6 +99,7 @@ describe('Feature 008 transient ingress boundary', () => {
         evidenceRefs: state.evidenceRefs,
         auditEvents: state.auditEvents,
         sseBuilds: state.orchestration.sseEventBuilds.mock.calls,
+        generationInputs: stream.mock.calls,
         responseText: response.text,
         responseBody: response.body
       });
@@ -108,6 +128,10 @@ describe('Feature 008 transient ingress boundary', () => {
       }
       expect(modelInputSanitizer).toHaveBeenCalled();
       expect(generateAnswer).not.toHaveBeenCalled();
+      expect(stream).toHaveBeenCalledTimes(1);
+      expect(isolated.providerGenerate).not.toHaveBeenCalled();
+      expect(isolated.providerStream).not.toHaveBeenCalled();
+      expect(isolated.outboundFetch).not.toHaveBeenCalled();
       expect(classifyIntent).not.toHaveBeenCalled();
       expect(summarize).not.toHaveBeenCalled();
 
@@ -117,6 +141,7 @@ describe('Feature 008 transient ingress boundary', () => {
       generateAnswer.mockRestore();
       classifyIntent.mockRestore();
       summarize.mockRestore();
+      jest.restoreAllMocks();
     });
   });
 });

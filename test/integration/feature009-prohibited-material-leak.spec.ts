@@ -7,7 +7,7 @@ import {
   parseSseResponse
 } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
-import { LlmExecutionService } from '../../src/llm/llm-execution.service';
+import { isolateIntegrationLlm, stubGroundedIntegrationAnswer } from '../support/isolated-integration-llm.helper';
 
 const CONNECTOR_CONTEXT_REF = `ccr_${'R'.repeat(43)}`;
 const SENTINELS = Object.freeze({
@@ -26,14 +26,13 @@ const SENTINELS = Object.freeze({
 
 describe('Feature 009 prohibited-material leak closeout', () => {
   it('keeps the transient connector reference out of persistence, Evidence, answer, SSE, and history', async () => {
-    const fixture = await createUs1TestAppWithState();
+    const previousMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
+    let fixture: Awaited<ReturnType<typeof createUs1TestAppWithState>> | undefined;
     try {
-      jest.spyOn(fixture.app.get(LlmExecutionService, { strict: false }), 'streamAnswer').mockImplementation(async function* (input) {
-        const citation = input.instructions?.split('allowedCitations=')[1]?.split(',')[0]?.trim();
-        if (!citation) throw new Error('TEST_APPROVED_CITATION_MISSING');
-        yield { type: 'text_delta', text: `核准證據支持此回答。[${citation}]` };
-        yield { type: 'completed', finishReason: 'stop', metadata: { provider: 'openai', model: 'test-model', fallbackUsed: false } };
-      });
+      fixture = await createUs1TestAppWithState();
+      const isolated = isolateIntegrationLlm(fixture.app);
+      const stream = stubGroundedIntegrationAnswer(isolated.llm, '"status":"picking"', '訂單狀態為 picking。');
       const headers = createAuthorizedInternalIdentityHeaders(DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE, {
         claims: { permission_scopes: ['orders:read'] },
         requestId: 'req-phase13-transient-reference'
@@ -49,13 +48,23 @@ describe('Feature 009 prohibited-material leak closeout', () => {
           }
         });
       expect(response.status).toBe(200);
-      expect(parseSseResponse(response.text).map(({ event }) => event)).toEqual([
-        'tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final'
+      const events = parseSseResponse(response.text);
+      expect(events.filter(({ event }) => event !== 'answer_delta').map(({ event }) => event)).toEqual([
+        'tool_call_started', 'tool_call_completed', 'evidence_attached', 'final'
       ]);
+      expect(events.filter(({ event }) => event === 'answer_delta').length).toBeGreaterThan(0);
+      expect(events.filter(({ event }) => event === 'answer_delta').map(({ data }) => data.data.delta).join(''))
+        .toBe(events.at(-1)?.data.data.answer);
+      expect(events.at(-1)?.data.data.answer).toContain('picking');
+      expect(stream).toHaveBeenCalledTimes(1);
       const history = await request(fixture.app.getHttpServer())
         .get('/api/v1/assistant/sessions/session-owned-001/messages')
         .set({ ...headers, 'x-request-id': 'req-phase13-history-reference-scan' });
       expect(history.status).toBe(200);
+      expect(history.body.data.messages).toEqual(expect.arrayContaining([
+        expect.objectContaining({ messageId: events.at(-1)?.data.messageId,
+          content: events.at(-1)?.data.data.answer })
+      ]));
 
       const serialized = JSON.stringify({
         response: response.text,
@@ -68,13 +77,20 @@ describe('Feature 009 prohibited-material leak closeout', () => {
         auditEvents: fixture.state.auditEvents,
         queryUnderstandingResults: fixture.state.queryUnderstandingResults,
         executionPlans: fixture.state.executionPlans,
+        generationInputs: stream.mock.calls,
         groundingChecks: fixture.state.groundingChecks,
         answerDecisions: fixture.state.answerDecisions,
         feedbackEvents: fixture.state.feedbackEvents
       });
       expect(serialized).not.toContain(CONNECTOR_CONTEXT_REF);
+      expect(isolated.providerGenerate).not.toHaveBeenCalled();
+      expect(isolated.providerStream).not.toHaveBeenCalled();
+      expect(isolated.outboundFetch).not.toHaveBeenCalled();
     } finally {
-      await fixture.app.close();
+      await fixture?.app.close();
+      jest.restoreAllMocks();
+      if (previousMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+      else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousMode;
     }
   });
 

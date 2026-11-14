@@ -10,6 +10,7 @@ import {
   Us1TestState
 } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
+import { isolateIntegrationLlm, stubGroundedIntegrationAnswer } from '../support/isolated-integration-llm.helper';
 
 type ReadPath = Readonly<{
   name: string;
@@ -17,6 +18,7 @@ type ReadPath = Readonly<{
   message: string;
   pageContext: Readonly<Record<string, unknown>>;
   toolKey: string;
+  capabilityKey: string;
   argument: Readonly<Record<string, string>>;
   permission: string;
   projectedField: string;
@@ -30,6 +32,7 @@ const READ_PATHS: readonly ReadPath[] = [
     message: '查詢訂單目前狀態 訂單號 SO-10001',
     pageContext: { module: 'orders', entityType: 'order', entityId: 'SO-10001', visibleColumns: ['status'] },
     toolKey: 'mock.orders.status.lookup',
+    capabilityKey: 'orders.status',
     argument: { entityId: 'SO-10001' }, permission: 'orders:read', projectedField: 'status', projectedValue: 'picking', sourceId: 'SO-10001'
   },
   {
@@ -37,6 +40,7 @@ const READ_PATHS: readonly ReadPath[] = [
     message: '請查 WO-20002 工單進度',
     pageContext: { module: 'work-orders', entityType: 'workOrder', entityId: 'WO-20002', visibleColumns: ['status', 'completedQuantity'] },
     toolKey: 'mock.work-orders.progress.lookup',
+    capabilityKey: 'work-orders.progress',
     argument: { entityId: 'WO-20002' }, permission: 'work-orders:read', projectedField: 'completedQuantity', projectedValue: 24, sourceId: 'WO-20002'
   },
   {
@@ -44,6 +48,7 @@ const READ_PATHS: readonly ReadPath[] = [
     message: '請查 SKU-DEMO-RED 庫存可用量',
     pageContext: { module: 'inventory', entityType: 'itemSku', entityId: 'SKU-DEMO-RED', visibleColumns: ['availableQuantity'] },
     toolKey: 'mock.inventory.availability.lookup',
+    capabilityKey: 'inventory.availability',
     argument: { entityId: 'SKU-DEMO-RED' }, permission: 'inventory:read', projectedField: 'availableQuantity', projectedValue: 36, sourceId: 'SKU-DEMO-RED'
   },
   {
@@ -51,21 +56,37 @@ const READ_PATHS: readonly ReadPath[] = [
     message: '請查這筆客戶歷史',
     pageContext: { module: 'customers', entityType: 'customer', entityId: 'BP-CUSTOMER-001', visibleColumns: ['relationshipStatus', 'openItemCount'] },
     toolKey: 'mock.business-partner.history.lookup',
+    capabilityKey: 'business-partners.history',
     argument: { entityId: 'BP-CUSTOMER-001' }, permission: 'business-partners:read', projectedField: 'relationshipStatus', projectedValue: 'active', sourceId: 'BP-CUSTOMER-001'
   }
 ];
 
 describe('Feature 011 pack-backed Tool equivalence', () => {
   let app: INestApplication | undefined;
+  let previousMode: string | undefined;
+
+  beforeEach(() => {
+    previousMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
+  });
 
   afterEach(async () => {
-    await app?.close();
-    app = undefined;
+    try {
+      await app?.close();
+      jest.restoreAllMocks();
+      app = undefined;
+    } finally {
+      if (previousMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+      else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousMode;
+    }
   });
 
   it.each(READ_PATHS)('preserves the complete $name Feature 008 path', async (path) => {
     const fixture = await createUs1TestAppWithState();
     app = fixture.app;
+    const isolated = isolateIntegrationLlm(app);
+    stubGroundedIntegrationAnswer(isolated.llm, JSON.stringify(path.projectedValue),
+      `${path.projectedField}: ${String(path.projectedValue)}。`);
     const state: Us1TestState = fixture.state;
     const adapter = app.get(MockConnectorAdapter);
     const registry = app.get(ToolRegistryService);
@@ -83,13 +104,17 @@ describe('Feature 011 pack-backed Tool equivalence', () => {
 
     expect(response.status).toBe(200);
     const events = parseSseResponse(response.text);
-    expect(events.map(({ event }) => event)).toEqual([
-      'tool_call_started', 'tool_call_completed', 'evidence_attached', 'answer_delta', 'final'
+    expect(events.filter(({ event }) => event !== 'answer_delta').map(({ event }) => event)).toEqual([
+      'tool_call_started', 'tool_call_completed', 'evidence_attached', 'final'
     ]);
+    expect(events.filter(({ event }) => event === 'answer_delta').length).toBeGreaterThan(0);
+    expect(events.filter(({ event }) => event === 'answer_delta').map(({ data }) => data.data.delta).join(''))
+      .toBe(events.at(-1)?.data.data.answer);
 
     const plan = state.executionPlans.at(-1);
-    expect(plan?.candidateTools).toEqual([{ key: path.toolKey, version: '1.0.0',
-      arguments: path.argument, reason: 'customer_capability_binding' }]);
+    expect(plan?.candidateTools).toEqual([expect.objectContaining({ key: path.toolKey, version: '1.0.0',
+      arguments: path.argument, capabilityKey: path.capabilityKey, bindingId: path.capabilityKey,
+      reason: 'customer_capability_binding' })]);
     expect(plan?.decision).toBe('continue');
 
     expect(execute).toHaveBeenCalledTimes(1);
@@ -116,5 +141,8 @@ describe('Feature 011 pack-backed Tool equivalence', () => {
     }));
     expect(state.answerDecisions.at(-1)).toEqual(expect.objectContaining({ status: 'answered' }));
     expect(events.at(-1)?.data?.data).toEqual(expect.objectContaining({ answerDecision: 'answered' }));
+    expect(isolated.providerGenerate).not.toHaveBeenCalled();
+    expect(isolated.providerStream).not.toHaveBeenCalled();
+    expect(isolated.outboundFetch).not.toHaveBeenCalled();
   });
 });

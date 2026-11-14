@@ -7,9 +7,11 @@ import { LlmExecutionService } from '../../src/llm/llm-execution.service';
 import { LlmInputSanitizerService } from '../../src/permissions/llm-input-sanitizer.service';
 import * as groundedAnswer from '../../src/assistant/runtime/grounded-answer-input.types';
 import * as observabilityMetadata from '../../src/observability/observability-metadata.helper';
+import { isolateIntegrationLlm, stubGroundedIntegrationAnswer } from '../support/isolated-integration-llm.helper';
 import {
   createIdentityHeaders,
   createUs1TestAppWithState,
+  parseSseResponse,
   Us1TestState
 } from '../support/us1-test-app.helper';
 
@@ -22,20 +24,30 @@ const SENTINELS = [RAW_RESULT, CUSTOMER_SECRET, INTERNAL_COST, CONNECTOR_CONTEXT
 describe('Feature 008 raw adapter result boundary', () => {
   let app: INestApplication;
   let state: Us1TestState;
+  let isolated: ReturnType<typeof isolateIntegrationLlm>;
+  let previousMode: string | undefined;
 
   beforeAll(async () => {
+    previousMode = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+    process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = 'false';
     ({ app, state } = await createUs1TestAppWithState());
   });
 
   afterAll(async () => {
-    await app.close();
+    try { await app.close(); }
+    finally {
+      if (previousMode === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
+      else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = previousMode;
+    }
   });
 
+  beforeEach(() => { isolated = isolateIntegrationLlm(app); });
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
   it('releases only projected facts and keeps denied raw values out of every downstream sink', async () => {
+    stubGroundedIntegrationAnswer(isolated.llm, '"status":"picking"', '訂單狀態為 picking。');
     jest.spyOn(MockConnectorAdapter.prototype, 'execute').mockResolvedValueOnce({
       toolKey: 'mock.orders.status.lookup',
       status: 'succeeded',
@@ -76,6 +88,14 @@ describe('Feature 008 raw adapter result boundary', () => {
     });
     expect(newEvidence).toHaveLength(1);
     expect(captures.groundedInput).toHaveBeenCalled();
+    expect(captures.streamAnswer).toHaveBeenCalledTimes(1);
+    const successEvents = parseSseResponse(response.text);
+    expect(successEvents.filter((event) => event.event !== 'answer_delta').map((event) => event.event)).toEqual([
+      'tool_call_started', 'tool_call_completed', 'evidence_attached', 'final'
+    ]);
+    expect(successEvents.filter((event) => event.event === 'answer_delta').map((event) => event.data.data.delta).join(''))
+      .toBe(successEvents.at(-1)?.data.data.answer);
+    expect(successEvents.at(-1)?.data.data.evidenceRefs).toEqual([newEvidence[0].id]);
 
     assertSentinelsAbsent({
       toolCalls: newToolCalls,
@@ -86,6 +106,7 @@ describe('Feature 008 raw adapter result boundary', () => {
       sanitizerInputs: captures.sanitizer.mock.calls,
       sanitizerOutputs: captures.sanitizer.mock.results.map((entry) => entry.value),
       groundedAnswerInputs: captures.groundedInput.mock.calls,
+      generationInputs: captures.streamAnswer.mock.calls,
       modelCalls: {
         generateAnswer: captures.generateAnswer.mock.calls,
         classifyIntent: captures.classifyIntent.mock.calls,
@@ -95,6 +116,9 @@ describe('Feature 008 raw adapter result boundary', () => {
       serializedSse: response.text,
       publicResponse: response.body
     });
+    expect(isolated.providerGenerate).not.toHaveBeenCalled();
+    expect(isolated.providerStream).not.toHaveBeenCalled();
+    expect(isolated.outboundFetch).not.toHaveBeenCalled();
   });
 
   it('fails the started ToolCall atomically when malformed raw output cannot be projected', async () => {
@@ -127,6 +151,13 @@ describe('Feature 008 raw adapter result boundary', () => {
     }));
     expect(newEvidence).toHaveLength(0);
     expect(captures.groundedInput).not.toHaveBeenCalled();
+    expect(captures.streamAnswer).not.toHaveBeenCalled();
+    const failureEvents = parseSseResponse(response.text);
+    expect(failureEvents.map((event) => event.event)).not.toContain('evidence_attached');
+    expect(failureEvents.at(-1)?.event).toBe('final');
+    expect(failureEvents.at(-1)?.data.data).toEqual(expect.objectContaining({
+      answerDecision: 'no_answer', evidenceRefs: []
+    }));
 
     assertSentinelsAbsent({
       toolCalls: newToolCalls,
@@ -137,6 +168,7 @@ describe('Feature 008 raw adapter result boundary', () => {
       sanitizerInputs: captures.sanitizer.mock.calls,
       sanitizerOutputs: captures.sanitizer.mock.results.map((entry) => entry.value),
       groundedAnswerInputs: captures.groundedInput.mock.calls,
+      generationInputs: captures.streamAnswer.mock.calls,
       modelCalls: {
         generateAnswer: captures.generateAnswer.mock.calls,
         classifyIntent: captures.classifyIntent.mock.calls,
@@ -146,6 +178,9 @@ describe('Feature 008 raw adapter result boundary', () => {
       serializedSse: response.text,
       publicResponse: response.body
     });
+    expect(isolated.providerGenerate).not.toHaveBeenCalled();
+    expect(isolated.providerStream).not.toHaveBeenCalled();
+    expect(isolated.outboundFetch).not.toHaveBeenCalled();
   });
 });
 
@@ -156,6 +191,7 @@ function captureNegativeSurfaces(app: INestApplication) {
     observability: jest.spyOn(observabilityMetadata, 'createRuntimeDecisionMetadata'),
     sanitizer: jest.spyOn(app.get(LlmInputSanitizerService), 'sanitize'),
     groundedInput: jest.spyOn(groundedAnswer, 'createGroundedAnswerInput'),
+    streamAnswer: jest.spyOn(llmExecution, 'streamAnswer'),
     generateAnswer: jest.spyOn(llmExecution, 'generateAnswer'),
     classifyIntent: jest.spyOn(llmExecution, 'classifyIntent'),
     summarize: jest.spyOn(llmExecution, 'summarize')
@@ -167,7 +203,7 @@ async function sendOrderStatusRequest(app: INestApplication, requestId: string) 
     .post('/api/v1/assistant/sessions/session-owned-001/messages')
     .set(createIdentityHeaders({ 'x-request-id': requestId }))
     .send({
-      message: '這張訂單目前狀態？',
+      message: '查詢訂單目前狀態 訂單號 SO-10001',
       pageContext: {
         connectorContextRef: CONNECTOR_CONTEXT,
         module: 'orders',

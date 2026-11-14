@@ -9,9 +9,13 @@ const HASHES = Object.freeze({
   feature009Design: 'bbec3cd75fa7fa00cb298d1fa4c7ddd713d3dea870924b4c0a1a625986ada6fb',
   feature009Plan: '00fc5b55351f980deb063d07de555dc88213b5acf71b7e30855cade067f875c1',
   feature009Tasks: 'ebb7089a7d2af47cdcb7e7926d3f8b0376de906a6d0c7d43c7520710d804087a',
-  feature009Manifest: '1d1747eb11b82ae2179cb78eca7d5707fd2dcb6a4a604dbb37f373dd05825352',
-  prismaSchema: 'e14673993010d994259e6a1d611c02f22b217752890abfc8b63cc812ea38d733',
-  prismaMigrations: '8a93d1082c2696f8b50af5adbe4e0128a8f984894d94f6d30e02f66d6b2c58ba',
+  // c676875: the Shinmone wire response is PascalCase; shinmone-manifest.spec.ts
+  // checks exact extraction, bounded output, and rejection of malformed responses.
+  feature009Manifest: '44ee5c55951221a206587d12bd15c92b3d5a4ae346eafc9c442de85bb2e01542',
+  // 91f07b1: sessions gained integration ownership and an exact-scope index.
+  prismaSchema: 'f28b405d52d3e8c8733e29e61dc266b688b548c11558835826a753ba975ce1f1',
+  // 91f07b1: two additive migrations keep legacy NULL ownership and reject blank IDs.
+  prismaMigrations: '20758d12be2f087b6e97f63bdf393aebcd207cfe8e11db012e5a802400848489',
   feature010Spec: '3c33d6737768d59d6b62f907d77be06fea2b8b6c145392527d473019436c9346',
   feature010Design: 'c060bcf6a9e305fbecc75697410642f261ded88eb9230ad9d36e5b9b5c02500f',
   feature010Plan: 'c6d151ca35e53655fefb2cfde53879208cfb3e3642d0b94df68b9b74d49835e5',
@@ -20,9 +24,13 @@ const HASHES = Object.freeze({
   sseEventTypes: '9a58004960347cf40a55fbd443da356377fa0c61c87329c0a531ffca78c5fb06',
   assistantSseTypes: 'e3020a6884e6381a766ff61fa094dd05f135c65020e3b7a0a6a89c69f62d2f9c',
   historyTypes: '06acd4f1706779e861e0b916022abf45c1732c7ee1a189731db45a991f1f5e44',
-  packageJson: '970e99f6780a56eeb6e37931d94c3eeb3084bd8cbe5f9decf49d4ca6e710bf9f',
+  // B4 dependency security remediation: Prisma 7.10.1 and audited transitive
+  // overrides; Prisma CLI stays available for production migrations.
+  // Scripts, compiled entrypoint, and public boundaries are unchanged.
+  packageJson: '077923c924a1b6b87df82defaf775bcae8fdca2390c54a4722390c341f304c6f',
   activeFeature: '718abaacae7e402d4d44998e680abde71aaa88fa21f72c481f4078fee4249bfd',
-  agentInstructions: 'e2989d23443431394adaa0008e235af2a57133961300eaf630b387ec91f556dd'
+  // af98077 / 965a23f: AGENTS.md gained the customers/<customer>/ placement rules.
+  agentInstructions: 'f80f2b3a929ea52efbc27eaaf3dd7031c443eb7f616ae3b5bc2ed411690e96da'
 });
 
 describe('Feature 010 permanent scope boundary (T002)', () => {
@@ -50,6 +58,17 @@ describe('Feature 010 permanent scope boundary (T002)', () => {
   it('preserves schema, migrations, and frozen Feature 010 planning', () => {
     expect(hash('prisma/schema.prisma')).toBe(HASHES.prismaSchema);
     expect(treeHash(['prisma/migrations'])).toBe(HASHES.prismaMigrations);
+    const schema = text('prisma/schema.prisma');
+    const ownership = text('prisma/migrations/20261028000000_assistant_session_integration_ownership/migration.sql');
+    const whitespace = text('prisma/migrations/20261029000000_assistant_session_integration_whitespace_check/migration.sql');
+    expect(schema).toMatch(/model AssistantSession \{[\s\S]*?integrationId\s+String\?/);
+    expect(schema).toContain('@@index([customerId, integrationId, organizationId, hostApp, actorId], map: "AssistantSession_scope_integration_idx")');
+    expect(ownership).toContain('ADD COLUMN "integrationId" TEXT');
+    expect(ownership.split('\n').filter((line) => !line.trimStart().startsWith('--')).join('\n'))
+      .not.toMatch(/\b(?:UPDATE|DEFAULT)\b/i);
+    expect(ownership).toContain('"customerId", "integrationId", "organizationId", "hostApp", "actorId"');
+    expect(whitespace).toContain('"integrationId" IS NULL');
+    expect(whitespace).toContain("~ '[^[:space:]]'");
     expect(hash('specs/010-conversational-context-grounded-retrieval/spec.md')).toBe(HASHES.feature010Spec);
     expect(hash('specs/010-conversational-context-grounded-retrieval/design.md')).toBe(HASHES.feature010Design);
     expect(hash('specs/010-conversational-context-grounded-retrieval/plan.md')).toBe(HASHES.feature010Plan);
@@ -109,7 +128,7 @@ function treeHash(roots: readonly string[]): string {
 
 function listFiles(path: string): string[] {
   return statSync(path).isDirectory()
-    ? readdirSync(path).flatMap((entry) => listFiles(join(path, entry)))
+    ? readdirSync(path).filter((entry) => entry !== '.DS_Store').flatMap((entry) => listFiles(join(path, entry)))
     : [path];
 }
 
