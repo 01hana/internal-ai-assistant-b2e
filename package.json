@@ -40,13 +40,14 @@
     "@nestjs/core": "^11.1.26",
     "@nestjs/platform-express": "^11.1.26",
     "@nestjs/swagger": "^11.4.4",
-    "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^17.4.2",
     "jose": "^5.10.0",
     "openai": "^6.43.0",
+    "prisma": "^7.10.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "swagger-ui-express": "^5.0.1"
@@ -62,7 +63,6 @@
     "eslint": "^9.39.4",
     "globals": "^16.5.0",
     "jest": "^30.4.2",
-    "prisma": "^7.8.0",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.11",
     "ts-loader": "^9.6.0",
@@ -70,5 +70,13 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.57.0"
+  },
+  "overrides": {
+    "multer": "2.5.0",
+    "js-yaml": "4.3.2",
+    "body-parser": "2.4.0",
+    "proxy-addr": "2.0.8",
+    "qs": "6.16.1",
+    "fast-uri": "3.1.9"
   }
 }
