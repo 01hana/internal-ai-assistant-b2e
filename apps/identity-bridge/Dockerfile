@@ -25,6 +25,7 @@ COPY --from=runtime-dependencies --chown=node:node /repo/apps/identity-bridge/no
 COPY --from=runtime-dependencies --chown=node:node /repo/packages/connector-runtime-contract /repo/packages/connector-runtime-contract
 COPY --from=build --chown=node:node /repo/apps/identity-bridge/dist ./dist
 COPY --chown=node:node apps/identity-bridge/package.json ./package.json
+COPY --chown=node:node apps/identity-bridge/package-lock.json ./package-lock.json
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=12 \

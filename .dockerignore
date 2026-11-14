@@ -1,5 +1,8 @@
 node_modules/
 dist/
+src/generated/
+apps/gateway/src/generated/
+packages/*/dist/
 build/
 coverage/
 .git/
@@ -10,6 +13,11 @@ coverage/
 .env.*
 !.env.example
 .local-secrets/
+.local-state/
+.gateway-local-keys/
+deploy/demo/.delivery-out/
+deploy/demo/assistant-backend-images-*.tar
+deploy/demo/assistant-backend-images-*.tar.sha256
 apps/identity-bridge/env/local.env
 **/*.pem
 **/*.key
