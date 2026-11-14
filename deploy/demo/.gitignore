@@ -1,0 +1,15 @@
+assistant-backend.tar
+assistant-backend.tar.sha256
+host-report.txt
+
+# 部署過程產出（log、主機與 nginx 傾印），不進版控
+deploy-log-*.txt
+*-log.txt
+nginx-report.txt
+nginx-idx.txt
+
+# 交付前由 prepare-delivery.sh 從 customers/shinmone 產生，不進版控
+provision/tool-catalog.json
+
+# 特定主機的 Nginx UI 設定片段（含上游實際位址），記在部署 runbook，不進版控
+nginx-ui-*.conf

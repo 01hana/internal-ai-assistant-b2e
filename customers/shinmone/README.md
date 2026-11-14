@@ -6,7 +6,7 @@
 
 | 環境 | customerId | integrationId | hostApp |
 | --- | --- | --- | --- |
-| Demo（192.168.10.110） | `customer-shinmone` | `shinmone-scm-assistant` | `shinmone-scm` |
+| Demo（公司 Demo 主機） | `customer-shinmone` | `shinmone-scm-assistant` | `shinmone-scm` |
 | 本機開發 | `customer-shinmone-scm-local` | `shinmone-scm-assistant-local` | `shinmone-scm` |
 
 目前上線能力：Dashboard KPIStats 六指標統計（`/Dashboard/KPIStats`，期間 today / thisWeek / thisMonth），唯讀，需 `menu:SCM_DASHBOARD:read`。
@@ -17,6 +17,7 @@
 | --- | --- |
 | `capability-packs/shinmone-scm-local/1.0.0.json` | 本機開發用 pack（`work-orders.count`） |
 | `capability-packs/shinmone-scm-kpistats-demo/1.0.0.json` | 本機 KPIStats Demo pack |
+| `capability-packs/shinmone-scm-kpistats/1.0.0.json` | 正式部署用 Active pack（與 Demo pack 能力相同，使用正式 customerId / integrationId）；交付時上傳到主機的 `DEMO_CAPABILITY_PACK_DIR/shinmone-scm-kpistats.json` |
 | `docs/` | onboarding 紀錄：業務語意目錄、審核批次、信任邊界驗證、`work-orders.count` 驗收 |
 | `query-scope/company-scope.local.v1.json` | 本機公司範圍規則：`work-orders.count` 只允許查詢登入公司 |
 | `query-scope/company-scope.demo.v1.json` | Demo 公司範圍規則：KPIStats 三個期間只允許查詢登入公司（**已準備，未啟用**） |
@@ -33,7 +34,7 @@
 | --- | --- |
 | `apps/customer-connector-runtime/integrations/shinmone/` | Connector 程式與 manifest；`apps/customer-connector-runtime/Dockerfile` 的 CMD 指向 `dist/integrations/shinmone/production.main.js` |
 | `apps/customer-connector-runtime/test/integrations/shinmone-*.spec.ts` | 測試上述 Connector 程式，跟程式一起搬 |
-| `deploy/demo/`（含 `production-pack/`、`provision/`） | Demo 部署腳本與正式 pack，正用於 192.168.10.110 |
+| `deploy/demo/`（含 `provision/`） | Demo 部署腳本，正用於公司 Demo 主機。正式 pack 已移到 `capability-packs/shinmone-scm-kpistats/`；`provision/tool-catalog.json` 由 `deploy/demo/prepare-delivery.sh` 產生 |
 | `dev/connector-local/`、`dev/local-assistant/` | 本機開發工具 |
 | `scripts/seed.ts` | 新模 Tool 定義（產品端的全域 Tool 註冊） |
 | Core 測試使用新模 fixture：`test/unit/connectors-module.spec.ts`、`test/unit/llm-tool-selection.service.spec.ts`、`test/unit/query-scope-validation.service.spec.ts`、`test/integration/feature011-*.spec.ts`、`test/integration/llm-tool-selection.live.spec.ts`、`test/eval/feature011-capability-resolution.eval.spec.ts` | 這些是 Core 測試，但以新模 pack 當測試資料；之後應改用合成客戶 fixture |

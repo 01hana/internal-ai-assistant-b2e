@@ -1,0 +1,13 @@
+# Use with compose.yaml only after loading the reviewed linux/amd64 images.
+# This removes source-build contexts; it does not override image tags or trust.
+services:
+  migrate:
+    build: !reset null
+  core:
+    build: !reset null
+  gateway:
+    build: !reset null
+  bridge:
+    build: !reset null
+  connector:
+    build: !reset null

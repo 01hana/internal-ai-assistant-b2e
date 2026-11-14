@@ -1,0 +1,190 @@
+name: shinmone-assistant-demo
+
+x-logs: &logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: ${DEMO_POSTGRES_IMAGE:?Provide an approved PostgreSQL 16 image reference}
+    platform: linux/amd64
+    environment:
+      POSTGRES_USER: ${DEMO_POSTGRES_USER:?}
+      POSTGRES_DB: ${DEMO_POSTGRES_DB:?}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+    logging: *logs
+
+  migrate:
+    image: internal-ai-assistant-core:${DEMO_IMAGE_TAG:?Set an immutable build tag}
+    platform: linux/amd64
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    env_file: ${DEMO_CONFIG_DIR:?Set an absolute external config directory}/database.env
+    command: [npm, run, prisma:deploy]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+    restart: "no"
+    logging: *logs
+
+  connector:
+    image: assistant-shinmone-runtime:${DEMO_IMAGE_TAG:?}-amd64
+    platform: linux/amd64
+    build:
+      context: ../..
+      dockerfile: apps/customer-connector-runtime/Dockerfile
+    env_file: ${DEMO_CONFIG_DIR:?}/connector.env
+    environment:
+      NODE_ENV: production
+      PORT: "3100"
+      NODE_EXTRA_CA_CERTS: /run/secrets/trusted_ca
+      SHINMONE_RUNTIME_TOOL_MODE: kpistats-demo
+      CONNECTOR_RUNTIME_PROCESS_ROLE: single-replica
+    secrets: [trusted_ca]
+    networks: [backend, egress]
+    restart: unless-stopped
+    logging: *logs
+
+  connector-tls:
+    image: ${DEMO_CADDY_IMAGE:?Provide an approved Caddy image reference}
+    platform: linux/amd64
+    environment:
+      CONNECTOR_TLS_HOST: ${DEMO_CONNECTOR_TLS_HOST:?Set the certificate DNS name}
+    volumes:
+      - ./connector.Caddyfile:/etc/caddy/Caddyfile:ro
+    secrets: [connector_tls_cert, connector_tls_key]
+    depends_on:
+      connector:
+        condition: service_healthy
+    networks:
+      backend:
+        aliases:
+          - ${DEMO_CONNECTOR_TLS_HOST:?}
+    healthcheck:
+      test: [CMD, caddy, validate, --config, /etc/caddy/Caddyfile]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    restart: unless-stopped
+    logging: *logs
+
+  bridge:
+    image: internal-ai-assistant-identity-bridge:${DEMO_IMAGE_TAG:?}-amd64
+    platform: linux/amd64
+    build:
+      context: ../..
+      dockerfile: apps/identity-bridge/Dockerfile
+    env_file: ${DEMO_CONFIG_DIR:?}/bridge.env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      NODE_EXTRA_CA_CERTS: /run/secrets/trusted_ca
+    secrets: [trusted_ca, bridge_signing_key, bridge_binding_key]
+    ports:
+      - "127.0.0.1:${DEMO_BRIDGE_HOST_PORT:?Set an approved loopback port}:3000"
+    depends_on:
+      connector-tls:
+        condition: service_healthy
+    networks: [backend, egress, ingress]
+    restart: unless-stopped
+    logging: *logs
+
+  gateway:
+    image: internal-ai-assistant-gateway:${DEMO_IMAGE_TAG:?}-amd64
+    platform: linux/amd64
+    build:
+      context: ../..
+      dockerfile: apps/gateway/Dockerfile
+    env_file: ${DEMO_CONFIG_DIR:?}/gateway.env
+    environment:
+      NODE_ENV: production
+      GATEWAY_PORT: "4000"
+      GATEWAY_LOCAL_SIGNING_BOOTSTRAP_ENABLED: "false"
+      NODE_EXTRA_CA_CERTS: /run/secrets/trusted_ca
+    secrets: [trusted_ca, gateway_signing_key]
+    ports:
+      - "127.0.0.1:${DEMO_GATEWAY_HOST_PORT:?Set an approved loopback port}:4000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      bridge:
+        condition: service_healthy
+    networks: [backend, egress, ingress]
+    restart: unless-stopped
+    logging: *logs
+
+  core:
+    image: internal-ai-assistant-core:${DEMO_IMAGE_TAG:?}
+    platform: linux/amd64
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    env_file: ${DEMO_CONFIG_DIR:?}/core.env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      ASSISTANT_LLM_TOOL_SELECTION_ENABLED: "true"
+      NODE_EXTRA_CA_CERTS: /run/secrets/trusted_ca
+    secrets: [trusted_ca, core_connector_key]
+    volumes:
+      - ${DEMO_CAPABILITY_PACK_DIR:?Set an approved pack directory}:/app/customer-capability-packs:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      gateway:
+        condition: service_healthy
+      connector-tls:
+        condition: service_healthy
+    networks: [backend, egress]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/v1/readiness').then(r=>r.json()).then(b=>{if((b.data??b).status!=='healthy')process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+    restart: unless-stopped
+    logging: *logs
+
+networks:
+  backend:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${DEMO_BACKEND_SUBNET:?Choose a nonconflicting private subnet}
+  egress: {}
+  ingress: {}
+
+volumes:
+  postgres-data: {}
+
+secrets:
+  postgres_password:
+    file: ${DEMO_SECRET_DIR:?Set an absolute external secret directory}/postgres-password
+  trusted_ca:
+    file: ${DEMO_SECRET_DIR:?}/trusted-ca.pem
+  gateway_signing_key:
+    file: ${DEMO_SECRET_DIR:?}/gateway-signing-key.pem
+  bridge_signing_key:
+    file: ${DEMO_SECRET_DIR:?}/bridge-signing-key.pem
+  bridge_binding_key:
+    file: ${DEMO_SECRET_DIR:?}/bridge-binding-key.pem
+  core_connector_key:
+    file: ${DEMO_SECRET_DIR:?}/core-connector-key.pem
+  connector_tls_cert:
+    file: ${DEMO_SECRET_DIR:?}/connector-tls.crt
+  connector_tls_key:
+    file: ${DEMO_SECRET_DIR:?}/connector-tls.key

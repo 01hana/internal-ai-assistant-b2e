@@ -3,7 +3,7 @@
   "policyId": "shinmone-current-company-demo",
   "kind": "CURRENT_COMPANY_ONLY",
   "locale": "zh-TW",
-  "description": "新模 Demo（192.168.10.110）：Dashboard KPIStats 三個期間只允許查詢登入公司。scopeAnchorTerms 新增的 KPIStats 指標詞尚待業務確認（AI_INFERRED）。未啟用：需設定 ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON。",
+  "description": "新模 Demo（公司 Demo 主機）：Dashboard KPIStats 三個期間只允許查詢登入公司。scopeAnchorTerms 新增的 KPIStats 指標詞尚待業務確認（AI_INFERRED）。未啟用：需設定 ASSISTANT_QUERY_SCOPE_POLICY_PATHS_JSON。",
   "vocabulary": {
     "currentCompanyPrefixes": [
       "本",

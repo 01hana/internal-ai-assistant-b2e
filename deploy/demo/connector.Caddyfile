@@ -1,0 +1,4 @@
+https://{$CONNECTOR_TLS_HOST}:3443 {
+  tls /run/secrets/connector_tls_cert /run/secrets/connector_tls_key
+  reverse_proxy connector:3100
+}

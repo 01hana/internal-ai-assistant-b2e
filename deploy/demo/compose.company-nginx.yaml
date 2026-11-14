@@ -1,0 +1,22 @@
+# 公開入口是跑在 Docker 裡的反向代理（例如 Nginx UI）的主機專用：
+# 它不在主機網路，連不到 127.0.0.1 上的 port。
+# 這個 overlay 讓 Gateway 與 Bridge 額外加入 Nginx UI 所在的 Docker 網路，
+# Nginx UI 就能用固定的別名轉發，不需要把任何 port 開到 0.0.0.0。
+#
+# Nginx UI 的 upstream：
+#   /api/v1/assistant/**            -> http://ai-assistant-gateway:4000
+#   /assistant-identity/**          -> http://ai-assistant-bridge:3000/  （去掉 /assistant-identity 前綴）
+services:
+  gateway:
+    networks:
+      company-proxy:
+        aliases: [ai-assistant-gateway]
+  bridge:
+    networks:
+      company-proxy:
+        aliases: [ai-assistant-bridge]
+
+networks:
+  company-proxy:
+    external: true
+    name: ${DEMO_COMPANY_PROXY_NETWORK:?Set the Docker network of the company reverse proxy}
