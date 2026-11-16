@@ -9,6 +9,7 @@
 #   ./deploy.sh db         <compose.env>                 # 啟動 PostgreSQL 並執行 migration
 #   ./deploy.sh edge       <compose.env>                 # 啟動 connector、connector-tls、bridge
 #   ./deploy.sh provision  <compose.env>                 # 先唯讀檢查，再建立 Customer、TrustProfile、簽章金鑰、工具政策
+#   ./deploy.sh experience <compose.env>                 # 先唯讀檢查，再寫入並啟用 Assistant 體驗設定（開場、Quick Reply、延伸建議）
 #   ./deploy.sh app        <compose.env>                 # 啟動 gateway → 啟用簽章金鑰 → 啟動 core
 #   ./deploy.sh status     <compose.env>                 # 查看本專案容器狀態與最近日誌
 #   ./deploy.sh stop       <compose.env>                 # 只停止本專案容器，保留資料與日誌
@@ -22,7 +23,7 @@ die()  { echo "✗ $*" >&2; exit 1; }
 ok()   { echo "✓ $*"; }
 warn() { echo "! $*"; }
 
-[ -n "$CMD" ] && [ -n "$ENV_FILE" ] || { sed -n '2,15p' "$0"; exit 1; }
+[ -n "$CMD" ] && [ -n "$ENV_FILE" ] || { sed -n '2,16p' "$0"; exit 1; }
 [ -f "$ENV_FILE" ] || die "找不到 compose.env：$ENV_FILE"
 ENV_FILE="$(cd "$(dirname "$ENV_FILE")" && pwd)/$(basename "$ENV_FILE")"
 
@@ -59,6 +60,15 @@ provision() { # check | prepare | activate-key
   plan="$(python3 -c 'import json,sys;print(json.dumps(json.load(open(sys.argv[1])),separators=(",",":")))' "$plan_file")"
   dc run --rm --no-deps -T -v "$DIR/provision:/provision:ro" -e PROVISION_PLAN_JSON="$plan" \
     gateway node /provision/provision.cjs "$1"
+}
+
+experience() { # check | write
+  local file="$DIR/provision/assistant-experience.json"
+  [ -s "$file" ] || die "找不到 $file，請在開發機執行 deploy/demo/prepare-delivery.sh 後再交付"
+  local args=(--file /provision/assistant-experience.json); [ "$1" = check ] && args+=(--check)
+  # 在 Core image 內執行：以 core.env 的 DATABASE_URL 與已掛載的 Active Pack 驗證每個選項宣告的能力與參數
+  dc run --rm --no-deps -T -v "$DIR/provision:/provision:ro" \
+    core node dist/src/assistant-experience/provision-assistant-experience.cli.js "${args[@]}"
 }
 
 check_images() {
@@ -172,6 +182,11 @@ case "$CMD" in
     check_images
     echo "== 唯讀檢查"; provision check || die "檢查失敗，未寫入任何資料"
     echo; echo "== 寫入"; provision prepare ;;
+  experience)
+    check_images
+    echo "== 唯讀檢查"; experience check || die "檢查失敗，未寫入任何資料"
+    echo; echo "== 寫入並啟用"; experience write
+    echo "已在執行中的 Core 會在下一次讀取時使用新設定；不需要重啟。" ;;
   app)
     check_images
     dc up -d --pull never --no-build --no-deps gateway

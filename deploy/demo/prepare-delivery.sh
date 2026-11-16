@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 交付前在開發機（repo 根目錄或任何位置）執行：從 customers/shinmone 產生部署需要、但不進版控的檔案。
 # - provision/tool-catalog.json：provision.cjs 使用的 Tool 定義，來源是 Shinmone 的 tool catalog
+# - provision/assistant-experience.json：deploy.sh experience 使用的體驗設定（開場、Quick Reply、延伸建議）
 # 正式 Active Pack 請另外上傳：customers/shinmone/capability-packs/shinmone-scm-kpistats/1.0.0.json
 #   → 主機上的 $DEMO_CAPABILITY_PACK_DIR/shinmone-scm-kpistats.json
 set -euo pipefail
@@ -16,4 +17,8 @@ with open(out, "w", encoding="utf-8") as f:
     json.dump({"source": rel, "tools": tools}, f, ensure_ascii=False, indent=2); f.write("\n")
 print(f"✓ provision/tool-catalog.json（{len(tools)} 個 Tool，來源 {rel}）")
 PY
+EXPERIENCE="customers/shinmone/assistant-experience/1.0.0.json"
+[ -s "$ROOT/$EXPERIENCE" ] || { echo "✗ 找不到 $EXPERIENCE" >&2; exit 1; }
+cp "$ROOT/$EXPERIENCE" "$DIR/provision/assistant-experience.json"
+echo "✓ provision/assistant-experience.json（來源 $EXPERIENCE）"
 echo "· 記得上傳 Active Pack：customers/shinmone/capability-packs/shinmone-scm-kpistats/1.0.0.json"

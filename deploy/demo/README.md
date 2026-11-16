@@ -53,6 +53,18 @@ docker compose --env-file /approved/path/compose.env -f deploy/demo/compose.yaml
 docker compose --env-file /approved/path/compose.env -f deploy/demo/compose.yaml -f deploy/demo/compose.images.yaml up -d --pull never --no-build
 ```
 
+## Assistant 體驗設定（Feature 013）
+
+開場問候、Quick Reply 與延伸建議來自 `customers/<customer>/assistant-experience/<version>.json`，存在資料庫的 `AssistantExperienceConfig`（有版本，同一 Integration 只有一筆 active）。
+
+1. 開發機執行 `deploy/demo/prepare-delivery.sh`，產生 `provision/assistant-experience.json`（不進版控）並一起交付。
+2. 主機在 `db`（含 Feature 013 migration）與 `provision` 之後執行 `./deploy.sh experience <compose.env>`：先 `--check` 唯讀驗證（schema、Customer／Integration／HostApp、每個選項宣告的能力與參數都能解析到 Active Pack、語意審核為 `HUMAN_VERIFIED`），通過才寫入並啟用；失敗不寫入任何資料。
+3. 之後修改文案或選項：提高 `configVersion` 後重跑步驟 1、2。Core 每次請求都讀 active 設定，不需要重啟。同版本、同內容重跑不會新增紀錄；內容改了卻沒提高版本會被拒絕（`VERSION_CONFLICT`）。要退回舊版，重新交付舊版檔案再跑一次即可。
+
+沒有 active 設定時，開場回 Core 預設問候、`quickReplies` 為空，其他功能不受影響。
+
+**升級既有部署的順序：Core 先於 Gateway。** 新 Gateway 會轉發 `choiceId`、Session 列表與封存；若 Core 還是舊版，這些請求會被拒絕。順序：`load` → `db`（migration）→ `experience` → 重啟 `core` 並等 healthy → 重啟 `gateway`。首次部署照原本的 `app` 順序即可（兩者同時是新版）。
+
 ## 交付目錄與受控啟停
 
 將 `compose.yaml`、`compose.images.yaml`、`connector.Caddyfile`、Nginx Route 參考及 `config/*.example` 放在公司核准目錄；正式 `config/`、`secrets/`、Active Pack 使用 Operator 管理的絕對路徑，不放進 Git。可選 `edge.conf` 只在獨立核准的 Edge 場景使用。Compose 相對 Dockerfile/Volume 路徑均依部署目錄規劃查核；Image-only 仍需 `connector.Caddyfile`。

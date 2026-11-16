@@ -1,7 +1,7 @@
 # Tasks: Feature 013 — Assistant Conversation Experience
 
 **Input**: 已核准的 `spec.md`（2026-11-15）、`design.md` 與 `plan.md`
-**Status**: Phase 0–6 完成（Gate 6 PASS）；第一個未執行的 task 為 T051
+**Status**: Phase 0–7 完成（Gate 7 PASS）；後端可合併回 main，前端串接另行進行
 
 ## 格式、相依與停止規則
 
@@ -220,8 +220,32 @@ FEATURE013_FIRST_UNEXECUTED_TASK=T051
 
 ## Phase 7 — 收尾與驗收
 
-- [ ] T051 新增 `test/integration/feature013-acceptance.spec.ts`：兩位權限不同的使用者完整走過 開場 → 點 Quick Reply → 延伸建議 → 能力總覽 → 列表 → 封存，驗證 SC-001（看得到的都能執行、看不到的都不能執行）。
-- [ ] T052 `customers/shinmone/test/integration/shinmone-assistant-experience.spec.ts`：以 Shinmone 合成資料驗證設定檔在其 pack 上的 opening、建議與權限篩選（Shinmone 文案仍為 `NEEDS_HUMAN_REVIEW`）。
-- [ ] T053 Core 架構檢查：`src/`、`test/`（客戶以外）不含客戶名稱與客戶詞彙（以既有 `shinmone-reference-boundary.guard` 的方式擴充檢查範圍到 `src/assistant-experience/`）。
-- [ ] T054 文件：更新 `docs/` 架構文件（新增體驗設定、可用能力服務、新端點）；`deploy/demo/README.md` 與部署 runbook 加入 `assistant-experience:provision` 步驟與「Core 先於 Gateway 部署」；`specs/README.md` 將 013 標為完成。
-- [ ] T055 **Gate 7**：使用者執行全套測試（`--json` 輸出）全部通過；typecheck 通過；SC-001～SC-006 對照表記錄於本檔。記錄 `FEATURE013_GATE_7=PASS`，Feature 013 可合併回 main。
+- [x] T051 新增 `test/integration/feature013-acceptance.spec.ts`：兩位權限不同的使用者完整走過 開場 → 點 Quick Reply → 延伸建議 → 能力總覽 → 列表 → 封存，驗證 SC-001（看得到的都能執行、看不到的都不能執行）。
+- [x] T052 `customers/shinmone/test/integration/shinmone-assistant-experience.spec.ts`：以 Shinmone 合成資料驗證設定檔在其 pack 上的 opening、建議與權限篩選（Shinmone 文案仍為 `NEEDS_HUMAN_REVIEW`）。
+- [x] T053 Core 架構檢查：`src/`、`test/`（客戶以外）不含客戶名稱與客戶詞彙（以既有 `shinmone-reference-boundary.guard` 的方式擴充檢查範圍到 `src/assistant-experience/`）。
+- [x] T054 文件：更新 `docs/` 架構文件（新增體驗設定、可用能力服務、新端點）；`deploy/demo/README.md` 與部署 runbook 加入 `assistant-experience:provision` 步驟與「Core 先於 Gateway 部署」；`specs/README.md` 將 013 標為完成。
+- [x] T055 **Gate 7**：使用者執行全套測試（`--json` 輸出）全部通過；typecheck 通過；SC-001～SC-006 對照表記錄於本檔。記錄 `FEATURE013_GATE_7=PASS`，Feature 013 可合併回 main。
+
+**Phase 7 執行證據（2026-11-16）**：
+
+- T051：`test/integration/feature013-acceptance.spec.ts`：兩位權限不同的使用者（只有 `orders:read`；`orders:read` + `work-orders:read`）。開場看到的每個選項點了都能執行（`RESOLVED`／`DECLARED_CHOICE`），沒看到的都回 404 且不執行；完整走過 Quick Reply → 延伸建議 → 能力總覽 → 列表（標題來自第一則訊息）→ 封存，另一位使用者看不到、不能送訊息、不能封存。
+- T052：`customers/shinmone/test/integration/shinmone-assistant-experience.spec.ts`：以正式 Active Pack 與合成使用者驗證 Shinmone 設定：Dashboard 開場 4 個選項、其他頁只有 overview、無 `menu:SCM_DASHBOARD:read` 時全部不出現；三個期間的延伸建議；顯示的選項都能解析、無權限時都不能。Shinmone 文案已於 2026-11-16 由使用者確認為 `HUMAN_VERIFIED`（原 task 寫 `NEEDS_HUMAN_REVIEW` 已過時）。
+- T053：`test/unit/shinmone-reference-boundary.guard.spec.ts` 掃描範圍加入 `src/assistant-experience`、`src/capabilities`、`src/assistant/session`、`src/feedback`；先以相同規則手動掃過，無命中。
+- T054：新增 `docs/architecture/assistant-conversation-experience.md`、`docs/frontend-integration/assistant-conversation-experience.md`（前端串接指南）；`docs/customer-onboarding/customer-artifact-map.md` 加入 AssistantExperienceConfig；`deploy/demo/deploy.sh` 新增 `experience` 指令（在 Core image 內執行 provisioning CLI，先 `--check` 再寫入），`prepare-delivery.sh` 產生 `provision/assistant-experience.json`（加入 `.gitignore`）；`deploy/demo/README.md` 加入體驗設定與「Core 先於 Gateway」升級順序；Project 部署手冊第 8 節加入 Feature 013 升級步驟。`specs/README.md` 於 Gate 7 通過後標為完成。
+- typecheck（`tsconfig.spec.json`）、變更檔 lint、`bash -n` 通過。
+- T055 Gate 7（使用者於 Mac 執行，2026-11-16）：Core 全套（含 `customers/shinmone`）273 suites 中 249 passed、24 skipped、0 failed；2411 tests 中 2225 passed、186 skipped。Gateway 本 Phase 未變更，沿用 Gate 5 結果（82 suites 中 72 passed、10 skipped、0 failed）。
+
+| 成功標準 | 結果 | 證據 |
+| --- | --- | --- |
+| SC-001 看得到 ⇔ 能執行 | PASS | `feature013-acceptance`、`shinmone-assistant-experience`、`quick-reply-selection`、`capability-overview`、`follow-up-suggestions` |
+| SC-002 LLM 旗標不改變清單 | PASS | `capability-overview`（flag true/false 同文）、`quick-reply-selection`（兩種 flag 皆以宣告能力執行） |
+| SC-003 舊公開 contract 不改預期 | PASS | `assistant-sessions`、`assistant-messages-sse`、`assistant-message-history`、`feature012-public-compatibility` 預期值未改（僅新增案例）。Gateway 內部路由鎖定與 handler 方法清單依新路由更新（Phase 5 已記錄並經使用者確認） |
+| SC-004 跨客戶隔離 | PASS | `session-list`（列表、封存）、`quick-reply-selection`（點擊）、`unsupported-question-review-item`（ReviewItem） |
+| SC-005 全套與 typecheck | PASS | 本 Gate 全套 0 failed；`tsc --noEmit -p tsconfig.spec.json` 通過 |
+| SC-006 資料問句 0 誤判為總覽 | PASS | `controlled-conversation-classifier`（Gate 3 反向問句表） |
+
+```text
+FEATURE013_GATE_7=PASS
+FEATURE013_COMPLETED_TASK_RANGE=T001-T055
+FEATURE013_STATUS=COMPLETE_BACKEND
+```

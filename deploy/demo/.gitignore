@@ -10,6 +10,7 @@ nginx-idx.txt
 
 # 交付前由 prepare-delivery.sh 從 customers/shinmone 產生，不進版控
 provision/tool-catalog.json
+provision/assistant-experience.json
 
 # 特定主機的 Nginx UI 設定片段（含上游實際位址），記在部署 runbook，不進版控
 nginx-ui-*.conf
