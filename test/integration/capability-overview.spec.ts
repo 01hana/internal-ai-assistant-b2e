@@ -109,11 +109,12 @@ describe('capability overview and suggestions', () => {
     expect(result.final?.suggestions).toEqual([{ id: 'order-status-10001', label: '訂單 SO-10001 的狀態' }]);
   });
 
-  it('does not attach suggestions to an ordinary answered question', async () => {
+  // Phase 4 (US3) adds configured follow-ups after an answered question; Quick Replies are never offered there.
+  it('offers follow-ups rather than Quick Replies after an ordinary answered question', async () => {
     stubGroundedIntegrationAnswer(isolated.llm, '"status":"picking"', '訂單 SO-10001 狀態為 picking。');
     const result = await send('req-f013-plain', { message: '查詢訂單目前狀態 訂單號 SO-10001', pageContext: {
       module: 'orders', entityType: 'order', entityId: 'SO-10001', visibleColumns: ['status'] } });
-    expect(result.final).toEqual(expect.objectContaining({ answerDecision: 'answered' }));
-    expect(result.final).not.toHaveProperty('suggestions');
+    expect(result.final).toEqual(expect.objectContaining({ answerDecision: 'answered',
+      suggestions: [{ id: 'follow-order-10002', label: '看 SO-10002' }] }));
   });
 });

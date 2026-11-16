@@ -82,8 +82,9 @@ describe('session opening and Quick Reply selection', () => {
     });
 
     it('executes a follow-up choice and records it as a suggestion', async () => {
-      stubGroundedIntegrationAnswer(isolated.llm, 'SO-10002', '訂單 SO-10002 狀態如下。');
+      stubGroundedIntegrationAnswer(isolated.llm, '"status":"delayed"', '訂單 SO-10002 狀態為 delayed。');
       const result = await send('req-f013-follow-up', { choiceId: 'follow-order-10002' });
+      expect(result.finalData).toEqual(expect.objectContaining({ answerDecision: 'answered' }));
       expect(result.toolCalls).toEqual([expect.objectContaining({ toolName: 'mock.orders.status.lookup' })]);
       expect(result.audit.map((event) => event.eventType)).toContain('suggestion_selected');
     });

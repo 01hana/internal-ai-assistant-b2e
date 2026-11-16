@@ -84,4 +84,41 @@ describe('AssistantExperienceService (Feature 013 T019)', () => {
     expect(await service.resolveChoice({ ...host, customerId: 'customer-b' }, 'work-orders-today')).toBeNull();
     expect(await service.resolveChoice({ ...host, hostApp: 'other-app' }, 'work-orders-today')).toBeNull();
   });
+
+  describe('buildFollowUps (T032)', () => {
+    const today = { timeRange: 'today' };
+    const ids = async (service: AssistantExperienceService, scope: HostIntegrationContext, key: string, parameters: Record<string, string>) =>
+      (await service.buildFollowUps(scope, key, parameters)).map((item) => item.id);
+
+    it('matches whenCapabilityKey and whenParameters and keeps configuration order', async () => {
+      const { service } = await setup();
+      expect(await ids(service, host, 'work-orders.count', today)).toEqual(['follow-week', 'follow-month']);
+      expect(await ids(service, host, 'work-orders.count', { timeRange: 'this_week' })).toEqual(['follow-month']);
+    });
+
+    it('drops a follow-up that would repeat the answered request', async () => {
+      const { service } = await setup();
+      expect(await ids(service, host, 'work-orders.count', { timeRange: 'this_month' })).toEqual([]);
+    });
+
+    it('drops follow-ups the actor may not run', async () => {
+      const { service } = await setup();
+      expect(await ids(service, { ...host, permissionScopes: ['work-orders:read'] }, 'work-orders.count', today)).toEqual(['follow-week']);
+    });
+
+    it('returns nothing for another capability, another scope or no configuration', async () => {
+      const { service } = await setup();
+      expect(await ids(service, host, 'orders.status', { entityRef: 'SO-1' })).toEqual([]);
+      expect(await ids(service, { ...host, customerId: 'customer-b' }, 'work-orders.count', today)).toEqual([]);
+      expect(await ids(service, { ...host, hostApp: 'other-app' }, 'work-orders.count', today)).toEqual([]);
+    });
+
+    it('returns at most three follow-ups', async () => {
+      const input = raw();
+      input.followUps = ['a', 'b', 'c', 'd'].map((suffix) => ({ id: `follow-${suffix}`, whenCapabilityKey: 'work-orders.count',
+        label: suffix, message: suffix, capabilityKey: 'work-orders.count', parameters: { timeRange: 'this_week' } }));
+      const { service } = await setup(input);
+      expect(await ids(service, host, 'work-orders.count', today)).toEqual(['follow-a', 'follow-b', 'follow-c']);
+    });
+  });
 });

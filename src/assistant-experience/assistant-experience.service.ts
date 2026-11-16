@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { acceptsDeclared, AvailableBindingV1, AvailableCapabilityService } from '../capabilities/available-capability.service';
+import type { CanonicalParameterValueV1 } from '../capabilities/capability-pack.types';
 import type { HostIntegrationContext } from '../host-integration/host-integration.types';
 import type { DeclaredChoiceV1 } from '../query-understanding/query-understanding.types';
 import type { NormalizedPageContext } from '../assistant/page-context/page-context.types';
@@ -65,6 +66,26 @@ export class AssistantExperienceService {
       .map(toChoice));
   }
 
+  /**
+   * Feature 013 US3: follow-ups for a successfully answered capability. A follow-up applies when its
+   * `whenCapabilityKey` matches and every `whenParameters` entry equals the answered parameter; it is dropped
+   * when it would repeat the same request or the actor may not run it. Configuration order, at most 3.
+   */
+  async buildFollowUps(host: HostIntegrationContext, capabilityKey: string,
+    parameters: Readonly<Record<string, CanonicalParameterValueV1>>): Promise<readonly ExperienceChoiceV1[]> {
+    const active = await this.configs.findActive(host.customerId, host.integrationId);
+    if (!active || !active.payload.hostApps.includes(host.hostApp)) return Object.freeze([]);
+    const candidates = active.payload.followUps.filter((item) => item.whenCapabilityKey === capabilityKey &&
+      Object.entries(item.whenParameters ?? {}).every(([name, value]) => parameters[name] === value) &&
+      !(item.capabilityKey === capabilityKey && sameParameters(item.parameters ?? {}, parameters)));
+    if (candidates.length === 0) return Object.freeze([]);
+    const { bindings } = await this.available.resolveAvailableBindings(host);
+    return Object.freeze(candidates
+      .filter((item) => acceptsDeclared(bindings, item.capabilityKey, item.parameters ?? {}))
+      .slice(0, MAX_FOLLOW_UPS)
+      .map((item) => Object.freeze({ id: item.id, label: item.label })));
+  }
+
   /** Returns null when the ID is unknown, not in the active configuration, or no longer permitted. */
   async resolveChoice(host: HostIntegrationContext, choiceId: string): Promise<ResolvedExperienceChoice | null> {
     const active = await this.configs.findActive(host.customerId, host.integrationId);
@@ -86,6 +107,14 @@ export class AssistantExperienceService {
       declared: Object.freeze({ kind: 'capability' as const, capabilityKey: followUp.capabilityKey,
         parameters: Object.freeze({ ...(followUp.parameters ?? {}) }) }) });
   }
+}
+
+const MAX_FOLLOW_UPS = 3;
+
+function sameParameters(left: Readonly<Record<string, CanonicalParameterValueV1>>,
+  right: Readonly<Record<string, CanonicalParameterValueV1>>): boolean {
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  return [...keys].every((key) => left[key] === right[key]);
 }
 
 function quickReplyVisible(reply: QuickReplyV1, bindings: readonly AvailableBindingV1[]): boolean {

@@ -1,7 +1,7 @@
 # Tasks: Feature 013 — Assistant Conversation Experience
 
 **Input**: 已核准的 `spec.md`（2026-11-15）、`design.md` 與 `plan.md`
-**Status**: Phase 0–3 完成（Gate 3 PASS）；第一個未執行的 task 為 T032
+**Status**: Phase 0–4 完成（Gate 4 PASS）；第一個未執行的 task 為 T037
 
 ## 格式、相依與停止規則
 
@@ -143,11 +143,26 @@ FEATURE013_FIRST_UNEXECUTED_TASK=T032
 
 ## Phase 4 — 延伸建議（US3）
 
-- [ ] T032 [US3] 擴充 `assistant-experience.service.spec.ts`（`buildFollowUps`）：條件比對、排除與目前參數相同者、權限與參數可用性篩選、上限 3。RED 後實作。
-- [ ] T033 [US3] 擴充 `test/unit/assistant-sse-event-builder.spec.ts`：`suggestions` 有值時出現、空陣列時省略欄位、其他 `final` 欄位不變。RED 後修改 `assistant-sse.types.ts` 與 builder。
-- [ ] T034 [US3] 新增 `test/integration/follow-up-suggestions.spec.ts`：成功回答附建議；無權限的建議不出現；`no_answer`、`permission_denied`、`tool_failed`、一般澄清、確認／核准回答不附建議；以 `choiceId` 點擊建議寫入 `suggestion_selected`，並以宣告的能力與參數執行。RED 後在 `AssistantMessageService` 接入。
-- [ ] T035 [US3] 擴充 `test/contract/feature012-public-compatibility.contract.spec.ts`：未設定 followUps 時 `final` 形狀與現行完全相同。
-- [ ] T036 [US3] **Gate 4**：typecheck、US3 focused、`feature012-*` 與 `assistant-messages-sse` contract 通過。記錄 `FEATURE013_GATE_4=PASS`。
+- [x] T032 [US3] 擴充 `assistant-experience.service.spec.ts`（`buildFollowUps`）：條件比對、排除與目前參數相同者、權限與參數可用性篩選、上限 3。RED 後實作。
+- [x] T033 [US3] 擴充 `test/unit/assistant-sse-event-builder.spec.ts`：`suggestions` 有值時出現、空陣列時省略欄位、其他 `final` 欄位不變。RED 後修改 `assistant-sse.types.ts` 與 builder。
+- [x] T034 [US3] 新增 `test/integration/follow-up-suggestions.spec.ts`：成功回答附建議；無權限的建議不出現；`no_answer`、`permission_denied`、`tool_failed`、一般澄清、確認／核准回答不附建議；以 `choiceId` 點擊建議寫入 `suggestion_selected`，並以宣告的能力與參數執行。RED 後在 `AssistantMessageService` 接入。
+- [x] T035 [US3] 擴充 `test/contract/feature012-public-compatibility.contract.spec.ts`：未設定 followUps 時 `final` 形狀與現行完全相同。
+- [x] T036 [US3] **Gate 4**：typecheck、US3 focused、`feature012-*` 與 `assistant-messages-sse` contract 通過。記錄 `FEATURE013_GATE_4=PASS`。
+
+**Phase 4 執行證據（2026-11-16）**：
+
+- T032：`AssistantExperienceService.buildFollowUps`：`whenCapabilityKey` 相符、`whenParameters` 每項等於已回答的參數；排除與剛回答完全相同的請求與使用者無權執行者；依設定順序最多 3 個。
+- T033：SSE `suggestions` 型別已於 Phase 3 加入；本 Phase 補 builder 測試（`buildAnswerOnlyEvents`、`buildMessageEvents` 皆原樣帶出，未提供時不出現欄位）。
+- T034：`AssistantMessageService.followUpSuggestions` 只在 `answered`、工具 `completed`、能力解析 `RESOLVED` 時附加；LLM 串流生成與確定性回答兩條成功路徑皆接上，證據衝突的 no_answer 不附。
+- T035：無設定客戶的 `final` 不含 `suggestions`（`follow-up-suggestions.spec.ts`）；既有 `feature012-public-compatibility`、`assistant-messages-sse` contract 未修改且通過。
+- 首輪 2 個測試問題：Phase 3 的「一般問題不附建議」在加入延伸建議後已過時，改為檢查附的是延伸建議而非 Quick Reply；SO-10002 的回答替身比對了不存在於證據中的文字，改為比對 `"status":"delayed"`。同一替身錯誤也存在於 Phase 2 `quick-reply-selection.spec.ts`（原只檢查工具與審計，故未失敗），一併修正並補上「成功回答」斷言。
+- T036 Gate 4（使用者於 Mac 執行，2026-11-16）：全套 265 suites 中 238 passed、24 skipped、3 failed（上述 2 個測試問題與 baseline `clarification-required`）；修正後 3 個受影響檔案重跑通過。typecheck 與變更檔 lint 通過。
+
+```text
+FEATURE013_GATE_4=PASS
+FEATURE013_COMPLETED_TASK_RANGE=T001-T036
+FEATURE013_FIRST_UNEXECUTED_TASK=T037
+```
 
 ## Phase 5 — Session 列表與封存（US4）
 

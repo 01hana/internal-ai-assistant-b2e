@@ -88,6 +88,17 @@ export class AssistantMessageService {
     return suggestions.length > 0 ? { suggestions } : {};
   }
 
+  /** Feature 013 US3: follow-ups only after an answered request whose declared or resolved tool completed. */
+  private async followUpSuggestions(input: SendAssistantMessageInput, planningResult: AssistantPlanningResult,
+    status: AnswerDecisionStatus, toolLifecycle: string | undefined): Promise<{ suggestions?: readonly AssistantSuggestionV1[] }> {
+    const resolution = planningResult.queryUnderstanding.capabilityResolution;
+    if (!this.experience || status !== AnswerDecisionStatus.answered || toolLifecycle !== 'completed' ||
+      resolution?.outcome !== 'RESOLVED') return {};
+    const suggestions = await this.experience.buildFollowUps(input.hostIntegrationContext,
+      resolution.capability.capabilityKey, resolution.parameters);
+    return suggestions.length > 0 ? { suggestions } : {};
+  }
+
   private isUnrecognizedCapability(planningResult: { queryUnderstanding: { capabilityResolution?: CapabilityResolutionResultV1 } }): boolean {
     const resolution = planningResult.queryUnderstanding.capabilityResolution;
     return resolution?.outcome === 'NEEDS_CLARIFICATION' &&
@@ -1262,7 +1273,8 @@ export class AssistantMessageService {
           metadata: providerMetadata, outcome: 'COMPLETED', durationMs: Math.max(0, Date.now() - startedAt) });
         await this.contextStateService.updateAfterMessageFlow({ customerScope, sessionId, pageContext: input.pageContext,
           planningResult, toolCallIds: toolExecution?.toolCallId ? [toolExecution.toolCallId] : [], evidenceRefIds: evidenceIds });
-        const finalData = { answerDecision: answerDecision.status, answer: text, evidenceRefs: evidenceIds };
+        const finalData = { answerDecision: answerDecision.status, answer: text, evidenceRefs: evidenceIds,
+          ...await this.followUpSuggestions(input, planningResult, answerDecision.status, toolExecution?.toolLifecycle) };
         await emit(makeEvent('final', ++sequence, finalData));
         return streamedEvents;
       } catch (error) {
@@ -1342,7 +1354,9 @@ export class AssistantMessageService {
     const releasedEvidenceIds = conflictGate?.kind === 'no_answer' ? [] : evidenceIds;
     const finalData = { answerDecision: answerDecision.status, answer: answerDecision.answer.text,
       ...(finalNoAnswerReason ? { noAnswerReason: finalNoAnswerReason } : {}),
-      ...(toolExecution?.errorCode ? { errorCode: toolExecution.errorCode } : {}), evidenceRefs: releasedEvidenceIds };
+      ...(toolExecution?.errorCode ? { errorCode: toolExecution.errorCode } : {}), evidenceRefs: releasedEvidenceIds,
+      ...(conflictGate?.kind === 'no_answer' ? {}
+        : await this.followUpSuggestions(input, planningResult, answerDecision.status, toolExecution?.toolLifecycle)) };
     if (toolExecution?.toolLifecycle && toolExecution.toolName) {
       return this.sseEventBuilder.buildMessageEvents({ requestId: input.requestId, sessionId, messageId: assistantMessageId,
         toolCallId: toolExecution.toolCallId ?? 'not-executed', toolName: toolExecution.toolName,
