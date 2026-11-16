@@ -66,6 +66,7 @@ export class AssistantPlanningService {
     }
     const { output, persisted } = await this.queryUnderstandingService.understandAndPersist({
       ...(input.identityContext ? { identityContext: input.identityContext } : {}),
+      ...(input.declaredChoice ? { declaredChoice: input.declaredChoice } : {}),
       requestId: input.requestId,
       sessionId: input.sessionId,
       messageId: input.messageId,

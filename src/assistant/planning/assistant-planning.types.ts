@@ -7,13 +7,14 @@ import { NormalizedPageContext } from '../page-context/page-context.types';
 import {
   PersistedQueryUnderstandingResult,
   QueryUnderstandingContextStateSnapshot,
-  QueryUnderstandingOutput
-} from '../../query-understanding/query-understanding.types';
+  QueryUnderstandingOutput, DeclaredChoiceV1 } from '../../query-understanding/query-understanding.types';
 import type { GroundedRetrievalPlan } from '../../retrieval/grounded-retrieval.types';
 import type { BoundedConversationContext } from '../conversation/conversation.types';
 
 export interface AssistantPlanningInput {
   identityContext?: RequestIdentityContext;
+  /** Feature 013: server-resolved experience choice (see DeclaredChoiceV1). */
+  declaredChoice?: DeclaredChoiceV1;
   customerScope: CustomerScope;
   requestId: string;
   sessionId: string;

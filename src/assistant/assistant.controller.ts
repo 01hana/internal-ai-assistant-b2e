@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Optional,
   Param,
   Post,
   Query,
@@ -26,6 +27,7 @@ import {
 import { AssistantHistoryService } from "./history/assistant-history.service";
 import { AssistantMessageService } from "./message/assistant-message.service";
 import { AssistantSessionService } from "./session/assistant-session.service";
+import { AssistantExperienceService } from "../assistant-experience/assistant-experience.service";
 
 @Controller("assistant")
 @UseGuards(IdentityGuard)
@@ -35,6 +37,8 @@ export class AssistantController {
     private readonly assistantMessageService: AssistantMessageService,
     private readonly assistantHistoryService: AssistantHistoryService,
     private readonly hostIntegrationRequestFactory: HostIntegrationRequestFactory,
+    /** Always injected by Nest; optional only so hand-built unit-test controllers stay valid. */
+    @Optional() private readonly experience?: AssistantExperienceService,
   ) {}
 
   @Post("sessions")
@@ -44,10 +48,12 @@ export class AssistantController {
   ) {
     const identityContext = getRequiredIdentityContext(request);
     const { host, pageContext } = this.hostIntegrationRequestFactory.create(identityContext, body.pageContext);
+    const opening = this.experience ? await this.experience.buildOpening(host, pageContext) : undefined;
     return this.assistantSessionService.createSession({
       requestId: identityContext.requestId,
       hostIntegrationContext: host,
       pageContext,
+      ...(opening ? { opening } : {}),
     });
   }
 
@@ -78,6 +84,12 @@ export class AssistantController {
 
     const customerScope = createCustomerScopeFromHostIntegrationContext(host);
     await this.assistantSessionService.getVisibleSession(sessionId, customerScope);
+    // Feature 013: a choice is resolved and permission-checked before any SSE output; unknown or no
+    // longer permitted choices are indistinguishable from a missing session.
+    const experienceChoice = body.choiceId === undefined || !this.experience ? undefined
+      : await this.experience.resolveChoice(host, body.choiceId);
+    if (body.choiceId !== undefined && !experienceChoice) throw this.assistantSessionService.createSessionNotFoundError();
+    const message = experienceChoice ? experienceChoice.message : body.message!;
 
     response.status(HttpStatus.OK);
     response.setHeader("Content-Type", "text/event-stream; charset=utf-8");
@@ -94,7 +106,8 @@ export class AssistantController {
       const events = await this.assistantMessageService.sendMessage({
         requestId,
         sessionId,
-        message: body.message,
+        message,
+        ...(experienceChoice ? { experienceChoice } : {}),
         identityContext,
         hostIntegrationContext: host,
         pageContext,

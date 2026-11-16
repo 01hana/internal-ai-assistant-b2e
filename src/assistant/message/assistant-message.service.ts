@@ -93,6 +93,17 @@ export class AssistantMessageService {
         pageContext: toPageContextAuditMetadata(input.pageContext)
       })
     });
+    if (input.experienceChoice) {
+      await this.auditWriter.append({
+        customerScope,
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: userMessage.id,
+        eventType: input.experienceChoice.source === 'quick_reply' ? 'quick_reply_selected' : 'suggestion_selected',
+        metadata: toJsonInput({ choiceId: input.experienceChoice.choiceId,
+          experienceConfigVersion: input.experienceChoice.configVersion, declaredKind: input.experienceChoice.declared.kind })
+      });
+    }
 
     const latestContextState = await this.contextStateService.loadLatest(customerScope, session.id);
     const planningResult = await this.planningService.createPlan({
@@ -102,6 +113,7 @@ export class AssistantMessageService {
       sessionId: session.id,
       messageId: userMessage.id,
       text: input.message,
+      ...(input.experienceChoice ? { declaredChoice: input.experienceChoice.declared } : {}),
       hostIntegrationContext: input.hostIntegrationContext,
       pageContext: input.pageContext,
       assistantContextState: latestContextState

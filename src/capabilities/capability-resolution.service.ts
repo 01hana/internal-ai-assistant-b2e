@@ -1,6 +1,6 @@
 import { CapabilityBindingResolverService } from './capability-binding-resolver.service';
 import { CapabilityCatalogRegistry, type CapabilityCatalogScope } from './capability-catalog.registry';
-import type { CapabilityResolutionResultV1, ScopedCapabilityCatalogV1 } from './capability-pack.types';
+import type { CanonicalParameterValueV1, CapabilityResolutionResultV1, ScopedCapabilityCatalogV1 } from './capability-pack.types';
 import {
   CapabilityParameterResolverService,
   freezeCapabilityResolutionResultV1
@@ -64,6 +64,39 @@ export class CapabilityResolutionService {
     const closed = freezeCapabilityResolutionResultV1(result);
     try {
       await this.audit.record({ ...auditMetadata(scope, catalog, closed, Date.now() - started),
+        ...(input.auditContext ? { auditContext: input.auditContext } : {}) });
+    } catch {
+      throw new Error('CAPABILITY_RESOLUTION_AUDIT_FAILED');
+    }
+    return closed;
+  }
+
+  /**
+   * Feature 013 Decision 4: resolves a server-owned, human-verified choice (Quick Reply or follow-up)
+   * that declares its capability and parameters. Semantic matching and LLM selection are skipped;
+   * binding resolution, the result contract and the resolution audit are identical to resolve().
+   */
+  async resolveDeclared(input: Readonly<{
+    scope: CapabilityCatalogScope;
+    capabilityKey: string;
+    parameters: Readonly<Record<string, CanonicalParameterValueV1>>;
+    auditContext?: CapabilityResolutionAuditMetadataV1['auditContext'];
+  }>): Promise<CapabilityResolutionResultV1> {
+    const started = Date.now();
+    const scope: CapabilityCatalogScope = Object.freeze({ customerId: input.scope.customerId,
+      integrationId: input.scope.integrationId, hostApp: input.scope.hostApp });
+    const selected = this.registry.resolveCatalog(scope);
+    const catalog = selected.available ? selected.catalog : undefined;
+    const capability = catalog?.capabilities.find((entry) => entry.active && entry.capabilityKey === input.capabilityKey);
+    let result: CapabilityResolutionResultV1 = notRecognized();
+    if (catalog && capability) {
+      try { result = await this.bindings.resolve(catalog, capability.capabilityKey, { ...input.parameters }); }
+      catch { result = notRecognized(); }
+    }
+    const closed = freezeCapabilityResolutionResultV1(result);
+    try {
+      await this.audit.record({ ...auditMetadata(scope, catalog, closed, Date.now() - started),
+        reasonCode: closed.outcome === 'RESOLVED' ? 'DECLARED_CHOICE' : 'DECLARED_CHOICE_UNRESOLVED',
         ...(input.auditContext ? { auditContext: input.auditContext } : {}) });
     } catch {
       throw new Error('CAPABILITY_RESOLUTION_AUDIT_FAILED');

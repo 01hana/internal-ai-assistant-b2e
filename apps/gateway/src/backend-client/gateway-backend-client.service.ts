@@ -1,3 +1,4 @@
+import { hasMessageOrChoiceId } from './assistant-message-input';
 import type { CanonicalGatewayIdentity } from '../identity/canonical-gateway-identity';
 import { BACKEND_ROUTE_DEFINITIONS } from './backend-route-definition';
 
@@ -8,7 +9,8 @@ type CreateSessionInput = Readonly<{
 }>;
 
 type SendStreamMessageInput = Readonly<{
-  message: string;
+  message?: string;
+  choiceId?: string;
   pageContext?: Readonly<Record<string, unknown>>;
   requestId?: string;
   traceparent?: string;
@@ -111,7 +113,7 @@ export class GatewayBackendClient {
       ...correlationHeader('x-request-id', input.requestId),
       ...correlationHeader('traceparent', input.traceparent)
     };
-    const body = JSON.stringify({ message: input.message, pageContext: input.pageContext });
+    const body = JSON.stringify({ message: input.message, choiceId: input.choiceId, pageContext: input.pageContext });
 
     try {
       const response = await this.dependencies.fetch(new URL(path, this.dependencies.backendBaseUrl).toString(), {
@@ -184,8 +186,8 @@ function isCreateSessionInput(value: unknown): value is CreateSessionInput {
 function isSendStreamMessageInput(value: unknown): value is SendStreamMessageInput {
   if (!isRecord(value)) return false;
   const keys = Object.keys(value);
-  if (keys.some((key) => key !== 'message' && key !== 'pageContext' && key !== 'requestId' && key !== 'traceparent')) return false;
-  if (!isNonBlankString(value.message)) return false;
+  if (keys.some((key) => key !== 'message' && key !== 'choiceId' && key !== 'pageContext' && key !== 'requestId' && key !== 'traceparent')) return false;
+  if (!hasMessageOrChoiceId(value)) return false;
   if (value.pageContext !== undefined && !isRecord(value.pageContext)) return false;
   return isOptionalString(value.requestId) && isOptionalString(value.traceparent);
 }

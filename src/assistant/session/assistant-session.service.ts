@@ -9,6 +9,7 @@ import { customerScopedListPredicate, sessionOwnedByScopePredicate } from '../..
 import { PrismaService } from '../../prisma/prisma.service';
 import { AssistantContextStateService } from '../context/assistant-context-state.service';
 import { toPageContextAuditMetadata } from '../page-context/page-context.mapper';
+import type { AssistantOpeningV1 } from '../../assistant-experience/assistant-experience.service';
 import {
   AssistantSessionSummary,
   CloseAssistantSessionInput,
@@ -27,7 +28,7 @@ export class AssistantSessionService {
     private readonly contextStateService: AssistantContextStateService
   ) {}
 
-  async createSession(input: CreateAssistantSessionInput): Promise<{ sessionId: string; status: AssistantSessionStatus }> {
+  async createSession(input: CreateAssistantSessionInput): Promise<{ sessionId: string; status: AssistantSessionStatus; opening?: AssistantOpeningV1 }> {
     const customerScope = createCustomerScopeFromHostIntegrationContext(input.hostIntegrationContext);
     if (!customerScope.integrationId?.trim()) throw this.createSessionNotFoundError();
     const session = await this.prisma.db.assistantSession.create({
@@ -53,13 +54,16 @@ export class AssistantSessionService {
       sessionId: session.id,
       eventType: 'session_created',
       metadata: toJsonInput({
-        pageContext: toPageContextAuditMetadata(input.pageContext)
+        pageContext: toPageContextAuditMetadata(input.pageContext),
+        ...(input.opening ? { experienceConfigVersion: input.opening.configVersion,
+          quickReplyIds: input.opening.quickReplies.map((item) => item.id) } : {})
       })
     });
 
     return {
       sessionId: session.id,
-      status: session.status
+      status: session.status,
+      ...(input.opening ? { opening: input.opening } : {})
     };
   }
 

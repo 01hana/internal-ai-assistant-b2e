@@ -6,6 +6,7 @@ import type { GatewayHistoryQuery } from '../backend-client/gateway-backend-clie
 import { IdentityResolutionError } from '../integration-registry/canonical-identity-resolver.service';
 import { IdentityServiceUnavailableError } from '../signing/identity-service-unavailable.error';
 import { UpstreamAuthenticationError, UpstreamIdentityServiceUnavailableError } from '../upstream-auth/upstream-auth.error';
+import { hasMessageOrChoiceId } from '../backend-client/assistant-message-input';
 
 /**
  * Fixed Host operations only. This controller has no routing or identity
@@ -95,7 +96,8 @@ export class GatewayAssistantController {
       stream = await this.trustChainHandler.sendStreamMessage({
         authorization,
         sessionId,
-        message: input.message,
+        ...(input.message === undefined ? {} : { message: input.message }),
+        ...(input.choiceId === undefined ? {} : { choiceId: input.choiceId }),
         pageContext: input.pageContext,
         requestId,
         traceparent: optionalHeader(traceparent)
@@ -160,14 +162,18 @@ function writeReadResponse(response: Response, result: Readonly<{ statusCode: nu
   response.send(result.body);
 }
 
-function readSendMessageInput(body: unknown): Readonly<{ message: string; pageContext?: Readonly<Record<string, unknown>> }> {
+function readSendMessageInput(body: unknown): Readonly<{ message?: string; choiceId?: string; pageContext?: Readonly<Record<string, unknown>> }> {
   if (!isRecord(body)) throw new BadRequestException('Invalid Gateway operation input.');
   const keys = Object.keys(body);
-  if (keys.some((key) => key !== 'message' && key !== 'pageContext') || !isNonBlankString(body.message)) {
+  if (keys.some((key) => key !== 'message' && key !== 'choiceId' && key !== 'pageContext') || !hasMessageOrChoiceId(body)) {
     throw new BadRequestException('Invalid Gateway operation input.');
   }
   if (body.pageContext !== undefined && !isRecord(body.pageContext)) throw new BadRequestException('Invalid Gateway operation input.');
-  return Object.freeze({ message: body.message, ...(body.pageContext === undefined ? {} : { pageContext: body.pageContext }) });
+  return Object.freeze({
+    ...(body.message === undefined ? {} : { message: body.message as string }),
+    ...(body.choiceId === undefined ? {} : { choiceId: body.choiceId as string }),
+    ...(body.pageContext === undefined ? {} : { pageContext: body.pageContext })
+  });
 }
 
 function normalizeRequestId(value: string | undefined): string {

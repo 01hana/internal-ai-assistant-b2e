@@ -50,7 +50,10 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
 
   async understand(input: QueryUnderstandingInput): Promise<QueryUnderstandingOutput> {
     const normalizedText = normalizeQueryText(input.text);
-    const conversationalIntent = classifyControlledConversation(normalizedText);
+    // Feature 013 Decision 4: a declared choice never goes through text-based intent or capability matching.
+    const declaredCapability = input.declaredChoice?.kind === 'capability' ? input.declaredChoice : undefined;
+    const conversationalIntent = input.declaredChoice?.kind === 'capability_overview' ? 'capability_discovery'
+      : input.declaredChoice ? undefined : classifyControlledConversation(normalizedText);
     if (conversationalIntent) {
       let reply: string;
       if (conversationalIntent === 'greeting') {
@@ -227,10 +230,15 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
     const llmSelectionEnabled = process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED === 'true';
     const llmCanResolveFollowUp = llmSelectionEnabled && verifiedPriorQuestions.length > 0 &&
       followUpResolution?.reasonCode !== 'CONTRADICTORY_CURRENT_FRAME';
-    const mustClarifyFollowUp = !llmCanResolveFollowUp &&
+    const mustClarifyFollowUp = !declaredCapability && !llmCanResolveFollowUp &&
       ((followUpResolution?.kind === 'CLARIFY' && !capabilityFollowUpResolution?.resolvedFrame)
         || followUpEvidence?.kind === 'CLARIFY');
-    const capabilityResult: CapabilityResolutionResultV1 | undefined = (!hasNonDocumentSubTask && isDocumentTaskType(documentTaskType)) || riskLevel !== RiskLevel.low
+    const capabilityResult: CapabilityResolutionResultV1 | undefined = declaredCapability
+      ? await this.capabilityResolution.resolveDeclared({ scope, capabilityKey: declaredCapability.capabilityKey,
+          parameters: declaredCapability.parameters, auditContext: {
+            customerScope: createCustomerScopeFromHostIntegrationContext(input.hostIntegrationContext),
+            requestId: input.requestId, sessionId: input.sessionId, messageId: input.messageId } })
+      : (!hasNonDocumentSubTask && isDocumentTaskType(documentTaskType)) || riskLevel !== RiskLevel.low
       || mustClarifyFollowUp
       ? undefined
       : llmSelectionEnabled

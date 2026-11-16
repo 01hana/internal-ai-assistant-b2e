@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "configVersion": "1.0.0",
+  "customerId": "customer-a",
+  "integrationId": "integration-erp",
+  "hostApps": ["erp"],
+  "locale": "zh-TW",
+  "semanticReviewStatus": "HUMAN_VERIFIED",
+  "greeting": { "text": "你好，我可以協助查詢訂單資訊。" },
+  "maxQuickReplies": 3,
+  "quickReplies": [
+    { "id": "overview", "kind": "capability_overview", "label": "你能查詢哪些資料？", "message": "你能查詢哪些資料？", "priority": 100 },
+    { "id": "order-status-10001", "kind": "capability", "label": "訂單 SO-10001 的狀態", "message": "查詢訂單 SO-10001 狀態",
+      "capabilityKey": "orders.status", "parameters": { "entityRef": "SO-10001" }, "priority": 90, "pageScope": { "modules": ["orders"] } },
+    { "id": "work-order-progress", "kind": "capability", "label": "工單 WO-20001 進度", "message": "查詢工單 WO-20001 進度",
+      "capabilityKey": "work-orders.progress", "parameters": { "entityRef": "WO-20001" }, "priority": 80 }
+  ],
+  "followUps": [
+    { "id": "follow-order-10002", "whenCapabilityKey": "orders.status", "label": "看 SO-10002", "message": "查詢訂單 SO-10002 狀態",
+      "capabilityKey": "orders.status", "parameters": { "entityRef": "SO-10002" } }
+  ]
+}

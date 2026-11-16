@@ -1,7 +1,7 @@
 # Tasks: Feature 013 — Assistant Conversation Experience
 
 **Input**: 已核准的 `spec.md`（2026-11-15）、`design.md` 與 `plan.md`
-**Status**: Phase 0–1 完成（Gate 1 PASS）；第一個未執行的 task 為 T019
+**Status**: Phase 0–2 完成（Gate 2 PASS）；第一個未執行的 task 為 T026
 
 ## 格式、相依與停止規則
 
@@ -89,13 +89,31 @@ FEATURE013_FIRST_UNEXECUTED_TASK=T019
 
 ## Phase 2 — 開場語與 Quick Reply（US1）
 
-- [ ] T019 [US1] 新增 `test/unit/assistant-experience.service.spec.ts`（`buildOpening`、`resolveQuickReply`）：權限篩選、`pageScope` 篩選、`priority` 排序、`maxQuickReplies` 截斷、`capability_overview` 只在至少一項可用能力時出現、無設定時回預設問候語。RED 後實作 `assistant-experience.service.ts` 對應方法。
-- [ ] T020 [US1] 擴充 `test/contract/assistant-sessions.contract.spec.ts`：回應新增 `opening`，既有欄位與既有斷言不變。RED 後在 `AssistantController.createSession` 組裝 `opening`，`session_created` 審計 metadata 加 `experienceConfigVersion`、`quickReplyIds`。
-- [ ] T021 [US1] 新增 `test/unit/send-message-dto.spec.ts`：`message` 與 `choiceId` 恰好一個、`choiceId` 格式。RED 後修改 `SendAssistantMessageDto`；新增 `CapabilityResolutionService.resolveDeclared` 與其單元測試（binding 解析結果與審計 `reasonCode: DECLARED_CHOICE`）。
-- [ ] T022 [US1] 新增 `test/integration/quick-reply-selection.spec.ts`：點擊可見 Quick Reply 以宣告的能力與參數執行，LLM 工具選擇開或關結果相同且不呼叫模型；ToolCall、權限檢查與 answerDecision 與一般問題路徑一致；寫入 `quick_reply_selected`；不存在／已換版／無權限的 ID 回與 session not found 相同的 404，且不寫 user message。RED 後在 `AssistantMessageService` 與 query understanding 接入 `resolveChoice` / `resolveDeclared`。
-- [ ] T023 [US1] 擴充 `test/integration/customer-session-isolation.spec.ts`：A 客戶的 `choiceId` 在 B 客戶 session 不可用，`opening` 不含 B 的設定。
-- [ ] T024 [US1] Gateway：擴充 `apps/gateway/test` 對應測試，`readSendMessageInput` 接受並轉發 `choiceId`，拒絕格式錯誤；`POST sessions` 回應原樣轉發 `opening`。RED 後修改 `gateway-assistant.controller.ts` 與 trust chain handler 的 message 型別。
-- [ ] T025 [US1] **Gate 2**：typecheck（Core + Gateway）、US1 focused 測試、既有 `assistant-sessions` / `assistant-messages-sse` / `gateway-internal-identity` contract 通過且預期值未改。記錄 `FEATURE013_GATE_2=PASS`。
+- [x] T019 [US1] 新增 `test/unit/assistant-experience.service.spec.ts`（`buildOpening`、`resolveQuickReply`）：權限篩選、`pageScope` 篩選、`priority` 排序、`maxQuickReplies` 截斷、`capability_overview` 只在至少一項可用能力時出現、無設定時回預設問候語。RED 後實作 `assistant-experience.service.ts` 對應方法。
+- [x] T020 [US1] 擴充 `test/contract/assistant-sessions.contract.spec.ts`：回應新增 `opening`，既有欄位與既有斷言不變。RED 後在 `AssistantController.createSession` 組裝 `opening`，`session_created` 審計 metadata 加 `experienceConfigVersion`、`quickReplyIds`。
+- [x] T021 [US1] 新增 `test/unit/send-message-dto.spec.ts`：`message` 與 `choiceId` 恰好一個、`choiceId` 格式。RED 後修改 `SendAssistantMessageDto`；新增 `CapabilityResolutionService.resolveDeclared` 與其單元測試（binding 解析結果與審計 `reasonCode: DECLARED_CHOICE`）。
+- [x] T022 [US1] 新增 `test/integration/quick-reply-selection.spec.ts`：點擊可見 Quick Reply 以宣告的能力與參數執行，LLM 工具選擇開或關結果相同且不呼叫模型；ToolCall、權限檢查與 answerDecision 與一般問題路徑一致；寫入 `quick_reply_selected`；不存在／已換版／無權限的 ID 回與 session not found 相同的 404，且不寫 user message。RED 後在 `AssistantMessageService` 與 query understanding 接入 `resolveChoice` / `resolveDeclared`。
+- [x] T023 [US1] 擴充 `test/integration/customer-session-isolation.spec.ts`：A 客戶的 `choiceId` 在 B 客戶 session 不可用，`opening` 不含 B 的設定。
+- [x] T024 [US1] Gateway：擴充 `apps/gateway/test` 對應測試，`readSendMessageInput` 接受並轉發 `choiceId`，拒絕格式錯誤；`POST sessions` 回應原樣轉發 `opening`。RED 後修改 `gateway-assistant.controller.ts` 與 trust chain handler 的 message 型別。
+- [x] T025 [US1] **Gate 2**：typecheck（Core + Gateway）、US1 focused 測試、既有 `assistant-sessions` / `assistant-messages-sse` / `gateway-internal-identity` contract 通過且預期值未改。記錄 `FEATURE013_GATE_2=PASS`。
+
+**Phase 2 執行證據（2026-11-16）**：
+
+- T019：`AssistantExperienceService`（`buildOpening`、`resolveChoice`）。一次請求只呼叫一次 `resolveAvailableBindings`，再以純函式 `acceptsDeclared` 比對每個選項。`pageScope` 只是顯示篩選，點擊時不重新檢查；權限每次點擊都重新檢查。無 active 設定或 hostApp 不在設定內時，回 Core 預設問候語。
+- T020：`opening` 由 controller 組好後傳入 `AssistantSessionService.createSession`（session 服務建構子不變）；`session_created` 審計加 `experienceConfigVersion`、`quickReplyIds`。既有 `assistant-sessions.contract.spec.ts` 為 `objectContaining`，未修改；opening 案例寫在新檔 `test/integration/quick-reply-selection.spec.ts`。
+- T021：`SendAssistantMessageDto` 以 `ValidateIf` + 自訂限制實作「`message` 與 `choiceId` 恰好一個」；另新增 `CapabilityResolutionService.resolveDeclared()`（略過語意比對，照常寫解析審計，`reasonCode: DECLARED_CHOICE`／`DECLARED_CHOICE_UNRESOLVED`）。`declaredChoice` 經 controller → 訊息服務 → 規劃服務 → query understanding → pipeline 傳遞；pipeline 收到宣告的能力時不做文字意圖分類、不呼叫 LLM 工具選擇。
+- T022：`AssistantController` 新增的 `AssistantExperienceService` 標為 `@Optional()`，以免修改手動建構 controller 的既有單元測試；正式 app 一律由 Nest 注入。測試用 in-memory Prisma mock 新增 `assistantExperienceConfig`，並新增 `test/support/assistant-experience-state.fixture.ts` 與合成設定 `customer-a-reference.v1.json`（使用預設 reference pack 的 `orders.status`，經 mock connector 實際執行）。
+- T023：**與 tasks 的差異**：跨客戶隔離案例寫在 `quick-reply-selection.spec.ts`，未修改 `customer-session-isolation.spec.ts`（後者的 app 設定不含體驗設定）。
+- T024：Gateway controller、trust-chain handler、backend client 三層改為接受 `message` 或 `choiceId` 擇一（共用 `apps/gateway/src/backend-client/assistant-message-input.ts`）。只送 `message` 時轉發給 Core 的 JSON 與原本相同。
+- **經使用者同意修改的既有測試預期值**（皆因 FR-004／FR-005 的新增欄位，且原測試為嚴格比對）：`apps/gateway/test/backend-client/gateway-backend-client.spec.ts` 鎖定的送訊息 DTO 欄位；`customers/shinmone/test/integration/shinmone-reference-vertical.spec.ts` 的 session 回應明確加入 `opening`。
+- 首輪全套另有 3 個失敗：本 Phase 新測試的預期錯誤（無權限時 reference pack 仍有不需權限的工具）、DTO 單元測試缺 `reflect-metadata`、上述 Shinmone 嚴格比對；修正後 4 個受影響檔案單獨重跑通過。`shinmone-kpistats-demo-http` 的 `it.each` 首例在全套時逾時 5 秒，單獨執行通過，判定為負載造成，非本 Phase 變更所致。
+- T025 Gate 2（使用者於 Mac 執行，2026-11-16）：Core 全套 262 suites 中 233 passed、24 skipped、5 failed（修正後僅剩 baseline `clarification-required` 2 個）；Gateway 全套 81 suites 中 71 passed、10 skipped，1418 tests passed。typecheck（Core、Gateway）與變更檔 lint 通過。
+
+```text
+FEATURE013_GATE_2=PASS
+FEATURE013_COMPLETED_TASK_RANGE=T001-T025
+FEATURE013_FIRST_UNEXECUTED_TASK=T026
+```
 
 ## Phase 3 — 能力總覽（US2）
 

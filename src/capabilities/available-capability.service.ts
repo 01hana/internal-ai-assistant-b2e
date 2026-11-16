@@ -100,15 +100,20 @@ export class AvailableCapabilityService {
   /** True when at least one available binding accepts every supplied enum parameter value. */
   async isAvailable(host: HostIntegrationContext, capabilityKey: string,
     parameters: Readonly<Record<string, CanonicalParameterValueV1>> = {}): Promise<boolean> {
-    const { bindings } = await this.resolveAvailableBindings(host);
-    return bindings.some((item) => item.capability.capabilityKey === capabilityKey &&
-      Object.entries(parameters).every(([name, value]) => {
-        const parameter = item.capability.parameters.find((entry) => entry.parameterName === name);
-        if (!parameter) return false;
-        if (parameter.type !== 'enum') return true;
-        return typeof value === 'string' && allowedEnumValues(item.capability, item.binding, name).includes(value);
-      }));
+    return acceptsDeclared((await this.resolveAvailableBindings(host)).bindings, capabilityKey, parameters);
   }
+}
+
+/** Pure check over an already-resolved binding set, so callers can test many choices with one lookup. */
+export function acceptsDeclared(bindings: readonly AvailableBindingV1[], capabilityKey: string,
+  parameters: Readonly<Record<string, CanonicalParameterValueV1>> = {}): boolean {
+  return bindings.some((item) => item.capability.capabilityKey === capabilityKey &&
+    Object.entries(parameters).every(([name, value]) => {
+      const parameter = item.capability.parameters.find((entry) => entry.parameterName === name);
+      if (!parameter) return false;
+      if (parameter.type !== 'enum') return true;
+      return typeof value === 'string' && allowedEnumValues(item.capability, item.binding, name).includes(value);
+    }));
 }
 
 function allowedEnumValues(capability: CapabilityDefinitionV1, binding: CapabilityBindingV1, parameterName: string): string[] {

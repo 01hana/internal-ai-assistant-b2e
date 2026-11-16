@@ -1,3 +1,4 @@
+import { hasMessageOrChoiceId } from './assistant-message-input';
 import type { GatewayBackendClient, GatewayBackendReadResponse, GatewayHistoryQuery } from './gateway-backend-client.service';
 import type { CanonicalIdentityResolver } from '../integration-registry/canonical-identity-resolver.service';
 import type { UpstreamTokenVerifier } from '../upstream-auth/upstream-token-verifier.service';
@@ -12,7 +13,8 @@ type CreateSessionInput = Readonly<{
 type SendStreamMessageInput = Readonly<{
   authorization?: string;
   sessionId: string;
-  message: string;
+  message?: string;
+  choiceId?: string;
   pageContext?: Readonly<Record<string, unknown>>;
   requestId: string;
   traceparent?: string;
@@ -67,7 +69,8 @@ export class GatewayTrustChainHandler {
       requestId: input.requestId
     });
     return this.dependencies.gatewayBackendClient.sendStreamMessage(canonicalIdentity, input.sessionId, {
-      message: input.message,
+      ...(input.message === undefined ? {} : { message: input.message }),
+      ...(input.choiceId === undefined ? {} : { choiceId: input.choiceId }),
       pageContext: input.pageContext,
       requestId: input.requestId,
       traceparent: input.traceparent
@@ -118,10 +121,10 @@ function isCreateSessionInput(value: unknown): value is CreateSessionInput {
 function isSendStreamMessageInput(value: unknown): value is SendStreamMessageInput {
   if (!isRecord(value)) return false;
   const keys = Object.keys(value);
-  if (keys.some((key) => key !== 'authorization' && key !== 'sessionId' && key !== 'message' && key !== 'pageContext' && key !== 'requestId' && key !== 'traceparent')) return false;
+  if (keys.some((key) => key !== 'authorization' && key !== 'sessionId' && key !== 'message' && key !== 'choiceId' && key !== 'pageContext' && key !== 'requestId' && key !== 'traceparent')) return false;
   return isOptionalString(value.authorization)
     && isNonBlankString(value.sessionId)
-    && isNonBlankString(value.message)
+    && hasMessageOrChoiceId(value)
     && isOptionalRecord(value.pageContext)
     && isNonBlankString(value.requestId)
     && isOptionalString(value.traceparent);

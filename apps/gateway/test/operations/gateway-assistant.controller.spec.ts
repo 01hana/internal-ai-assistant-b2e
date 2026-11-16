@@ -293,3 +293,29 @@ async function httpResponse(operation: Promise<unknown>): Promise<unknown> {
     return (error as HttpException).getResponse();
   }
 }
+
+describe('GatewayAssistantController Feature 013 choice input (T024)', () => {
+  const closedStream = () => new ReadableStream<Uint8Array>({ start(controller) { controller.close(); } });
+
+  it('forwards a well-formed choiceId instead of a message', async () => {
+    const handler = createHandler(closedStream());
+    await new GatewayAssistantController(handler).sendStreamMessage('Bearer upstream-token', 'choice-forward', undefined,
+      'session-owned-001', { choiceId: 'order-status-10001', pageContext: { module: 'orders' } }, new TestResponse() as unknown as Response);
+    expect(handler.sendStreamMessage).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: 'session-owned-001', choiceId: 'order-status-10001', pageContext: { module: 'orders' } }));
+    expect((handler.sendStreamMessage as jest.Mock).mock.calls[0][0]).not.toHaveProperty('message');
+  });
+
+  it.each([
+    ['both message and choiceId', { message: 'hello', choiceId: 'overview' }],
+    ['neither', { pageContext: { module: 'orders' } }],
+    ['a malformed choiceId', { choiceId: 'Not Valid!' }],
+    ['a non-string choiceId', { choiceId: 7 }],
+    ['an unknown field', { choiceId: 'overview', capabilityKey: 'orders.status' }]
+  ])('rejects %s before any trust-chain work', async (_label, body) => {
+    const handler = createHandler(closedStream());
+    await expect(new GatewayAssistantController(handler).sendStreamMessage('Bearer upstream-token', 'choice-invalid', undefined,
+      'session-owned-001', body, new TestResponse() as unknown as Response)).rejects.toBeInstanceOf(HttpException);
+    expect(handler.sendStreamMessage).not.toHaveBeenCalled();
+  });
+});

@@ -401,6 +401,19 @@ type ExecutionPlanRecord = {
   createdAt: Date;
 };
 
+export type AssistantExperienceConfigRecord = {
+  id: string;
+  customerId: string;
+  integrationId: string;
+  configVersion: string;
+  status: 'draft' | 'active' | 'retired';
+  activeSlot: string | null;
+  payload: unknown;
+  checksum: string;
+  createdAt: Date;
+  activatedAt: Date | null;
+};
+
 type MockState = {
   sessions: SessionRecord[];
   contextStates: ContextStateRecord[];
@@ -424,6 +437,8 @@ type MockState = {
   knowledgeChunks: KnowledgeChunkRecord[];
   retrievalRuns: RetrievalRunRecord[];
   retrievalCandidates: RetrievalCandidateRecord[];
+  /** Feature 013: empty by default; tests seed rows through augmentStateBeforeInit or directly. */
+  assistantExperienceConfigs: AssistantExperienceConfigRecord[];
   internalIdentity?: InternalIdentityTestConfig;
   workflowAuditFailureEventTypes: string[];
   orchestration: {
@@ -1308,6 +1323,19 @@ function createPrismaMock(state: MockState) {
         async ({ where }: { where: Record<string, unknown> }) => state.toolCalls.find((item) => matchesWhere(item, where)) ?? null
       )
     },
+    assistantExperienceConfig: {
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        if (typeof where.activeSlot === 'string') {
+          return state.assistantExperienceConfigs.find((item) => item.activeSlot === where.activeSlot) ?? null;
+        }
+        const selector = where.customerId_integrationId_configVersion;
+        if (!isRecord(selector)) return null;
+        return state.assistantExperienceConfigs.find((item) => item.customerId === selector.customerId &&
+          item.integrationId === selector.integrationId && item.configVersion === selector.configVersion) ?? null;
+      }),
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.assistantExperienceConfigs.filter((item) => !where || matchesWhere(item, where)))
+    },
     customerToolPolicy: {
       findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
         const selector = where.customerId_toolDefinitionId;
@@ -2056,6 +2084,7 @@ function createInitialState(): MockState {
     knowledgeChunks: createKnowledgeChunks(baseDate),
     retrievalRuns: [],
     retrievalCandidates: [],
+    assistantExperienceConfigs: [],
     orchestration: {
       sendMessage: jest.fn(),
       sseEventBuilds: jest.fn()

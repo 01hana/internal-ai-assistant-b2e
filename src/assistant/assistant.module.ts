@@ -9,6 +9,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { QueryUnderstandingModule } from '../query-understanding/query-understanding.module';
 import { CapabilitiesModule } from '../capabilities/capabilities.module';
+import { AssistantExperienceModule } from '../assistant-experience/assistant-experience.module';
 import { RetrievalModule } from '../retrieval/retrieval.module';
 import { ToolsModule } from '../tools/tools.module';
 import { HostIntegrationModule } from '../host-integration/host-integration.module';
@@ -65,6 +66,7 @@ export interface AssistantQueryScopeComposition {
     ApprovalsModule,
     QueryUnderstandingModule,
     CapabilitiesModule,
+    AssistantExperienceModule,
     RetrievalModule,
     IdentityModule,
     LlmModule,
