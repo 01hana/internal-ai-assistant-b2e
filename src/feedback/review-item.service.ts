@@ -8,6 +8,7 @@ import { RequestIdentityContext } from '../identity/identity-context.types';
 import { CustomerScope } from '../identity/customer-scope.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { sessionOwnedByScopePredicate } from '../prisma/customer-scope.predicate';
+import type { UnsupportedQuestionReasonCode } from '../assistant/message/unsupported-question';
 
 export interface CreateReviewItemFromAssistantOutcomeInput {
   customerScope: CustomerScope;
@@ -20,6 +21,13 @@ export interface CreateReviewItemFromFeedbackInput {
   requestId: string; sessionId: string; messageId: string; identityContext: RequestIdentityContext;
   feedbackEventId: string; answerDecision: AnswerDecisionStatus; rating: FeedbackRating; intent: string; reason?: string; comment?: string; toolCallIds: string[]; evidenceRefIds: string[];
 }
+/** Feature 013 US5: a question the assistant could not map to any capability. The user's text is never copied. */
+export interface CreateUnsupportedQuestionInput {
+  customerScope: CustomerScope; identityContext: RequestIdentityContext;
+  requestId: string; sessionId: string; userMessageId: string;
+  reasonCode: UnsupportedQuestionReasonCode; module?: string;
+}
+export const UNSUPPORTED_QUESTION_SUMMARY = 'unsupported_question: assistant could not recognize the requested capability';
 export interface ReviewVisibilityInput { customerScope: CustomerScope; identityContext: RequestIdentityContext; status?: ReviewItemStatus; sourceType?: ReviewSourceType; priority?: ReviewPriority; }
 export interface ReviewTransitionInput { customerScope: CustomerScope; requestId: string; identityContext: RequestIdentityContext; reviewItemId: string; reason?: string; }
 
@@ -39,9 +47,29 @@ export class ReviewItemService {
     return this.prisma.db.$transaction((transaction) => this.createFeedbackInDatabase(input, transaction as ReviewTransactionClient));
   }
 
+  /** Every occurrence is recorded (no de-duplication): the count itself is the demand signal. */
+  async createUnsupportedQuestion(input: CreateUnsupportedQuestionInput) {
+    assertCustomerScopeMatchesIdentityContext(input.customerScope, input.identityContext);
+    return this.prisma.db.$transaction(async (transaction) => {
+      const database = transaction as ReviewTransactionClient;
+      await this.assertParents(database, input.customerScope, input.sessionId, input.userMessageId, [], []);
+      const suggestedImprovement = { reasonCode: input.reasonCode, module: input.module ?? null };
+      const reviewItem = await database.reviewItem.create({ data: { customerId: input.customerScope.customerId,
+        sourceType: ReviewSourceType.unsupported_question, sourceId: input.userMessageId, status: ReviewItemStatus.open,
+        priority: ReviewPriority.medium, summary: UNSUPPORTED_QUESTION_SUMMARY, suggestedImprovement: toJsonInput(suggestedImprovement) } });
+      await this.auditWriter.append({ customerScope: input.customerScope, requestId: input.requestId, sessionId: input.sessionId,
+        messageId: input.userMessageId, eventType: 'review_item_created', metadata: toJsonInput({ reviewItemId: reviewItem.id,
+          sourceType: ReviewSourceType.unsupported_question, ...suggestedImprovement }) }, database);
+      return reviewItem;
+    });
+  }
+
   async listForReview(input: ReviewVisibilityInput) {
     assertCustomerScopeMatchesIdentityContext(input.customerScope, input.identityContext);
-    const items = await this.prisma.db.reviewItem.findMany({ where: { customerId: input.customerScope.customerId, status: input.status, sourceType: input.sourceType, priority: input.priority }, orderBy: { createdAt: 'desc' } });
+    // Only filters the caller supplied; an omitted filter is never sent as `undefined`.
+    const items = await this.prisma.db.reviewItem.findMany({ where: { customerId: input.customerScope.customerId,
+      ...(input.status ? { status: input.status } : {}), ...(input.sourceType ? { sourceType: input.sourceType } : {}),
+      ...(input.priority ? { priority: input.priority } : {}) }, orderBy: { createdAt: 'desc' } });
     const visible = await Promise.all(items.map(async (item) => (await this.hasValidSource(item, this.prisma.db, input.customerScope)) ? toReviewItemResponse(item) : undefined));
     return visible.filter((item): item is ReviewItemResponse => item !== undefined);
   }
@@ -104,6 +132,10 @@ export class ReviewItemService {
   }
 
   private async hasValidSource(item: { sourceType: ReviewSourceType; sourceId: string }, database: ReviewTransactionClient, customerScope: CustomerScope) {
+    if (item.sourceType === ReviewSourceType.unsupported_question) {
+      const userMessage = await database.assistantMessage.findFirst({ where: { customerId: customerScope.customerId, id: item.sourceId } });
+      return userMessage ? this.isVisibleIntegrationSession(database, customerScope, userMessage.sessionId) : false;
+    }
     const [feedback, decision] = await Promise.all([
       database.feedbackEvent.findFirst({ where: { customerId: customerScope.customerId, id: item.sourceId } }),
       database.answerDecision.findFirst({ where: { customerId: customerScope.customerId, id: item.sourceId } })
@@ -116,10 +148,14 @@ export class ReviewItemService {
     if (!source) return false;
     const message = await database.assistantMessage.findFirst({ where: { customerId: customerScope.customerId, id: source.messageId } });
     if (!message) return false;
-    // Reviewers may inspect another actor's items, but never another Integration's Session.
+    return this.isVisibleIntegrationSession(database, customerScope, message.sessionId);
+  }
+
+  /** Reviewers may inspect another actor's items, but never another Integration's Session. */
+  private async isVisibleIntegrationSession(database: ReviewTransactionClient, customerScope: CustomerScope, sessionId: string) {
     return Boolean(await database.assistantSession.findFirst({ where: {
       customerId: customerScope.customerId, integrationId: customerScope.integrationId,
-      organizationId: customerScope.organizationId, hostApp: customerScope.hostApp, id: message.sessionId
+      organizationId: customerScope.organizationId, hostApp: customerScope.hostApp, id: sessionId
     } }));
   }
 }

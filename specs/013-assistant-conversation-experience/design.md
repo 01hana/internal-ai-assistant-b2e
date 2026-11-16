@@ -114,6 +114,8 @@ model AssistantExperienceConfig {
 ### D8. 未支援問題（US5）
 
 - 在能力解析結果轉為澄清處，若 reasonCode 為 `CAPABILITY_NOT_RECOGNIZED` / `LLM_NO_MATCH` 且不是 controlled conversation，呼叫 `ReviewItemService` 新方法 `createUnsupportedQuestion`：`sourceId` = 使用者訊息 ID，`summary` 為固定文字，`suggestedImprovement` = `{ reasonCode, module }`。
+- 接入點有兩處：`CAPABILITY_NOT_RECOGNIZED` 在前置澄清路徑、`LLM_NO_MATCH` 在前置 no_answer 路徑；判斷規則集中在 `unsupportedQuestionReason`，點擊的選項不收集。
+- `hasValidSource` 對 `unsupported_question` 以使用者訊息確認來源仍屬於同一 Integration 的 session。
 - `clarification-required` 測試依決定更新預期為現行行為。
 
 ### D9. Gateway

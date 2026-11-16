@@ -1,7 +1,7 @@
 # Tasks: Feature 013 — Assistant Conversation Experience
 
 **Input**: 已核准的 `spec.md`（2026-11-15）、`design.md` 與 `plan.md`
-**Status**: Phase 0–5 完成（Gate 5 PASS）；第一個未執行的 task 為 T045
+**Status**: Phase 0–6 完成（Gate 6 PASS）；第一個未執行的 task 為 T051
 
 ## 格式、相依與停止規則
 
@@ -194,12 +194,29 @@ FEATURE013_FIRST_UNEXECUTED_TASK=T045
 
 ## Phase 6 — 未支援問題收集（US5）
 
-- [ ] T045 [US5] 擴充 `test/unit/review-item.service.spec.ts`（或新增）：`createUnsupportedQuestion` 不複製原文、`suggestedImprovement` 只含 `reasonCode` 與 `module`。RED 後實作。
-- [ ] T046 [US5] 新增 `test/integration/unsupported-question-review-item.spec.ts`：`CAPABILITY_NOT_RECOGNIZED`、`LLM_NO_MATCH` 建立紀錄；`PARAMETER_ISSUES`、`MULTIPLE_CAPABILITIES`、controlled conversation 不建立；同一問題重問兩次建立兩筆。RED 後在澄清路徑接入。
-- [ ] T047 [US5] 擴充 `test/integration/customer-review-isolation.spec.ts`：`unsupported_question` 跨客戶隔離；review-items API 可依 `sourceType=unsupported_question` 篩選。
-- [ ] T048 [US5] 確認 `src/feedback/feedback.dto.ts` 與 review-items 查詢參數的 `sourceType` 驗證接受新值。
-- [ ] T049 [US5] 依 spec Decision 1 更新 `test/integration/clarification-required.spec.ts`：預期改為 `CAPABILITY_NOT_RECOGNIZED`、候選為空，並保留「不執行工具」與「建立 clarification question」斷言。
-- [ ] T050 [US5] **Gate 6**：typecheck、US5 focused、`clarification-required`、`no-answer-review-item`、`feedback-review-linkage` 通過。記錄 `FEATURE013_GATE_6=PASS`。
+- [x] T045 [US5] 擴充 `test/unit/review-item.service.spec.ts`（或新增）：`createUnsupportedQuestion` 不複製原文、`suggestedImprovement` 只含 `reasonCode` 與 `module`。RED 後實作。
+- [x] T046 [US5] 新增 `test/integration/unsupported-question-review-item.spec.ts`：`CAPABILITY_NOT_RECOGNIZED`、`LLM_NO_MATCH` 建立紀錄；`PARAMETER_ISSUES`、`MULTIPLE_CAPABILITIES`、controlled conversation 不建立；同一問題重問兩次建立兩筆。RED 後在澄清路徑接入。
+- [x] T047 [US5] 擴充 `test/integration/customer-review-isolation.spec.ts`：`unsupported_question` 跨客戶隔離；review-items API 可依 `sourceType=unsupported_question` 篩選。
+- [x] T048 [US5] 確認 `src/feedback/feedback.dto.ts` 與 review-items 查詢參數的 `sourceType` 驗證接受新值。
+- [x] T049 [US5] 依 spec Decision 1 更新 `test/integration/clarification-required.spec.ts`：預期改為 `CAPABILITY_NOT_RECOGNIZED`、候選為空，並保留「不執行工具」與「建立 clarification question」斷言。
+- [x] T050 [US5] **Gate 6**：typecheck、US5 focused、`clarification-required`、`no-answer-review-item`、`feedback-review-linkage` 通過。記錄 `FEATURE013_GATE_6=PASS`。
+
+**Phase 6 執行證據（2026-11-16）**：
+
+- T045：判斷規則抽成純函式 `src/assistant/message/unsupported-question.ts`（`unsupportedQuestionReason`），單元測試 `test/unit/unsupported-question.spec.ts`；`ReviewItemService.createUnsupportedQuestion` 單元測試 `test/unit/review-item-unsupported-question.spec.ts`：`sourceId` 為使用者訊息 ID，`suggestedImprovement` 只有 `{ reasonCode, module }`（無 module 時為 `null`），`summary` 為固定文字，審計 metadata 同樣不含原文；使用者訊息不在該 session 時不寫入。`priority` 為 `medium`。
+- T046：`test/integration/unsupported-question-review-item.spec.ts`。接入兩處：`CAPABILITY_NOT_RECOGNIZED` 走前置澄清路徑，`LLM_NO_MATCH` 走前置 no_answer 路徑；兩處都在回應前寫入。打招呼、能力詢問、點擊 Quick Reply／延伸建議、成功回答都不建立；同一問題重問兩次建立兩筆。建立失敗時整個請求失敗，與既有 no_answer `ReviewItem` 行為一致。
+- T047：review-items API 依 `sourceType=unsupported_question` 篩選、跨客戶列表與讀取隔離，併入上述 integration 檔，未修改 `customer-review-isolation.spec.ts`。`hasValidSource` 對 `unsupported_question` 改以使用者訊息確認來源仍屬於同一 Integration 的 session。
+- T048：`ReviewItemsQueryDto.sourceType` 加入 `unsupported_question`；Prisma enum 已於 Phase 1 migration 加入。
+- T049：`clarification-required.spec.ts` 依 Decision 1 改為 `CAPABILITY_NOT_RECOGNIZED`、候選為空，保留「不執行工具」與「建立 clarification question」斷言。**注意**：依 Decision 1，這兩種模糊情境（多筆選取列、同錨點多工具）目前解析為 `CAPABILITY_NOT_RECOGNIZED`，因此也會建立 `unsupported_question`。待日後恢復「列出候選」時，它們會自然改走 `MULTIPLE_CAPABILITIES`，不再被收集。
+- 首輪 2 個失敗：(1) `clarification-required` 第二個測試的 `candidateRefs` 位於 `metadata`，修正斷言；(2) `listForReview` 未提供的篩選條件以 `undefined` 傳入，測試替身刻意把 `undefined` 視為無效條件（Prisma 視為不篩選），改為只帶入有提供的條件，實際查詢結果不變。
+- typecheck（`tsconfig.json`、`tsconfig.spec.json`）與變更檔 lint 通過。
+- T050 Gate 6（使用者於 Mac 執行，2026-11-16）：全套 271 suites 中 245 passed、24 skipped、2 failed（上述 2 個問題，baseline `clarification-required` 已不在既有失敗中）；修正後重跑 `clarification-required`、`unsupported-question-review-item`、`customer-review-isolation`、`feedback-review-linkage`、`no-answer-review-item`、`review-items` contract 全部通過。
+
+```text
+FEATURE013_GATE_6=PASS
+FEATURE013_COMPLETED_TASK_RANGE=T001-T050
+FEATURE013_FIRST_UNEXECUTED_TASK=T051
+```
 
 ## Phase 7 — 收尾與驗收
 

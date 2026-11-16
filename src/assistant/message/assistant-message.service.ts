@@ -9,6 +9,8 @@ import { EscalationRequestService } from '../../approvals/escalation-request.ser
 import { AttachedEvidence, EvidenceRefService } from '../../evidence/evidence-ref.service';
 import { Prisma } from '../../generated/prisma/client';
 import { createCustomerScopeFromHostIntegrationContext } from '../../host-integration/host-integration-request.factory';
+import type { CustomerScope } from '../../identity/customer-scope.types';
+import { unsupportedQuestionReason } from './unsupported-question';
 import { AnswerDecisionStatus, AssistantMessageRole, NoAnswerReason, RiskLevel } from '../../generated/prisma/enums';
 import { ReviewItemService } from '../../feedback/review-item.service';
 import { RetrievalService } from '../../retrieval/retrieval.service';
@@ -103,6 +105,16 @@ export class AssistantMessageService {
     const resolution = planningResult.queryUnderstanding.capabilityResolution;
     return resolution?.outcome === 'NEEDS_CLARIFICATION' &&
       (resolution.reasonCode === 'CAPABILITY_NOT_RECOGNIZED' || resolution.reasonCode === 'LLM_NO_MATCH');
+  }
+
+  /** Feature 013 US5: collect a typed question no capability could recognize (see `unsupportedQuestionReason`). */
+  private async recordUnsupportedQuestion(input: SendAssistantMessageInput, planningResult: AssistantPlanningResult,
+    customerScope: CustomerScope, sessionId: string, userMessageId: string): Promise<void> {
+    const reasonCode = unsupportedQuestionReason(planningResult.queryUnderstanding.capabilityResolution, Boolean(input.experienceChoice));
+    if (!reasonCode) return;
+    await this.reviewItemService.createUnsupportedQuestion({ customerScope, identityContext: input.identityContext,
+      requestId: input.requestId, sessionId, userMessageId, reasonCode,
+      ...(input.pageContext?.module ? { module: input.pageContext.module } : {}) });
   }
 
   async sendMessage(input: SendAssistantMessageInput): Promise<AssistantSseEventRecord[]> {
@@ -261,6 +273,7 @@ export class AssistantMessageService {
         messageId: assistantMessage.id, eventType: 'answer_generated', decision: answerDecision.status,
         evidenceRefIds: [], metadata: toJsonInput({ answerDecisionId: answerDecision.answerDecisionId,
           reason: selectionReason }) });
+      await this.recordUnsupportedQuestion(input, planningResult, customerScope, session.id, userMessage.id);
       return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId,
         sessionId: session.id, messageId: assistantMessage.id, answerDelta: answerDecision.answer.delta,
         finalData: { answerDecision: answerDecision.status, answer: answerDecision.answer.text, evidenceRefs: [],
@@ -342,6 +355,7 @@ export class AssistantMessageService {
           groundingCheckId: answerDecision.groundingCheckId
         })
       });
+      await this.recordUnsupportedQuestion(input, planningResult, customerScope, session.id, userMessage.id);
 
       return this.sseEventBuilder.buildAnswerOnlyEvents({
         requestId: input.requestId,
