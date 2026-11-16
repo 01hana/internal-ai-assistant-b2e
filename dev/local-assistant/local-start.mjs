@@ -218,7 +218,9 @@ try {
   const gatewayAction = await startManagedProcess({
     state, name: 'gateway', command: 'node', args: ['apps/gateway/dist/main.js'], environment: commonGatewayEnv, port: PORTS.gateway,
     health: () => httpHealthy(`http://127.0.0.1:${PORTS.gateway}/health`, { expect: (body) => body?.status === 'healthy' }),
-    configInputs: [join(ROOT, '.env'), join(ROOT, 'apps/gateway/dist/main.js'), join(ROOT, '.gateway-local-keys/gateway-signing-key.pem')]
+    // Every compiled Gateway file, like the backend: a rebuild that leaves main.js unchanged must still restart it.
+    configInputs: [join(ROOT, '.env'), join(ROOT, '.gateway-local-keys/gateway-signing-key.pem'),
+      ...compiledFiles(join(ROOT, 'apps/gateway/dist'))]
   });
   if (gatewayAction !== 'REUSE') startedThisRun.push({ kind: 'process', name: 'gateway' });
   process.stdout.write(`[${gatewayAction}] Gateway\n`);
