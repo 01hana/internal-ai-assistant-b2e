@@ -25,6 +25,19 @@ export interface AssistantSessionSummary {
   };
 }
 
+/** Feature 013 US4: one entry of the session history list. */
+export interface AssistantSessionListItem {
+  sessionId: string;
+  title: string | null;
+  createdAt: string;
+  lastMessageAt: string;
+}
+
+export interface AssistantSessionListResult {
+  sessions: AssistantSessionListItem[];
+  nextCursor: string | null;
+}
+
 export interface PersistedSession {
   id: string;
   customerId: string;

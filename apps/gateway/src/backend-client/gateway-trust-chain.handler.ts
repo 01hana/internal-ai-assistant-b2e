@@ -1,5 +1,6 @@
 import { hasMessageOrChoiceId } from './assistant-message-input';
-import type { GatewayBackendClient, GatewayBackendReadResponse, GatewayHistoryQuery } from './gateway-backend-client.service';
+import { GATEWAY_SESSION_LIST_CURSOR_PATTERN, GATEWAY_SESSION_LIST_LIMIT_PATTERN } from './gateway-backend-client.service';
+import type { GatewayBackendClient, GatewayBackendReadResponse, GatewayHistoryQuery, GatewaySessionListQuery } from './gateway-backend-client.service';
 import type { CanonicalIdentityResolver } from '../integration-registry/canonical-identity-resolver.service';
 import type { UpstreamTokenVerifier } from '../upstream-auth/upstream-token-verifier.service';
 
@@ -35,10 +36,17 @@ type GetSessionMessagesInput = Readonly<{
   traceparent?: string;
 }>;
 
+type ListSessionsInput = Readonly<{
+  authorization?: string;
+  query: GatewaySessionListQuery;
+  requestId: string;
+  traceparent?: string;
+}>;
+
 type GatewayTrustChainHandlerDependencies = Readonly<{
   upstreamTokenVerifier: UpstreamTokenVerifier;
   canonicalIdentityResolver: Pick<CanonicalIdentityResolver, 'resolve'>;
-  gatewayBackendClient: Pick<GatewayBackendClient, 'createSession' | 'getSession' | 'getSessionMessages' | 'sendStreamMessage'>;
+  gatewayBackendClient: Pick<GatewayBackendClient, 'createSession' | 'getSession' | 'getSessionMessages' | 'sendStreamMessage' | 'listSessions' | 'archiveSession'>;
 }>;
 
 /** Coordinates the fixed identity-to-transport chain without owning either authority. */
@@ -95,6 +103,23 @@ export class GatewayTrustChainHandler {
     });
   }
 
+  async listSessions(input: ListSessionsInput): Promise<GatewayBackendReadResponse> {
+    if (!isListSessionsInput(input)) throw new GatewayTrustChainInputError();
+    const canonicalIdentity = await resolveCanonicalIdentity(this.dependencies, input.authorization, input.requestId);
+    return this.dependencies.gatewayBackendClient.listSessions(canonicalIdentity, input.query, {
+      requestId: input.requestId,
+      traceparent: input.traceparent
+    });
+  }
+
+  async archiveSession(input: GetSessionInput): Promise<GatewayBackendReadResponse> {
+    if (!isGetSessionInput(input)) throw new GatewayTrustChainInputError();
+    const canonicalIdentity = await resolveCanonicalIdentity(this.dependencies, input.authorization, input.requestId);
+    return this.dependencies.gatewayBackendClient.archiveSession(canonicalIdentity, input.sessionId, {
+      requestId: input.requestId,
+      traceparent: input.traceparent
+    });
+  }
 }
 
 class GatewayTrustChainInputError extends Error {
@@ -138,6 +163,17 @@ function isGetSessionInput(value: unknown): value is GetSessionInput {
 function isGetSessionMessagesInput(value: unknown): value is GetSessionMessagesInput {
   if (!isRecord(value) || Object.keys(value).some((key) => key !== 'authorization' && key !== 'sessionId' && key !== 'query' && key !== 'requestId' && key !== 'traceparent')) return false;
   return isOptionalString(value.authorization) && isNonBlankString(value.sessionId) && isHistoryQuery(value.query) && isNonBlankString(value.requestId) && isOptionalString(value.traceparent);
+}
+
+function isListSessionsInput(value: unknown): value is ListSessionsInput {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'authorization' && key !== 'query' && key !== 'requestId' && key !== 'traceparent')) return false;
+  return isOptionalString(value.authorization) && isSessionListQuery(value.query) && isNonBlankString(value.requestId) && isOptionalString(value.traceparent);
+}
+
+function isSessionListQuery(value: unknown): value is GatewaySessionListQuery {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'limit' && key !== 'cursor')) return false;
+  return (value.limit === undefined || (typeof value.limit === 'string' && GATEWAY_SESSION_LIST_LIMIT_PATTERN.test(value.limit)))
+    && (value.cursor === undefined || (typeof value.cursor === 'string' && GATEWAY_SESSION_LIST_CURSOR_PATTERN.test(value.cursor)));
 }
 
 function isHistoryQuery(value: unknown): value is GatewayHistoryQuery {

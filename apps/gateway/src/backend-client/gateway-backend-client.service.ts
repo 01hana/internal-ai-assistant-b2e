@@ -22,6 +22,17 @@ export type GatewayHistoryQuery = Readonly<{
   order?: 'asc';
 }>;
 
+/** Feature 013 US4: opaque keyset paging for the actor's own session list. */
+export type GatewaySessionListQuery = Readonly<{
+  limit?: string;
+  cursor?: string;
+}>;
+
+export const GATEWAY_SESSION_LIST_LIMIT_PATTERN = /^[0-9]{1,3}$/;
+export const GATEWAY_SESSION_LIST_CURSOR_PATTERN = /^[A-Za-z0-9_-]{1,200}$/;
+
+type ReadOperation = 'get-session' | 'get-session-messages' | 'list-sessions' | 'archive-session';
+
 export type GatewayBackendReadResponse = Readonly<{
   statusCode: number;
   body: unknown;
@@ -87,12 +98,24 @@ export class GatewayBackendClient {
 
   async getSession(identity: CanonicalGatewayIdentity, sessionId: string, input: ReadInput): Promise<GatewayBackendReadResponse> {
     if (!isNonBlankString(sessionId) || !isReadInput(input)) throw new BackendUnavailableError();
-    return this.fetchRead(identity, 'get-session', sessionId, undefined, input);
+    return this.fetchRead(identity, 'get-session', sessionId, undefined, input, SESSION_READ_FAILURES);
   }
 
   async getSessionMessages(identity: CanonicalGatewayIdentity, sessionId: string, query: GatewayHistoryQuery, input: ReadInput): Promise<GatewayBackendReadResponse> {
     if (!isNonBlankString(sessionId) || !isHistoryQuery(query) || !isReadInput(input)) throw new BackendUnavailableError();
-    return this.fetchRead(identity, 'get-session-messages', sessionId, query, input);
+    return this.fetchRead(identity, 'get-session-messages', sessionId, query, input, SESSION_READ_FAILURES);
+  }
+
+  /** Feature 013 US4. Core rejects an out-of-range limit or undecodable cursor with a safe 400, which passes through. */
+  async listSessions(identity: CanonicalGatewayIdentity, query: GatewaySessionListQuery, input: ReadInput): Promise<GatewayBackendReadResponse> {
+    if (!isSessionListQuery(query) || !isReadInput(input)) throw new BackendUnavailableError();
+    return this.fetchRead(identity, 'list-sessions', undefined, query, input, SESSION_LIST_FAILURES);
+  }
+
+  /** Feature 013 US4: archive one of the actor's own sessions; Core owns the visibility decision. */
+  async archiveSession(identity: CanonicalGatewayIdentity, sessionId: string, input: ReadInput): Promise<GatewayBackendReadResponse> {
+    if (!isNonBlankString(sessionId) || !isReadInput(input)) throw new BackendUnavailableError();
+    return this.fetchRead(identity, 'archive-session', sessionId, undefined, input, SESSION_READ_FAILURES);
   }
 
   async sendStreamMessage(
@@ -131,14 +154,16 @@ export class GatewayBackendClient {
 
   private async fetchRead(
     identity: CanonicalGatewayIdentity,
-    operation: 'get-session' | 'get-session-messages',
-    sessionId: string,
-    query: GatewayHistoryQuery | undefined,
-    input: ReadInput
+    operation: ReadOperation,
+    sessionId: string | undefined,
+    query: Readonly<{ limit?: string; cursor?: string; order?: string }> | undefined,
+    input: ReadInput,
+    safeFailureStatuses: readonly number[]
   ): Promise<GatewayBackendReadResponse> {
     const token = await this.dependencies.internalTokenIssuer.issue(identity);
     const route = BACKEND_ROUTE_DEFINITIONS[operation];
-    const url = new URL(route.path.replace(':id', encodeURIComponent(sessionId)), this.dependencies.backendBaseUrl);
+    const path = sessionId === undefined ? route.path : route.path.replace(':id', encodeURIComponent(sessionId));
+    const url = new URL(path, this.dependencies.backendBaseUrl);
     if (query) {
       if (query.limit !== undefined) url.searchParams.set('limit', query.limit);
       if (query.cursor !== undefined) url.searchParams.set('cursor', query.cursor);
@@ -158,7 +183,7 @@ export class GatewayBackendClient {
       if (typeof response.json !== 'function') throw new BackendUnavailableError();
       const body = await response.json();
       if (response.ok && response.status >= 200 && response.status < 300) return Object.freeze({ statusCode: response.status, body });
-      if (isSafeBackendReadFailure(response.status, body)) return Object.freeze({ statusCode: response.status, body });
+      if (isSafeBackendReadFailure(response.status, body, safeFailureStatuses)) return Object.freeze({ statusCode: response.status, body });
       throw new BackendUnavailableError();
     } catch {
       throw new BackendUnavailableError();
@@ -204,8 +229,17 @@ function isHistoryQuery(value: unknown): value is GatewayHistoryQuery {
     && (value.order === undefined || value.order === 'asc');
 }
 
-function isSafeBackendReadFailure(statusCode: number, body: unknown): boolean {
-  if (![401, 403, 404].includes(statusCode) || !isRecord(body) || !isNonBlankString(body.requestId) || !isRecord(body.error)) return false;
+function isSessionListQuery(value: unknown): value is GatewaySessionListQuery {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'limit' && key !== 'cursor')) return false;
+  return (value.limit === undefined || (typeof value.limit === 'string' && GATEWAY_SESSION_LIST_LIMIT_PATTERN.test(value.limit)))
+    && (value.cursor === undefined || (typeof value.cursor === 'string' && GATEWAY_SESSION_LIST_CURSOR_PATTERN.test(value.cursor)));
+}
+
+const SESSION_READ_FAILURES: readonly number[] = Object.freeze([401, 403, 404]);
+const SESSION_LIST_FAILURES: readonly number[] = Object.freeze([400, 401, 403]);
+
+function isSafeBackendReadFailure(statusCode: number, body: unknown, allowedStatuses: readonly number[]): boolean {
+  if (!allowedStatuses.includes(statusCode) || !isRecord(body) || !isNonBlankString(body.requestId) || !isRecord(body.error)) return false;
   return isNonBlankString(body.error.code) && typeof body.error.message === 'string';
 }
 

@@ -106,7 +106,7 @@ Feature 013 補齊以上體驗，並維持既有的信任邊界：**所有提示
 
 **Acceptance Scenarios**:
 
-1. **Given** 使用者有多個 session，**when** 呼叫 `GET /assistant/sessions?limit&cursor`，**then** 回傳自己的 active session（`sessionId`、`title`、`createdAt`、`lastMessageAt`），依 `lastMessageAt`（無則 `createdAt`）由新到舊，cursor 分頁，`limit` 上限 50。
+1. **Given** 使用者有多個 session，**when** 呼叫 `GET /assistant/sessions?limit&cursor`，**then** 回傳自己已有訊息的 active session（`sessionId`、`title`、`createdAt`、`lastMessageAt`），依 `lastMessageAt` 由新到舊（同時間依 `id`），cursor 分頁，`limit` 上限 50。尚無訊息的 session 不列出（前端開啟助理就會建立 session，否則每次開啟都會多一筆空紀錄）。
 2. **Given** session 的第一則使用者訊息，**when** 寫入，**then** 以該訊息去除空白後的前 40 個字元設定 `title`（不使用 LLM）；尚未有訊息的 session `title` 為 `null`。
 3. **Given** 另一位使用者或另一客戶的 session，**then** 不出現在列表；以其 ID 封存時回傳 not found。
 4. **Given** 呼叫 `POST /assistant/sessions/:id/archive`，**then** session 狀態改為 `closed`，寫入 `session_archived` 審計事件；之後對它送訊息回 not found。

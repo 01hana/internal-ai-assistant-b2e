@@ -115,6 +115,7 @@ export class AssistantMessageService {
       content: input.message,
       pageContext: input.pageContext
     });
+    await this.sessionService.recordUserMessage(customerScope, session.id, input.message);
 
     await this.auditWriter.append({
       customerScope,

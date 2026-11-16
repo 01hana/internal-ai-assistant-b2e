@@ -2,7 +2,8 @@ import { BadRequestException, Body, Controller, Get, Headers, HttpCode, HttpExce
 import { randomUUID } from 'node:crypto';
 import type { Response } from 'express';
 import { GatewayTrustChainHandler } from '../backend-client/gateway-trust-chain.handler';
-import type { GatewayHistoryQuery } from '../backend-client/gateway-backend-client.service';
+import { GATEWAY_SESSION_LIST_CURSOR_PATTERN, GATEWAY_SESSION_LIST_LIMIT_PATTERN } from '../backend-client/gateway-backend-client.service';
+import type { GatewayHistoryQuery, GatewaySessionListQuery } from '../backend-client/gateway-backend-client.service';
 import { IdentityResolutionError } from '../integration-registry/canonical-identity-resolver.service';
 import { IdentityServiceUnavailableError } from '../signing/identity-service-unavailable.error';
 import { UpstreamAuthenticationError, UpstreamIdentityServiceUnavailableError } from '../upstream-auth/upstream-auth.error';
@@ -35,6 +36,49 @@ export class GatewayAssistantController {
     } catch (error) {
       throw projectTrustChainError(error);
     }
+  }
+
+  /** Feature 013 US4: the actor's own session list. Declared before `sessions/:id`. */
+  @Get('sessions')
+  async listSessions(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    const listQuery = readSessionListQuery(query);
+    rejectGetBody(body);
+    const result = await this.trustChainHandler.listSessions({
+      authorization,
+      query: listQuery,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
+  }
+
+  /** Feature 013 US4: archive one of the actor's own sessions. No body or query is accepted. */
+  @Post('sessions/:id/archive')
+  @HttpCode(200)
+  async archiveSession(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Param('id') sessionId: string,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    rejectGetBodyOrQuery(body, query);
+    const result = await this.trustChainHandler.archiveSession({
+      authorization,
+      sessionId,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
   }
 
   @Get('sessions/:id')
@@ -154,6 +198,15 @@ function readHistoryQuery(query: unknown): GatewayHistoryQuery {
     || (cursor !== undefined && typeof cursor !== 'string')
     || (order !== undefined && order !== 'asc')) throw new BadRequestException('Invalid Gateway operation input.');
   return Object.freeze({ ...(limit === undefined ? {} : { limit }), ...(cursor === undefined ? {} : { cursor }), ...(order === undefined ? {} : { order }) });
+}
+
+function readSessionListQuery(query: unknown): GatewaySessionListQuery {
+  if (!isRecord(query) || Object.keys(query).some((key) => key !== 'limit' && key !== 'cursor')) throw new BadRequestException('Invalid Gateway operation input.');
+  const limit = query.limit;
+  const cursor = query.cursor;
+  if ((limit !== undefined && (typeof limit !== 'string' || !GATEWAY_SESSION_LIST_LIMIT_PATTERN.test(limit)))
+    || (cursor !== undefined && (typeof cursor !== 'string' || !GATEWAY_SESSION_LIST_CURSOR_PATTERN.test(cursor)))) throw new BadRequestException('Invalid Gateway operation input.');
+  return Object.freeze({ ...(limit === undefined ? {} : { limit }), ...(cursor === undefined ? {} : { cursor }) });
 }
 
 function writeReadResponse(response: Response, result: Readonly<{ statusCode: number; body: unknown }>): void {

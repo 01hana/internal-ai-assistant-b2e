@@ -45,6 +45,18 @@ export class SendAssistantMessageDto {
   pageContext?: PageContextDto;
 }
 
+/** Feature 013 US4: session history list query; values are validated again by session-cursor. */
+export class AssistantSessionListQueryDto {
+  @IsOptional()
+  @IsNumberString()
+  limit?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  cursor?: string;
+}
+
 export class AssistantMessageHistoryQueryDto {
   @IsOptional()
   @IsNumberString()

@@ -98,9 +98,9 @@ describe('Gateway trust-chain handler contract (T068)', () => {
     expect(readSourceFiles(backendClientRoot).filter((source) => forbidden.test(source.content))).toEqual([]);
   });
 
-  it('requires exactly the two server-owned future handler methods', () => {
+  it('requires exactly the fixed server-owned handler methods (Feature 013 adds list and archive)', () => {
     const Handler = loadGatewayTrustChainHandler();
-    expect(Object.getOwnPropertyNames(Handler.prototype).sort()).toEqual(['constructor', 'createSession', 'getSession', 'getSessionMessages', 'sendStreamMessage']);
+    expect(Object.getOwnPropertyNames(Handler.prototype).sort()).toEqual(['archiveSession', 'constructor', 'createSession', 'getSession', 'getSessionMessages', 'listSessions', 'sendStreamMessage']);
   });
 
   it('has no legacy verifier, multi-profile implementation, registry, or binding authority', () => {

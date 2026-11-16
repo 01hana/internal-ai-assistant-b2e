@@ -10,7 +10,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AssistantContextStateService } from '../context/assistant-context-state.service';
 import { toPageContextAuditMetadata } from '../page-context/page-context.mapper';
 import type { AssistantOpeningV1 } from '../../assistant-experience/assistant-experience.service';
+import { encodeSessionCursor, SessionCursor } from './session-cursor';
 import {
+  AssistantSessionListResult,
   AssistantSessionSummary,
   CloseAssistantSessionInput,
   CloseAssistantSessionResult,
@@ -145,6 +147,57 @@ export class AssistantSessionService {
     };
   }
 
+  /**
+   * Feature 013 US4: the actor's own active sessions that contain at least one message, newest first.
+   * Sessions opened but never used are excluded so every opening does not add an empty history entry.
+   * Listing is not audited (spec US4 scenario 5).
+   */
+  async listSessionPage(customerScope: CustomerScope, input: { limit: number; cursor?: SessionCursor }): Promise<AssistantSessionListResult> {
+    const predicate = customerScopedListPredicate(customerScope, {
+      integrationId: customerScope.integrationId,
+      organizationId: customerScope.organizationId,
+      hostApp: customerScope.hostApp,
+      actorId: customerScope.actorId,
+      status: AssistantSessionStatus.active
+    });
+    const rows = await this.prisma.db.assistantSession.findMany({
+      where: {
+        ...predicate,
+        lastMessageAt: { not: null },
+        ...(input.cursor ? { OR: [
+          { lastMessageAt: { lt: input.cursor.lastMessageAt } },
+          { lastMessageAt: input.cursor.lastMessageAt, id: { lt: input.cursor.id } }
+        ] } : {})
+      },
+      orderBy: [{ lastMessageAt: 'desc' }, { id: 'desc' }],
+      take: input.limit + 1
+    });
+    const page = rows.slice(0, input.limit);
+    const last = page.at(-1);
+    return {
+      sessions: page.map((row) => ({ sessionId: row.id, title: row.title ?? null, createdAt: row.createdAt.toISOString(),
+        lastMessageAt: row.lastMessageAt!.toISOString() })),
+      nextCursor: rows.length > input.limit && last?.lastMessageAt
+        ? encodeSessionCursor({ lastMessageAt: last.lastMessageAt, id: last.id }) : null
+    };
+  }
+
+  /** Feature 013 US4: records message activity; the title is set once, from the first user message. */
+  async recordUserMessage(customerScope: CustomerScope, sessionId: string, content: string, at: Date = new Date()): Promise<void> {
+    const owned = sessionOwnedByScopePredicate(customerScope, sessionId);
+    await this.prisma.db.assistantSession.updateMany({ where: { ...owned, title: null },
+      data: { title: sessionTitleFrom(content) } });
+    await this.prisma.db.assistantSession.updateMany({ where: owned, data: { lastMessageAt: at } });
+  }
+
+  /** Feature 013 US4: archives (closes) one of the actor's active sessions and audits it. */
+  async archiveVisibleSession(input: { customerScope: CustomerScope; requestId: string; sessionId: string }): Promise<CloseAssistantSessionResult> {
+    const result = await this.closeVisibleSession({ customerScope: input.customerScope, sessionId: input.sessionId });
+    await this.auditWriter.append({ customerScope: input.customerScope, requestId: input.requestId,
+      sessionId: input.sessionId, eventType: 'session_archived' });
+    return result;
+  }
+
   createSessionNotFoundError() {
     return new NotFoundException({
       error: 'NOT_FOUND',
@@ -155,4 +208,11 @@ export class AssistantSessionService {
 
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
+}
+
+export const SESSION_TITLE_MAX_LENGTH = 40;
+
+/** Whitespace-collapsed, trimmed, at most 40 characters (code points). No LLM is involved. */
+export function sessionTitleFrom(content: string): string {
+  return [...content.replace(/\s+/gu, ' ').trim()].slice(0, SESSION_TITLE_MAX_LENGTH).join('');
 }

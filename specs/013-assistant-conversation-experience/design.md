@@ -106,8 +106,9 @@ model AssistantExperienceConfig {
 
 ### D7. Session 列表與封存（US4）
 
-- `GET /assistant/sessions?limit&cursor`：exact scope + `status=active`；排序 `coalesce(lastMessageAt, createdAt) desc, id desc`；cursor 為 base64url 的 `{t, id}`，伺服器驗證格式；`limit` 預設 20、上限 50。
-- 標題：在 `sendMessage` 寫入第一則 user message 的同一 transaction，以 `updateMany where title is null` 設定（避免併發覆寫）。
+- `GET /assistant/sessions?limit&cursor`：exact scope + `status=active` + `lastMessageAt is not null`；排序 `lastMessageAt desc, id desc`；cursor 為 base64url 的 `{t, id}`，伺服器驗證格式；`limit` 預設 20、上限 50。
+- `lastMessageAt`：既有欄位但先前沒有任何程式更新；Feature 013 起每則 user message 寫入後更新。只列有訊息的 session，所以排序不需要 `coalesce`，也能直接用 Prisma keyset 分頁。
+- 標題：在 `sendMessage` 寫入 user message 後，以 `updateMany where title is null` 設定（單一條件更新，併發時只有第一筆生效，不會覆寫）。
 - `POST /assistant/sessions/:id/archive`：沿用 `closeVisibleSession`，寫 `session_archived`。
 
 ### D8. 未支援問題（US5）

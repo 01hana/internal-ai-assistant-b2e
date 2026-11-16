@@ -2,7 +2,9 @@ export type BackendRouteOperation =
   | 'create-session'
   | 'get-session'
   | 'get-session-messages'
-  | 'send-stream-message';
+  | 'send-stream-message'
+  | 'list-sessions'
+  | 'archive-session';
 
 export type BackendRouteDefinition = Readonly<{
   method: 'GET' | 'POST';
@@ -26,5 +28,13 @@ export const BACKEND_ROUTE_DEFINITIONS: Readonly<Record<BackendRouteOperation, B
   'send-stream-message': Object.freeze({
     method: 'POST',
     path: '/api/v1/assistant/sessions/:id/messages'
+  }),
+  'list-sessions': Object.freeze({
+    method: 'GET',
+    path: '/api/v1/assistant/sessions'
+  }),
+  'archive-session': Object.freeze({
+    method: 'POST',
+    path: '/api/v1/assistant/sessions/:id/archive'
   })
 });

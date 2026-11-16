@@ -1,7 +1,7 @@
 # Tasks: Feature 013 — Assistant Conversation Experience
 
 **Input**: 已核准的 `spec.md`（2026-11-15）、`design.md` 與 `plan.md`
-**Status**: Phase 0–4 完成（Gate 4 PASS）；第一個未執行的 task 為 T037
+**Status**: Phase 0–5 完成（Gate 5 PASS）；第一個未執行的 task 為 T045
 
 ## 格式、相依與停止規則
 
@@ -166,14 +166,31 @@ FEATURE013_FIRST_UNEXECUTED_TASK=T037
 
 ## Phase 5 — Session 列表與封存（US4）
 
-- [ ] T037 [US4] 新增 `test/unit/session-cursor.spec.ts`：cursor 編解碼、竄改或格式錯誤回 400、`limit` 預設 20 與上限 50。RED 後實作 cursor 工具。
-- [ ] T038 [US4] 新增 `test/integration/session-list.spec.ts`：只列自己 exact scope 的 active session；排序 `coalesce(lastMessageAt, createdAt) desc, id desc`；分頁不重複不遺漏；`closed` 不出現；不寫審計。RED 後新增 `GET /assistant/sessions` 與 service 方法。
-- [ ] T039 [US4] 擴充 `session-list.spec.ts`：第一則 user message 設定 `title`（去除空白後前 40 字）、第二則不覆寫、併發兩則只設定一次。RED 後在 `sendMessage` 的 user message transaction 內實作。
-- [ ] T040 [US4] 新增 `test/integration/session-archive.spec.ts`：封存後狀態 `closed`、寫 `session_archived`、之後送訊息與讀取回 404；他人或他客戶 session 回 404。RED 後新增 `POST /assistant/sessions/:id/archive`。
-- [ ] T041 [US4] 新增 `test/contract/assistant-session-list.contract.spec.ts`：列表與封存的回應形狀與錯誤格式。
-- [ ] T042 [US4] 擴充 `test/integration/customer-session-isolation.spec.ts`：跨客戶列表與封存隔離。
-- [ ] T043 [US4] Gateway：`backend-route-definition.ts` 新增 `list-sessions`、`archive-session`；`gateway-assistant.controller.ts` 新增 handler；擴充 Gateway 測試（含白名單仍拒絕未定義路由）。
-- [ ] T044 [US4] **Gate 5**：typecheck（Core + Gateway）、US4 focused、`assistant-sessions` / `assistant-message-history` contract 通過。記錄 `FEATURE013_GATE_5=PASS`。
+- [x] T037 [US4] 新增 `test/unit/session-cursor.spec.ts`：cursor 編解碼、竄改或格式錯誤回 400、`limit` 預設 20 與上限 50。RED 後實作 cursor 工具。
+- [x] T038 [US4] 新增 `test/integration/session-list.spec.ts`：只列自己 exact scope 的 active session；排序 `coalesce(lastMessageAt, createdAt) desc, id desc`；分頁不重複不遺漏；`closed` 不出現；不寫審計。RED 後新增 `GET /assistant/sessions` 與 service 方法。
+- [x] T039 [US4] 擴充 `session-list.spec.ts`：第一則 user message 設定 `title`（去除空白後前 40 字）、第二則不覆寫、併發兩則只設定一次。RED 後在 `sendMessage` 的 user message transaction 內實作。
+- [x] T040 [US4] 新增 `test/integration/session-archive.spec.ts`：封存後狀態 `closed`、寫 `session_archived`、之後送訊息與讀取回 404；他人或他客戶 session 回 404。RED 後新增 `POST /assistant/sessions/:id/archive`。
+- [x] T041 [US4] 新增 `test/contract/assistant-session-list.contract.spec.ts`：列表與封存的回應形狀與錯誤格式。
+- [x] T042 [US4] 擴充 `test/integration/customer-session-isolation.spec.ts`：跨客戶列表與封存隔離。
+- [x] T043 [US4] Gateway：`backend-route-definition.ts` 新增 `list-sessions`、`archive-session`；`gateway-assistant.controller.ts` 新增 handler；擴充 Gateway 測試（含白名單仍拒絕未定義路由）。
+- [x] T044 [US4] **Gate 5**：typecheck（Core + Gateway）、US4 focused、`assistant-sessions` / `assistant-message-history` contract 通過。記錄 `FEATURE013_GATE_5=PASS`。
+
+**Phase 5 執行證據（2026-11-16）**：
+
+- T037：`src/assistant/session/session-cursor.ts`：cursor 為 base64url `{t, id}`，長度、字元、欄位、時間格式任一不符回 400；`limit` 預設 20、1–50 以外回 400。
+- T038：`AssistantSessionService.listSessionPage`。與原設計的差異（已同步 spec/design）：(1) 只列已有訊息的 session，避免每次開啟助理都多一筆空紀錄；(2) 排序改為 `lastMessageAt desc, id desc`（不需 coalesce）；(3) 發現 `lastMessageAt` 先前從未被更新，改為每則 user message 寫入後更新。
+- T039：`recordUserMessage` 以 `updateMany where title is null` 設定標題（空白合併、去頭尾、前 40 字）；第二則不覆寫。併發只設定一次由單一條件更新保證，未另寫併發測試。
+- T040、T042：封存與跨客戶隔離測試併入 `test/integration/session-list.spec.ts`（`archive (T040)`、兩個 T042 案例），未另建 `session-archive.spec.ts`，也未修改 `customer-session-isolation.spec.ts`。
+- T041：`test/contract/assistant-session-list.contract.spec.ts`。
+- T043：Gateway 新增 `list-sessions`、`archive-session` 固定路由與 client／handler／controller 方法；列表只接受 `limit`（1–3 位數字）與 `cursor`（base64url，最多 200 字），Core 的 400（cursor 或 limit 不合法）安全轉發；封存不接受 body 與 query，只轉發 401/403/404。新增 `apps/gateway/test/backend-client/gateway-session-list.spec.ts`。**修改既有測試**：`backend-route-definition.contract.spec.ts`（路由鎖定加入兩條新路由與 3 個漂移案例）、`gateway-trust-chain-handler.spec.ts`（handler 方法清單加入 `listSessions`、`archiveSession`）。
+- typecheck（Core、Gateway `tsconfig.test.json`）與變更檔 lint 通過。
+- T044 Gate 5（使用者於 Mac 執行，2026-11-16）：Core 全套 268 suites 中 242 passed、24 skipped、2 failed：baseline `clarification-required`（2 tests，T049 處理）與 `structured-api-evidence-http.contract.spec.ts` 的「請查本期新增數量」案例回 404（單一案例、耗時 896ms，同組其他案例同一 session 皆通過）；該檔單獨重跑 3 次皆 22 passed、1 skipped，判定為偶發，不屬 Phase 5 變更。Gateway 82 suites 中 72 passed、10 skipped、0 failed。
+
+```text
+FEATURE013_GATE_5=PASS
+FEATURE013_COMPLETED_TASK_RANGE=T001-T044
+FEATURE013_FIRST_UNEXECUTED_TASK=T045
+```
 
 ## Phase 6 — 未支援問題收集（US5）
 

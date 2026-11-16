@@ -23,7 +23,9 @@ import {
   CreateAssistantSessionDto,
   SendAssistantMessageDto,
   AssistantMessageHistoryQueryDto,
+  AssistantSessionListQueryDto,
 } from "./dto/assistant.dto";
+import { decodeSessionCursor, parseSessionListLimit } from "./session/session-cursor";
 import { AssistantHistoryService } from "./history/assistant-history.service";
 import { AssistantMessageService } from "./message/assistant-message.service";
 import { AssistantSessionService } from "./session/assistant-session.service";
@@ -54,6 +56,36 @@ export class AssistantController {
       hostIntegrationContext: host,
       pageContext,
       ...(opening ? { opening } : {}),
+    });
+  }
+
+  /** Feature 013 US4: the actor's own sessions that contain messages, newest first. */
+  @Get("sessions")
+  async listSessions(
+    @Req() request: IdentityRequest,
+    @Query() query: AssistantSessionListQueryDto,
+  ) {
+    const identityContext = getRequiredIdentityContext(request);
+    const { host } = this.hostIntegrationRequestFactory.create(identityContext, undefined);
+    return this.assistantSessionService.listSessionPage(createCustomerScopeFromHostIntegrationContext(host), {
+      limit: parseSessionListLimit(query.limit),
+      ...(query.cursor === undefined ? {} : { cursor: decodeSessionCursor(query.cursor) }),
+    });
+  }
+
+  /** Feature 013 US4: archive (close) one of the actor's sessions. */
+  @Post("sessions/:id/archive")
+  @HttpCode(HttpStatus.OK)
+  async archiveSession(
+    @Req() request: IdentityRequest,
+    @Param("id") sessionId: string,
+  ) {
+    const identityContext = getRequiredIdentityContext(request);
+    const { host } = this.hostIntegrationRequestFactory.create(identityContext, undefined);
+    return this.assistantSessionService.archiveVisibleSession({
+      customerScope: createCustomerScopeFromHostIntegrationContext(host),
+      requestId: identityContext.requestId,
+      sessionId,
     });
   }
 
