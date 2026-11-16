@@ -1,7 +1,7 @@
 # Tasks: Feature 013 — Assistant Conversation Experience
 
 **Input**: 已核准的 `spec.md`（2026-11-15）、`design.md` 與 `plan.md`
-**Status**: 尚未開始；第一個未執行的 task 為 T001
+**Status**: Phase 0 完成（Gate 0 PASS）；第一個未執行的 task 為 T007
 
 ## 格式、相依與停止規則
 
@@ -16,12 +16,39 @@
 
 **Goal**：移除凍結整檔 hash 的檢查，保留真正的安全邊界；建立 specs 索引。
 
-- [ ] T001 [US0] 在新檔 `test/architecture/repository-safety.guard.spec.ts` 寫入保留的檢查並確認 GREEN：tracked 檔案不含 `.pem` / `.key`；無 `.gitmodules`、無 submodule；只有一個 worktree；tracked 檔案不含 `frontend|f2e|widget|assistant-sdk` 目錄。
-- [ ] T002 [US0] 在同檔新增 migration 只能新增的檢查：以 `test/fixtures/migration-ledger.json` 記錄既有每支 migration 目錄名稱與 `migration.sql` 的 sha256；既有項目內容不得改變或消失，新目錄允許出現（需同時更新 ledger）。先以竄改暫存副本的方式證明檢查會失敗（RED 證據），再確認現況 GREEN。
-- [ ] T003 [US0] 刪除 `test/contract/feature010-scope-boundary.contract.spec.ts`；確認其仍有價值的檢查已由 T001–T002 或既有 contract 測試（`assistant-sessions`、`assistant-messages-sse`、`assistant-message-history`、`feature010-public-compatibility`）涵蓋，將對照表記錄在本檔 Phase 0 證據段。
-- [ ] T004 [US0] 將 `.specify/feature.json` 改為指向 `specs/013-assistant-conversation-experience`；確認沒有其他測試依賴舊值。
-- [ ] T005 [US0] 新增 `specs/README.md`：001–012 的名稱、狀態（已完成）、合併進 main 的日期；013 狀態為「進行中」；說明 spec 合併後凍結、現況文件在 `docs/`。日期以 `git log` 查證，不得推測。
-- [ ] T006 **Gate 0**：typecheck 通過；T001–T002 focused 通過；使用者執行全套，結果只剩 baseline 中的 `clarification-required` 失敗。記錄 `FEATURE013_GATE_0=PASS`。
+- [x] T001 [US0] 在新檔 `test/architecture/repository-safety.guard.spec.ts` 寫入保留的檢查並確認 GREEN：tracked 檔案不含 `.pem` / `.key`；無 `.gitmodules`、無 submodule；只有一個 worktree；tracked 檔案不含 `frontend|f2e|widget|assistant-sdk` 目錄。
+- [x] T002 [US0] 在同檔新增 migration 只能新增的檢查：以 `test/fixtures/migration-ledger.json` 記錄既有每支 migration 目錄名稱與 `migration.sql` 的 sha256；既有項目內容不得改變或消失，新目錄允許出現（需同時更新 ledger）。先以竄改暫存副本的方式證明檢查會失敗（RED 證據），再確認現況 GREEN。
+- [x] T003 [US0] 刪除 `test/contract/feature010-scope-boundary.contract.spec.ts`；確認其仍有價值的檢查已由 T001–T002 或既有 contract 測試（`assistant-sessions`、`assistant-messages-sse`、`assistant-message-history`、`feature010-public-compatibility`）涵蓋，將對照表記錄在本檔 Phase 0 證據段。
+- [x] T004 [US0] 將 `.specify/feature.json` 改為指向 `specs/013-assistant-conversation-experience`；確認沒有其他測試依賴舊值。
+- [x] T005 [US0] 新增 `specs/README.md`：001–012 的名稱、狀態（已完成）、合併進 main 的日期；013 狀態為「進行中」；說明 spec 合併後凍結、現況文件在 `docs/`。日期以 `git log` 查證，不得推測。
+- [x] T006 **Gate 0**：typecheck 通過；T001–T002 focused 通過；使用者執行全套，結果只剩 baseline 中的 `clarification-required` 失敗。記錄 `FEATURE013_GATE_0=PASS`。
+
+**Phase 0 執行證據（2026-11-16）**：
+
+- 執行環境：Claude 的 Linux VM 無法執行 jest（`jest-resolve` 使用的原生模組為 macOS 版），測試由使用者在 Mac 執行；Claude 端只跑 `tsc`。`npx tsc --noEmit -p tsconfig.spec.json` PASS。
+- T001／T002：新增 `test/architecture/repository-safety.guard.spec.ts` 與 `test/fixtures/migration-ledger.json`（11 支 migration + `migration_lock.toml`）。反向案例內建於同一檔：合成 `.pem`/`.KEY` 與前端路徑清單必須被抓出；在暫存副本中竄改、刪除、插入舊日期 migration 與新增未登錄 migration，必須回報四項違規。
+- T003：刪除 `test/contract/feature010-scope-boundary.contract.spec.ts`。原檢查對照：
+
+| 原檢查 | 處置 |
+|---|---|
+| tracked `.key`/`.pem`、submodule、單一 worktree、無前端目錄 | 移到 T001 |
+| `prisma/migrations` 整體 hash 與兩支 ownership migration 內容 | 由 T002 migration ledger 取代（既有 migration 內容不可變） |
+| `prisma/schema.prisma` hash | 刻意移除；schema 變更由 migration ledger 與 code review 控管 |
+| controller／DTO／SSE 型別／history 型別 hash、controller 只有 4 個路由 | 刻意移除；公開行為由既有 contract 測試把關：`assistant-sessions`、`assistant-messages-sse`、`assistant-message-history`、`feature010-public-compatibility`、`feature012-public-compatibility` |
+| specs 009／010 的 spec、design、plan、tasks hash、009 T126–T142 未執行、010 tasks 編號連續 | 刻意移除；合併後的 specs 依 `specs/README.md` 約定凍結，延後項目記錄在索引 |
+| Shinmone `work-orders.monthly-new-count` manifest hash | 刻意移除；manifest 內容由 Connector Runtime 的 Shinmone manifest 測試驗證 |
+| `package.json`、`AGENTS.md`、`.specify/feature.json` hash | 刻意移除；一般變更由 code review 控管 |
+
+- T004：`.specify/feature.json` 改指向 013；repo 內沒有其他測試讀取它。
+- T005：新增 `specs/README.md`；日期取自 `git log`（各資料夾第一個 commit 與 `tasks.md` 最後一個 commit、PR #1／#2 merge commit），延後項目取自各 `tasks.md` 未勾選的 task。
+
+- T006 Gate 0（使用者於 Mac 執行全套，2026-11-16）：251 suites 中 227 passed、23 skipped、1 failed；2202 tests 中 2018 passed、182 skipped、2 failed。唯一失敗為 baseline 已知的 `clarification-required`（2，T049 處理）；`repository-safety.guard` 5/5 passed，含兩個反向案例。
+
+```text
+FEATURE013_GATE_0=PASS
+FEATURE013_COMPLETED_TASK_RANGE=T001-T006
+FEATURE013_FIRST_UNEXECUTED_TASK=T007
+```
 
 ## Phase 1 — 共用基礎
 

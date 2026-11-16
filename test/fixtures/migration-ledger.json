@@ -1,0 +1,17 @@
+{
+  "description": "Append-only ledger of applied Prisma migrations. Existing entries must never change; add a new entry for each new migration.",
+  "migrationLock": "99836963713b4f5b269ad49af0ed3d7b0b2e336115c2f92dc9ac683d139d0900",
+  "migrations": {
+    "20260615044944_init": "5cf73e3dcc128398eb8e7f67574331eacbdbd4637931dccc17cee8baccba1425",
+    "20260621000000_add_escalation_expired_status": "ec850b9898f6cf63bd871476d26ee44590fbbe71454164984d3d35daee2197b6",
+    "20260804000000_customer_scope_expand": "ab7ff53262a2c8296a9606b5afc56afd1a89c2484c648386f281bfc75430f63b",
+    "20260804000001_customer_scope_backfill_enforce": "66157c2928044a777fda1071150312769a4b23504cc69f1bec95de3aca12b3f7",
+    "20260809000000_feature003_gateway_registry": "41a8a55c7bcfcfa8bd5a070a227a32fde510d7468231bb683f331bc465215218",
+    "20260817000000_feature004_trust_profiles": "65f276d4fe75b1ec397d8bd847044230fa7b825b8122f2cea2769bc0ebcc39ac",
+    "20260817000001_add_gateway_identity_audit_profile_id": "31340a98bbdb02daa3bd617270252e694f66b3964fd50da1c961acafd1831c57",
+    "20260820000000_feature005_managed_identity_exchange": "a584342a15a90555dcd6d35cb46a7f6eb48c5329de44da0228f45f9f2b681ece",
+    "20260825000000_feature006_idx_provider": "6f429a44b64249ec3638ef22eded6280c2961f1809e4894e676316d56e1525f6",
+    "20261028000000_assistant_session_integration_ownership": "6929dcaa330650f3d1ff42786ba751883eede70419e7b150cdd7950a0e95e7ff",
+    "20261029000000_assistant_session_integration_whitespace_check": "1d3604ca9f8ea46dc3ab09935d33e500f764660a7900eb8ca2e5c7844c2cbe1f"
+  }
+}
