@@ -10,6 +10,7 @@ import { CapabilityParameterResolverService } from './capability-parameter-resol
 import { CapabilitySemanticResolverService } from './capability-semantic-resolver.service';
 import { CapabilityResolutionService } from './capability-resolution.service';
 import { CapabilityResolutionAuditService } from './capability-resolution-audit.service';
+import { AvailableCapabilityService } from './available-capability.service';
 import {
   CAPABILITY_PACK_FILE_ACCESS,
   CapabilityPackLoader,
@@ -38,10 +39,11 @@ class CapabilityPackBootstrapInitializer implements OnApplicationBootstrap {
     CapabilityResolutionAuditService,
     { provide: 'CapabilityResolutionAuditPort', useExisting: CapabilityResolutionAuditService },
     CapabilityResolutionService,
+    AvailableCapabilityService,
     CapabilityPackLoader,
     CapabilityPackBootstrapInitializer,
     { provide: CAPABILITY_PACK_FILE_ACCESS, useValue: NODE_CAPABILITY_PACK_FILE_ACCESS }
   ],
-  exports: [CapabilityCatalogRegistry, CapabilityBindingResolverService, CapabilityParameterResolverService, CapabilitySemanticResolverService, CapabilityResolutionService]
+  exports: [CapabilityCatalogRegistry, CapabilityBindingResolverService, CapabilityParameterResolverService, CapabilitySemanticResolverService, CapabilityResolutionService, AvailableCapabilityService]
 })
 export class CapabilitiesModule {}

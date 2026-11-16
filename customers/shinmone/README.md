@@ -17,6 +17,7 @@
 | --- | --- |
 | `capability-packs/shinmone-scm-local/1.0.0.json` | 本機開發用 pack（`work-orders.count`） |
 | `capability-packs/shinmone-scm-kpistats-demo/1.0.0.json` | 本機 KPIStats Demo pack |
+| `assistant-experience/1.0.0.json` | Feature 013 開場語、Quick Reply 與延伸建議設定（`HUMAN_VERIFIED`，審核紀錄見 `docs/assistant-experience-review.md`） |
 | `capability-packs/shinmone-scm-kpistats/1.0.0.json` | 正式部署用 Active pack（與 Demo pack 能力相同，使用正式 customerId / integrationId）；交付時上傳到主機的 `DEMO_CAPABILITY_PACK_DIR/shinmone-scm-kpistats.json` |
 | `docs/` | onboarding 紀錄：業務語意目錄、審核批次、信任邊界驗證、`work-orders.count` 驗收 |
 | `query-scope/company-scope.local.v1.json` | 本機公司範圍規則：`work-orders.count` 只允許查詢登入公司 |

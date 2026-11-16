@@ -12,6 +12,7 @@
     "20260820000000_feature005_managed_identity_exchange": "a584342a15a90555dcd6d35cb46a7f6eb48c5329de44da0228f45f9f2b681ece",
     "20260825000000_feature006_idx_provider": "6f429a44b64249ec3638ef22eded6280c2961f1809e4894e676316d56e1525f6",
     "20261028000000_assistant_session_integration_ownership": "6929dcaa330650f3d1ff42786ba751883eede70419e7b150cdd7950a0e95e7ff",
-    "20261029000000_assistant_session_integration_whitespace_check": "1d3604ca9f8ea46dc3ab09935d33e500f764660a7900eb8ca2e5c7844c2cbe1f"
+    "20261029000000_assistant_session_integration_whitespace_check": "1d3604ca9f8ea46dc3ab09935d33e500f764660a7900eb8ca2e5c7844c2cbe1f",
+    "20261116000000_feature013_assistant_experience": "83f1c6a4b9a6a70408cf11c93f8ed8aee5efa76d9eddd2aa9df3da72b8473429"
   }
 }

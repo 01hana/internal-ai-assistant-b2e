@@ -1,0 +1,299 @@
+{
+  "version": "1",
+  "packId": "customer-a-experience",
+  "packVersion": "1.0.0",
+  "customerId": "customer-a",
+  "integrationId": "integration-erp",
+  "hostApps": [
+    "erp"
+  ],
+  "active": true,
+  "capabilities": [
+    {
+      "version": "1",
+      "capabilityKey": "work-orders.count",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "工單新增數量",
+      "semanticProfiles": [
+        {
+          "version": "1",
+          "locale": "zh-TW",
+          "aliases": [
+            "工單新增數量",
+            "新增工單數",
+            "新增工單",
+            "新增多少工單",
+            "新增幾張工單"
+          ],
+          "examples": [
+            "查詢本月新開立的工單數量",
+            "今天新增多少工單？",
+            "本週新增多少工單？"
+          ],
+          "resourceTerms": [
+            "工單"
+          ],
+          "intentTerms": [
+            "查詢"
+          ],
+          "metricTerms": [
+            "新增數量",
+            "新增",
+            "新開",
+            "幾張",
+            "多少"
+          ],
+          "requiredSignalGroups": [
+            "resource",
+            "metric"
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "version": "1",
+          "parameterName": "timeRange",
+          "type": "enum",
+          "required": true,
+          "semanticTerms": [
+            "期間"
+          ],
+          "values": [
+            {
+              "value": "today",
+              "aliases": [
+                "今天",
+                "今日"
+              ]
+            },
+            {
+              "value": "this_week",
+              "aliases": [
+                "本週",
+                "這週"
+              ]
+            },
+            {
+              "value": "this_month",
+              "aliases": [
+                "本月",
+                "這個月"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1",
+      "capabilityKey": "orders.status",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "訂單狀態",
+      "semanticProfiles": [
+        {
+          "version": "1",
+          "locale": "zh-TW",
+          "aliases": [
+            "查詢訂單目前狀態"
+          ],
+          "examples": [
+            "請幫我查訂單目前狀態"
+          ],
+          "resourceTerms": [
+            "訂單"
+          ],
+          "intentTerms": [
+            "查詢"
+          ],
+          "metricTerms": [
+            "狀態"
+          ],
+          "requiredSignalGroups": [
+            "resource",
+            "metric"
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "version": "1",
+          "parameterName": "entityRef",
+          "type": "bounded_string",
+          "required": true,
+          "semanticTerms": [
+            "訂單號"
+          ],
+          "maxLength": 64,
+          "tokenSyntax": "SAFE_IDENTIFIER",
+          "prefixes": [
+            "SO-"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1",
+      "capabilityKey": "inventory.availability",
+      "active": true,
+      "kind": "READ_ONLY_TOOL",
+      "safeLabel": "庫存可用量",
+      "semanticProfiles": [
+        {
+          "version": "1",
+          "locale": "zh-TW",
+          "aliases": [
+            "查詢庫存可用量",
+            "庫存可用量"
+          ],
+          "examples": [
+            "請查庫存可用量"
+          ],
+          "resourceTerms": [
+            "庫存"
+          ],
+          "intentTerms": [
+            "查詢"
+          ],
+          "metricTerms": [
+            "可用量"
+          ],
+          "requiredSignalGroups": [
+            "resource",
+            "metric"
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "version": "1",
+          "parameterName": "entityRef",
+          "type": "bounded_string",
+          "required": true,
+          "semanticTerms": [
+            "料號"
+          ],
+          "maxLength": 64,
+          "tokenSyntax": "SAFE_IDENTIFIER",
+          "prefixes": [
+            "SKU-"
+          ]
+        }
+      ]
+    }
+  ],
+  "bindings": [
+    {
+      "version": "1",
+      "bindingId": "work-orders.today",
+      "bindingVersion": "1.0.0",
+      "active": true,
+      "capabilityKey": "work-orders.count",
+      "semanticConstraints": [
+        {
+          "version": "1",
+          "parameterName": "timeRange",
+          "operator": "ENUM_VALUE_IN",
+          "allowedValues": [
+            "today"
+          ]
+        }
+      ],
+      "target": {
+        "kind": "TOOL",
+        "toolKey": "experience.work-orders.today",
+        "toolVersion": "1.0.0"
+      },
+      "mappings": []
+    },
+    {
+      "version": "1",
+      "bindingId": "work-orders.weekly",
+      "bindingVersion": "1.0.0",
+      "active": true,
+      "capabilityKey": "work-orders.count",
+      "semanticConstraints": [
+        {
+          "version": "1",
+          "parameterName": "timeRange",
+          "operator": "ENUM_VALUE_IN",
+          "allowedValues": [
+            "this_week"
+          ]
+        }
+      ],
+      "target": {
+        "kind": "TOOL",
+        "toolKey": "experience.work-orders.weekly",
+        "toolVersion": "1.0.0"
+      },
+      "mappings": []
+    },
+    {
+      "version": "1",
+      "bindingId": "work-orders.monthly",
+      "bindingVersion": "1.0.0",
+      "active": true,
+      "capabilityKey": "work-orders.count",
+      "semanticConstraints": [
+        {
+          "version": "1",
+          "parameterName": "timeRange",
+          "operator": "ENUM_VALUE_IN",
+          "allowedValues": [
+            "this_month"
+          ]
+        }
+      ],
+      "target": {
+        "kind": "TOOL",
+        "toolKey": "experience.work-orders.monthly",
+        "toolVersion": "1.0.0"
+      },
+      "mappings": []
+    },
+    {
+      "version": "1",
+      "bindingId": "orders.status",
+      "bindingVersion": "1.0.0",
+      "active": true,
+      "capabilityKey": "orders.status",
+      "semanticConstraints": [],
+      "target": {
+        "kind": "TOOL",
+        "toolKey": "mock.orders.status.lookup",
+        "toolVersion": "1.0.0"
+      },
+      "mappings": [
+        {
+          "version": "1",
+          "targetArgument": "entityId",
+          "source": "CANONICAL_PARAMETER",
+          "parameterName": "entityRef"
+        }
+      ]
+    },
+    {
+      "version": "1",
+      "bindingId": "inventory.availability",
+      "bindingVersion": "1.0.0",
+      "active": false,
+      "capabilityKey": "inventory.availability",
+      "semanticConstraints": [],
+      "target": {
+        "kind": "TOOL",
+        "toolKey": "mock.inventory.availability.lookup",
+        "toolVersion": "1.0.0"
+      },
+      "mappings": [
+        {
+          "version": "1",
+          "targetArgument": "entityId",
+          "source": "CANONICAL_PARAMETER",
+          "parameterName": "entityRef"
+        }
+      ]
+    }
+  ]
+}

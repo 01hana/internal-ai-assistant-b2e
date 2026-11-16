@@ -23,7 +23,7 @@ Feature 013 補齊以上體驗，並維持既有的信任邊界：**所有提示
 - 已驗證的 `customerId` 仍是最外層隔離邊界；`integrationId`、`organizationId`、`hostApp`、`actorId` 限定 session 與歷史；`roles`、`permissionScopes` 是權限判斷輸入。
 - 「使用者能用哪些能力」只有一個來源：Capability Pack 的 active capability → active binding → `ToolDefinition`（active）→ `CustomerToolPolicy`（enabled）→ `requiredPermissions` / `requiredPermissionScopes` / `requiredRoles`。Quick Reply、延伸建議、能力總覽都使用同一個判斷，不另外宣告權限。
 - 客戶文案（問候語、Quick Reply、延伸建議）屬客戶資料：原始檔放在 `customers/<customer>/assistant-experience/`，經 provisioning 驗證後寫入資料庫的版本表。Core 只保留不含客戶詞彙的預設問候語。
-- 點擊 Quick Reply 時，伺服器依 ID 從 active 設定取出訊息文字；點擊延伸建議時，訊息照一般訊息流程重新解析。兩者都不會略過能力解析、權限、證據或審計。
+- 點擊 Quick Reply 或延伸建議時，前端只送 `choiceId`；伺服器從 active 設定取出該選項**預先宣告的能力與參數**，直接交給 binding 解析（不做語意比對），之後的工具政策、權限、證據與審計與手打問題完全相同。選項文字（`message`）只作為對話紀錄中的使用者訊息。見 Decision 4。
 - 公開 API 只做**新增**：既有端點、SSE 事件名稱與 `final` 欄位不變，舊版 SDK 不受影響。
 - 不在本 feature 範圍：管理後台（admin-api）、使用者對話刪除與保存期限政策、多語系、主動推送、寫入類工具。
 
@@ -49,15 +49,15 @@ Feature 013 補齊以上體驗，並維持既有的信任邊界：**所有提示
 
 **Why this priority**: 降低第一次使用的門檻，也是所有後續體驗功能（建議、能力總覽）共用的設定與權限基礎。
 
-**Independent Test**: 兩個權限不同的使用者在同一客戶下建立 session，各自只看到自己有權執行的 Quick Reply；點擊後得到與手打同一問題相同的能力解析、工具呼叫與審計結果。
+**Independent Test**: 兩個權限不同的使用者在同一客戶下建立 session，各自只看到自己有權執行的 Quick Reply；點擊後執行設定宣告的能力與參數，工具呼叫、權限檢查、證據與審計與一般問題相同；無論 LLM 工具選擇是否開啟，結果都一致。
 
 **Acceptance Scenarios**:
 
 1. **Given** 該 integration 有 active 的體驗設定，**when** 建立 session，**then** 回應包含 `opening.greeting` 與最多 `maxQuickReplies` 個 Quick Reply（依 `priority` 排序），以及 `opening.configVersion`。
 2. **Given** 某 Quick Reply 對應的能力，使用者缺少任一必要權限、或 binding / tool / policy 未啟用，**when** 建立 session，**then** 該 Quick Reply 不出現。
 3. **Given** Quick Reply 設定了 `pageScope.modules`，**when** 建立 session 時的 `pageContext.module` 不在其中，**then** 該 Quick Reply 不出現；未設定 `pageScope` 的 Quick Reply 不受頁面限制。
-4. **Given** 送出 `{ quickReplyId }`，**when** 伺服器處理，**then** 由 active 設定取出 `message`，重新檢查可見性，以一般訊息流程處理，並寫入 `quick_reply_selected` 審計事件。
-5. **Given** `quickReplyId` 不存在、已不在 active 設定、或使用者已無權限，**when** 送出，**then** 回傳與「session 不存在」同等級的通用錯誤，不透露設定內容。
+4. **Given** 送出 `{ choiceId }`（某個 Quick Reply 的 ID），**when** 伺服器處理，**then** 由 active 設定取出該選項，重新檢查可見性，以設定的 `message` 作為使用者訊息，以宣告的 `capabilityKey` 與參數直接解析 binding 並執行，寫入 `quick_reply_selected` 審計事件。`kind: capability_overview` 的選項直接回答能力總覽。
+5. **Given** `choiceId` 不存在、已不在 active 設定、或使用者已無權限，**when** 送出，**then** 回傳與「session 不存在」同等級的通用錯誤，不透露設定內容。
 6. **Given** 沒有任何 active 設定，**when** 建立 session，**then** 回傳 Core 預設問候語、Quick Reply 為空陣列，建立 session 不失敗。
 7. **Given** 舊版前端不讀 `opening`，**when** 建立 session，**then** 既有欄位 `sessionId`、`status` 不變。
 
@@ -86,14 +86,14 @@ Feature 013 補齊以上體驗，並維持既有的信任邊界：**所有提示
 
 **Why this priority**: 提高連續使用率，但依賴 US1 的設定與權限基礎。
 
-**Independent Test**: 回答「今日新增工單」後，`final` 事件帶出本週、本月的建議；使用者沒有本月權限時只出現本週；點擊後的處理結果與手打相同。
+**Independent Test**: 回答「今日新增工單」後，`final` 事件帶出本週、本月的建議；使用者沒有本月權限時只出現本週；點擊後執行設定宣告的能力與參數。
 
 **Acceptance Scenarios**:
 
 1. **Given** 一次 `RESOLVED` 且成功回答的能力查詢，**when** 送出 `final`，**then** 可附加最多 3 個 `suggestions`（`id`、`label`、`message`），來源是體驗設定中符合該 `capabilityKey` 與參數條件的 `followUps`。
 2. **Given** 建議對應的能力或參數組合使用者無權執行，**then** 不出現。
 3. **Given** `no_answer`、`permission_denied`、`tool_failed`、澄清或需要確認／核准的回答，**then** 不附建議。例外：能力總覽（US2 情境 1）與能力無法辨識的澄清回覆（US2 情境 8）會附上 Quick Reply 作為建議。
-4. **Given** 使用者點擊建議，**when** 前端以一般訊息送出 `message` 並附 `origin: { type: "suggestion", suggestionId }`，**then** 訊息照一般流程重新解析；`origin` 只用於審計（`suggestion_selected`），不賦予任何權限。
+4. **Given** 使用者點擊建議，**when** 前端送出 `{ choiceId }`（該建議的 ID），**then** 與 US1 情境 4 相同：重新檢查可見性，以宣告的能力與參數執行，寫入 `suggestion_selected` 審計事件。
 5. 舊版前端忽略 `suggestions` 時行為不變。
 
 ### User Story 4 — Session 歷史列表與封存（Priority: P2）
@@ -130,8 +130,8 @@ Feature 013 補齊以上體驗，並維持既有的信任邊界：**所有提示
 ### Edge Cases
 
 - 體驗設定引用的 `capabilityKey` 不存在於同一 integration 的 active pack → provisioning 驗證失敗，不寫入。
-- 設定中某 Quick Reply 的 `message` 經能力解析後不是宣告的 `capabilityKey`（或參數不符）→ provisioning 驗證失敗。
-- 設定在 session 建立後被換版 → 點擊舊版才有的 `quickReplyId` 回通用錯誤；前端應重新建立 session 或忽略。
+- 設定中某選項宣告的能力與參數無法解析到 active binding（例如 binding 已停用或缺必要參數）→ provisioning 驗證失敗。
+- 設定在 session 建立後被換版 → 點擊舊版才有的 `choiceId` 回通用錯誤；前端應重新建立 session 或忽略。
 - Capability Pack 換版導致能力停用 → 下次建立 session 時自動不再出現，不需改體驗設定。
 - 同一 integration 同時只能有一份 active 設定；啟用新版本時舊版本改為 `retired`，在同一 transaction 內完成。
 - session 標題含有使用者輸入的敏感資料：標題與訊息內容同等級，只回傳給該 session 的擁有者。
@@ -142,9 +142,9 @@ Feature 013 補齊以上體驗，並維持既有的信任邊界：**所有提示
 
 - **FR-001**: 系統 MUST 提供單一「可用能力」判斷服務，輸入已驗證的 host context，輸出使用者可執行的 capability（含可用的 enum 參數值）；US1、US2、US3 皆使用此服務。
 - **FR-002**: 系統 MUST 以 `AssistantExperienceConfig` 儲存每個 `customerId` + `integrationId` 的體驗設定版本，狀態為 `draft` / `active` / `retired`，同一範圍最多一份 `active`。
-- **FR-003**: 系統 MUST 提供 provisioning 指令，從 `customers/<customer>/assistant-experience/<version>.json` 讀取設定，驗證 schema、`customerId` / `integrationId` / `hostApps` 與 active pack 一致、每個 `message` 解析結果與宣告一致，通過後寫入並啟用；驗證失敗不得寫入任何資料。
+- **FR-003**: 系統 MUST 提供 provisioning 指令，從 `customers/<customer>/assistant-experience/<version>.json` 讀取設定，驗證 schema、`customerId` / `integrationId` / `hostApps` 與 active pack 一致、每個選項宣告的能力與參數都能解析到 active binding（Decision 4；`message` 僅為顯示文字），語意審核狀態須為 `HUMAN_VERIFIED`（開發與測試可用 `--allow-unverified`），通過後寫入並啟用；驗證失敗不得寫入任何資料。
 - **FR-004**: `POST /assistant/sessions` 回應 MUST 新增 `opening: { configVersion: string | null, greeting: string, quickReplies: { id, label }[] }`。
-- **FR-005**: `POST /assistant/sessions/:id/messages` MUST 接受 `quickReplyId`（與 `message` 二擇一）及選填 `origin: { type: "suggestion", suggestionId }`。
+- **FR-005**: `POST /assistant/sessions/:id/messages` MUST 接受 `choiceId`（與 `message` 二擇一），指向 active 設定中的 Quick Reply 或延伸建議（兩者 ID 在同一份設定內唯一）；伺服器以該選項宣告的能力與參數執行（Decision 4）。
 - **FR-006**: `capability_discovery` 的回答 MUST 改用 FR-001，且不依賴 LLM 工具選擇開關；意圖判斷 MUST 依序使用規則層句型比對、LLM 層（僅在開關開啟時，併入既有呼叫）與保底建議（US2 情境 5–8）。
 - **FR-007**: SSE `final` 事件的資料 MUST 可選擇性新增 `suggestions: { id, label, message }[]`；未產生建議時省略此欄位。
 - **FR-008**: 系統 MUST 新增 `GET /assistant/sessions` 與 `POST /assistant/sessions/:id/archive`，範圍限定與既有 session 端點相同。
@@ -185,6 +185,8 @@ Feature 013 補齊以上體驗，並維持既有的信任邊界：**所有提示
 1. `clarification-required`：接受現行行為（`CAPABILITY_NOT_RECOGNIZED`、無候選），更新測試預期；「列出候選讓使用者選」待 US3 穩定後另案評估。
 2. 未支援問題：每次都建立 `ReviewItem`，不去重；分組留給後台。
 3. Session 標題：固定取第一則問題前 40 字，本 feature 不提供改名 API。
+
+4. **Quick Reply 與延伸建議以伺服器端預先宣告的能力執行**（2026-11-16）：Shinmone 正式 pack 的確定性語意幾乎無法辨識任何問法（連 pack 自身範例皆為 `CAPABILITY_NOT_RECOGNIZED`），測試機目前依賴 LLM 工具選擇。若按鈕文字仍走語意解析，結果會隨 LLM 而變。改為：選項宣告的 `capabilityKey` 與參數屬於經人工確認、provisioning 時已驗證可解析到 active binding 的伺服器端設定；前端只能送 ID。這是 Feature 011「pack 語意解析為唯一工具語意來源」之外新增的第二個入口，僅限此類設定，其餘授權、政策與證據判斷不變。改善 Shinmone pack 語意另列為客戶待辦。
 
 ## Open Questions（原始提問，已於上方決定）
 

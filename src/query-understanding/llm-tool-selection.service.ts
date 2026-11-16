@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { isDeepStrictEqual } from 'node:util';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { AvailableCapabilityService } from '../capabilities/available-capability.service';
 import { CapabilityCatalogRegistry } from '../capabilities/capability-catalog.registry';
 import { CapabilityBindingResolverService } from '../capabilities/capability-binding-resolver.service';
 import { validateCapabilityCanonicalValue } from '../capabilities/capability-parameter-resolver.service';
@@ -50,7 +51,12 @@ export class LlmToolSelectionService {
     private readonly bindings: CapabilityBindingResolverService,
     private readonly llm: LlmExecutionService,
     private readonly audit: AuditWriterService
-  ) {}
+  ) {
+    // Stateless; shares the single FR-001 visibility rule without changing this service's injection contract.
+    this.available = new AvailableCapabilityService(catalogs, tools);
+  }
+
+  private readonly available: AvailableCapabilityService;
 
   /** Uses exactly the same scoped, policy and permission filtered offers as model selection. */
   async describeAvailable(host: HostIntegrationContext): Promise<readonly string[]> {
@@ -88,41 +94,21 @@ export class LlmToolSelectionService {
     offered: OfferedTool[];
     offeredAuthorities: Map<string, RegisteredToolDefinition>;
   }> {
-    const selected = this.catalogs.resolveCatalog({ customerId: host.customerId,
-      integrationId: host.integrationId, hostApp: host.hostApp });
+    const { catalog, bindings } = await this.available.resolveAvailableBindings(host);
     const offered: OfferedTool[] = [];
     const offeredAuthorities = new Map<string, RegisteredToolDefinition>();
-    if (!selected.available) return { offered, offeredAuthorities };
-    const catalog = selected.catalog;
-    for (const binding of catalog.bindings) {
-      if (!binding.active) continue;
-      const capability = catalog.capabilities.find((item) => item.active && item.capabilityKey === binding.capabilityKey);
-      if (!capability) continue;
-      const resolved = await this.tools.resolveExactToolForCustomer(binding.target.toolKey,
-        binding.target.toolVersion, host.customerId);
-      if (!resolved.resolved || !this.tools.isExecutableReadOnly(resolved.resolved.tool)) continue;
-      const authority = resolved.resolved;
-      if (authority.requiredRoles.length > 0 && !authority.requiredRoles.some((role) => host.roles.includes(role))) continue;
-      const scopes = [...authority.tool.requiredPermissionScopes, ...authority.requiredPermissionScopes];
-      if (scopes.some((scope) => !host.permissionScopes.includes(scope))) continue;
-      const resultPolicy = this.tools.resolveResultPolicy(authority.tool);
-      if (!resultPolicy.allowed && resultPolicy.reason !== 'missing_result_policy') continue;
-      if (resultPolicy.allowed && resultPolicy.policy.permissionMasks.some((mask) =>
-        mask.requiredPermissionScopes.some((scope) => !host.permissionScopes.includes(scope)))) continue;
-      const outputSummary = resultPolicy.allowed
-        ? approvedOutputSummary(authority.tool, resultPolicy.policy, host.permissionScopes) : undefined;
-      if (outputSummary && outputSummary.length === 0) continue;
-      offered.push({ capabilityKey: capability.capabilityKey, toolKey: authority.tool.key,
-        toolVersion: authority.tool.version, bindingId: binding.bindingId,
-        description: `${capability.safeLabel}. ${authority.tool.description}`,
-        inputSchema: publicInputSchema(authority.tool.inputSchema),
+    for (const { capability, binding, tool, outputSummary } of bindings) {
+      offered.push({ capabilityKey: capability.capabilityKey, toolKey: tool.key,
+        toolVersion: tool.version, bindingId: binding.bindingId,
+        description: `${capability.safeLabel}. ${tool.description}`,
+        inputSchema: publicInputSchema(tool.inputSchema),
         ...(outputSummary ? { outputSummary } : {}),
         canonicalParameters: capability.parameters.map((parameter) => parameter.type === 'enum'
           ? { name: parameter.parameterName, type: 'enum', required: parameter.required,
               values: parameter.values.map((value) => ({ value: value.value, terms: value.aliases })) }
           : { name: parameter.parameterName, type: 'bounded_string', required: parameter.required,
               maxLength: parameter.maxLength, prefixes: parameter.prefixes }) });
-      offeredAuthorities.set(`${authority.tool.key}@${authority.tool.version}`, authority.tool);
+      offeredAuthorities.set(`${tool.key}@${tool.version}`, tool);
     }
     return { catalog, offered, offeredAuthorities };
   }

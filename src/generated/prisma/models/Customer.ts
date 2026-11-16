@@ -167,6 +167,7 @@ export type CustomerWhereInput = {
   auditEvents?: Prisma.AuditEventListRelationFilter
   integrationBindings?: Prisma.IntegrationBindingListRelationFilter
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventListRelationFilter
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigListRelationFilter
 }
 
 export type CustomerOrderByWithRelationInput = {
@@ -188,6 +189,7 @@ export type CustomerOrderByWithRelationInput = {
   auditEvents?: Prisma.AuditEventOrderByRelationAggregateInput
   integrationBindings?: Prisma.IntegrationBindingOrderByRelationAggregateInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventOrderByRelationAggregateInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigOrderByRelationAggregateInput
 }
 
 export type CustomerWhereUniqueInput = Prisma.AtLeast<{
@@ -212,6 +214,7 @@ export type CustomerWhereUniqueInput = Prisma.AtLeast<{
   auditEvents?: Prisma.AuditEventListRelationFilter
   integrationBindings?: Prisma.IntegrationBindingListRelationFilter
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventListRelationFilter
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigListRelationFilter
 }, "id">
 
 export type CustomerOrderByWithAggregationInput = {
@@ -247,6 +250,7 @@ export type CustomerCreateInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateInput = {
@@ -268,6 +272,7 @@ export type CustomerUncheckedCreateInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUpdateInput = {
@@ -289,6 +294,7 @@ export type CustomerUpdateInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateInput = {
@@ -310,6 +316,7 @@ export type CustomerUncheckedUpdateInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateManyInput = {
@@ -392,6 +399,20 @@ export type CustomerUpdateOneRequiredWithoutAssistantSessionsNestedInput = {
   upsert?: Prisma.CustomerUpsertWithoutAssistantSessionsInput
   connect?: Prisma.CustomerWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.CustomerUpdateToOneWithWhereWithoutAssistantSessionsInput, Prisma.CustomerUpdateWithoutAssistantSessionsInput>, Prisma.CustomerUncheckedUpdateWithoutAssistantSessionsInput>
+}
+
+export type CustomerCreateNestedOneWithoutAssistantExperienceConfigsInput = {
+  create?: Prisma.XOR<Prisma.CustomerCreateWithoutAssistantExperienceConfigsInput, Prisma.CustomerUncheckedCreateWithoutAssistantExperienceConfigsInput>
+  connectOrCreate?: Prisma.CustomerCreateOrConnectWithoutAssistantExperienceConfigsInput
+  connect?: Prisma.CustomerWhereUniqueInput
+}
+
+export type CustomerUpdateOneRequiredWithoutAssistantExperienceConfigsNestedInput = {
+  create?: Prisma.XOR<Prisma.CustomerCreateWithoutAssistantExperienceConfigsInput, Prisma.CustomerUncheckedCreateWithoutAssistantExperienceConfigsInput>
+  connectOrCreate?: Prisma.CustomerCreateOrConnectWithoutAssistantExperienceConfigsInput
+  upsert?: Prisma.CustomerUpsertWithoutAssistantExperienceConfigsInput
+  connect?: Prisma.CustomerWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CustomerUpdateToOneWithWhereWithoutAssistantExperienceConfigsInput, Prisma.CustomerUpdateWithoutAssistantExperienceConfigsInput>, Prisma.CustomerUncheckedUpdateWithoutAssistantExperienceConfigsInput>
 }
 
 export type CustomerCreateNestedOneWithoutAssistantMessagesInput = {
@@ -608,6 +629,7 @@ export type CustomerCreateWithoutIntegrationBindingsInput = {
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutIntegrationBindingsInput = {
@@ -628,6 +650,7 @@ export type CustomerUncheckedCreateWithoutIntegrationBindingsInput = {
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutIntegrationBindingsInput = {
@@ -664,6 +687,7 @@ export type CustomerUpdateWithoutIntegrationBindingsInput = {
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutIntegrationBindingsInput = {
@@ -684,6 +708,7 @@ export type CustomerUncheckedUpdateWithoutIntegrationBindingsInput = {
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutGatewayIdentityAuditEventsInput = {
@@ -704,6 +729,7 @@ export type CustomerCreateWithoutGatewayIdentityAuditEventsInput = {
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutGatewayIdentityAuditEventsInput = {
@@ -724,6 +750,7 @@ export type CustomerUncheckedCreateWithoutGatewayIdentityAuditEventsInput = {
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutGatewayIdentityAuditEventsInput = {
@@ -760,6 +787,7 @@ export type CustomerUpdateWithoutGatewayIdentityAuditEventsInput = {
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutGatewayIdentityAuditEventsInput = {
@@ -780,6 +808,7 @@ export type CustomerUncheckedUpdateWithoutGatewayIdentityAuditEventsInput = {
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutAssistantSessionsInput = {
@@ -800,6 +829,7 @@ export type CustomerCreateWithoutAssistantSessionsInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutAssistantSessionsInput = {
@@ -820,6 +850,7 @@ export type CustomerUncheckedCreateWithoutAssistantSessionsInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutAssistantSessionsInput = {
@@ -856,10 +887,112 @@ export type CustomerUpdateWithoutAssistantSessionsInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutAssistantSessionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  assistantMessages?: Prisma.AssistantMessageUncheckedUpdateManyWithoutCustomerNestedInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentUncheckedUpdateManyWithoutCustomerNestedInput
+  knowledgeChunks?: Prisma.KnowledgeChunkUncheckedUpdateManyWithoutCustomerNestedInput
+  retrievalRuns?: Prisma.RetrievalRunUncheckedUpdateManyWithoutCustomerNestedInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUncheckedUpdateManyWithoutCustomerNestedInput
+  evidenceRefs?: Prisma.EvidenceRefUncheckedUpdateManyWithoutCustomerNestedInput
+  toolPolicies?: Prisma.CustomerToolPolicyUncheckedUpdateManyWithoutCustomerNestedInput
+  toolCalls?: Prisma.ToolCallUncheckedUpdateManyWithoutCustomerNestedInput
+  approvalRequests?: Prisma.ApprovalRequestUncheckedUpdateManyWithoutCustomerNestedInput
+  actionDrafts?: Prisma.ActionDraftUncheckedUpdateManyWithoutCustomerNestedInput
+  escalationRequests?: Prisma.EscalationRequestUncheckedUpdateManyWithoutCustomerNestedInput
+  feedbackEvents?: Prisma.FeedbackEventUncheckedUpdateManyWithoutCustomerNestedInput
+  reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
+}
+
+export type CustomerCreateWithoutAssistantExperienceConfigsInput = {
+  id: string
+  assistantSessions?: Prisma.AssistantSessionCreateNestedManyWithoutCustomerInput
+  assistantMessages?: Prisma.AssistantMessageCreateNestedManyWithoutCustomerInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentCreateNestedManyWithoutCustomerInput
+  knowledgeChunks?: Prisma.KnowledgeChunkCreateNestedManyWithoutCustomerInput
+  retrievalRuns?: Prisma.RetrievalRunCreateNestedManyWithoutCustomerInput
+  retrievalCandidates?: Prisma.RetrievalCandidateCreateNestedManyWithoutCustomerInput
+  evidenceRefs?: Prisma.EvidenceRefCreateNestedManyWithoutCustomerInput
+  toolPolicies?: Prisma.CustomerToolPolicyCreateNestedManyWithoutCustomerInput
+  toolCalls?: Prisma.ToolCallCreateNestedManyWithoutCustomerInput
+  approvalRequests?: Prisma.ApprovalRequestCreateNestedManyWithoutCustomerInput
+  actionDrafts?: Prisma.ActionDraftCreateNestedManyWithoutCustomerInput
+  escalationRequests?: Prisma.EscalationRequestCreateNestedManyWithoutCustomerInput
+  feedbackEvents?: Prisma.FeedbackEventCreateNestedManyWithoutCustomerInput
+  reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+}
+
+export type CustomerUncheckedCreateWithoutAssistantExperienceConfigsInput = {
+  id: string
+  assistantSessions?: Prisma.AssistantSessionUncheckedCreateNestedManyWithoutCustomerInput
+  assistantMessages?: Prisma.AssistantMessageUncheckedCreateNestedManyWithoutCustomerInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentUncheckedCreateNestedManyWithoutCustomerInput
+  knowledgeChunks?: Prisma.KnowledgeChunkUncheckedCreateNestedManyWithoutCustomerInput
+  retrievalRuns?: Prisma.RetrievalRunUncheckedCreateNestedManyWithoutCustomerInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUncheckedCreateNestedManyWithoutCustomerInput
+  evidenceRefs?: Prisma.EvidenceRefUncheckedCreateNestedManyWithoutCustomerInput
+  toolPolicies?: Prisma.CustomerToolPolicyUncheckedCreateNestedManyWithoutCustomerInput
+  toolCalls?: Prisma.ToolCallUncheckedCreateNestedManyWithoutCustomerInput
+  approvalRequests?: Prisma.ApprovalRequestUncheckedCreateNestedManyWithoutCustomerInput
+  actionDrafts?: Prisma.ActionDraftUncheckedCreateNestedManyWithoutCustomerInput
+  escalationRequests?: Prisma.EscalationRequestUncheckedCreateNestedManyWithoutCustomerInput
+  feedbackEvents?: Prisma.FeedbackEventUncheckedCreateNestedManyWithoutCustomerInput
+  reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+}
+
+export type CustomerCreateOrConnectWithoutAssistantExperienceConfigsInput = {
+  where: Prisma.CustomerWhereUniqueInput
+  create: Prisma.XOR<Prisma.CustomerCreateWithoutAssistantExperienceConfigsInput, Prisma.CustomerUncheckedCreateWithoutAssistantExperienceConfigsInput>
+}
+
+export type CustomerUpsertWithoutAssistantExperienceConfigsInput = {
+  update: Prisma.XOR<Prisma.CustomerUpdateWithoutAssistantExperienceConfigsInput, Prisma.CustomerUncheckedUpdateWithoutAssistantExperienceConfigsInput>
+  create: Prisma.XOR<Prisma.CustomerCreateWithoutAssistantExperienceConfigsInput, Prisma.CustomerUncheckedCreateWithoutAssistantExperienceConfigsInput>
+  where?: Prisma.CustomerWhereInput
+}
+
+export type CustomerUpdateToOneWithWhereWithoutAssistantExperienceConfigsInput = {
+  where?: Prisma.CustomerWhereInput
+  data: Prisma.XOR<Prisma.CustomerUpdateWithoutAssistantExperienceConfigsInput, Prisma.CustomerUncheckedUpdateWithoutAssistantExperienceConfigsInput>
+}
+
+export type CustomerUpdateWithoutAssistantExperienceConfigsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  assistantSessions?: Prisma.AssistantSessionUpdateManyWithoutCustomerNestedInput
+  assistantMessages?: Prisma.AssistantMessageUpdateManyWithoutCustomerNestedInput
+  knowledgeDocuments?: Prisma.KnowledgeDocumentUpdateManyWithoutCustomerNestedInput
+  knowledgeChunks?: Prisma.KnowledgeChunkUpdateManyWithoutCustomerNestedInput
+  retrievalRuns?: Prisma.RetrievalRunUpdateManyWithoutCustomerNestedInput
+  retrievalCandidates?: Prisma.RetrievalCandidateUpdateManyWithoutCustomerNestedInput
+  evidenceRefs?: Prisma.EvidenceRefUpdateManyWithoutCustomerNestedInput
+  toolPolicies?: Prisma.CustomerToolPolicyUpdateManyWithoutCustomerNestedInput
+  toolCalls?: Prisma.ToolCallUpdateManyWithoutCustomerNestedInput
+  approvalRequests?: Prisma.ApprovalRequestUpdateManyWithoutCustomerNestedInput
+  actionDrafts?: Prisma.ActionDraftUpdateManyWithoutCustomerNestedInput
+  escalationRequests?: Prisma.EscalationRequestUpdateManyWithoutCustomerNestedInput
+  feedbackEvents?: Prisma.FeedbackEventUpdateManyWithoutCustomerNestedInput
+  reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
+  integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
+  gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+}
+
+export type CustomerUncheckedUpdateWithoutAssistantExperienceConfigsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  assistantSessions?: Prisma.AssistantSessionUncheckedUpdateManyWithoutCustomerNestedInput
   assistantMessages?: Prisma.AssistantMessageUncheckedUpdateManyWithoutCustomerNestedInput
   knowledgeDocuments?: Prisma.KnowledgeDocumentUncheckedUpdateManyWithoutCustomerNestedInput
   knowledgeChunks?: Prisma.KnowledgeChunkUncheckedUpdateManyWithoutCustomerNestedInput
@@ -896,6 +1029,7 @@ export type CustomerCreateWithoutAssistantMessagesInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutAssistantMessagesInput = {
@@ -916,6 +1050,7 @@ export type CustomerUncheckedCreateWithoutAssistantMessagesInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutAssistantMessagesInput = {
@@ -952,6 +1087,7 @@ export type CustomerUpdateWithoutAssistantMessagesInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutAssistantMessagesInput = {
@@ -972,6 +1108,7 @@ export type CustomerUncheckedUpdateWithoutAssistantMessagesInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutToolPoliciesInput = {
@@ -992,6 +1129,7 @@ export type CustomerCreateWithoutToolPoliciesInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutToolPoliciesInput = {
@@ -1012,6 +1150,7 @@ export type CustomerUncheckedCreateWithoutToolPoliciesInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutToolPoliciesInput = {
@@ -1048,6 +1187,7 @@ export type CustomerUpdateWithoutToolPoliciesInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutToolPoliciesInput = {
@@ -1068,6 +1208,7 @@ export type CustomerUncheckedUpdateWithoutToolPoliciesInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutToolCallsInput = {
@@ -1088,6 +1229,7 @@ export type CustomerCreateWithoutToolCallsInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutToolCallsInput = {
@@ -1108,6 +1250,7 @@ export type CustomerUncheckedCreateWithoutToolCallsInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutToolCallsInput = {
@@ -1144,6 +1287,7 @@ export type CustomerUpdateWithoutToolCallsInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutToolCallsInput = {
@@ -1164,6 +1308,7 @@ export type CustomerUncheckedUpdateWithoutToolCallsInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutEvidenceRefsInput = {
@@ -1184,6 +1329,7 @@ export type CustomerCreateWithoutEvidenceRefsInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutEvidenceRefsInput = {
@@ -1204,6 +1350,7 @@ export type CustomerUncheckedCreateWithoutEvidenceRefsInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutEvidenceRefsInput = {
@@ -1240,6 +1387,7 @@ export type CustomerUpdateWithoutEvidenceRefsInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutEvidenceRefsInput = {
@@ -1260,6 +1408,7 @@ export type CustomerUncheckedUpdateWithoutEvidenceRefsInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutAuditEventsInput = {
@@ -1280,6 +1429,7 @@ export type CustomerCreateWithoutAuditEventsInput = {
   reviewItems?: Prisma.ReviewItemCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutAuditEventsInput = {
@@ -1300,6 +1450,7 @@ export type CustomerUncheckedCreateWithoutAuditEventsInput = {
   reviewItems?: Prisma.ReviewItemUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutAuditEventsInput = {
@@ -1336,6 +1487,7 @@ export type CustomerUpdateWithoutAuditEventsInput = {
   reviewItems?: Prisma.ReviewItemUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutAuditEventsInput = {
@@ -1356,6 +1508,7 @@ export type CustomerUncheckedUpdateWithoutAuditEventsInput = {
   reviewItems?: Prisma.ReviewItemUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutFeedbackEventsInput = {
@@ -1376,6 +1529,7 @@ export type CustomerCreateWithoutFeedbackEventsInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutFeedbackEventsInput = {
@@ -1396,6 +1550,7 @@ export type CustomerUncheckedCreateWithoutFeedbackEventsInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutFeedbackEventsInput = {
@@ -1432,6 +1587,7 @@ export type CustomerUpdateWithoutFeedbackEventsInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutFeedbackEventsInput = {
@@ -1452,6 +1608,7 @@ export type CustomerUncheckedUpdateWithoutFeedbackEventsInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutReviewItemsInput = {
@@ -1472,6 +1629,7 @@ export type CustomerCreateWithoutReviewItemsInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutReviewItemsInput = {
@@ -1492,6 +1650,7 @@ export type CustomerUncheckedCreateWithoutReviewItemsInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutReviewItemsInput = {
@@ -1528,6 +1687,7 @@ export type CustomerUpdateWithoutReviewItemsInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutReviewItemsInput = {
@@ -1548,6 +1708,7 @@ export type CustomerUncheckedUpdateWithoutReviewItemsInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutApprovalRequestsInput = {
@@ -1568,6 +1729,7 @@ export type CustomerCreateWithoutApprovalRequestsInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutApprovalRequestsInput = {
@@ -1588,6 +1750,7 @@ export type CustomerUncheckedCreateWithoutApprovalRequestsInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutApprovalRequestsInput = {
@@ -1624,6 +1787,7 @@ export type CustomerUpdateWithoutApprovalRequestsInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutApprovalRequestsInput = {
@@ -1644,6 +1808,7 @@ export type CustomerUncheckedUpdateWithoutApprovalRequestsInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutActionDraftsInput = {
@@ -1664,6 +1829,7 @@ export type CustomerCreateWithoutActionDraftsInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutActionDraftsInput = {
@@ -1684,6 +1850,7 @@ export type CustomerUncheckedCreateWithoutActionDraftsInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutActionDraftsInput = {
@@ -1720,6 +1887,7 @@ export type CustomerUpdateWithoutActionDraftsInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutActionDraftsInput = {
@@ -1740,6 +1908,7 @@ export type CustomerUncheckedUpdateWithoutActionDraftsInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutEscalationRequestsInput = {
@@ -1760,6 +1929,7 @@ export type CustomerCreateWithoutEscalationRequestsInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutEscalationRequestsInput = {
@@ -1780,6 +1950,7 @@ export type CustomerUncheckedCreateWithoutEscalationRequestsInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutEscalationRequestsInput = {
@@ -1816,6 +1987,7 @@ export type CustomerUpdateWithoutEscalationRequestsInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutEscalationRequestsInput = {
@@ -1836,6 +2008,7 @@ export type CustomerUncheckedUpdateWithoutEscalationRequestsInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutKnowledgeDocumentsInput = {
@@ -1856,6 +2029,7 @@ export type CustomerCreateWithoutKnowledgeDocumentsInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutKnowledgeDocumentsInput = {
@@ -1876,6 +2050,7 @@ export type CustomerUncheckedCreateWithoutKnowledgeDocumentsInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutKnowledgeDocumentsInput = {
@@ -1912,6 +2087,7 @@ export type CustomerUpdateWithoutKnowledgeDocumentsInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutKnowledgeDocumentsInput = {
@@ -1932,6 +2108,7 @@ export type CustomerUncheckedUpdateWithoutKnowledgeDocumentsInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutKnowledgeChunksInput = {
@@ -1952,6 +2129,7 @@ export type CustomerCreateWithoutKnowledgeChunksInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutKnowledgeChunksInput = {
@@ -1972,6 +2150,7 @@ export type CustomerUncheckedCreateWithoutKnowledgeChunksInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutKnowledgeChunksInput = {
@@ -2008,6 +2187,7 @@ export type CustomerUpdateWithoutKnowledgeChunksInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutKnowledgeChunksInput = {
@@ -2028,6 +2208,7 @@ export type CustomerUncheckedUpdateWithoutKnowledgeChunksInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutRetrievalRunsInput = {
@@ -2048,6 +2229,7 @@ export type CustomerCreateWithoutRetrievalRunsInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutRetrievalRunsInput = {
@@ -2068,6 +2250,7 @@ export type CustomerUncheckedCreateWithoutRetrievalRunsInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutRetrievalRunsInput = {
@@ -2104,6 +2287,7 @@ export type CustomerUpdateWithoutRetrievalRunsInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutRetrievalRunsInput = {
@@ -2124,6 +2308,7 @@ export type CustomerUncheckedUpdateWithoutRetrievalRunsInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerCreateWithoutRetrievalCandidatesInput = {
@@ -2144,6 +2329,7 @@ export type CustomerCreateWithoutRetrievalCandidatesInput = {
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutRetrievalCandidatesInput = {
@@ -2164,6 +2350,7 @@ export type CustomerUncheckedCreateWithoutRetrievalCandidatesInput = {
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutCustomerInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedCreateNestedManyWithoutCustomerInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedCreateNestedManyWithoutCustomerInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutRetrievalCandidatesInput = {
@@ -2200,6 +2387,7 @@ export type CustomerUpdateWithoutRetrievalCandidatesInput = {
   auditEvents?: Prisma.AuditEventUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutRetrievalCandidatesInput = {
@@ -2220,6 +2408,7 @@ export type CustomerUncheckedUpdateWithoutRetrievalCandidatesInput = {
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutCustomerNestedInput
   integrationBindings?: Prisma.IntegrationBindingUncheckedUpdateManyWithoutCustomerNestedInput
   gatewayIdentityAuditEvents?: Prisma.GatewayIdentityAuditEventUncheckedUpdateManyWithoutCustomerNestedInput
+  assistantExperienceConfigs?: Prisma.AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 
@@ -2245,6 +2434,7 @@ export type CustomerCountOutputType = {
   auditEvents: number
   integrationBindings: number
   gatewayIdentityAuditEvents: number
+  assistantExperienceConfigs: number
 }
 
 export type CustomerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2265,6 +2455,7 @@ export type CustomerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensio
   auditEvents?: boolean | CustomerCountOutputTypeCountAuditEventsArgs
   integrationBindings?: boolean | CustomerCountOutputTypeCountIntegrationBindingsArgs
   gatewayIdentityAuditEvents?: boolean | CustomerCountOutputTypeCountGatewayIdentityAuditEventsArgs
+  assistantExperienceConfigs?: boolean | CustomerCountOutputTypeCountAssistantExperienceConfigsArgs
 }
 
 /**
@@ -2396,6 +2587,13 @@ export type CustomerCountOutputTypeCountGatewayIdentityAuditEventsArgs<ExtArgs e
   where?: Prisma.GatewayIdentityAuditEventWhereInput
 }
 
+/**
+ * CustomerCountOutputType without action
+ */
+export type CustomerCountOutputTypeCountAssistantExperienceConfigsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AssistantExperienceConfigWhereInput
+}
+
 
 export type CustomerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2416,6 +2614,7 @@ export type CustomerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   auditEvents?: boolean | Prisma.Customer$auditEventsArgs<ExtArgs>
   integrationBindings?: boolean | Prisma.Customer$integrationBindingsArgs<ExtArgs>
   gatewayIdentityAuditEvents?: boolean | Prisma.Customer$gatewayIdentityAuditEventsArgs<ExtArgs>
+  assistantExperienceConfigs?: boolean | Prisma.Customer$assistantExperienceConfigsArgs<ExtArgs>
   _count?: boolean | Prisma.CustomerCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["customer"]>
 
@@ -2450,6 +2649,7 @@ export type CustomerInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   auditEvents?: boolean | Prisma.Customer$auditEventsArgs<ExtArgs>
   integrationBindings?: boolean | Prisma.Customer$integrationBindingsArgs<ExtArgs>
   gatewayIdentityAuditEvents?: boolean | Prisma.Customer$gatewayIdentityAuditEventsArgs<ExtArgs>
+  assistantExperienceConfigs?: boolean | Prisma.Customer$assistantExperienceConfigsArgs<ExtArgs>
   _count?: boolean | Prisma.CustomerCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type CustomerIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -2475,6 +2675,7 @@ export type $CustomerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     auditEvents: Prisma.$AuditEventPayload<ExtArgs>[]
     integrationBindings: Prisma.$IntegrationBindingPayload<ExtArgs>[]
     gatewayIdentityAuditEvents: Prisma.$GatewayIdentityAuditEventPayload<ExtArgs>[]
+    assistantExperienceConfigs: Prisma.$AssistantExperienceConfigPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2889,6 +3090,7 @@ export interface Prisma__CustomerClient<T, Null = never, ExtArgs extends runtime
   auditEvents<T extends Prisma.Customer$auditEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$auditEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuditEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   integrationBindings<T extends Prisma.Customer$integrationBindingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$integrationBindingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$IntegrationBindingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   gatewayIdentityAuditEvents<T extends Prisma.Customer$gatewayIdentityAuditEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$gatewayIdentityAuditEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GatewayIdentityAuditEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  assistantExperienceConfigs<T extends Prisma.Customer$assistantExperienceConfigsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$assistantExperienceConfigsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AssistantExperienceConfigPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3717,6 +3919,30 @@ export type Customer$gatewayIdentityAuditEventsArgs<ExtArgs extends runtime.Type
   take?: number
   skip?: number
   distinct?: Prisma.GatewayIdentityAuditEventScalarFieldEnum | Prisma.GatewayIdentityAuditEventScalarFieldEnum[]
+}
+
+/**
+ * Customer.assistantExperienceConfigs
+ */
+export type Customer$assistantExperienceConfigsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AssistantExperienceConfig
+   */
+  select?: Prisma.AssistantExperienceConfigSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AssistantExperienceConfig
+   */
+  omit?: Prisma.AssistantExperienceConfigOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AssistantExperienceConfigInclude<ExtArgs> | null
+  where?: Prisma.AssistantExperienceConfigWhereInput
+  orderBy?: Prisma.AssistantExperienceConfigOrderByWithRelationInput | Prisma.AssistantExperienceConfigOrderByWithRelationInput[]
+  cursor?: Prisma.AssistantExperienceConfigWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AssistantExperienceConfigScalarFieldEnum | Prisma.AssistantExperienceConfigScalarFieldEnum[]
 }
 
 /**

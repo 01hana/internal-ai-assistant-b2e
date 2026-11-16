@@ -411,6 +411,7 @@ export const ModelName = {
   GatewaySigningKey: 'GatewaySigningKey',
   GatewayIdentityAuditEvent: 'GatewayIdentityAuditEvent',
   AssistantSession: 'AssistantSession',
+  AssistantExperienceConfig: 'AssistantExperienceConfig',
   AssistantMessage: 'AssistantMessage',
   AssistantContextState: 'AssistantContextState',
   ExecutionPlan: 'ExecutionPlan',
@@ -447,7 +448,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "customer" | "integrationBinding" | "managedIdentityProviderInstance" | "managedIntegrationExchangeConfig" | "managedIntegrationAdmissionPolicy" | "managedPermissionSourceInstance" | "managedPermissionPolicy" | "managedUpstreamIssuer" | "managedUpstreamSigningKey" | "managedExchangeAuditEvent" | "registeredUpstreamTrustProfile" | "gatewaySigningKey" | "gatewayIdentityAuditEvent" | "assistantSession" | "assistantMessage" | "assistantContextState" | "executionPlan" | "answerDecision" | "clarificationQuestion" | "groundingCheck" | "toolDefinition" | "customerToolPolicy" | "toolCall" | "evidenceRef" | "auditEvent" | "feedbackEvent" | "reviewItem" | "approvalRequest" | "actionDraft" | "escalationRequest" | "queryUnderstandingResult" | "knowledgeDocument" | "knowledgeChunk" | "retrievalRun" | "retrievalCandidate"
+    modelProps: "customer" | "integrationBinding" | "managedIdentityProviderInstance" | "managedIntegrationExchangeConfig" | "managedIntegrationAdmissionPolicy" | "managedPermissionSourceInstance" | "managedPermissionPolicy" | "managedUpstreamIssuer" | "managedUpstreamSigningKey" | "managedExchangeAuditEvent" | "registeredUpstreamTrustProfile" | "gatewaySigningKey" | "gatewayIdentityAuditEvent" | "assistantSession" | "assistantExperienceConfig" | "assistantMessage" | "assistantContextState" | "executionPlan" | "answerDecision" | "clarificationQuestion" | "groundingCheck" | "toolDefinition" | "customerToolPolicy" | "toolCall" | "evidenceRef" | "auditEvent" | "feedbackEvent" | "reviewItem" | "approvalRequest" | "actionDraft" | "escalationRequest" | "queryUnderstandingResult" | "knowledgeDocument" | "knowledgeChunk" | "retrievalRun" | "retrievalCandidate"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1484,6 +1485,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.AssistantSessionCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.AssistantSessionCountAggregateOutputType> | number
+        }
+      }
+    }
+    AssistantExperienceConfig: {
+      payload: Prisma.$AssistantExperienceConfigPayload<ExtArgs>
+      fields: Prisma.AssistantExperienceConfigFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AssistantExperienceConfigFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AssistantExperienceConfigFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload>
+        }
+        findFirst: {
+          args: Prisma.AssistantExperienceConfigFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AssistantExperienceConfigFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload>
+        }
+        findMany: {
+          args: Prisma.AssistantExperienceConfigFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload>[]
+        }
+        create: {
+          args: Prisma.AssistantExperienceConfigCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload>
+        }
+        createMany: {
+          args: Prisma.AssistantExperienceConfigCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AssistantExperienceConfigCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload>[]
+        }
+        delete: {
+          args: Prisma.AssistantExperienceConfigDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload>
+        }
+        update: {
+          args: Prisma.AssistantExperienceConfigUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload>
+        }
+        deleteMany: {
+          args: Prisma.AssistantExperienceConfigDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AssistantExperienceConfigUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AssistantExperienceConfigUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload>[]
+        }
+        upsert: {
+          args: Prisma.AssistantExperienceConfigUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AssistantExperienceConfigPayload>
+        }
+        aggregate: {
+          args: Prisma.AssistantExperienceConfigAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAssistantExperienceConfig>
+        }
+        groupBy: {
+          args: Prisma.AssistantExperienceConfigGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AssistantExperienceConfigGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AssistantExperienceConfigCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AssistantExperienceConfigCountAggregateOutputType> | number
         }
       }
     }
@@ -3312,12 +3387,29 @@ export const AssistantSessionScalarFieldEnum = {
   organizationId: 'organizationId',
   actorId: 'actorId',
   status: 'status',
+  title: 'title',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   lastMessageAt: 'lastMessageAt'
 } as const
 
 export type AssistantSessionScalarFieldEnum = (typeof AssistantSessionScalarFieldEnum)[keyof typeof AssistantSessionScalarFieldEnum]
+
+
+export const AssistantExperienceConfigScalarFieldEnum = {
+  id: 'id',
+  customerId: 'customerId',
+  integrationId: 'integrationId',
+  configVersion: 'configVersion',
+  status: 'status',
+  activeSlot: 'activeSlot',
+  payload: 'payload',
+  checksum: 'checksum',
+  createdAt: 'createdAt',
+  activatedAt: 'activatedAt'
+} as const
+
+export type AssistantExperienceConfigScalarFieldEnum = (typeof AssistantExperienceConfigScalarFieldEnum)[keyof typeof AssistantExperienceConfigScalarFieldEnum]
 
 
 export const AssistantMessageScalarFieldEnum = {
@@ -4013,6 +4105,20 @@ export type ListEnumAssistantSessionStatusFieldRefInput<$PrismaModel> = FieldRef
 
 
 /**
+ * Reference to a field of type 'AssistantExperienceConfigStatus'
+ */
+export type EnumAssistantExperienceConfigStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantExperienceConfigStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'AssistantExperienceConfigStatus[]'
+ */
+export type ListEnumAssistantExperienceConfigStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantExperienceConfigStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'AssistantMessageRole'
  */
 export type EnumAssistantMessageRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantMessageRole'>
@@ -4526,6 +4632,7 @@ export type GlobalOmitConfig = {
   gatewaySigningKey?: Prisma.GatewaySigningKeyOmit
   gatewayIdentityAuditEvent?: Prisma.GatewayIdentityAuditEventOmit
   assistantSession?: Prisma.AssistantSessionOmit
+  assistantExperienceConfig?: Prisma.AssistantExperienceConfigOmit
   assistantMessage?: Prisma.AssistantMessageOmit
   assistantContextState?: Prisma.AssistantContextStateOmit
   executionPlan?: Prisma.ExecutionPlanOmit

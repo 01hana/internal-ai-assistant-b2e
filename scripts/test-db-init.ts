@@ -29,6 +29,7 @@ async function main() {
       prisma.gatewaySigningKey.deleteMany(),
       prisma.auditEvent.deleteMany(),
       prisma.reviewItem.deleteMany(),
+      prisma.assistantExperienceConfig.deleteMany(),
       prisma.feedbackEvent.deleteMany(),
       prisma.approvalRequest.deleteMany(),
       prisma.actionDraft.deleteMany(),

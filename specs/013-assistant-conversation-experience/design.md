@@ -16,16 +16,17 @@
 | `LlmToolSelectionService.describeAvailable()` | **REMOVE**（無其他呼叫者時） | 能力總覽改由 `AvailableCapabilityService` 產生，不再依賴 LLM 開關。 |
 | `LlmToolSelectionService` 選擇結構 | **EXTEND** | 新增 `capability_discovery` 決策值；不新增 LLM 呼叫。 |
 | `classifyControlledConversation()` | **EXTEND** | 整句清單比對改為正規化 + 句型比對；保留資料字眼排除並擴充；函式簽章不變。 |
-| `CapabilityCatalogRegistry` / `CapabilityResolutionService` | **REUSE_AS_IS** | 體驗設定 validator 用它驗證每則 `message` 的解析結果；不改解析規則。 |
+| `CapabilityCatalogRegistry` / `CapabilityBindingResolverService` | **REUSE_AS_IS** | validator 以 binding resolver 驗證每個選項宣告的能力與參數可解析到 active binding。 |
+| `CapabilityResolutionService` | **EXTEND** | 新增 `resolveDeclared(scope, capabilityKey, parameters, auditContext)`：略過語意比對，直接 binding 解析，回傳相同的 `RESOLVED` 結構並照常寫入解析審計（`reasonCode: DECLARED_CHOICE`）。語意解析 `resolve()` 不變。 |
 | `ToolRegistryService`、`ToolPermissionPrecheckService` | **REUSE_AS_IS** | 由 `AvailableCapabilityService` 間接使用；執行時的權限檢查仍在原處，不因可見性判斷而略過。 |
 | `AssistantSessionService` | **EXTEND** | `listVisibleSessions` 加分頁與排序；`closeVisibleSession` 對外開放為封存；新增標題設定。 |
-| `AssistantController` / `SendAssistantMessageDto` | **EXTEND** | 新增列表、封存端點；`opening` 回應欄位；`quickReplyId`、`origin` 輸入。 |
+| `AssistantController` / `SendAssistantMessageDto` | **EXTEND** | 新增列表、封存端點；`opening` 回應欄位；`choiceId` 輸入。 |
 | `AssistantMessageService.sendMessage` | **EXTEND** | 接入 Quick Reply 解析、延伸建議、未支援問題收集；既有流程與判斷順序不變。 |
 | `assistant-sse-event.builder.ts` / `assistant-sse.types.ts` | **EXTEND** | `finalData` 新增選填 `suggestions`，空時省略。 |
 | `ReviewItemService` | **EXTEND** | 新增 `createUnsupportedQuestion`；既有 `createFromAssistantOutcome` 不變。 |
 | `AuditWriterService` | **REUSE_AS_IS** | 新增 eventType，不改 schema。 |
 | `provision-customer-tool-policy.command.ts` 模式 | **REUSE_PATTERN** | 體驗設定 provisioning 比照其結構（command + script + `--check`）。 |
-| Gateway `backend-route-definition.ts`、`gateway-assistant.controller.ts` | **EXTEND** | 白名單新增兩條路由；送訊息轉發 `quickReplyId`、`origin`。Gateway 只做格式驗證，不做可見性判斷。 |
+| Gateway `backend-route-definition.ts`、`gateway-assistant.controller.ts` | **EXTEND** | 白名單新增兩條路由；送訊息轉發 `choiceId`。Gateway 只做格式驗證，不做可見性判斷。 |
 
 ### D1. AvailableCapabilityService（`src/capabilities/available-capability.service.ts`）
 
@@ -75,7 +76,7 @@ model AssistantExperienceConfig {
 |---|---|
 | `assistant-experience.types.ts` | payload v1 型別（spec Key Entities） |
 | `assistant-experience.parser.ts` | 純函式 schema 驗證：欄位、長度、ID 唯一、`maxQuickReplies` 1–6、`kind` 規則；錯誤回傳路徑與代碼，不含內容 |
-| `assistant-experience.validator.ts` | 與 active pack 交叉驗證：scope 一致、`capabilityKey` 存在、每則 `message` 經 `CapabilityResolutionService` 解析為宣告的 key 與參數 |
+| `assistant-experience.validator.ts` | 與 active pack 交叉驗證：scope 一致、`capabilityKey` 與參數已宣告、宣告的能力與參數經 `CapabilityBindingResolverService` 解析到 active binding（Decision 4）；不做語意比對、不寫審計 |
 | `assistant-experience.repository.ts` | 讀 active、寫 draft、activate（同一 transaction 將舊 active 改 `retired`） |
 | `assistant-experience.service.ts` | `buildOpening(host, pageContext)`、`resolveQuickReply(host, id)`、`buildFollowUps(host, resolvedCapability, parameters)`、`buildCapabilityQuickReplies(host)` |
 | `provision-assistant-experience.command.ts` + `scripts/provision-assistant-experience.ts` | 讀 `customers/<c>/assistant-experience/<v>.json` → parse → validate → 寫入並 activate；`--check` 只驗證不寫入 |
@@ -86,8 +87,8 @@ model AssistantExperienceConfig {
 ### D4. 開場與 Quick Reply（US1）
 
 - `AssistantSessionService.createSession` 回傳後，controller 呼叫 `buildOpening` 組 `opening`；`session_created` 審計的 metadata 加 `experienceConfigVersion`、`quickReplyIds`。
-- `SendAssistantMessageDto`：`message` 改為選填，新增 `quickReplyId`（`@MaxLength(64)`，格式 `SAFE_IDENTIFIER`）與 `origin`；以自訂驗證保證 `message` 與 `quickReplyId` 恰好一個。
-- `quickReplyId` 流程：`resolveQuickReply` → 不可見則丟出與 session not found 相同的 404 → 以設定中的 `message` 走既有 `sendMessage` → 寫 `quick_reply_selected`（`quickReplyId`、`configVersion`）。
+- `SendAssistantMessageDto`：`message` 改為選填，新增 `choiceId`（與設定 ID 相同格式 `^[a-z0-9][a-z0-9._-]{0,63}$`）；以自訂驗證保證 `message` 與 `choiceId` 恰好一個。
+- `choiceId` 流程（Decision 4）：`resolveChoice(host, choiceId)` 在 active 設定的 `quickReplies` 與 `followUps` 中查找 → 不存在或 `isAvailable` 為 false 時丟出與 session not found 相同的 404 → 以選項 `message` 寫入 user message → query understanding 以 `CapabilityResolutionService.resolveDeclared` 取代語意解析（LLM 工具選擇不介入）→ 之後的工具政策、權限、執行、證據、回答流程不變 → 寫 `quick_reply_selected` 或 `suggestion_selected`（`choiceId`、`configVersion`）。
 - `kind: capability_overview` 的 Quick Reply 直接走 US2 的能力總覽回答。
 
 ### D5. 能力總覽三層（US2）
@@ -101,7 +102,7 @@ model AssistantExperienceConfig {
 
 - 成功回答（`answerDecision` 為 grounded 類且能力解析 `RESOLVED`）後，`buildFollowUps` 取設定中 `whenCapabilityKey` 相符、`whenParameters` 為目前參數子集的 `followUps`，排除與目前參數完全相同者，以 `isAvailable` 篩選，取前 3 個。
 - `finalData` 新增選填 `suggestions`；builder 在空陣列時省略欄位。
-- `origin.type === "suggestion"` 時寫 `suggestion_selected`（`suggestionId`），不影響處理流程。
+- 點擊建議同樣以 `choiceId` 送出，流程見 D4。
 
 ### D7. Session 列表與封存（US4）
 
@@ -117,5 +118,5 @@ model AssistantExperienceConfig {
 ### D9. Gateway
 
 - `backend-route-definition.ts` 新增 `list-sessions`（GET `/api/v1/assistant/sessions`）、`archive-session`（POST `/api/v1/assistant/sessions/:id/archive`）。
-- `gateway-assistant.controller.ts` 新增對應 handler；`readSendMessageInput` 接受 `quickReplyId`、`origin` 並做與 Core 相同的格式驗證後轉發。
+- `gateway-assistant.controller.ts` 新增對應 handler；`readSendMessageInput` 接受 `choiceId` 並做與 Core 相同的格式驗證後轉發。
 - Gateway 只做格式驗證與轉發，不做可見性判斷。
