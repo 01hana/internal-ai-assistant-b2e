@@ -11,7 +11,7 @@
 Assistant 已能在驗證過的客戶範圍內解析能力、檢查權限、執行唯讀工具並以串流回答，但使用者體驗仍停在「空白對話框」：
 
 - 開新 session 時沒有問候語，也沒有任何提示告訴使用者可以問什麼。
-- 「你能查詢哪些資料？」已有規則式意圖（`capability_discovery`），但答案依賴 `ASSISTANT_LLM_TOOL_SELECTION_ENABLED`；開關關閉時一律回「目前無法確認你有可使用的查詢功能」。
+- 「你能查詢哪些資料？」已有規則式意圖（`capability_discovery`），但只認得固定的完整句子；回答沒有附上可點選的範例，沒有可用能力時的說明也不夠明確。（2026-11-16 更正：原稿寫「答案依賴 LLM 開關」有誤——`describeAvailable()` 雖位於 LLM 選工具服務內，但不呼叫 LLM、不檢查開關，且自 Phase 1 起已改用 `AvailableCapabilityService`。）
 - 回答後沒有延伸建議，使用者要自己想下一個問題。
 - `AssistantSessionService` 已有 `listVisibleSessions`、`closeVisibleSession`，但沒有對外 API、沒有標題，使用者無法回到舊對話。
 - 只有 `no_answer` 會產生 `ReviewItem`；最有規劃價值的「Assistant 不支援的問題」（能力無法辨識而轉為澄清）目前沒有被收集。
@@ -67,12 +67,12 @@ Feature 013 補齊以上體驗，並維持既有的信任邊界：**所有提示
 
 **Why this priority**: 這是 Quick Reply 最常見的入口；目前在 LLM 開關關閉時無法運作。
 
-**Independent Test**: `ASSISTANT_LLM_TOOL_SELECTION_ENABLED=false` 時，能力總覽仍列出使用者可用能力的 `safeLabel`；權限不同的使用者得到不同清單；完全沒有可用能力時回明確訊息。
+**Independent Test**: LLM 工具選擇開關為 `true` 或 `false` 時，能力總覽內容相同；權限不同的使用者得到不同清單；完全沒有可用能力時回明確訊息。
 
 **Acceptance Scenarios**:
 
-1. **Given** 使用者觸發既有的 `capability_discovery` 意圖或點擊 `kind: capability_overview` 的 Quick Reply，**when** 回答，**then** 內容只列出 US1 同一判斷下可用能力的 `safeLabel`，且 `final` 附上 `suggestions`：取使用者目前可見的 `kind: capability` Quick Reply（不受 `pageScope` 限制，最多 `maxQuickReplies` 個），讓使用者直接點選範例問題。
-2. **Given** LLM 工具選擇開關為 `false`，**then** 結果與開關為 `true` 時相同（不再依賴 LLM 服務）。
+1. **Given** 使用者觸發既有的 `capability_discovery` 意圖或點擊 `kind: capability_overview` 的 Quick Reply，**when** 回答，**then** 內容只列出 US1 同一判斷下可用的能力（沿用既有 `describeAvailable()` 的格式：能力名稱、可查欄位、可用期間與範例問句），且 `final` 附上 `suggestions`：取使用者目前可見的 `kind: capability` Quick Reply（不受 `pageScope` 限制，最多 `maxQuickReplies` 個），讓使用者直接點選範例問題。
+2. **Given** LLM 工具選擇開關為 `false`，**then** 結果與開關為 `true` 時相同（既有行為，以回歸測試鎖定）。
 3. **Given** 使用者沒有任何可用能力，**then** 回覆說明目前沒有可用的查詢功能，並建議向系統管理者申請權限；不列出任何能力名稱。
 4. 回答的 `answerDecision` 維持現有 controlled conversation 的決策類型，不產生工具呼叫或 evidence。
 5. **規則層（句型比對）**：**Given** 「請問你可以幫我查哪些東西？」「您能看什麼資料呢」等措辭不同但意思相同的問題，**when** 判斷意圖，**then** 先去除「請問」「想問」「嗎」「呢」等贅字，再以句型（主詞／能力動詞／疑問詞的組合）比對，判定為 `capability_discovery`。句型屬通用產品用語，留在 Core，不放客戶設定。
@@ -145,7 +145,7 @@ Feature 013 補齊以上體驗，並維持既有的信任邊界：**所有提示
 - **FR-003**: 系統 MUST 提供 provisioning 指令，從 `customers/<customer>/assistant-experience/<version>.json` 讀取設定，驗證 schema、`customerId` / `integrationId` / `hostApps` 與 active pack 一致、每個選項宣告的能力與參數都能解析到 active binding（Decision 4；`message` 僅為顯示文字），語意審核狀態須為 `HUMAN_VERIFIED`（開發與測試可用 `--allow-unverified`），通過後寫入並啟用；驗證失敗不得寫入任何資料。
 - **FR-004**: `POST /assistant/sessions` 回應 MUST 新增 `opening: { configVersion: string | null, greeting: string, quickReplies: { id, label }[] }`。
 - **FR-005**: `POST /assistant/sessions/:id/messages` MUST 接受 `choiceId`（與 `message` 二擇一），指向 active 設定中的 Quick Reply 或延伸建議（兩者 ID 在同一份設定內唯一）；伺服器以該選項宣告的能力與參數執行（Decision 4）。
-- **FR-006**: `capability_discovery` 的回答 MUST 改用 FR-001，且不依賴 LLM 工具選擇開關；意圖判斷 MUST 依序使用規則層句型比對、LLM 層（僅在開關開啟時，併入既有呼叫）與保底建議（US2 情境 5–8）。
+- **FR-006**: `capability_discovery` 的回答 MUST 使用 FR-001 的可用能力（既有 `describeAvailable()` 已符合），且不依賴 LLM 工具選擇開關；意圖判斷 MUST 依序使用規則層句型比對、LLM 層（僅在開關開啟時，併入既有呼叫）與保底建議（US2 情境 5–8）。
 - **FR-007**: SSE `final` 事件的資料 MUST 可選擇性新增 `suggestions: { id, label, message }[]`；未產生建議時省略此欄位。
 - **FR-008**: 系統 MUST 新增 `GET /assistant/sessions` 與 `POST /assistant/sessions/:id/archive`，範圍限定與既有 session 端點相同。
 - **FR-009**: `AssistantSession` MUST 新增可為 null 的 `title` 欄位；migration 只能新增，不回填既有資料。

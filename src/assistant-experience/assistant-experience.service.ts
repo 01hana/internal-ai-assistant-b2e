@@ -50,6 +50,21 @@ export class AssistantExperienceService {
     return Object.freeze({ configVersion: payload.configVersion, greeting: payload.greeting.text, quickReplies: Object.freeze(quickReplies) });
   }
 
+  /**
+   * Feature 013 US2: capability Quick Replies the actor may run, ignoring page scope, up to maxQuickReplies.
+   * Used as suggestions after a capability overview or an unrecognized question.
+   */
+  async buildCapabilityQuickReplies(host: HostIntegrationContext): Promise<readonly ExperienceChoiceV1[]> {
+    const active = await this.configs.findActive(host.customerId, host.integrationId);
+    if (!active || !active.payload.hostApps.includes(host.hostApp)) return Object.freeze([]);
+    const { bindings } = await this.available.resolveAvailableBindings(host);
+    return Object.freeze(active.payload.quickReplies
+      .filter((reply) => reply.kind === 'capability' && quickReplyVisible(reply, bindings))
+      .sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id, 'en-US'))
+      .slice(0, active.payload.maxQuickReplies)
+      .map(toChoice));
+  }
+
   /** Returns null when the ID is unknown, not in the active configuration, or no longer permitted. */
   async resolveChoice(host: HostIntegrationContext, choiceId: string): Promise<ResolvedExperienceChoice | null> {
     const active = await this.configs.findActive(host.customerId, host.integrationId);

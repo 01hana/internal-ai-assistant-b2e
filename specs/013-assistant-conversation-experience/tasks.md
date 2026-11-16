@@ -1,7 +1,7 @@
 # Tasks: Feature 013 — Assistant Conversation Experience
 
 **Input**: 已核准的 `spec.md`（2026-11-15）、`design.md` 與 `plan.md`
-**Status**: Phase 0–2 完成（Gate 2 PASS）；第一個未執行的 task 為 T026
+**Status**: Phase 0–3 完成（Gate 3 PASS）；第一個未執行的 task 為 T032
 
 ## 格式、相依與停止規則
 
@@ -117,12 +117,29 @@ FEATURE013_FIRST_UNEXECUTED_TASK=T026
 
 ## Phase 3 — 能力總覽（US2）
 
-- [ ] T026 [US2] 新增 `test/unit/controlled-conversation-classifier.spec.ts`：正向問句表（至少 20 句不同措辭，含既有清單）與反向問句表（至少 20 句含資料字眼，如「我可以查本月工單嗎」）。RED 後將 `classifyControlledConversation` 改為正規化 + 句型比對（design D5-1），保留函式簽章。
-- [ ] T027 [US2] 擴充 `test/unit/controlled-conversation.spec.ts` 或新增 `test/integration/capability-overview.spec.ts`：開關 `true` / `false` 輸出相同清單；權限不同的兩位使用者清單不同；無可用能力時回固定說明且不列任何能力；`final.suggestions` 為可見的能力類 Quick Reply；不產生 ToolCall / evidence。RED 後改用 `AvailableCapabilityService` 產生回答。
-- [ ] T028 [US2] 擴充 `test/unit/llm-tool-selection.service.spec.ts`：模型回 `capability_discovery` 時解析為能力總覽；開關關閉時不呼叫模型；模型回非法值時照原本失敗路徑。RED 後擴充選擇結構（不新增呼叫）。
-- [ ] T029 [US2] 新增 `test/integration/unrecognized-capability-suggestions.spec.ts`：`CAPABILITY_NOT_RECOGNIZED` / `LLM_NO_MATCH` 的澄清 `final` 附 `suggestions`；無可用能力時省略。RED 後實作保底（design D5-3）。
-- [ ] T030 [US2] 移除 `describeAvailable()`（若已無呼叫者）與對應測試；`kind: capability_overview` 的 Quick Reply 點擊走能力總覽，補一個 integration 案例於 `quick-reply-selection.spec.ts`。
-- [ ] T031 [US2] **Gate 3**：typecheck、US2 focused、SC-006 反向問句表 0 誤判、既有 `controlled-conversation` 與 `query-understanding` 測試通過。記錄 `FEATURE013_GATE_3=PASS`。
+- [x] T026 [US2] 新增 `test/unit/controlled-conversation-classifier.spec.ts`：正向問句表（至少 20 句不同措辭，含既有清單）與反向問句表（至少 20 句含資料字眼，如「我可以查本月工單嗎」）。RED 後將 `classifyControlledConversation` 改為正規化 + 句型比對（design D5-1），保留函式簽章。
+- [x] T027 [US2] 擴充 `test/unit/controlled-conversation.spec.ts` 或新增 `test/integration/capability-overview.spec.ts`：開關 `true` / `false` 輸出相同清單；權限不同的兩位使用者清單不同；無可用能力時回固定說明且不列任何能力；`final.suggestions` 為可見的能力類 Quick Reply；不產生 ToolCall / evidence。**2026-11-16 調整**：開關無關性為既有行為（EXISTING_GREEN，以測試鎖定）；RED 後修改無可用能力時的說明，並加入 `final.suggestions`（含 SSE builder 的 `suggestions` 欄位，原屬 T033）。
+- [x] T028 [US2] 擴充 `test/unit/llm-tool-selection.service.spec.ts`：模型回 `capability_discovery` 時解析為能力總覽；開關關閉時不呼叫模型；模型回非法值時照原本失敗路徑。RED 後擴充選擇結構（不新增呼叫）。
+- [x] T029 [US2] 新增 `test/integration/unrecognized-capability-suggestions.spec.ts`：`CAPABILITY_NOT_RECOGNIZED` / `LLM_NO_MATCH` 的澄清 `final` 附 `suggestions`；無可用能力時省略。RED 後實作保底（design D5-3）。
+- [x] T030 [US2] **2026-11-16 調整**：保留 `describeAvailable()`（design Reuse Inventory 更正）；`kind: capability_overview` 的 Quick Reply 點擊走能力總覽，補一個 integration 案例於 `quick-reply-selection.spec.ts`。
+- [x] T031 [US2] **Gate 3**：typecheck、US2 focused、SC-006 反向問句表 0 誤判、既有 `controlled-conversation` 與 `query-understanding` 測試通過。記錄 `FEATURE013_GATE_3=PASS`。
+
+**Phase 3 執行證據（2026-11-16）**：
+
+- T026：`classifyControlledConversation` 改為「正規化（去除請問／想問／嗎／呢等）＋ 5 種句型」，舊的固定句子清單與「怎麼查詢 X」規則原樣保留。資料字眼（數量、期間、比較、狀態、進度、單號、數字等）一律不歸類為能力總覽。主詞包含指 AI 本身的「這個／這套／你們的 ＋ 助理／系統／AI／機器人／小幫手」。`controlled-conversation-classifier.spec.ts` 正反各 29 句，先在 VM 以編譯後的 JS 驗證 0 錯誤；既有 `controlled-conversation.spec.ts` 13 個案例結果不變。
+- T027：**更正 spec**：原稿「能力總覽依賴 LLM 開關」有誤——`describeAvailable()` 不呼叫 LLM、不檢查開關，且自 Phase 1 起經 `AvailableCapabilityService` 判斷權限（開關無關性為 EXISTING_GREEN，以 `capability-overview.spec.ts` 鎖定）。實作：無可用能力時改為建議申請權限；`final.suggestions` 由 `AssistantExperienceService.buildCapabilityQuickReplies` 提供（可見的能力類 Quick Reply，不受 `pageScope` 限制）。SSE `finalData.suggestions` 型別在本 Phase 加入（原屬 T033），空陣列時不出現。
+- T028：LLM 選工具新增 `{"decision":"capability_discovery"}`（必須只有這個鍵）→ `LLM_CAPABILITY_DISCOVERY` → pipeline 以能力總覽回答；全程只呼叫一次模型。
+- T029：`CAPABILITY_NOT_RECOGNIZED`（澄清路徑）與 `LLM_NO_MATCH`（no_answer 路徑）的回覆附上能力類 Quick Reply；一般成功回答不附。
+- T030：**依 design 更正保留 `describeAvailable()`**（輸出含可查欄位、期間與範例問句，比只列 `safeLabel` 更適合使用者）；`capability_overview` Quick Reply 點擊附建議的案例在 `capability-overview.spec.ts`。
+- 首輪 `capability-overview.spec.ts` 2 個測試寫法問題：LLM 案例的測試句含「這個」，被追問判斷視為指涉前文而在無前文時要求澄清，未走到 LLM；一般問題案例缺少回答替身（測試封鎖真實 LLM）。修正後通過。
+- **觀察事項（不屬本 feature，另列 Feature 010 待辦）**：追問判斷遇到「這個／那個」時，即使指示詞後接的是助理或系統本身、或前面沒有任何對話，也會直接要求澄清。本 Phase 已讓「這個助理能做什麼」這類能力問題在規則層先被辨識；其他帶指示詞但前文不存在的問題，建議改為繼續往下解析而非直接澄清。
+- T031 Gate 3（使用者於 Mac 執行，2026-11-16）：全套 264 suites 中 238 passed、24 skipped、2 failed（`capability-overview` 2 個測試寫法問題，修正後重跑通過；其餘僅 baseline `clarification-required`）。擴充主詞後 `controlled-conversation-classifier`、`controlled-conversation`、`capability-overview` 重跑全部通過。typecheck 與變更檔 lint 通過。
+
+```text
+FEATURE013_GATE_3=PASS
+FEATURE013_COMPLETED_TASK_RANGE=T001-T031
+FEATURE013_FIRST_UNEXECUTED_TASK=T032
+```
 
 ## Phase 4 — 延伸建議（US3）
 

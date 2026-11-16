@@ -6,7 +6,7 @@ import { parseTimeRanges } from './time-range.parser';
 import { mapExtractedPhrases, normalizeDomainTerms, toQueryTokens } from './query-normalizer';
 import { QueryUnderstandingPipeline } from './query-understanding-pipeline.interface';
 import { QueryUnderstandingInput, QueryUnderstandingOutput } from './query-understanding.types';
-import { classifyControlledConversation } from './controlled-conversation.classifier';
+import { classifyControlledConversation, ControlledConversationIntent } from './controlled-conversation.classifier';
 import { normalizeQueryText, splitQuerySentences } from './query-sentence-splitter';
 import {
   decomposeSubTasks,
@@ -48,34 +48,38 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
     @Optional() private readonly llmToolSelection?: LlmToolSelectionService
   ) {}
 
+  /** Complete, low-risk meta conversation: no business evidence and no tool candidate. */
+  private async controlledConversationOutput(input: QueryUnderstandingInput, normalizedText: string,
+    conversationalIntent: ControlledConversationIntent): Promise<QueryUnderstandingOutput> {
+    let reply: string;
+    if (conversationalIntent === 'greeting') {
+      reply = /謝謝|感謝/.test(normalizedText)
+        ? '不客氣！如果還有需要查詢的資訊，可以再告訴我。'
+        : '你好！我是系統內的 AI 助理。你可以問我目前能查詢哪些資料。';
+    } else if (conversationalIntent === 'assistant_help') {
+      reply = '我是系統內的 AI 助理。你可以直接用自然語言描述想查詢的資訊；我會依目前支援的功能及你的權限提供協助。你也可以問我「目前能查詢哪些資料？」。';
+    } else {
+      const available = input.identityContext && this.llmToolSelection
+        ? await this.llmToolSelection.describeAvailable(input.hostIntegrationContext).catch(() => []) : [];
+      reply = available.length > 0
+        ? `依目前權限可使用的查詢功能：${available.join('；')}。請直接用自然語言提問；實際查詢仍會驗證資料範圍。`
+        : '目前沒有可使用的查詢功能。如需使用，請向系統管理者申請權限。';
+    }
+    return {
+      taskType: conversationalIntent, sentences: splitQuerySentences(normalizedText), tokens: [], phrases: [],
+      normalizedTerms: [], timeRanges: [], resolvedReferences: [], entityCandidates: [], subTasks: [],
+      candidateTools: [], riskLevel: RiskLevel.low, confidence: 1, clarificationNeeds: [], requiredEvidence: [],
+      conversationReply: { kind: conversationalIntent, text: reply }
+    };
+  }
+
   async understand(input: QueryUnderstandingInput): Promise<QueryUnderstandingOutput> {
     const normalizedText = normalizeQueryText(input.text);
     // Feature 013 Decision 4: a declared choice never goes through text-based intent or capability matching.
     const declaredCapability = input.declaredChoice?.kind === 'capability' ? input.declaredChoice : undefined;
     const conversationalIntent = input.declaredChoice?.kind === 'capability_overview' ? 'capability_discovery'
       : input.declaredChoice ? undefined : classifyControlledConversation(normalizedText);
-    if (conversationalIntent) {
-      let reply: string;
-      if (conversationalIntent === 'greeting') {
-        reply = /謝謝|感謝/.test(normalizedText)
-          ? '不客氣！如果還有需要查詢的資訊，可以再告訴我。'
-          : '你好！我是系統內的 AI 助理。你可以問我目前能查詢哪些資料。';
-      } else if (conversationalIntent === 'assistant_help') {
-        reply = '我是系統內的 AI 助理。你可以直接用自然語言描述想查詢的資訊；我會依目前支援的功能及你的權限提供協助。你也可以問我「目前能查詢哪些資料？」。';
-      } else {
-        const available = input.identityContext && this.llmToolSelection
-          ? await this.llmToolSelection.describeAvailable(input.hostIntegrationContext).catch(() => []) : [];
-        reply = available.length > 0
-          ? `依目前權限可使用的查詢功能：${available.join('；')}。請直接用自然語言提問；實際查詢仍會驗證資料範圍。`
-          : '目前無法確認你有可使用的查詢功能。';
-      }
-      return {
-        taskType: conversationalIntent, sentences: splitQuerySentences(normalizedText), tokens: [], phrases: [],
-        normalizedTerms: [], timeRanges: [], resolvedReferences: [], entityCandidates: [], subTasks: [],
-        candidateTools: [], riskLevel: RiskLevel.low, confidence: 1, clarificationNeeds: [], requiredEvidence: [],
-        conversationReply: { kind: conversationalIntent, text: reply }
-      };
-    }
+    if (conversationalIntent) return this.controlledConversationOutput(input, normalizedText, conversationalIntent);
     const sentences = splitQuerySentences(normalizedText);
     const tokenResult = await this.tokenizerAdapter.tokenize({
       requestId: input.requestId,
@@ -270,6 +274,10 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
             requestId: input.requestId, sessionId: input.sessionId, messageId: input.messageId
           }
         });
+    // Feature 013 US2 LLM layer: the existing selection call judged this to be a capability question.
+    if (capabilityResult?.outcome === 'NEEDS_CLARIFICATION' && capabilityResult.reasonCode === 'LLM_CAPABILITY_DISCOVERY') {
+      return this.controlledConversationOutput(input, normalizedText, 'capability_discovery');
+    }
     const candidateTools = capabilityResult?.outcome === 'RESOLVED' ? [capabilityResult.toolCandidate] : [];
     const preCandidateScopeApplicability = followUpEvidence?.kind === 'CLARIFY' && candidateTools.length === 0
       ? this.capabilityResolution.resolvePreCandidateScopeApplicability({ scope, text: normalizedText,

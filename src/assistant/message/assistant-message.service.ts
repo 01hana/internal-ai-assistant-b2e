@@ -1,4 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { AssistantExperienceService } from '../../assistant-experience/assistant-experience.service';
+import type { CapabilityResolutionResultV1 } from '../../capabilities/capability-pack.types';
+import type { AssistantSuggestionV1 } from '../sse/assistant-sse.types';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { AuditWriterService } from '../../audit/audit-writer.service';
 import { ActionDraftService } from '../../approvals/action-draft.service';
 import { ApprovalRequestService } from '../../approvals/approval-request.service';
@@ -69,8 +72,27 @@ export class AssistantMessageService {
     private readonly generationPrompt: GroundedGenerationPromptService,
     private readonly groundedAnswerFinalizer: GroundedAnswerFinalizerService,
     private readonly llmExecution: LlmExecutionService,
-    private readonly queryScopeValidation: QueryScopeValidationService
+    private readonly queryScopeValidation: QueryScopeValidationService,
+    /** Always injected by Nest; optional only so hand-built unit-test services stay valid. */
+    @Optional() private readonly experience?: AssistantExperienceService
   ) {}
+
+  /**
+   * Feature 013 US2: suggestions after a capability overview (scenario 1) or an unrecognized question
+   * (scenario 8). Every other outcome returns no suggestions.
+   */
+  private async experienceSuggestions(host: SendAssistantMessageInput['hostIntegrationContext']):
+    Promise<{ suggestions?: readonly AssistantSuggestionV1[] }> {
+    if (!this.experience) return {};
+    const suggestions = await this.experience.buildCapabilityQuickReplies(host);
+    return suggestions.length > 0 ? { suggestions } : {};
+  }
+
+  private isUnrecognizedCapability(planningResult: { queryUnderstanding: { capabilityResolution?: CapabilityResolutionResultV1 } }): boolean {
+    const resolution = planningResult.queryUnderstanding.capabilityResolution;
+    return resolution?.outcome === 'NEEDS_CLARIFICATION' &&
+      (resolution.reasonCode === 'CAPABILITY_NOT_RECOGNIZED' || resolution.reasonCode === 'LLM_NO_MATCH');
+  }
 
   async sendMessage(input: SendAssistantMessageInput): Promise<AssistantSseEventRecord[]> {
     const customerScope = createCustomerScopeFromHostIntegrationContext(input.hostIntegrationContext);
@@ -153,7 +175,9 @@ export class AssistantMessageService {
           kind: controlledReply.kind, controlledConversation: true }) });
       return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId,
         sessionId: session.id, messageId: assistantMessage.id, answerDelta: controlledReply.text,
-        finalData: { answerDecision: decision.status, answer: controlledReply.text, evidenceRefs: [] } });
+        finalData: { answerDecision: decision.status, answer: controlledReply.text, evidenceRefs: [],
+          ...(controlledReply.kind === 'capability_discovery'
+            ? await this.experienceSuggestions(input.hostIntegrationContext) : {}) } });
     }
 
     const plannedCandidate = Array.isArray(planningResult.executionPlan.candidateTools)
@@ -227,7 +251,9 @@ export class AssistantMessageService {
           reason: selectionReason }) });
       return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId,
         sessionId: session.id, messageId: assistantMessage.id, answerDelta: answerDecision.answer.delta,
-        finalData: { answerDecision: answerDecision.status, answer: answerDecision.answer.text, evidenceRefs: [] } });
+        finalData: { answerDecision: answerDecision.status, answer: answerDecision.answer.text, evidenceRefs: [],
+          ...(this.isUnrecognizedCapability(planningResult)
+            ? await this.experienceSuggestions(input.hostIntegrationContext) : {}) } });
     }
     if (
       preRuntimeGate?.kind === 'clarification' &&
@@ -314,7 +340,9 @@ export class AssistantMessageService {
           answerDecision: answerDecision.status,
           answer: answerDecision.answer.text,
           clarificationQuestionId: clarificationQuestion.id,
-          evidenceRefs: []
+          evidenceRefs: [],
+          ...(this.isUnrecognizedCapability(planningResult)
+            ? await this.experienceSuggestions(input.hostIntegrationContext) : {})
         }
       });
     }
