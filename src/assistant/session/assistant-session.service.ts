@@ -148,17 +148,19 @@ export class AssistantSessionService {
   }
 
   /**
-   * Feature 013 US4: the actor's own active sessions that contain at least one message, newest first.
+   * Feature 013 US4: the actor's own sessions that contain at least one message, newest first —
+   * active ones by default, or archived (closed) ones. Deleted sessions are never listed.
    * Sessions opened but never used are excluded so every opening does not add an empty history entry.
    * Listing is not audited (spec US4 scenario 5).
    */
-  async listSessionPage(customerScope: CustomerScope, input: { limit: number; cursor?: SessionCursor }): Promise<AssistantSessionListResult> {
+  async listSessionPage(customerScope: CustomerScope,
+    input: { limit: number; cursor?: SessionCursor; archived?: boolean }): Promise<AssistantSessionListResult> {
     const predicate = customerScopedListPredicate(customerScope, {
       integrationId: customerScope.integrationId,
       organizationId: customerScope.organizationId,
       hostApp: customerScope.hostApp,
       actorId: customerScope.actorId,
-      status: AssistantSessionStatus.active
+      status: input.archived ? AssistantSessionStatus.closed : AssistantSessionStatus.active
     });
     const rows = await this.prisma.db.assistantSession.findMany({
       where: {
@@ -196,6 +198,35 @@ export class AssistantSessionService {
     await this.auditWriter.append({ customerScope: input.customerScope, requestId: input.requestId,
       sessionId: input.sessionId, eventType: 'session_archived' });
     return result;
+  }
+
+  /** Feature 013 US4: moves one of the actor's archived sessions back to the active list and audits it. */
+  async unarchiveVisibleSession(input: { customerScope: CustomerScope; requestId: string; sessionId: string }) {
+    const result = await this.prisma.db.assistantSession.updateMany({
+      where: { ...sessionOwnedByScopePredicate(input.customerScope, input.sessionId), status: AssistantSessionStatus.closed },
+      data: { status: AssistantSessionStatus.active }
+    });
+    if (result.count !== 1) throw this.createSessionNotFoundError();
+    await this.auditWriter.append({ customerScope: input.customerScope, requestId: input.requestId,
+      sessionId: input.sessionId, eventType: 'session_unarchived' });
+    return { sessionId: input.sessionId, status: AssistantSessionStatus.active };
+  }
+
+  /**
+   * Feature 013 US4: hides one of the actor's active or archived sessions for good. The session, its messages
+   * and the audit trail are retained (review items and audit events still refer to them); nothing is returned to
+   * the user again and the session cannot be restored by the user.
+   */
+  async deleteVisibleSession(input: { customerScope: CustomerScope; requestId: string; sessionId: string }) {
+    const result = await this.prisma.db.assistantSession.updateMany({
+      where: { ...sessionOwnedByScopePredicate(input.customerScope, input.sessionId),
+        status: { in: [AssistantSessionStatus.active, AssistantSessionStatus.closed] } },
+      data: { status: AssistantSessionStatus.deleted }
+    });
+    if (result.count !== 1) throw this.createSessionNotFoundError();
+    await this.auditWriter.append({ customerScope: input.customerScope, requestId: input.requestId,
+      sessionId: input.sessionId, eventType: 'session_deleted' });
+    return { sessionId: input.sessionId, status: AssistantSessionStatus.deleted };
   }
 
   createSessionNotFoundError() {

@@ -12,7 +12,8 @@
 export const AssistantSessionStatus = {
   active: 'active',
   closed: 'closed',
-  expired: 'expired'
+  expired: 'expired',
+  deleted: 'deleted'
 } as const
 
 export type AssistantSessionStatus = (typeof AssistantSessionStatus)[keyof typeof AssistantSessionStatus]

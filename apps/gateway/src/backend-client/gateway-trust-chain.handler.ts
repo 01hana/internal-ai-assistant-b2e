@@ -46,7 +46,7 @@ type ListSessionsInput = Readonly<{
 type GatewayTrustChainHandlerDependencies = Readonly<{
   upstreamTokenVerifier: UpstreamTokenVerifier;
   canonicalIdentityResolver: Pick<CanonicalIdentityResolver, 'resolve'>;
-  gatewayBackendClient: Pick<GatewayBackendClient, 'createSession' | 'getSession' | 'getSessionMessages' | 'sendStreamMessage' | 'listSessions' | 'archiveSession'>;
+  gatewayBackendClient: Pick<GatewayBackendClient, 'createSession' | 'getSession' | 'getSessionMessages' | 'sendStreamMessage' | 'listSessions' | 'archiveSession' | 'unarchiveSession' | 'deleteSession'>;
 }>;
 
 /** Coordinates the fixed identity-to-transport chain without owning either authority. */
@@ -120,6 +120,24 @@ export class GatewayTrustChainHandler {
       traceparent: input.traceparent
     });
   }
+
+  async unarchiveSession(input: GetSessionInput): Promise<GatewayBackendReadResponse> {
+    if (!isGetSessionInput(input)) throw new GatewayTrustChainInputError();
+    const canonicalIdentity = await resolveCanonicalIdentity(this.dependencies, input.authorization, input.requestId);
+    return this.dependencies.gatewayBackendClient.unarchiveSession(canonicalIdentity, input.sessionId, {
+      requestId: input.requestId,
+      traceparent: input.traceparent
+    });
+  }
+
+  async deleteSession(input: GetSessionInput): Promise<GatewayBackendReadResponse> {
+    if (!isGetSessionInput(input)) throw new GatewayTrustChainInputError();
+    const canonicalIdentity = await resolveCanonicalIdentity(this.dependencies, input.authorization, input.requestId);
+    return this.dependencies.gatewayBackendClient.deleteSession(canonicalIdentity, input.sessionId, {
+      requestId: input.requestId,
+      traceparent: input.traceparent
+    });
+  }
 }
 
 class GatewayTrustChainInputError extends Error {
@@ -171,9 +189,10 @@ function isListSessionsInput(value: unknown): value is ListSessionsInput {
 }
 
 function isSessionListQuery(value: unknown): value is GatewaySessionListQuery {
-  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'limit' && key !== 'cursor')) return false;
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'limit' && key !== 'cursor' && key !== 'status')) return false;
   return (value.limit === undefined || (typeof value.limit === 'string' && GATEWAY_SESSION_LIST_LIMIT_PATTERN.test(value.limit)))
-    && (value.cursor === undefined || (typeof value.cursor === 'string' && GATEWAY_SESSION_LIST_CURSOR_PATTERN.test(value.cursor)));
+    && (value.cursor === undefined || (typeof value.cursor === 'string' && GATEWAY_SESSION_LIST_CURSOR_PATTERN.test(value.cursor)))
+    && (value.status === undefined || value.status === 'archived');
 }
 
 function isHistoryQuery(value: unknown): value is GatewayHistoryQuery {

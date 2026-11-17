@@ -55,6 +55,11 @@ export class AssistantSessionListQueryDto {
   @IsString()
   @MaxLength(200)
   cursor?: string;
+
+  /** Omitted for the active list; `archived` lists the actor's archived sessions. */
+  @IsOptional()
+  @IsIn(['archived'])
+  status?: 'archived';
 }
 
 export class AssistantMessageHistoryQueryDto {

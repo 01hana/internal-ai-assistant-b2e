@@ -4,10 +4,12 @@ export type BackendRouteOperation =
   | 'get-session-messages'
   | 'send-stream-message'
   | 'list-sessions'
-  | 'archive-session';
+  | 'archive-session'
+  | 'unarchive-session'
+  | 'delete-session';
 
 export type BackendRouteDefinition = Readonly<{
-  method: 'GET' | 'POST';
+  method: 'GET' | 'POST' | 'DELETE';
   path: string;
 }>;
 
@@ -36,5 +38,13 @@ export const BACKEND_ROUTE_DEFINITIONS: Readonly<Record<BackendRouteOperation, B
   'archive-session': Object.freeze({
     method: 'POST',
     path: '/api/v1/assistant/sessions/:id/archive'
+  }),
+  'unarchive-session': Object.freeze({
+    method: 'POST',
+    path: '/api/v1/assistant/sessions/:id/unarchive'
+  }),
+  'delete-session': Object.freeze({
+    method: 'DELETE',
+    path: '/api/v1/assistant/sessions/:id'
   })
 });

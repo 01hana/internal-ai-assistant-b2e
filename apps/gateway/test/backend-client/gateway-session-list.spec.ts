@@ -35,9 +35,34 @@ describe('GatewayBackendClient session list and archive (Feature 013 T043)', () 
     expect(harness.calls[0].init.body).toBeUndefined();
   });
 
+  it('lists archived sessions with status=archived only', async () => {
+    const harness = createClientHarness();
+    await harness.client.listSessions(canonicalIdentity, { status: 'archived' }, { requestId: 'list-archived' });
+    expect(harness.calls[0].url).toBe('https://backend.internal.test/api/v1/assistant/sessions?status=archived');
+  });
+
+  it('unarchives with POST and deletes with DELETE on fixed encoded paths, without a body', async () => {
+    const harness = createClientHarness();
+    await harness.client.unarchiveSession(canonicalIdentity, 's/1', { requestId: 'unarchive-1' });
+    await harness.client.deleteSession(canonicalIdentity, 's/1', { requestId: 'delete-1' });
+    expect(harness.calls.map((call) => `${call.init.method} ${call.url}`)).toEqual([
+      'POST https://backend.internal.test/api/v1/assistant/sessions/s%2F1/unarchive',
+      'DELETE https://backend.internal.test/api/v1/assistant/sessions/s%2F1'
+    ]);
+    expect(harness.calls.every((call) => call.init.body === undefined)).toBe(true);
+  });
+
+  it('passes a safe 404 through for unarchive and delete', async () => {
+    const notFound = { requestId: 'gone', error: { code: 'NOT_FOUND', message: 'Assistant session not found.' } };
+    const harness = createClientHarness(async () => ({ ok: false, status: 404, json: async () => notFound }));
+    await expect(harness.client.unarchiveSession(canonicalIdentity, 'gone', { requestId: 'gone' })).resolves.toEqual({ statusCode: 404, body: notFound });
+    await expect(harness.client.deleteSession(canonicalIdentity, 'gone', { requestId: 'gone' })).resolves.toEqual({ statusCode: 404, body: notFound });
+  });
+
   it.each([
     [{ customerId: 'customer-b' }],
     [{ limit: '20', order: 'asc' }],
+    [{ status: 'deleted' }],
     [{ limit: '-1' }],
     [{ limit: '1000' }],
     [{ cursor: 'has space' }],
@@ -132,6 +157,39 @@ describe('GatewayAssistantController session list and archive (Feature 013 T043)
     expect(handler.archiveSession).toHaveBeenCalledWith({ authorization: 'Bearer upstream-token', sessionId: 'session-a', requestId: 'gateway-archive', traceparent: undefined });
     expect(response.statusCode).toBe(200);
     expect(response.sent).toEqual({ sessionId: 'session-a', status: 'closed' });
+  });
+
+  it('delegates unarchive and delete and writes the Backend result', async () => {
+    const handler = {
+      unarchiveSession: jest.fn(async () => ({ statusCode: 200, body: { sessionId: 'session-a', status: 'active' } })),
+      deleteSession: jest.fn(async () => ({ statusCode: 200, body: { sessionId: 'session-a', status: 'deleted' } }))
+    } as unknown as GatewayTrustChainHandler;
+    const controller = new GatewayAssistantController(handler);
+    const unarchived = new TestResponse();
+    await controller.unarchiveSession('Bearer upstream-token', 'gateway-unarchive', undefined, 'session-a', {}, undefined, unarchived as unknown as Response);
+    const deleted = new TestResponse();
+    await controller.deleteSession('Bearer upstream-token', 'gateway-delete', undefined, 'session-a', {}, undefined, deleted as unknown as Response);
+
+    expect(handler.unarchiveSession).toHaveBeenCalledWith({ authorization: 'Bearer upstream-token', sessionId: 'session-a', requestId: 'gateway-unarchive', traceparent: undefined });
+    expect(handler.deleteSession).toHaveBeenCalledWith({ authorization: 'Bearer upstream-token', sessionId: 'session-a', requestId: 'gateway-delete', traceparent: undefined });
+    expect([unarchived.sent, deleted.sent]).toEqual([{ sessionId: 'session-a', status: 'active' }, { sessionId: 'session-a', status: 'deleted' }]);
+  });
+
+  it('rejects unarchive or delete carrying a body or query before trust-chain work', async () => {
+    const handler = { unarchiveSession: jest.fn(), deleteSession: jest.fn() } as unknown as GatewayTrustChainHandler;
+    const controller = new GatewayAssistantController(handler);
+    await expect(controller.unarchiveSession('Bearer t', 'a', undefined, 'session-a', { force: '1' }, undefined, new TestResponse() as unknown as Response)).rejects.toBeInstanceOf(HttpException);
+    await expect(controller.deleteSession('Bearer t', 'a', undefined, 'session-a', {}, { customerId: 'customer-b' }, new TestResponse() as unknown as Response)).rejects.toBeInstanceOf(HttpException);
+    expect(handler.unarchiveSession).not.toHaveBeenCalled();
+    expect(handler.deleteSession).not.toHaveBeenCalled();
+  });
+
+  it('accepts status=archived on the list and rejects other statuses', async () => {
+    const handler = { listSessions: jest.fn(async () => ({ statusCode: 200, body: { sessions: [], nextCursor: null } })) } as unknown as GatewayTrustChainHandler;
+    const controller = new GatewayAssistantController(handler);
+    await controller.listSessions('Bearer t', 'a', undefined, { status: 'archived' }, undefined, new TestResponse() as unknown as Response);
+    expect(handler.listSessions).toHaveBeenCalledWith(expect.objectContaining({ query: { status: 'archived' } }));
+    await expect(controller.listSessions('Bearer t', 'a', undefined, { status: 'deleted' }, undefined, new TestResponse() as unknown as Response)).rejects.toBeInstanceOf(HttpException);
   });
 
   it('rejects an archive request carrying a body or query before trust-chain work', async () => {

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Headers, HttpCode, HttpException, Param, Post, Query, Res } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, HttpException, Param, Post, Query, Res } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Response } from 'express';
 import { GatewayTrustChainHandler } from '../backend-client/gateway-trust-chain.handler';
@@ -73,6 +73,50 @@ export class GatewayAssistantController {
   ): Promise<void> {
     rejectGetBodyOrQuery(body, query);
     const result = await this.trustChainHandler.archiveSession({
+      authorization,
+      sessionId,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
+  }
+
+  /** Feature 013 US4: move one of the actor's archived sessions back to the active list. No body or query. */
+  @Post('sessions/:id/unarchive')
+  @HttpCode(200)
+  async unarchiveSession(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Param('id') sessionId: string,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    rejectGetBodyOrQuery(body, query);
+    const result = await this.trustChainHandler.unarchiveSession({
+      authorization,
+      sessionId,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
+  }
+
+  /** Feature 013 US4: delete one of the actor's sessions. No body or query. */
+  @Delete('sessions/:id')
+  @HttpCode(200)
+  async deleteSession(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Param('id') sessionId: string,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    rejectGetBodyOrQuery(body, query);
+    const result = await this.trustChainHandler.deleteSession({
       authorization,
       sessionId,
       requestId: normalizeRequestId(requestIdHeader),
@@ -201,12 +245,15 @@ function readHistoryQuery(query: unknown): GatewayHistoryQuery {
 }
 
 function readSessionListQuery(query: unknown): GatewaySessionListQuery {
-  if (!isRecord(query) || Object.keys(query).some((key) => key !== 'limit' && key !== 'cursor')) throw new BadRequestException('Invalid Gateway operation input.');
+  if (!isRecord(query) || Object.keys(query).some((key) => key !== 'limit' && key !== 'cursor' && key !== 'status')) throw new BadRequestException('Invalid Gateway operation input.');
   const limit = query.limit;
   const cursor = query.cursor;
+  const status = query.status;
   if ((limit !== undefined && (typeof limit !== 'string' || !GATEWAY_SESSION_LIST_LIMIT_PATTERN.test(limit)))
-    || (cursor !== undefined && (typeof cursor !== 'string' || !GATEWAY_SESSION_LIST_CURSOR_PATTERN.test(cursor)))) throw new BadRequestException('Invalid Gateway operation input.');
-  return Object.freeze({ ...(limit === undefined ? {} : { limit }), ...(cursor === undefined ? {} : { cursor }) });
+    || (cursor !== undefined && (typeof cursor !== 'string' || !GATEWAY_SESSION_LIST_CURSOR_PATTERN.test(cursor)))
+    || (status !== undefined && status !== 'archived')) throw new BadRequestException('Invalid Gateway operation input.');
+  return Object.freeze({ ...(limit === undefined ? {} : { limit }), ...(cursor === undefined ? {} : { cursor }),
+    ...(status === undefined ? {} : { status: 'archived' as const }) });
 }
 
 function writeReadResponse(response: Response, result: Readonly<{ statusCode: number; body: unknown }>): void {

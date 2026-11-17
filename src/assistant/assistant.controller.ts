@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -69,6 +70,7 @@ export class AssistantController {
     const { host } = this.hostIntegrationRequestFactory.create(identityContext, undefined);
     return this.assistantSessionService.listSessionPage(createCustomerScopeFromHostIntegrationContext(host), {
       limit: parseSessionListLimit(query.limit),
+      ...(query.status === 'archived' ? { archived: true } : {}),
       ...(query.cursor === undefined ? {} : { cursor: decodeSessionCursor(query.cursor) }),
     });
   }
@@ -83,6 +85,38 @@ export class AssistantController {
     const identityContext = getRequiredIdentityContext(request);
     const { host } = this.hostIntegrationRequestFactory.create(identityContext, undefined);
     return this.assistantSessionService.archiveVisibleSession({
+      customerScope: createCustomerScopeFromHostIntegrationContext(host),
+      requestId: identityContext.requestId,
+      sessionId,
+    });
+  }
+
+  /** Feature 013 US4: move one of the actor's archived sessions back to the active list. */
+  @Post("sessions/:id/unarchive")
+  @HttpCode(HttpStatus.OK)
+  async unarchiveSession(
+    @Req() request: IdentityRequest,
+    @Param("id") sessionId: string,
+  ) {
+    const identityContext = getRequiredIdentityContext(request);
+    const { host } = this.hostIntegrationRequestFactory.create(identityContext, undefined);
+    return this.assistantSessionService.unarchiveVisibleSession({
+      customerScope: createCustomerScopeFromHostIntegrationContext(host),
+      requestId: identityContext.requestId,
+      sessionId,
+    });
+  }
+
+  /** Feature 013 US4: delete one of the actor's sessions (hidden for good; data retained for audit). */
+  @Delete("sessions/:id")
+  @HttpCode(HttpStatus.OK)
+  async deleteSession(
+    @Req() request: IdentityRequest,
+    @Param("id") sessionId: string,
+  ) {
+    const identityContext = getRequiredIdentityContext(request);
+    const { host } = this.hostIntegrationRequestFactory.create(identityContext, undefined);
+    return this.assistantSessionService.deleteVisibleSession({
       customerScope: createCustomerScopeFromHostIntegrationContext(host),
       requestId: identityContext.requestId,
       sessionId,

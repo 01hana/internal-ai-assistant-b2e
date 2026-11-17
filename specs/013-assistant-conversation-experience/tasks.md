@@ -1,7 +1,7 @@
 # Tasks: Feature 013 — Assistant Conversation Experience
 
 **Input**: 已核准的 `spec.md`（2026-11-15）、`design.md` 與 `plan.md`
-**Status**: Phase 0–7 完成（Gate 7 PASS）；後端可合併回 main，前端串接另行進行
+**Status**: Phase 0–8 完成（Gate 8 PASS）；後端可合併回 main，前端串接另行進行
 
 ## 格式、相依與停止規則
 
@@ -249,3 +249,15 @@ FEATURE013_GATE_7=PASS
 FEATURE013_COMPLETED_TASK_RANGE=T001-T055
 FEATURE013_STATUS=COMPLETE_BACKEND
 ```
+
+## Phase 8 — 已封存列表、取消封存與刪除（US4 延伸，2026-11-16）
+
+來源：Frontend 003 檢視對話紀錄畫面後，使用者選擇「做法 A」：封存可在「已封存」找回並取消封存；刪除是使用者端永久移除，後端保留資料作稽核。已封存的對話須先取消封存才能開啟。
+
+- [x] T056 Migration `20261117000000_feature013_session_deleted`：`AssistantSessionStatus` 新增 `deleted`（只新增；`migration-ledger.json` 已加入）。需使用者於 Mac 執行 `npx prisma generate` 更新已進版控的 Prisma 產生檔，並 `prisma migrate deploy` 至本機與測試資料庫。
+- [x] T057 Core：`GET /assistant/sessions?status=archived`（`closed` 狀態，格式與分頁同一般列表）；`POST /assistant/sessions/:id/unarchive`（`closed` → `active`，審計 `session_unarchived`）；`DELETE /assistant/sessions/:id`（`active`／`closed` → `deleted`，審計 `session_deleted`，訊息與審計保留）。`deleted` 不出現在任何列表，讀取、送訊息、封存、取消封存、刪除皆 404。
+- [x] T058 Gateway：新增 `unarchive-session`（POST）、`delete-session`（DELETE）固定路由；列表查詢接受 `status=archived`；兩個新操作只轉發 401/403/404 的安全錯誤。**修改既有測試**：`backend-route-definition.contract.spec.ts`（鎖定清單加入兩條路由與 2 個漂移案例）、`gateway-trust-chain-handler.spec.ts`（handler 方法清單）。
+- [x] T059 測試：`test/integration/session-list.spec.ts`（已封存列表、取消封存、刪除、跨客戶）、`test/contract/assistant-session-list.contract.spec.ts`、`apps/gateway/test/backend-client/gateway-session-list.spec.ts`。文件：`docs/frontend-integration/…`（5a 節）、`docs/architecture/…`。
+- [x] T060 **Gate 8**：使用者 `npx prisma generate` 後執行 Core 全套與 `npm --prefix apps/gateway test`。`FEATURE013_GATE_8=PASS`。
+  - 證據（使用者於 Mac 執行，2026-11-17）：migration 已套用本機與測試資料庫；Core 全套 273 suites 中 249 passed、24 skipped、0 failed，2416 tests 中 2230 passed、186 skipped（`session-list` integration 12、contract 3 全數通過）；Gateway 82 suites 中 72 passed、10 skipped、0 failed，1570 tests 中 1451 passed、119 skipped。
+

@@ -95,6 +95,12 @@ SSE `final` 事件的 `data` 可能多一個 `suggestions`（沒有時不會出�
 - 成功後從列表移除該項目。封存後對該 session 送訊息或讀取會回 404，前端應開新的 session。
 - session 不存在、已封存或不屬於該使用者：404。
 
+## 5a. 已封存、取消封存與刪除
+
+- `GET /sessions?status=archived&limit&cursor`：列出已封存的對話，格式與第 4 節相同。`status` 只接受 `archived`，其他值回 400。
+- `POST /sessions/:id/unarchive`（不帶 body 與 query）：把已封存的對話移回一般列表，回 `{ sessionId, status: "active" }`。對話不存在、不是已封存、或不屬於該使用者：404。已封存的對話要先取消封存才能開啟。
+- `DELETE /sessions/:id`（不帶 body 與 query）：刪除一般或已封存的對話，回 `{ sessionId, status: "deleted" }`。刪除後兩個列表都不會出現，也無法讀取或取消封存（404）；後端仍保留資料作為稽核紀錄，使用者無法復原。
+
 ## 6. 錯誤與相容性
 
 - 錯誤格式與現有端點相同：`{ requestId, error: { code, message } }`；Gateway 層的身分錯誤照舊（401／403／503）。

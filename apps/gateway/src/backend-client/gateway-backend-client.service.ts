@@ -26,12 +26,14 @@ export type GatewayHistoryQuery = Readonly<{
 export type GatewaySessionListQuery = Readonly<{
   limit?: string;
   cursor?: string;
+  /** Only `archived`; omitted for the active list. */
+  status?: 'archived';
 }>;
 
 export const GATEWAY_SESSION_LIST_LIMIT_PATTERN = /^[0-9]{1,3}$/;
 export const GATEWAY_SESSION_LIST_CURSOR_PATTERN = /^[A-Za-z0-9_-]{1,200}$/;
 
-type ReadOperation = 'get-session' | 'get-session-messages' | 'list-sessions' | 'archive-session';
+type ReadOperation = 'get-session' | 'get-session-messages' | 'list-sessions' | 'archive-session' | 'unarchive-session' | 'delete-session';
 
 export type GatewayBackendReadResponse = Readonly<{
   statusCode: number;
@@ -55,7 +57,7 @@ type GatewayBackendClientDependencies = Readonly<{
   timeoutMilliseconds: number;
   internalTokenIssuer: Readonly<{ issue(identity: CanonicalGatewayIdentity): Promise<string> }>;
   fetch(url: string, init: Readonly<{
-    method: 'GET' | 'POST';
+    method: 'GET' | 'POST' | 'DELETE';
     headers: Record<string, string>;
     body?: string;
     signal: AbortSignal;
@@ -112,6 +114,18 @@ export class GatewayBackendClient {
     return this.fetchRead(identity, 'list-sessions', undefined, query, input, SESSION_LIST_FAILURES);
   }
 
+  /** Feature 013 US4: move an archived session back to the active list; Core owns the visibility decision. */
+  async unarchiveSession(identity: CanonicalGatewayIdentity, sessionId: string, input: ReadInput): Promise<GatewayBackendReadResponse> {
+    if (!isNonBlankString(sessionId) || !isReadInput(input)) throw new BackendUnavailableError();
+    return this.fetchRead(identity, 'unarchive-session', sessionId, undefined, input, SESSION_READ_FAILURES);
+  }
+
+  /** Feature 013 US4: delete one of the actor's sessions (hidden for good, retained for audit). */
+  async deleteSession(identity: CanonicalGatewayIdentity, sessionId: string, input: ReadInput): Promise<GatewayBackendReadResponse> {
+    if (!isNonBlankString(sessionId) || !isReadInput(input)) throw new BackendUnavailableError();
+    return this.fetchRead(identity, 'delete-session', sessionId, undefined, input, SESSION_READ_FAILURES);
+  }
+
   /** Feature 013 US4: archive one of the actor's own sessions; Core owns the visibility decision. */
   async archiveSession(identity: CanonicalGatewayIdentity, sessionId: string, input: ReadInput): Promise<GatewayBackendReadResponse> {
     if (!isNonBlankString(sessionId) || !isReadInput(input)) throw new BackendUnavailableError();
@@ -156,7 +170,7 @@ export class GatewayBackendClient {
     identity: CanonicalGatewayIdentity,
     operation: ReadOperation,
     sessionId: string | undefined,
-    query: Readonly<{ limit?: string; cursor?: string; order?: string }> | undefined,
+    query: Readonly<{ limit?: string; cursor?: string; order?: string; status?: string }> | undefined,
     input: ReadInput,
     safeFailureStatuses: readonly number[]
   ): Promise<GatewayBackendReadResponse> {
@@ -168,6 +182,7 @@ export class GatewayBackendClient {
       if (query.limit !== undefined) url.searchParams.set('limit', query.limit);
       if (query.cursor !== undefined) url.searchParams.set('cursor', query.cursor);
       if (query.order !== undefined) url.searchParams.set('order', query.order);
+      if (query.status !== undefined) url.searchParams.set('status', query.status);
     }
     try {
       const response = await this.dependencies.fetch(url.toString(), {
@@ -230,9 +245,10 @@ function isHistoryQuery(value: unknown): value is GatewayHistoryQuery {
 }
 
 function isSessionListQuery(value: unknown): value is GatewaySessionListQuery {
-  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'limit' && key !== 'cursor')) return false;
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'limit' && key !== 'cursor' && key !== 'status')) return false;
   return (value.limit === undefined || (typeof value.limit === 'string' && GATEWAY_SESSION_LIST_LIMIT_PATTERN.test(value.limit)))
-    && (value.cursor === undefined || (typeof value.cursor === 'string' && GATEWAY_SESSION_LIST_CURSOR_PATTERN.test(value.cursor)));
+    && (value.cursor === undefined || (typeof value.cursor === 'string' && GATEWAY_SESSION_LIST_CURSOR_PATTERN.test(value.cursor)))
+    && (value.status === undefined || value.status === 'archived');
 }
 
 const SESSION_READ_FAILURES: readonly number[] = Object.freeze([401, 403, 404]);

@@ -26,16 +26,19 @@ Core (`/api/v1/assistant`, internal identity) and Gateway (same public paths, fi
 | POST | `/sessions` | Response adds `opening { configVersion, greeting, quickReplies[] }`. |
 | POST | `/sessions/:id/messages` | Body accepts exactly one of `message` or `choiceId`. SSE `final` may add `suggestions[]`. |
 | GET | `/sessions?limit&cursor` | New. Actor's own active sessions with messages, newest first; opaque cursor; `limit` 1–50 (default 20). Not audited. |
+| GET | `/sessions?status=archived` | Archived (closed) sessions, same shape and paging as the active list. |
 | POST | `/sessions/:id/archive` | New. Closes the session; audit `session_archived`. |
+| POST | `/sessions/:id/unarchive` | New. Archived → active; audit `session_unarchived`. |
+| DELETE | `/sessions/:id` | New. Active or archived → `deleted` (hidden from the user for good; messages and audit retained); audit `session_deleted`. |
 | GET | `/admin/assistant/review-items?sourceType=unsupported_question` | New filter value. |
 
 ## Audit events
 
-`session_created` metadata adds `experienceConfigVersion` and `quickReplyIds`. New: `quick_reply_selected`, `suggestion_selected`, `session_archived`, and `review_item_created` with `sourceType: unsupported_question`.
+`session_created` metadata adds `experienceConfigVersion` and `quickReplyIds`. New: `quick_reply_selected`, `suggestion_selected`, `session_archived`, `session_unarchived`, `session_deleted`, and `review_item_created` with `sourceType: unsupported_question`.
 
 ## Deployment
 
-Migration `20261116000000_feature013_assistant_experience` is additive. Provision the experience configuration with `deploy.sh experience` (see [`deploy/demo/README.md`](../../deploy/demo/README.md)). When upgrading, deploy Core before Gateway: a new Gateway forwards `choiceId`, list and archive, which an old Core rejects.
+Migrations `20261116000000_feature013_assistant_experience` and `20261117000000_feature013_session_deleted` (adds `AssistantSessionStatus.deleted`) are additive. Provision the experience configuration with `deploy.sh experience` (see [`deploy/demo/README.md`](../../deploy/demo/README.md)). When upgrading, deploy Core before Gateway: a new Gateway forwards `choiceId`, list and archive, which an old Core rejects.
 
 ## Known limits
 
