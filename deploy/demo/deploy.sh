@@ -220,9 +220,13 @@ case "$CMD" in
   upgrade)
     TAR="${3:-}"; SUM="${4:-}"
     [ -f "$TAR" ] && [ -f "$SUM" ] || die "用法：./deploy.sh upgrade <compose.env> <images.tar> <sha256>"
-    NEW_TAG="$(basename "$TAR" .tar)"; NEW_TAG="${NEW_TAG#assistant-backend-}"
-    [[ "$NEW_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,100}$ ]] && [ "$NEW_TAG" != assistant-backend ] \
-      || die "無法從檔名取得 TAG（檔名應為 assistant-backend-<TAG>.tar）"
+    # 從 tar 內的 manifest.json 讀 TAG（以 Core image 的 tag 為準），檔名不影響
+    NEW_TAG="$(tar -xOf "$TAR" manifest.json 2>/dev/null | python3 -c '
+import json, sys
+tags = [t.split(":", 1)[1] for m in json.load(sys.stdin) for t in (m.get("RepoTags") or [])
+        if t.startswith("internal-ai-assistant-core:")]
+print(tags[0] if len(tags) == 1 else "")' 2>/dev/null || true)"
+    [[ "$NEW_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,100}$ ]] || die "無法從 $TAR 讀出 Core image 的 TAG"
     OLD_TAG="$TAG"
     [ "$NEW_TAG" != "$OLD_TAG" ] || die "新舊 TAG 相同（${NEW_TAG}）"
     [ -s "$DIR/provision/assistant-experience.json" ] || die "缺少 provision/assistant-experience.json（開發機執行 prepare-delivery.sh 後上傳）"
