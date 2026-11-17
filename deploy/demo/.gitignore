@@ -1,5 +1,8 @@
 assistant-backend.tar
 assistant-backend.tar.sha256
+*.tar
+*.tar.sha256
+backups/
 host-report.txt
 
 # 部署過程產出（log、主機與 nginx 傾印），不進版控

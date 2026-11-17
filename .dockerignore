@@ -18,6 +18,12 @@ coverage/
 deploy/demo/.delivery-out/
 deploy/demo/assistant-backend-images-*.tar
 deploy/demo/assistant-backend-images-*.tar.sha256
+deploy/demo/*.tar
+deploy/demo/*.tar.sha256
+deploy/demo/*-log*.txt
+deploy/demo/host-report.txt
+deploy/demo/nginx-*.txt
+deploy/demo/backups/
 apps/identity-bridge/env/local.env
 **/*.pem
 **/*.key
