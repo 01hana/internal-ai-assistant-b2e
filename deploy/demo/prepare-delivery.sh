@@ -20,5 +20,5 @@ PY
 EXPERIENCE="customers/shinmone/assistant-experience/1.0.0.json"
 [ -s "$ROOT/$EXPERIENCE" ] || { echo "✗ 找不到 $EXPERIENCE" >&2; exit 1; }
 cp "$ROOT/$EXPERIENCE" "$DIR/provision/assistant-experience.json"
-echo "✓ provision/assistant-experience.json（來源 $EXPERIENCE）"
+echo "✓ provision/assistant-experience.json（來源 ${EXPERIENCE}）"
 echo "· 記得上傳 Active Pack：customers/shinmone/capability-packs/shinmone-scm-kpistats/1.0.0.json"

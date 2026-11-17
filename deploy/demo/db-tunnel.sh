@@ -52,7 +52,7 @@ SQL
     docker start "$TUNNEL" >/dev/null
     sleep 1
     [ "$(docker inspect -f '{{.State.Running}}' "$TUNNEL")" = true ] || { docker logs "$TUNNEL"; die "轉接容器啟動失敗"; }
-    ok "轉接入口已開在 127.0.0.1:$PORT（用完請執行 bash db-tunnel.sh stop）" ;;
+    ok "轉接入口已開在 127.0.0.1:${PORT}（用完請執行 bash db-tunnel.sh stop）" ;;
   stop)
     if docker inspect "$TUNNEL" >/dev/null 2>&1; then docker rm -f "$TUNNEL" >/dev/null; ok "轉接入口已關閉"; else ok "轉接入口原本就沒開"; fi ;;
   status)

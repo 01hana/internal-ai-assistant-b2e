@@ -34,12 +34,12 @@ for entry in "${IMAGES[@]}"; do
   docker image inspect "$ref" >/dev/null 2>&1 && die "$ref 已存在；不要覆蓋既有 tag，請換一個 TAG"
 done
 
-echo "TAG：$TAG（commit $COMMIT）"
+echo "TAG：${TAG}（commit ${COMMIT}）"
 cache=(); [ "${NO_CACHE:-}" = 1 ] && cache=(--no-cache)
 for entry in "${IMAGES[@]}"; do
   ref="${entry%%|*}"; file="${entry##*|}"
-  echo; echo "== 建置 $ref（$file）"
-  docker build --platform linux/amd64 "${cache[@]}" \
+  echo; echo "== 建置 ${ref}（${file}）"
+  docker build --platform linux/amd64 ${cache[@]+"${cache[@]}"} \
     --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" \
     -f "$file" -t "$ref" .
   arch="$(docker image inspect "$ref" --format '{{.Os}}/{{.Architecture}}')"

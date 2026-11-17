@@ -48,7 +48,7 @@ wait_healthy() { # 服務名稱, 秒數
     st="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id")"
     [ "$st" = healthy ] && { ok "$svc healthy"; return; }
     [ "$st" = unhealthy ] || [ "$st" = exited ] && { dc logs --tail 100 "$svc"; die "$svc 狀態為 $st"; }
-    [ "$t" -ge "$limit" ] && { dc logs --tail 100 "$svc"; die "$svc 在 ${limit}s 內未 healthy（目前 $st）"; }
+    [ "$t" -ge "$limit" ] && { dc logs --tail 100 "$svc"; die "$svc 在 ${limit}s 內未 healthy（目前 ${st}）"; }
     sleep 5; t=$((t+5))
   done
 }
@@ -56,7 +56,7 @@ wait_healthy() { # 服務名稱, 秒數
 provision() { # check | prepare | activate-key
   local plan_file plan
   plan_file="$(dirname "$CONFIG_DIR")/public/identity-plan.json"
-  [ -s "$plan_file" ] || die "找不到 $plan_file，請先執行 host-config.sh"
+  [ -s "$plan_file" ] || die "找不到 ${plan_file}，請先執行 host-config.sh"
   [ -s "$DIR/provision/provision.cjs" ] || die "找不到 $DIR/provision/provision.cjs"
   [ -s "$DIR/provision/tool-catalog.json" ] || die "找不到 $DIR/provision/tool-catalog.json，請在開發機執行 deploy/demo/prepare-delivery.sh 後再交付"
   plan="$(python3 -c 'import json,sys;print(json.dumps(json.load(open(sys.argv[1])),separators=(",",":")))' "$plan_file")"
@@ -66,7 +66,7 @@ provision() { # check | prepare | activate-key
 
 experience() { # check | write
   local file="$DIR/provision/assistant-experience.json"
-  [ -s "$file" ] || die "找不到 $file，請在開發機執行 deploy/demo/prepare-delivery.sh 後再交付"
+  [ -s "$file" ] || die "找不到 ${file}，請在開發機執行 deploy/demo/prepare-delivery.sh 後再交付"
   local args=(--file /provision/assistant-experience.json); [ "$1" = check ] && args+=(--check)
   # 在 Core image 內執行：以 core.env 的 DATABASE_URL 與已掛載的 Active Pack 驗證每個選項宣告的能力與參數
   dc run --rm --no-deps -T -v "$DIR/provision:/provision:ro" \
@@ -79,7 +79,7 @@ backup_db() { # label
   f="$dir/assistant-$(date +%Y%m%d-%H%M%S)-$1.sql.gz"
   ( umask 077; dc exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' | gzip > "$f" ) || die "資料庫備份失敗"
   [ "$(gzip -dc "$f" | head -c 100 | wc -c)" -gt 0 ] || die "備份檔是空的：$f"
-  ok "資料庫已備份：$f（$(du -h "$f" | cut -f1)）"
+  ok "資料庫已備份：${f}（$(du -h "$f" | cut -f1)）"
 }
 
 run_migration() {
@@ -90,7 +90,7 @@ run_migration() {
   dc up -d --pull never --no-build --no-deps migrate
   MID="$(dc ps -aq migrate)"; [ -n "$MID" ] || die "migration 容器未建立"
   CODE="$(docker wait "$MID")"; dc logs --tail 50 migrate
-  [ "$CODE" = 0 ] || die "migration 結束碼 $CODE，請先檢查日誌再處理，不要用 db push 或 migrate reset"
+  [ "$CODE" = 0 ] || die "migration 結束碼 ${CODE}，請先檢查日誌再處理，不要用 db push 或 migrate reset"
   ok "migration 完成"
 }
 
@@ -108,7 +108,7 @@ check_images() {
   for tpl in "${APP_IMAGES[@]}"; do
     ref="$(printf "$tpl" "$TAG")"
     arch="$(docker image inspect "$ref" --format '{{.Os}}/{{.Architecture}}' 2>/dev/null)" || die "尚未載入 image：$ref"
-    [ "$arch" = linux/amd64 ] || die "$ref 架構是 $arch，不是 linux/amd64"
+    [ "$arch" = linux/amd64 ] || die "$ref 架構是 ${arch}，不是 linux/amd64"
     ok "$ref ($arch)"
   done
 }
@@ -126,7 +126,7 @@ preflight() {
     [ -n "$(envval $v)" ] || { warn "$v 未設定"; fail=1; }
   done
 
-  echo "== 服務設定檔（$CONFIG_DIR）"
+  echo "== 服務設定檔（${CONFIG_DIR}）"
   for f in database core gateway bridge connector; do
     p="$CONFIG_DIR/$f.env"
     if [ ! -f "$p" ]; then warn "缺少 $p"; fail=1; continue; fi
@@ -139,7 +139,7 @@ preflight() {
   [ -s "$PACK_DIR/shinmone-scm-kpistats.json" ] || { warn "Active Pack 尚未上傳到 $PACK_DIR"; fail=1; }
   grep -qE '^GATEWAY_SIGNING_KEY_REFERENCE=file://' "$CONFIG_DIR/gateway.env" 2>/dev/null || { warn "gateway.env 的 GATEWAY_SIGNING_KEY_REFERENCE 必須是 file:///run/secrets/gateway_signing_key"; fail=1; }
 
-  echo "== Secrets（$SECRET_DIR，只檢查是否存在）"
+  echo "== Secrets（${SECRET_DIR}，只檢查是否存在）"
   for f in postgres-password trusted-ca.pem gateway-signing-key.pem bridge-signing-key.pem bridge-binding-key.pem core-connector-key.pem connector-tls.crt connector-tls.key; do
     [ -s "$SECRET_DIR/$f" ] && ok "$f" || { warn "缺少或空白：$f"; fail=1; }
   done
@@ -224,7 +224,7 @@ case "$CMD" in
     [[ "$NEW_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,100}$ ]] && [ "$NEW_TAG" != assistant-backend ] \
       || die "無法從檔名取得 TAG（檔名應為 assistant-backend-<TAG>.tar）"
     OLD_TAG="$TAG"
-    [ "$NEW_TAG" != "$OLD_TAG" ] || die "新舊 TAG 相同（$NEW_TAG）"
+    [ "$NEW_TAG" != "$OLD_TAG" ] || die "新舊 TAG 相同（${NEW_TAG}）"
     [ -s "$DIR/provision/assistant-experience.json" ] || die "缺少 provision/assistant-experience.json（開發機執行 prepare-delivery.sh 後上傳）"
     echo "== 升級 $OLD_TAG → $NEW_TAG"
     [ "$(sha256sum "$TAR" | cut -c1-64)" = "$(cut -c1-64 "$SUM")" ] && ok "SHA-256 校驗通過" || die "SHA-256 不符，停止"
@@ -235,7 +235,7 @@ case "$CMD" in
     cp "$ENV_FILE" "$ENV_FILE.bak-$OLD_TAG"
     sed -i "s/^DEMO_IMAGE_TAG=.*/DEMO_IMAGE_TAG=$NEW_TAG/" "$ENV_FILE"
     [ "$(envval DEMO_IMAGE_TAG)" = "$NEW_TAG" ] || die "compose.env 更新失敗"
-    ok "DEMO_IMAGE_TAG=$NEW_TAG（舊設定保存在 $(basename "$ENV_FILE").bak-$OLD_TAG）"
+    ok "DEMO_IMAGE_TAG=${NEW_TAG}（舊設定保存在 $(basename "$ENV_FILE").bak-${OLD_TAG}）"
     echo; echo "== 3/6 Migration"; run_migration
     echo; echo "== 4/6 體驗設定"
     experience check || die "體驗設定檢查失敗，未寫入；服務仍在舊版執行"
@@ -250,7 +250,7 @@ case "$CMD" in
     start_edge
     echo; dc ps
     ok "升級完成：$NEW_TAG"
-    echo "回滾：把 compose.env 換回 $(basename "$ENV_FILE").bak-$OLD_TAG，再依序重建 core、gateway、edge（migration 不倒退）" ;;
+    echo "回滾：把 compose.env 換回 $(basename "$ENV_FILE").bak-${OLD_TAG}，再依序重建 core、gateway、edge（migration 不倒退）" ;;
   status) dc ps; dc logs --tail 100 ;;
   stop)   dc stop ;;
   *) die "未知指令：$CMD" ;;

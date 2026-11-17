@@ -17,3 +17,6 @@ provision/assistant-experience.json
 
 # 特定主機的 Nginx UI 設定片段（含上游實際位址），記在部署 runbook，不進版控
 nginx-ui-*.conf
+
+# 編輯工具在連結資料夾留下的暫存檔
+.fuse_hidden*
