@@ -2,6 +2,12 @@ import { AnswerDecisionStatus, RiskLevel } from '../../generated/prisma/enums';
 import { SseEventEnvelope } from '../../common/sse/sse-event.types';
 import { ToolPermissionDeniedReason } from '../../tools/tool-registry.types';
 
+/** Feature 013: a clickable choice; the client sends `{ choiceId: id }`. */
+export interface AssistantSuggestionV1 {
+  readonly id: string;
+  readonly label: string;
+}
+
 export type AssistantToolLifecycle = 'completed' | 'blocked' | 'failed';
 
 export interface AssistantSseBuildInput {
@@ -23,6 +29,8 @@ export interface AssistantSseBuildInput {
     noAnswerReason?: string;
     errorCode?: string;
     clarificationQuestionId?: string;
+    /** Feature 013: present only when non-empty. */
+    suggestions?: readonly AssistantSuggestionV1[];
   };
 }
 
@@ -38,6 +46,8 @@ export interface AssistantAnswerOnlyBuildInput {
     noAnswerReason?: string;
     clarificationQuestionId?: string;
     errorCode?: string;
+    /** Feature 013: present only when non-empty. */
+    suggestions?: readonly AssistantSuggestionV1[];
   };
 }
 

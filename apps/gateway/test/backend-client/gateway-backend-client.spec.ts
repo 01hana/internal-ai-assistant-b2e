@@ -14,7 +14,8 @@ type CreateSessionInput = Readonly<{
 }>;
 
 type SendStreamMessageInput = Readonly<{
-  message: string;
+  message?: string;
+  choiceId?: string;
   pageContext?: Readonly<Record<string, unknown>>;
   requestId?: string;
   traceparent?: string;
@@ -150,16 +151,35 @@ describe('GatewayBackendClient JSON create-session transport contract (T064-A)',
 describe('GatewayBackendClient SSE send-message transport contract (T064-B)', () => {
   const dtoSource = readFileSync(sendMessageDtoPath, 'utf8');
 
-  it('locks the Backend send-message DTO to required message and optional top-level pageContext only', () => {
+  // Feature 013 FR-005: exactly one of message or choiceId (enforced by the DTO validators), plus optional pageContext.
+  it('locks the Backend send-message DTO to message or choiceId and optional top-level pageContext only', () => {
     expect(extractSendMessageTopLevelFields(dtoSource)).toEqual([
-      { name: 'message', optional: false },
+      { name: 'message', optional: true },
+      { name: 'choiceId', optional: true },
       { name: 'pageContext', optional: true }
     ]);
   });
 
   it('rejects send-message DTO top-level field drift', () => {
-    const mutated = dtoSource.replace('message!: string;', 'message!: string;\n  customerId?: string;');
+    const mutated = dtoSource.replace('message?: string;', 'message?: string;\n  customerId?: string;');
     expect(() => assertSendMessageDtoSurface(mutated)).toThrow('Backend send-message DTO surface no longer matches the locked Gateway contract.');
+  });
+
+  it('forwards a Feature 013 choiceId in place of the message', async () => {
+    const harness = createSseHarness(['internal-sse-token-choice']);
+    const { message: _message, ...withoutMessage } = sendStreamMessageInput;
+    await harness.client.sendStreamMessage(canonicalIdentity, 'session-owned-001', { ...withoutMessage, choiceId: 'order-status-10001' });
+    expect(harness.fetchCalls[0].init).toEqual(expect.objectContaining({
+      body: JSON.stringify({ choiceId: 'order-status-10001', pageContext: sendStreamMessageInput.pageContext }) }));
+  });
+
+  it('rejects send input with both or neither of message and choiceId', async () => {
+    const harness = createSseHarness(['internal-sse-token-unused']);
+    await expect(harness.client.sendStreamMessage(canonicalIdentity, 'session-owned-001',
+      { ...sendStreamMessageInput, choiceId: 'overview' } as never)).rejects.toThrow();
+    const { message: _message, ...neither } = sendStreamMessageInput;
+    await expect(harness.client.sendStreamMessage(canonicalIdentity, 'session-owned-001', neither as never)).rejects.toThrow();
+    expect(harness.fetchCalls).toEqual([]);
   });
 
   it('uses only the fixed SSE send-message route, body, and headers with a fresh identity-bound token', async () => {
@@ -401,7 +421,7 @@ function assertCreateSessionDtoSurface(source: string): void {
 }
 
 function assertSendMessageDtoSurface(source: string): void {
-  const expected = [{ name: 'message', optional: false }, { name: 'pageContext', optional: true }];
+  const expected = [{ name: 'message', optional: true }, { name: 'choiceId', optional: true }, { name: 'pageContext', optional: true }];
   if (JSON.stringify(extractSendMessageTopLevelFields(source)) !== JSON.stringify(expected)) {
     throw new Error('Backend send-message DTO surface no longer matches the locked Gateway contract.');
   }

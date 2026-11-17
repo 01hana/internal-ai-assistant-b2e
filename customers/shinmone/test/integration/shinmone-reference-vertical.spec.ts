@@ -211,7 +211,9 @@ describe('Feature 009 Shinmone reference fixture vertical slice', () => {
         .send({ pageContext: { module: 'work-orders' } });
       expect(session.status).toBe(201);
       expect(session.body).toEqual(expect.objectContaining({
-        requestId: 'req-phase11-gateway-session', data: { sessionId: expect.any(String), status: 'active' }
+        requestId: 'req-phase11-gateway-session', data: { sessionId: expect.any(String), status: 'active',
+          // Feature 013 FR-004: additive opening; this harness loads no experience configuration.
+          opening: { configVersion: null, greeting: expect.any(String), quickReplies: [] } }
       }));
       const response = await request(gateway.gateway.getHttpServer())
         .post(`/api/v1/assistant/sessions/${session.body.data.sessionId}/messages`)

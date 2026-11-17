@@ -59,6 +59,8 @@ type SessionRecord = {
   createdAt: Date;
   updatedAt: Date;
   lastMessageAt: Date | null;
+  /** Feature 013: null until the first user message. */
+  title?: string | null;
 };
 
 type ContextStateRecord = {
@@ -401,6 +403,19 @@ type ExecutionPlanRecord = {
   createdAt: Date;
 };
 
+export type AssistantExperienceConfigRecord = {
+  id: string;
+  customerId: string;
+  integrationId: string;
+  configVersion: string;
+  status: 'draft' | 'active' | 'retired';
+  activeSlot: string | null;
+  payload: unknown;
+  checksum: string;
+  createdAt: Date;
+  activatedAt: Date | null;
+};
+
 type MockState = {
   sessions: SessionRecord[];
   contextStates: ContextStateRecord[];
@@ -424,6 +439,8 @@ type MockState = {
   knowledgeChunks: KnowledgeChunkRecord[];
   retrievalRuns: RetrievalRunRecord[];
   retrievalCandidates: RetrievalCandidateRecord[];
+  /** Feature 013: empty by default; tests seed rows through augmentStateBeforeInit or directly. */
+  assistantExperienceConfigs: AssistantExperienceConfigRecord[];
   internalIdentity?: InternalIdentityTestConfig;
   workflowAuditFailureEventTypes: string[];
   orchestration: {
@@ -762,7 +779,8 @@ function createPrismaMock(state: MockState) {
           status: (data.status as AssistantSessionStatus) ?? AssistantSessionStatus.active,
           createdAt: now,
           updatedAt: now,
-          lastMessageAt: null
+          lastMessageAt: null,
+          title: null
         };
         state.sessions.push(record);
         return record;
@@ -776,9 +794,12 @@ function createPrismaMock(state: MockState) {
         }) =>
           state.sessions.find((item) => matchesWhere(item, where)) ?? null
       ),
-      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
-        state.sessions.filter((item) => !where || matchesWhere(item, where))
-      ),
+      findMany: jest.fn(async ({ where, orderBy, take }: { where?: Record<string, unknown>;
+        orderBy?: Array<Record<string, 'asc' | 'desc'>>; take?: number } = {}) => {
+        const rows = state.sessions.filter((item) => !where || matchesWhere(item, where));
+        if (orderBy) rows.sort((left, right) => compareByOrder(left as Record<string, unknown>, right as Record<string, unknown>, orderBy));
+        return take === undefined ? rows : rows.slice(0, take);
+      }),
       update: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<SessionRecord> }) => {
         const session = state.sessions.find((item) => matchesWhere(item, where));
         if (!session) throw new Error('AssistantSession not found.');
@@ -1307,6 +1328,19 @@ function createPrismaMock(state: MockState) {
       findFirst: jest.fn(
         async ({ where }: { where: Record<string, unknown> }) => state.toolCalls.find((item) => matchesWhere(item, where)) ?? null
       )
+    },
+    assistantExperienceConfig: {
+      findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        if (typeof where.activeSlot === 'string') {
+          return state.assistantExperienceConfigs.find((item) => item.activeSlot === where.activeSlot) ?? null;
+        }
+        const selector = where.customerId_integrationId_configVersion;
+        if (!isRecord(selector)) return null;
+        return state.assistantExperienceConfigs.find((item) => item.customerId === selector.customerId &&
+          item.integrationId === selector.integrationId && item.configVersion === selector.configVersion) ?? null;
+      }),
+      findMany: jest.fn(async ({ where }: { where?: Record<string, unknown> } = {}) =>
+        state.assistantExperienceConfigs.filter((item) => !where || matchesWhere(item, where)))
     },
     customerToolPolicy: {
       findUnique: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
@@ -2056,6 +2090,7 @@ function createInitialState(): MockState {
     knowledgeChunks: createKnowledgeChunks(baseDate),
     retrievalRuns: [],
     retrievalCandidates: [],
+    assistantExperienceConfigs: [],
     orchestration: {
       sendMessage: jest.fn(),
       sseEventBuilds: jest.fn()
@@ -2082,6 +2117,10 @@ function matchesWhere(record: Record<string, unknown>, where: Record<string, unk
     if (key === 'AND') {
       return Array.isArray(value) && value.every((predicate) => isRecord(predicate) && matchesWhere(record, predicate));
     }
+    if (key === 'OR') {
+      return Array.isArray(value) && value.some((predicate) => isRecord(predicate) && matchesWhere(record, predicate));
+    }
+    if (value instanceof Date) return record[key] instanceof Date && (record[key] as Date).getTime() === value.getTime();
 
     const compound = compoundSelectorFields(key, value);
     if (compound) {
@@ -2094,6 +2133,15 @@ function matchesWhere(record: Record<string, unknown>, where: Record<string, unk
 
     if (isRecord(value)) {
       if (Array.isArray(value.in)) return value.in.includes(record[key]);
+      if ('not' in value && value.not === null && Object.keys(value).length === 1) {
+        return record[key] !== null && record[key] !== undefined;
+      }
+      if ('lt' in value && Object.keys(value).length === 1) {
+        const actual = record[key];
+        if (value.lt instanceof Date) return actual instanceof Date && actual.getTime() < value.lt.getTime();
+        if (typeof value.lt === 'string') return typeof actual === 'string' && actual < value.lt;
+        return false;
+      }
       if (value.gte instanceof Date || value.lte instanceof Date) {
         const actual = record[key];
         if (!(actual instanceof Date)) return false;
@@ -2107,6 +2155,22 @@ function matchesWhere(record: Record<string, unknown>, where: Record<string, unk
 
     return record[key] === value;
   });
+}
+
+function compareByOrder(left: Record<string, unknown>, right: Record<string, unknown>,
+  orderBy: Array<Record<string, 'asc' | 'desc'>>): number {
+  for (const clause of orderBy) {
+    for (const [field, direction] of Object.entries(clause)) {
+      const a = left[field] instanceof Date ? (left[field] as Date).getTime() : left[field];
+      const b = right[field] instanceof Date ? (right[field] as Date).getTime() : right[field];
+      if (a === b) continue;
+      if (a === null || a === undefined) return 1;
+      if (b === null || b === undefined) return -1;
+      const result = (a as number | string) < (b as number | string) ? -1 : 1;
+      return direction === 'desc' ? -result : result;
+    }
+  }
+  return 0;
 }
 
 function compoundSelectorFields(

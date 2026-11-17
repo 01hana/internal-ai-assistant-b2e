@@ -1,4 +1,5 @@
 import { LlmToolSelectionService } from '../../src/query-understanding/llm-tool-selection.service';
+import { createExperienceHarness, EXPERIENCE_HOST } from '../support/assistant-experience.fixture';
 import { createFeature011DirectHarness } from '../support/feature011-direct.fixture';
 import { RuleBasedQueryUnderstandingPipeline } from '../../src/query-understanding/rule-based-query-understanding.pipeline';
 import { DefaultTokenizerAdapter } from '../../src/query-understanding/default-tokenizer.adapter';
@@ -404,5 +405,31 @@ describe('LLM Tool Selection with an existing scoped C01 catalog', () => {
       if (priorFlag === undefined) delete process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED;
       else process.env.ASSISTANT_LLM_TOOL_SELECTION_ENABLED = priorFlag;
     }
+  });
+});
+
+describe('LLM capability_discovery decision (Feature 013 T028)', () => {
+  async function select(answer: string) {
+    const harness = await createExperienceHarness();
+    const append = jest.fn(async (_event: { metadata: Record<string, unknown> }) => undefined);
+    const generateAnswer = jest.fn(async () => ({ content: answer, finishReason: 'stop',
+      metadata: { provider: 'stub', model: 'stub', fallbackUsed: false } }));
+    const service = new LlmToolSelectionService(harness.registry, { ...harness.tools, isExecutableReadOnly: () => true } as never,
+      harness.binding, { generateAnswer } as never, { append } as never);
+    const result = await service.select({ text: '你平常都幫忙處理什麼', requestId: 'r', sessionId: 's', messageId: 'm',
+      host: EXPERIENCE_HOST, identity: {} as never });
+    return { result, append, generateAnswer };
+  }
+
+  it('maps an exact capability_discovery decision to LLM_CAPABILITY_DISCOVERY with one model call', async () => {
+    const { result, append, generateAnswer } = await select(JSON.stringify({ decision: 'capability_discovery' }));
+    expect(result).toMatchObject({ outcome: 'NEEDS_CLARIFICATION', reasonCode: 'LLM_CAPABILITY_DISCOVERY' });
+    expect(generateAnswer).toHaveBeenCalledTimes(1);
+    expect(append.mock.calls[0][0].metadata).toEqual(expect.objectContaining({ reason: 'MODEL_CAPABILITY_DISCOVERY' }));
+  });
+
+  it('rejects a capability_discovery decision with extra keys', async () => {
+    const { result } = await select(JSON.stringify({ decision: 'capability_discovery', toolKey: 'x' }));
+    expect(result).toMatchObject({ reasonCode: 'LLM_SELECTION_FAILED' });
   });
 });

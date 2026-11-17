@@ -134,4 +134,21 @@ describe('AssistantSseEventBuilder', () => {
       })
     );
   });
+
+  it('passes Feature 013 suggestions through final unchanged and omits the field when absent (T033)', () => {
+    const builder = new AssistantSseEventBuilder();
+    const base = { requestId: 'req-sse', sessionId: 'session-001', messageId: 'message-001', answerDelta: '答案' };
+    const suggestions = [{ id: 'follow-week', label: '那本週呢？' }];
+    const withSuggestions = builder.buildAnswerOnlyEvents({ ...base,
+      finalData: { answerDecision: AnswerDecisionStatus.answered, answer: '答案', evidenceRefs: [], suggestions } });
+    const without = builder.buildAnswerOnlyEvents({ ...base,
+      finalData: { answerDecision: AnswerDecisionStatus.answered, answer: '答案', evidenceRefs: [] } });
+    const toolEvents = builder.buildMessageEvents({ ...base, toolCallId: 'tool-call-001', toolName: 'mock.orders.status.lookup',
+      toolLifecycle: 'completed', evidenceRefIds: [], finalData: { answerDecision: AnswerDecisionStatus.answered,
+        answer: '答案', evidenceRefs: [], suggestions } });
+    expect(withSuggestions.at(-1)?.payload.data).toEqual(expect.objectContaining({ suggestions }));
+    expect(without.at(-1)?.payload.data).not.toHaveProperty('suggestions');
+    expect(toolEvents.at(-1)?.payload.data).toEqual(expect.objectContaining({ suggestions }));
+  });
 });
+

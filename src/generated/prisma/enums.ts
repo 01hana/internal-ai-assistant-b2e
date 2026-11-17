@@ -12,7 +12,8 @@
 export const AssistantSessionStatus = {
   active: 'active',
   closed: 'closed',
-  expired: 'expired'
+  expired: 'expired',
+  deleted: 'deleted'
 } as const
 
 export type AssistantSessionStatus = (typeof AssistantSessionStatus)[keyof typeof AssistantSessionStatus]
@@ -191,6 +192,7 @@ export type FeedbackRating = (typeof FeedbackRating)[keyof typeof FeedbackRating
 
 export const ReviewSourceType = {
   failed_query: 'failed_query',
+  unsupported_question: 'unsupported_question',
   no_answer: 'no_answer',
   tool_failure: 'tool_failure',
   negative_feedback: 'negative_feedback',
@@ -272,6 +274,15 @@ export const NoAnswerReason = {
 } as const
 
 export type NoAnswerReason = (typeof NoAnswerReason)[keyof typeof NoAnswerReason]
+
+
+export const AssistantExperienceConfigStatus = {
+  draft: 'draft',
+  active: 'active',
+  retired: 'retired'
+} as const
+
+export type AssistantExperienceConfigStatus = (typeof AssistantExperienceConfigStatus)[keyof typeof AssistantExperienceConfigStatus]
 
 
 export const ClarificationQuestionStatus = {

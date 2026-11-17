@@ -32,6 +32,7 @@ export type AssistantSessionMinAggregateOutputType = {
   organizationId: string | null
   actorId: string | null
   status: $Enums.AssistantSessionStatus | null
+  title: string | null
   createdAt: Date | null
   updatedAt: Date | null
   lastMessageAt: Date | null
@@ -45,6 +46,7 @@ export type AssistantSessionMaxAggregateOutputType = {
   organizationId: string | null
   actorId: string | null
   status: $Enums.AssistantSessionStatus | null
+  title: string | null
   createdAt: Date | null
   updatedAt: Date | null
   lastMessageAt: Date | null
@@ -58,6 +60,7 @@ export type AssistantSessionCountAggregateOutputType = {
   organizationId: number
   actorId: number
   status: number
+  title: number
   createdAt: number
   updatedAt: number
   lastMessageAt: number
@@ -73,6 +76,7 @@ export type AssistantSessionMinAggregateInputType = {
   organizationId?: true
   actorId?: true
   status?: true
+  title?: true
   createdAt?: true
   updatedAt?: true
   lastMessageAt?: true
@@ -86,6 +90,7 @@ export type AssistantSessionMaxAggregateInputType = {
   organizationId?: true
   actorId?: true
   status?: true
+  title?: true
   createdAt?: true
   updatedAt?: true
   lastMessageAt?: true
@@ -99,6 +104,7 @@ export type AssistantSessionCountAggregateInputType = {
   organizationId?: true
   actorId?: true
   status?: true
+  title?: true
   createdAt?: true
   updatedAt?: true
   lastMessageAt?: true
@@ -185,6 +191,7 @@ export type AssistantSessionGroupByOutputType = {
   organizationId: string
   actorId: string
   status: $Enums.AssistantSessionStatus
+  title: string | null
   createdAt: Date
   updatedAt: Date
   lastMessageAt: Date | null
@@ -219,6 +226,7 @@ export type AssistantSessionWhereInput = {
   organizationId?: Prisma.StringFilter<"AssistantSession"> | string
   actorId?: Prisma.StringFilter<"AssistantSession"> | string
   status?: Prisma.EnumAssistantSessionStatusFilter<"AssistantSession"> | $Enums.AssistantSessionStatus
+  title?: Prisma.StringNullableFilter<"AssistantSession"> | string | null
   createdAt?: Prisma.DateTimeFilter<"AssistantSession"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"AssistantSession"> | Date | string
   lastMessageAt?: Prisma.DateTimeNullableFilter<"AssistantSession"> | Date | string | null
@@ -241,6 +249,7 @@ export type AssistantSessionOrderByWithRelationInput = {
   organizationId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  title?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastMessageAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -267,6 +276,7 @@ export type AssistantSessionWhereUniqueInput = Prisma.AtLeast<{
   organizationId?: Prisma.StringFilter<"AssistantSession"> | string
   actorId?: Prisma.StringFilter<"AssistantSession"> | string
   status?: Prisma.EnumAssistantSessionStatusFilter<"AssistantSession"> | $Enums.AssistantSessionStatus
+  title?: Prisma.StringNullableFilter<"AssistantSession"> | string | null
   createdAt?: Prisma.DateTimeFilter<"AssistantSession"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"AssistantSession"> | Date | string
   lastMessageAt?: Prisma.DateTimeNullableFilter<"AssistantSession"> | Date | string | null
@@ -289,6 +299,7 @@ export type AssistantSessionOrderByWithAggregationInput = {
   organizationId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  title?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastMessageAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -308,6 +319,7 @@ export type AssistantSessionScalarWhereWithAggregatesInput = {
   organizationId?: Prisma.StringWithAggregatesFilter<"AssistantSession"> | string
   actorId?: Prisma.StringWithAggregatesFilter<"AssistantSession"> | string
   status?: Prisma.EnumAssistantSessionStatusWithAggregatesFilter<"AssistantSession"> | $Enums.AssistantSessionStatus
+  title?: Prisma.StringNullableWithAggregatesFilter<"AssistantSession"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"AssistantSession"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"AssistantSession"> | Date | string
   lastMessageAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AssistantSession"> | Date | string | null
@@ -320,6 +332,7 @@ export type AssistantSessionCreateInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -342,6 +355,7 @@ export type AssistantSessionUncheckedCreateInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -362,6 +376,7 @@ export type AssistantSessionUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -384,6 +399,7 @@ export type AssistantSessionUncheckedUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -405,6 +421,7 @@ export type AssistantSessionCreateManyInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -417,6 +434,7 @@ export type AssistantSessionUpdateManyMutationInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -430,6 +448,7 @@ export type AssistantSessionUncheckedUpdateManyInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -458,6 +477,7 @@ export type AssistantSessionCountOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastMessageAt?: Prisma.SortOrder
@@ -471,6 +491,7 @@ export type AssistantSessionMaxOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastMessageAt?: Prisma.SortOrder
@@ -484,6 +505,7 @@ export type AssistantSessionMinOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastMessageAt?: Prisma.SortOrder
@@ -666,6 +688,7 @@ export type AssistantSessionCreateWithoutCustomerInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -686,6 +709,7 @@ export type AssistantSessionUncheckedCreateWithoutCustomerInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -736,6 +760,7 @@ export type AssistantSessionScalarWhereInput = {
   organizationId?: Prisma.StringFilter<"AssistantSession"> | string
   actorId?: Prisma.StringFilter<"AssistantSession"> | string
   status?: Prisma.EnumAssistantSessionStatusFilter<"AssistantSession"> | $Enums.AssistantSessionStatus
+  title?: Prisma.StringNullableFilter<"AssistantSession"> | string | null
   createdAt?: Prisma.DateTimeFilter<"AssistantSession"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"AssistantSession"> | Date | string
   lastMessageAt?: Prisma.DateTimeNullableFilter<"AssistantSession"> | Date | string | null
@@ -748,6 +773,7 @@ export type AssistantSessionCreateWithoutMessagesInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -769,6 +795,7 @@ export type AssistantSessionUncheckedCreateWithoutMessagesInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -804,6 +831,7 @@ export type AssistantSessionUpdateWithoutMessagesInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -825,6 +853,7 @@ export type AssistantSessionUncheckedUpdateWithoutMessagesInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -844,6 +873,7 @@ export type AssistantSessionCreateWithoutContextStatesInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -865,6 +895,7 @@ export type AssistantSessionUncheckedCreateWithoutContextStatesInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -900,6 +931,7 @@ export type AssistantSessionUpdateWithoutContextStatesInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -921,6 +953,7 @@ export type AssistantSessionUncheckedUpdateWithoutContextStatesInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -940,6 +973,7 @@ export type AssistantSessionCreateWithoutExecutionPlansInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -961,6 +995,7 @@ export type AssistantSessionUncheckedCreateWithoutExecutionPlansInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -996,6 +1031,7 @@ export type AssistantSessionUpdateWithoutExecutionPlansInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1017,6 +1053,7 @@ export type AssistantSessionUncheckedUpdateWithoutExecutionPlansInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1036,6 +1073,7 @@ export type AssistantSessionCreateWithoutToolCallsInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1057,6 +1095,7 @@ export type AssistantSessionUncheckedCreateWithoutToolCallsInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1092,6 +1131,7 @@ export type AssistantSessionUpdateWithoutToolCallsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1113,6 +1153,7 @@ export type AssistantSessionUncheckedUpdateWithoutToolCallsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1132,6 +1173,7 @@ export type AssistantSessionCreateWithoutAuditEventsInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1153,6 +1195,7 @@ export type AssistantSessionUncheckedCreateWithoutAuditEventsInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1188,6 +1231,7 @@ export type AssistantSessionUpdateWithoutAuditEventsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1209,6 +1253,7 @@ export type AssistantSessionUncheckedUpdateWithoutAuditEventsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1228,6 +1273,7 @@ export type AssistantSessionCreateWithoutApprovalRequestsInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1249,6 +1295,7 @@ export type AssistantSessionUncheckedCreateWithoutApprovalRequestsInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1284,6 +1331,7 @@ export type AssistantSessionUpdateWithoutApprovalRequestsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1305,6 +1353,7 @@ export type AssistantSessionUncheckedUpdateWithoutApprovalRequestsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1324,6 +1373,7 @@ export type AssistantSessionCreateWithoutActionDraftsInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1345,6 +1395,7 @@ export type AssistantSessionUncheckedCreateWithoutActionDraftsInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1380,6 +1431,7 @@ export type AssistantSessionUpdateWithoutActionDraftsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1401,6 +1453,7 @@ export type AssistantSessionUncheckedUpdateWithoutActionDraftsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1420,6 +1473,7 @@ export type AssistantSessionCreateWithoutEscalationRequestsInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1441,6 +1495,7 @@ export type AssistantSessionUncheckedCreateWithoutEscalationRequestsInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1476,6 +1531,7 @@ export type AssistantSessionUpdateWithoutEscalationRequestsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1497,6 +1553,7 @@ export type AssistantSessionUncheckedUpdateWithoutEscalationRequestsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1516,6 +1573,7 @@ export type AssistantSessionCreateManyCustomerInput = {
   organizationId: string
   actorId: string
   status?: $Enums.AssistantSessionStatus
+  title?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastMessageAt?: Date | string | null
@@ -1528,6 +1586,7 @@ export type AssistantSessionUpdateWithoutCustomerInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1548,6 +1607,7 @@ export type AssistantSessionUncheckedUpdateWithoutCustomerInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1568,6 +1628,7 @@ export type AssistantSessionUncheckedUpdateManyWithoutCustomerInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAssistantSessionStatusFieldUpdateOperationsInput | $Enums.AssistantSessionStatus
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastMessageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1675,6 +1736,7 @@ export type AssistantSessionSelect<ExtArgs extends runtime.Types.Extensions.Inte
   organizationId?: boolean
   actorId?: boolean
   status?: boolean
+  title?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastMessageAt?: boolean
@@ -1698,6 +1760,7 @@ export type AssistantSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Ty
   organizationId?: boolean
   actorId?: boolean
   status?: boolean
+  title?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastMessageAt?: boolean
@@ -1712,6 +1775,7 @@ export type AssistantSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Ty
   organizationId?: boolean
   actorId?: boolean
   status?: boolean
+  title?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastMessageAt?: boolean
@@ -1726,12 +1790,13 @@ export type AssistantSessionSelectScalar = {
   organizationId?: boolean
   actorId?: boolean
   status?: boolean
+  title?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastMessageAt?: boolean
 }
 
-export type AssistantSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "integrationId" | "hostApp" | "organizationId" | "actorId" | "status" | "createdAt" | "updatedAt" | "lastMessageAt", ExtArgs["result"]["assistantSession"]>
+export type AssistantSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "integrationId" | "hostApp" | "organizationId" | "actorId" | "status" | "title" | "createdAt" | "updatedAt" | "lastMessageAt", ExtArgs["result"]["assistantSession"]>
 export type AssistantSessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   messages?: boolean | Prisma.AssistantSession$messagesArgs<ExtArgs>
@@ -1775,6 +1840,10 @@ export type $AssistantSessionPayload<ExtArgs extends runtime.Types.Extensions.In
     organizationId: string
     actorId: string
     status: $Enums.AssistantSessionStatus
+    /**
+     * Feature 013: first user message, trimmed to 40 characters; null until the first message.
+     */
+    title: string | null
     createdAt: Date
     updatedAt: Date
     lastMessageAt: Date | null
@@ -2217,6 +2286,7 @@ export interface AssistantSessionFieldRefs {
   readonly organizationId: Prisma.FieldRef<"AssistantSession", 'String'>
   readonly actorId: Prisma.FieldRef<"AssistantSession", 'String'>
   readonly status: Prisma.FieldRef<"AssistantSession", 'AssistantSessionStatus'>
+  readonly title: Prisma.FieldRef<"AssistantSession", 'String'>
   readonly createdAt: Prisma.FieldRef<"AssistantSession", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"AssistantSession", 'DateTime'>
   readonly lastMessageAt: Prisma.FieldRef<"AssistantSession", 'DateTime'>

@@ -27,6 +27,7 @@ export class ReviewItemsQueryDto {
   @IsOptional()
   @IsIn([
     'failed_query',
+    'unsupported_question',
     'no_answer',
     'tool_failure',
     'negative_feedback',
@@ -36,6 +37,7 @@ export class ReviewItemsQueryDto {
   ])
   sourceType?:
     | 'failed_query'
+    | 'unsupported_question'
     | 'no_answer'
     | 'tool_failure'
     | 'negative_feedback'

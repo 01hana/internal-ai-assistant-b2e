@@ -1,3 +1,4 @@
+import type { CanonicalParameterValueV1 } from '../capabilities/capability-pack.types';
 import { Prisma } from '../generated/prisma/client';
 import { RiskLevel } from '../generated/prisma/enums';
 import type { RequestIdentityContext } from '../identity/identity-context.types';
@@ -13,8 +14,17 @@ import type {
   FollowUpResolutionDecision
 } from '../assistant/conversation/conversation.types';
 
+/**
+ * Feature 013 Decision 4: a server-owned, human-verified choice resolved from the active experience
+ * configuration. Only the server sets this; clients send a choice ID, never a capability or parameters.
+ */
+export type DeclaredChoiceV1 =
+  | Readonly<{ kind: 'capability'; capabilityKey: string; parameters: Readonly<Record<string, CanonicalParameterValueV1>> }>
+  | Readonly<{ kind: 'capability_overview' }>;
+
 export interface QueryUnderstandingInput {
   identityContext?: RequestIdentityContext;
+  declaredChoice?: DeclaredChoiceV1;
   requestId: string;
   sessionId: string;
   messageId: string;

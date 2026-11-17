@@ -150,7 +150,8 @@ export type CapabilityResolutionResultV1 =
   | {
       readonly version: '1';
       readonly outcome: 'NEEDS_CLARIFICATION';
-      readonly reasonCode: 'LLM_NO_MATCH' | 'LLM_NO_ALLOWED_TOOL' | 'LLM_SELECTION_FAILED';
+      /** LLM_CAPABILITY_DISCOVERY (Feature 013 US2): the model judged the question to ask what the Assistant can do. */
+      readonly reasonCode: 'LLM_NO_MATCH' | 'LLM_NO_ALLOWED_TOOL' | 'LLM_SELECTION_FAILED' | 'LLM_CAPABILITY_DISCOVERY';
       readonly missingParameters: readonly [];
       readonly invalidParameters: readonly [];
       readonly conflictingParameters: readonly [];

@@ -1,11 +1,13 @@
-import { BadRequestException, Body, Controller, Get, Headers, HttpCode, HttpException, Param, Post, Query, Res } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, HttpException, Param, Post, Query, Res } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Response } from 'express';
 import { GatewayTrustChainHandler } from '../backend-client/gateway-trust-chain.handler';
-import type { GatewayHistoryQuery } from '../backend-client/gateway-backend-client.service';
+import { GATEWAY_SESSION_LIST_CURSOR_PATTERN, GATEWAY_SESSION_LIST_LIMIT_PATTERN } from '../backend-client/gateway-backend-client.service';
+import type { GatewayHistoryQuery, GatewaySessionListQuery } from '../backend-client/gateway-backend-client.service';
 import { IdentityResolutionError } from '../integration-registry/canonical-identity-resolver.service';
 import { IdentityServiceUnavailableError } from '../signing/identity-service-unavailable.error';
 import { UpstreamAuthenticationError, UpstreamIdentityServiceUnavailableError } from '../upstream-auth/upstream-auth.error';
+import { hasMessageOrChoiceId } from '../backend-client/assistant-message-input';
 
 /**
  * Fixed Host operations only. This controller has no routing or identity
@@ -34,6 +36,93 @@ export class GatewayAssistantController {
     } catch (error) {
       throw projectTrustChainError(error);
     }
+  }
+
+  /** Feature 013 US4: the actor's own session list. Declared before `sessions/:id`. */
+  @Get('sessions')
+  async listSessions(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    const listQuery = readSessionListQuery(query);
+    rejectGetBody(body);
+    const result = await this.trustChainHandler.listSessions({
+      authorization,
+      query: listQuery,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
+  }
+
+  /** Feature 013 US4: archive one of the actor's own sessions. No body or query is accepted. */
+  @Post('sessions/:id/archive')
+  @HttpCode(200)
+  async archiveSession(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Param('id') sessionId: string,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    rejectGetBodyOrQuery(body, query);
+    const result = await this.trustChainHandler.archiveSession({
+      authorization,
+      sessionId,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
+  }
+
+  /** Feature 013 US4: move one of the actor's archived sessions back to the active list. No body or query. */
+  @Post('sessions/:id/unarchive')
+  @HttpCode(200)
+  async unarchiveSession(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Param('id') sessionId: string,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    rejectGetBodyOrQuery(body, query);
+    const result = await this.trustChainHandler.unarchiveSession({
+      authorization,
+      sessionId,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
+  }
+
+  /** Feature 013 US4: delete one of the actor's sessions. No body or query. */
+  @Delete('sessions/:id')
+  @HttpCode(200)
+  async deleteSession(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Param('id') sessionId: string,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    rejectGetBodyOrQuery(body, query);
+    const result = await this.trustChainHandler.deleteSession({
+      authorization,
+      sessionId,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
   }
 
   @Get('sessions/:id')
@@ -95,7 +184,8 @@ export class GatewayAssistantController {
       stream = await this.trustChainHandler.sendStreamMessage({
         authorization,
         sessionId,
-        message: input.message,
+        ...(input.message === undefined ? {} : { message: input.message }),
+        ...(input.choiceId === undefined ? {} : { choiceId: input.choiceId }),
         pageContext: input.pageContext,
         requestId,
         traceparent: optionalHeader(traceparent)
@@ -154,20 +244,36 @@ function readHistoryQuery(query: unknown): GatewayHistoryQuery {
   return Object.freeze({ ...(limit === undefined ? {} : { limit }), ...(cursor === undefined ? {} : { cursor }), ...(order === undefined ? {} : { order }) });
 }
 
+function readSessionListQuery(query: unknown): GatewaySessionListQuery {
+  if (!isRecord(query) || Object.keys(query).some((key) => key !== 'limit' && key !== 'cursor' && key !== 'status')) throw new BadRequestException('Invalid Gateway operation input.');
+  const limit = query.limit;
+  const cursor = query.cursor;
+  const status = query.status;
+  if ((limit !== undefined && (typeof limit !== 'string' || !GATEWAY_SESSION_LIST_LIMIT_PATTERN.test(limit)))
+    || (cursor !== undefined && (typeof cursor !== 'string' || !GATEWAY_SESSION_LIST_CURSOR_PATTERN.test(cursor)))
+    || (status !== undefined && status !== 'archived')) throw new BadRequestException('Invalid Gateway operation input.');
+  return Object.freeze({ ...(limit === undefined ? {} : { limit }), ...(cursor === undefined ? {} : { cursor }),
+    ...(status === undefined ? {} : { status: 'archived' as const }) });
+}
+
 function writeReadResponse(response: Response, result: Readonly<{ statusCode: number; body: unknown }>): void {
   response.status(result.statusCode);
   response.setHeader('content-type', 'application/json; charset=utf-8');
   response.send(result.body);
 }
 
-function readSendMessageInput(body: unknown): Readonly<{ message: string; pageContext?: Readonly<Record<string, unknown>> }> {
+function readSendMessageInput(body: unknown): Readonly<{ message?: string; choiceId?: string; pageContext?: Readonly<Record<string, unknown>> }> {
   if (!isRecord(body)) throw new BadRequestException('Invalid Gateway operation input.');
   const keys = Object.keys(body);
-  if (keys.some((key) => key !== 'message' && key !== 'pageContext') || !isNonBlankString(body.message)) {
+  if (keys.some((key) => key !== 'message' && key !== 'choiceId' && key !== 'pageContext') || !hasMessageOrChoiceId(body)) {
     throw new BadRequestException('Invalid Gateway operation input.');
   }
   if (body.pageContext !== undefined && !isRecord(body.pageContext)) throw new BadRequestException('Invalid Gateway operation input.');
-  return Object.freeze({ message: body.message, ...(body.pageContext === undefined ? {} : { pageContext: body.pageContext }) });
+  return Object.freeze({
+    ...(body.message === undefined ? {} : { message: body.message as string }),
+    ...(body.choiceId === undefined ? {} : { choiceId: body.choiceId as string }),
+    ...(body.pageContext === undefined ? {} : { pageContext: body.pageContext })
+  });
 }
 
 function normalizeRequestId(value: string | undefined): string {

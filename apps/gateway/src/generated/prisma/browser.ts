@@ -89,6 +89,12 @@ export type GatewayIdentityAuditEvent = Prisma.GatewayIdentityAuditEventModel
  */
 export type AssistantSession = Prisma.AssistantSessionModel
 /**
+ * Model AssistantExperienceConfig
+ * Feature 013: versioned greeting, Quick Reply and follow-up configuration per Customer integration.
+ * `payload` is validated by the provisioning command before it is written.
+ */
+export type AssistantExperienceConfig = Prisma.AssistantExperienceConfigModel
+/**
  * Model AssistantMessage
  * 
  */

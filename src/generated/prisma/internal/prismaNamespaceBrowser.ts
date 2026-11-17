@@ -65,6 +65,7 @@ export const ModelName = {
   GatewaySigningKey: 'GatewaySigningKey',
   GatewayIdentityAuditEvent: 'GatewayIdentityAuditEvent',
   AssistantSession: 'AssistantSession',
+  AssistantExperienceConfig: 'AssistantExperienceConfig',
   AssistantMessage: 'AssistantMessage',
   AssistantContextState: 'AssistantContextState',
   ExecutionPlan: 'ExecutionPlan',
@@ -336,12 +337,29 @@ export const AssistantSessionScalarFieldEnum = {
   organizationId: 'organizationId',
   actorId: 'actorId',
   status: 'status',
+  title: 'title',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   lastMessageAt: 'lastMessageAt'
 } as const
 
 export type AssistantSessionScalarFieldEnum = (typeof AssistantSessionScalarFieldEnum)[keyof typeof AssistantSessionScalarFieldEnum]
+
+
+export const AssistantExperienceConfigScalarFieldEnum = {
+  id: 'id',
+  customerId: 'customerId',
+  integrationId: 'integrationId',
+  configVersion: 'configVersion',
+  status: 'status',
+  activeSlot: 'activeSlot',
+  payload: 'payload',
+  checksum: 'checksum',
+  createdAt: 'createdAt',
+  activatedAt: 'activatedAt'
+} as const
+
+export type AssistantExperienceConfigScalarFieldEnum = (typeof AssistantExperienceConfigScalarFieldEnum)[keyof typeof AssistantExperienceConfigScalarFieldEnum]
 
 
 export const AssistantMessageScalarFieldEnum = {

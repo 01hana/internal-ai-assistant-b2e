@@ -9,7 +9,10 @@
 #   ./deploy.sh db         <compose.env>                 # 啟動 PostgreSQL 並執行 migration
 #   ./deploy.sh edge       <compose.env>                 # 啟動 connector、connector-tls、bridge
 #   ./deploy.sh provision  <compose.env>                 # 先唯讀檢查，再建立 Customer、TrustProfile、簽章金鑰、工具政策
+#   ./deploy.sh experience <compose.env>                 # 先唯讀檢查，再寫入並啟用 Assistant 體驗設定（開場、Quick Reply、延伸建議）
 #   ./deploy.sh app        <compose.env>                 # 啟動 gateway → 啟用簽章金鑰 → 啟動 core
+#   ./deploy.sh upgrade    <compose.env> <images.tar> <sha256>  # 升級既有部署：備份 → 載入 → 切換 TAG → migration → 體驗設定 → core → gateway → edge
+#   ./deploy.sh backup     <compose.env>                 # 備份資料庫到 backups/
 #   ./deploy.sh status     <compose.env>                 # 查看本專案容器狀態與最近日誌
 #   ./deploy.sh stop       <compose.env>                 # 只停止本專案容器，保留資料與日誌
 set -euo pipefail
@@ -22,7 +25,7 @@ die()  { echo "✗ $*" >&2; exit 1; }
 ok()   { echo "✓ $*"; }
 warn() { echo "! $*"; }
 
-[ -n "$CMD" ] && [ -n "$ENV_FILE" ] || { sed -n '2,15p' "$0"; exit 1; }
+[ -n "$CMD" ] && [ -n "$ENV_FILE" ] || { sed -n '2,16p' "$0"; exit 1; }
 [ -f "$ENV_FILE" ] || die "找不到 compose.env：$ENV_FILE"
 ENV_FILE="$(cd "$(dirname "$ENV_FILE")" && pwd)/$(basename "$ENV_FILE")"
 
@@ -45,7 +48,7 @@ wait_healthy() { # 服務名稱, 秒數
     st="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id")"
     [ "$st" = healthy ] && { ok "$svc healthy"; return; }
     [ "$st" = unhealthy ] || [ "$st" = exited ] && { dc logs --tail 100 "$svc"; die "$svc 狀態為 $st"; }
-    [ "$t" -ge "$limit" ] && { dc logs --tail 100 "$svc"; die "$svc 在 ${limit}s 內未 healthy（目前 $st）"; }
+    [ "$t" -ge "$limit" ] && { dc logs --tail 100 "$svc"; die "$svc 在 ${limit}s 內未 healthy（目前 ${st}）"; }
     sleep 5; t=$((t+5))
   done
 }
@@ -53,7 +56,7 @@ wait_healthy() { # 服務名稱, 秒數
 provision() { # check | prepare | activate-key
   local plan_file plan
   plan_file="$(dirname "$CONFIG_DIR")/public/identity-plan.json"
-  [ -s "$plan_file" ] || die "找不到 $plan_file，請先執行 host-config.sh"
+  [ -s "$plan_file" ] || die "找不到 ${plan_file}，請先執行 host-config.sh"
   [ -s "$DIR/provision/provision.cjs" ] || die "找不到 $DIR/provision/provision.cjs"
   [ -s "$DIR/provision/tool-catalog.json" ] || die "找不到 $DIR/provision/tool-catalog.json，請在開發機執行 deploy/demo/prepare-delivery.sh 後再交付"
   plan="$(python3 -c 'import json,sys;print(json.dumps(json.load(open(sys.argv[1])),separators=(",",":")))' "$plan_file")"
@@ -61,12 +64,51 @@ provision() { # check | prepare | activate-key
     gateway node /provision/provision.cjs "$1"
 }
 
+experience() { # check | write
+  local file="$DIR/provision/assistant-experience.json"
+  [ -s "$file" ] || die "找不到 ${file}，請在開發機執行 deploy/demo/prepare-delivery.sh 後再交付"
+  local args=(--file /provision/assistant-experience.json); [ "$1" = check ] && args+=(--check)
+  # 在 Core image 內執行：以 core.env 的 DATABASE_URL 與已掛載的 Active Pack 驗證每個選項宣告的能力與參數
+  dc run --rm --no-deps -T -v "$DIR/provision:/provision:ro" \
+    core node dist/src/assistant-experience/provision-assistant-experience.cli.js "${args[@]}"
+}
+
+backup_db() { # label
+  local dir="$DIR/backups" f
+  mkdir -p "$dir"; chmod 700 "$dir"
+  f="$dir/assistant-$(date +%Y%m%d-%H%M%S)-$1.sql.gz"
+  ( umask 077; dc exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' | gzip > "$f" ) || die "資料庫備份失敗"
+  [ "$(gzip -dc "$f" | head -c 100 | wc -c)" -gt 0 ] || die "備份檔是空的：$f"
+  ok "資料庫已備份：${f}（$(du -h "$f" | cut -f1)）"
+}
+
+run_migration() {
+  dc up -d --pull never --no-build postgres
+  wait_healthy postgres 120
+  echo "執行 migration（prisma migrate deploy）…"
+  dc rm -f -s migrate >/dev/null 2>&1 || true
+  dc up -d --pull never --no-build --no-deps migrate
+  MID="$(dc ps -aq migrate)"; [ -n "$MID" ] || die "migration 容器未建立"
+  CODE="$(docker wait "$MID")"; dc logs --tail 50 migrate
+  [ "$CODE" = 0 ] || die "migration 結束碼 ${CODE}，請先檢查日誌再處理，不要用 db push 或 migrate reset"
+  ok "migration 完成"
+}
+
+start_edge() {
+  dc up -d --pull never --no-build --no-deps connector
+  wait_healthy connector 120
+  dc up -d --pull never --no-build --no-deps connector-tls
+  wait_healthy connector-tls 60
+  dc up -d --pull never --no-build --no-deps bridge
+  wait_healthy bridge 120
+}
+
 check_images() {
   local tpl ref arch
   for tpl in "${APP_IMAGES[@]}"; do
     ref="$(printf "$tpl" "$TAG")"
     arch="$(docker image inspect "$ref" --format '{{.Os}}/{{.Architecture}}' 2>/dev/null)" || die "尚未載入 image：$ref"
-    [ "$arch" = linux/amd64 ] || die "$ref 架構是 $arch，不是 linux/amd64"
+    [ "$arch" = linux/amd64 ] || die "$ref 架構是 ${arch}，不是 linux/amd64"
     ok "$ref ($arch)"
   done
 }
@@ -84,7 +126,7 @@ preflight() {
     [ -n "$(envval $v)" ] || { warn "$v 未設定"; fail=1; }
   done
 
-  echo "== 服務設定檔（$CONFIG_DIR）"
+  echo "== 服務設定檔（${CONFIG_DIR}）"
   for f in database core gateway bridge connector; do
     p="$CONFIG_DIR/$f.env"
     if [ ! -f "$p" ]; then warn "缺少 $p"; fail=1; continue; fi
@@ -97,7 +139,7 @@ preflight() {
   [ -s "$PACK_DIR/shinmone-scm-kpistats.json" ] || { warn "Active Pack 尚未上傳到 $PACK_DIR"; fail=1; }
   grep -qE '^GATEWAY_SIGNING_KEY_REFERENCE=file://' "$CONFIG_DIR/gateway.env" 2>/dev/null || { warn "gateway.env 的 GATEWAY_SIGNING_KEY_REFERENCE 必須是 file:///run/secrets/gateway_signing_key"; fail=1; }
 
-  echo "== Secrets（$SECRET_DIR，只檢查是否存在）"
+  echo "== Secrets（${SECRET_DIR}，只檢查是否存在）"
   for f in postgres-password trusted-ca.pem gateway-signing-key.pem bridge-signing-key.pem bridge-binding-key.pem core-connector-key.pem connector-tls.crt connector-tls.key; do
     [ -s "$SECRET_DIR/$f" ] && ok "$f" || { warn "缺少或空白：$f"; fail=1; }
   done
@@ -150,28 +192,21 @@ case "$CMD" in
     check_images ;;
   db)
     check_images
-    dc up -d --pull never --no-build postgres
-    wait_healthy postgres 120
-    echo "執行 migration（prisma migrate deploy）…"
-    dc up -d --pull never --no-build --no-deps migrate
-    MID="$(dc ps -aq migrate)"; [ -n "$MID" ] || die "migration 容器未建立"
-    CODE="$(docker wait "$MID")"; dc logs --tail 50 migrate
-    [ "$CODE" = 0 ] || die "migration 結束碼 $CODE，請先檢查日誌再處理，不要用 db push 或 migrate reset"
-    ok "migration 完成"
+    run_migration
     echo "下一步：./deploy.sh edge $ENV_FILE" ;;
   edge)
     check_images
-    dc up -d --pull never --no-build --no-deps connector
-    wait_healthy connector 120
-    dc up -d --pull never --no-build --no-deps connector-tls
-    wait_healthy connector-tls 60
-    dc up -d --pull never --no-build --no-deps bridge
-    wait_healthy bridge 120
+    start_edge
     echo "下一步：./deploy.sh provision $ENV_FILE" ;;
   provision)
     check_images
     echo "== 唯讀檢查"; provision check || die "檢查失敗，未寫入任何資料"
     echo; echo "== 寫入"; provision prepare ;;
+  experience)
+    check_images
+    echo "== 唯讀檢查"; experience check || die "檢查失敗，未寫入任何資料"
+    echo; echo "== 寫入並啟用"; experience write
+    echo "已在執行中的 Core 會在下一次讀取時使用新設定；不需要重啟。" ;;
   app)
     check_images
     dc up -d --pull never --no-build --no-deps gateway
@@ -181,6 +216,45 @@ case "$CMD" in
     wait_healthy core 240
     dc ps
     ok "所有服務已啟動。Compose healthy 不等於業務與安全驗收通過，請接著做 E2E 測試。" ;;
+  backup) backup_db manual ;;
+  upgrade)
+    TAR="${3:-}"; SUM="${4:-}"
+    [ -f "$TAR" ] && [ -f "$SUM" ] || die "用法：./deploy.sh upgrade <compose.env> <images.tar> <sha256>"
+    # 從 tar 內的 manifest.json 讀 TAG（以 Core image 的 tag 為準），檔名不影響
+    NEW_TAG="$(tar -xOf "$TAR" manifest.json 2>/dev/null | python3 -c '
+import json, sys
+tags = [t.split(":", 1)[1] for m in json.load(sys.stdin) for t in (m.get("RepoTags") or [])
+        if t.startswith("internal-ai-assistant-core:")]
+print(tags[0] if len(tags) == 1 else "")' 2>/dev/null || true)"
+    [[ "$NEW_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,100}$ ]] || die "無法從 $TAR 讀出 Core image 的 TAG"
+    OLD_TAG="$TAG"
+    [ "$NEW_TAG" != "$OLD_TAG" ] || die "新舊 TAG 相同（${NEW_TAG}）"
+    [ -s "$DIR/provision/assistant-experience.json" ] || die "缺少 provision/assistant-experience.json（開發機執行 prepare-delivery.sh 後上傳）"
+    echo "== 升級 $OLD_TAG → $NEW_TAG"
+    [ "$(sha256sum "$TAR" | cut -c1-64)" = "$(cut -c1-64 "$SUM")" ] && ok "SHA-256 校驗通過" || die "SHA-256 不符，停止"
+    docker load -i "$TAR"
+    TAG="$NEW_TAG"; check_images
+    echo; echo "== 1/6 備份資料庫"; backup_db "before-$NEW_TAG"
+    echo; echo "== 2/6 切換 DEMO_IMAGE_TAG"
+    cp "$ENV_FILE" "$ENV_FILE.bak-$OLD_TAG"
+    sed -i "s/^DEMO_IMAGE_TAG=.*/DEMO_IMAGE_TAG=$NEW_TAG/" "$ENV_FILE"
+    [ "$(envval DEMO_IMAGE_TAG)" = "$NEW_TAG" ] || die "compose.env 更新失敗"
+    ok "DEMO_IMAGE_TAG=${NEW_TAG}（舊設定保存在 $(basename "$ENV_FILE").bak-${OLD_TAG}）"
+    echo; echo "== 3/6 Migration"; run_migration
+    echo; echo "== 4/6 體驗設定"
+    experience check || die "體驗設定檢查失敗，未寫入；服務仍在舊版執行"
+    experience write
+    echo; echo "== 5/6 Core → Gateway（Core 先升級，避免新 Gateway 轉發舊 Core 不認得的請求）"
+    dc up -d --pull never --no-build --no-deps core
+    wait_healthy core 240
+    dc up -d --pull never --no-build --no-deps gateway
+    wait_healthy gateway 120
+    provision activate-key || die "Gateway 簽章金鑰檢查失敗"
+    echo; echo "== 6/6 Connector / Bridge"
+    start_edge
+    echo; dc ps
+    ok "升級完成：$NEW_TAG"
+    echo "回滾：把 compose.env 換回 $(basename "$ENV_FILE").bak-${OLD_TAG}，再依序重建 core、gateway、edge（migration 不倒退）" ;;
   status) dc ps; dc logs --tail 100 ;;
   stop)   dc stop ;;
   *) die "未知指令：$CMD" ;;

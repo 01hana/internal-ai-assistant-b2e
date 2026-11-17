@@ -1,4 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { AssistantExperienceService } from '../../assistant-experience/assistant-experience.service';
+import type { CapabilityResolutionResultV1 } from '../../capabilities/capability-pack.types';
+import type { AssistantSuggestionV1 } from '../sse/assistant-sse.types';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { AuditWriterService } from '../../audit/audit-writer.service';
 import { ActionDraftService } from '../../approvals/action-draft.service';
 import { ApprovalRequestService } from '../../approvals/approval-request.service';
@@ -6,6 +9,8 @@ import { EscalationRequestService } from '../../approvals/escalation-request.ser
 import { AttachedEvidence, EvidenceRefService } from '../../evidence/evidence-ref.service';
 import { Prisma } from '../../generated/prisma/client';
 import { createCustomerScopeFromHostIntegrationContext } from '../../host-integration/host-integration-request.factory';
+import type { CustomerScope } from '../../identity/customer-scope.types';
+import { unsupportedQuestionReason } from './unsupported-question';
 import { AnswerDecisionStatus, AssistantMessageRole, NoAnswerReason, RiskLevel } from '../../generated/prisma/enums';
 import { ReviewItemService } from '../../feedback/review-item.service';
 import { RetrievalService } from '../../retrieval/retrieval.service';
@@ -69,8 +74,48 @@ export class AssistantMessageService {
     private readonly generationPrompt: GroundedGenerationPromptService,
     private readonly groundedAnswerFinalizer: GroundedAnswerFinalizerService,
     private readonly llmExecution: LlmExecutionService,
-    private readonly queryScopeValidation: QueryScopeValidationService
+    private readonly queryScopeValidation: QueryScopeValidationService,
+    /** Always injected by Nest; optional only so hand-built unit-test services stay valid. */
+    @Optional() private readonly experience?: AssistantExperienceService
   ) {}
+
+  /**
+   * Feature 013 US2: suggestions after a capability overview (scenario 1) or an unrecognized question
+   * (scenario 8). Every other outcome returns no suggestions.
+   */
+  private async experienceSuggestions(host: SendAssistantMessageInput['hostIntegrationContext']):
+    Promise<{ suggestions?: readonly AssistantSuggestionV1[] }> {
+    if (!this.experience) return {};
+    const suggestions = await this.experience.buildCapabilityQuickReplies(host);
+    return suggestions.length > 0 ? { suggestions } : {};
+  }
+
+  /** Feature 013 US3: follow-ups only after an answered request whose declared or resolved tool completed. */
+  private async followUpSuggestions(input: SendAssistantMessageInput, planningResult: AssistantPlanningResult,
+    status: AnswerDecisionStatus, toolLifecycle: string | undefined): Promise<{ suggestions?: readonly AssistantSuggestionV1[] }> {
+    const resolution = planningResult.queryUnderstanding.capabilityResolution;
+    if (!this.experience || status !== AnswerDecisionStatus.answered || toolLifecycle !== 'completed' ||
+      resolution?.outcome !== 'RESOLVED') return {};
+    const suggestions = await this.experience.buildFollowUps(input.hostIntegrationContext,
+      resolution.capability.capabilityKey, resolution.parameters);
+    return suggestions.length > 0 ? { suggestions } : {};
+  }
+
+  private isUnrecognizedCapability(planningResult: { queryUnderstanding: { capabilityResolution?: CapabilityResolutionResultV1 } }): boolean {
+    const resolution = planningResult.queryUnderstanding.capabilityResolution;
+    return resolution?.outcome === 'NEEDS_CLARIFICATION' &&
+      (resolution.reasonCode === 'CAPABILITY_NOT_RECOGNIZED' || resolution.reasonCode === 'LLM_NO_MATCH');
+  }
+
+  /** Feature 013 US5: collect a typed question no capability could recognize (see `unsupportedQuestionReason`). */
+  private async recordUnsupportedQuestion(input: SendAssistantMessageInput, planningResult: AssistantPlanningResult,
+    customerScope: CustomerScope, sessionId: string, userMessageId: string): Promise<void> {
+    const reasonCode = unsupportedQuestionReason(planningResult.queryUnderstanding.capabilityResolution, Boolean(input.experienceChoice));
+    if (!reasonCode) return;
+    await this.reviewItemService.createUnsupportedQuestion({ customerScope, identityContext: input.identityContext,
+      requestId: input.requestId, sessionId, userMessageId, reasonCode,
+      ...(input.pageContext?.module ? { module: input.pageContext.module } : {}) });
+  }
 
   async sendMessage(input: SendAssistantMessageInput): Promise<AssistantSseEventRecord[]> {
     const customerScope = createCustomerScopeFromHostIntegrationContext(input.hostIntegrationContext);
@@ -82,6 +127,7 @@ export class AssistantMessageService {
       content: input.message,
       pageContext: input.pageContext
     });
+    await this.sessionService.recordUserMessage(customerScope, session.id, input.message);
 
     await this.auditWriter.append({
       customerScope,
@@ -93,6 +139,17 @@ export class AssistantMessageService {
         pageContext: toPageContextAuditMetadata(input.pageContext)
       })
     });
+    if (input.experienceChoice) {
+      await this.auditWriter.append({
+        customerScope,
+        requestId: input.requestId,
+        sessionId: session.id,
+        messageId: userMessage.id,
+        eventType: input.experienceChoice.source === 'quick_reply' ? 'quick_reply_selected' : 'suggestion_selected',
+        metadata: toJsonInput({ choiceId: input.experienceChoice.choiceId,
+          experienceConfigVersion: input.experienceChoice.configVersion, declaredKind: input.experienceChoice.declared.kind })
+      });
+    }
 
     const latestContextState = await this.contextStateService.loadLatest(customerScope, session.id);
     const planningResult = await this.planningService.createPlan({
@@ -102,6 +159,7 @@ export class AssistantMessageService {
       sessionId: session.id,
       messageId: userMessage.id,
       text: input.message,
+      ...(input.experienceChoice ? { declaredChoice: input.experienceChoice.declared } : {}),
       hostIntegrationContext: input.hostIntegrationContext,
       pageContext: input.pageContext,
       assistantContextState: latestContextState
@@ -141,7 +199,9 @@ export class AssistantMessageService {
           kind: controlledReply.kind, controlledConversation: true }) });
       return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId,
         sessionId: session.id, messageId: assistantMessage.id, answerDelta: controlledReply.text,
-        finalData: { answerDecision: decision.status, answer: controlledReply.text, evidenceRefs: [] } });
+        finalData: { answerDecision: decision.status, answer: controlledReply.text, evidenceRefs: [],
+          ...(controlledReply.kind === 'capability_discovery'
+            ? await this.experienceSuggestions(input.hostIntegrationContext) : {}) } });
     }
 
     const plannedCandidate = Array.isArray(planningResult.executionPlan.candidateTools)
@@ -213,9 +273,12 @@ export class AssistantMessageService {
         messageId: assistantMessage.id, eventType: 'answer_generated', decision: answerDecision.status,
         evidenceRefIds: [], metadata: toJsonInput({ answerDecisionId: answerDecision.answerDecisionId,
           reason: selectionReason }) });
+      await this.recordUnsupportedQuestion(input, planningResult, customerScope, session.id, userMessage.id);
       return this.sseEventBuilder.buildAnswerOnlyEvents({ requestId: input.requestId,
         sessionId: session.id, messageId: assistantMessage.id, answerDelta: answerDecision.answer.delta,
-        finalData: { answerDecision: answerDecision.status, answer: answerDecision.answer.text, evidenceRefs: [] } });
+        finalData: { answerDecision: answerDecision.status, answer: answerDecision.answer.text, evidenceRefs: [],
+          ...(this.isUnrecognizedCapability(planningResult)
+            ? await this.experienceSuggestions(input.hostIntegrationContext) : {}) } });
     }
     if (
       preRuntimeGate?.kind === 'clarification' &&
@@ -292,6 +355,7 @@ export class AssistantMessageService {
           groundingCheckId: answerDecision.groundingCheckId
         })
       });
+      await this.recordUnsupportedQuestion(input, planningResult, customerScope, session.id, userMessage.id);
 
       return this.sseEventBuilder.buildAnswerOnlyEvents({
         requestId: input.requestId,
@@ -302,7 +366,9 @@ export class AssistantMessageService {
           answerDecision: answerDecision.status,
           answer: answerDecision.answer.text,
           clarificationQuestionId: clarificationQuestion.id,
-          evidenceRefs: []
+          evidenceRefs: [],
+          ...(this.isUnrecognizedCapability(planningResult)
+            ? await this.experienceSuggestions(input.hostIntegrationContext) : {})
         }
       });
     }
@@ -1222,7 +1288,8 @@ export class AssistantMessageService {
           metadata: providerMetadata, outcome: 'COMPLETED', durationMs: Math.max(0, Date.now() - startedAt) });
         await this.contextStateService.updateAfterMessageFlow({ customerScope, sessionId, pageContext: input.pageContext,
           planningResult, toolCallIds: toolExecution?.toolCallId ? [toolExecution.toolCallId] : [], evidenceRefIds: evidenceIds });
-        const finalData = { answerDecision: answerDecision.status, answer: text, evidenceRefs: evidenceIds };
+        const finalData = { answerDecision: answerDecision.status, answer: text, evidenceRefs: evidenceIds,
+          ...await this.followUpSuggestions(input, planningResult, answerDecision.status, toolExecution?.toolLifecycle) };
         await emit(makeEvent('final', ++sequence, finalData));
         return streamedEvents;
       } catch (error) {
@@ -1302,7 +1369,9 @@ export class AssistantMessageService {
     const releasedEvidenceIds = conflictGate?.kind === 'no_answer' ? [] : evidenceIds;
     const finalData = { answerDecision: answerDecision.status, answer: answerDecision.answer.text,
       ...(finalNoAnswerReason ? { noAnswerReason: finalNoAnswerReason } : {}),
-      ...(toolExecution?.errorCode ? { errorCode: toolExecution.errorCode } : {}), evidenceRefs: releasedEvidenceIds };
+      ...(toolExecution?.errorCode ? { errorCode: toolExecution.errorCode } : {}), evidenceRefs: releasedEvidenceIds,
+      ...(conflictGate?.kind === 'no_answer' ? {}
+        : await this.followUpSuggestions(input, planningResult, answerDecision.status, toolExecution?.toolLifecycle)) };
     if (toolExecution?.toolLifecycle && toolExecution.toolName) {
       return this.sseEventBuilder.buildMessageEvents({ requestId: input.requestId, sessionId, messageId: assistantMessageId,
         toolCallId: toolExecution.toolCallId ?? 'not-executed', toolName: toolExecution.toolName,

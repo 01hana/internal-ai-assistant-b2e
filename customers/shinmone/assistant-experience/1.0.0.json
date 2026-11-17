@@ -1,0 +1,139 @@
+{
+  "version": "1",
+  "configVersion": "1.0.0",
+  "customerId": "customer-shinmone",
+  "integrationId": "shinmone-scm-assistant",
+  "hostApps": [
+    "shinmone-scm"
+  ],
+  "locale": "zh-TW",
+  "semanticReviewStatus": "HUMAN_VERIFIED",
+  "greeting": {
+    "text": "你好，我是 SCM 系統的 AI 助理，可以協助查詢儀表板的工單統計。"
+  },
+  "maxQuickReplies": 4,
+  "quickReplies": [
+    {
+      "id": "overview",
+      "kind": "capability_overview",
+      "label": "你能查詢哪些資料？",
+      "message": "你能查詢哪些資料？",
+      "priority": 100
+    },
+    {
+      "id": "kpistats-new-today",
+      "kind": "capability",
+      "label": "今天新增幾張工單？",
+      "message": "今天新增幾張工單？",
+      "capabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "parameters": {
+        "timeRange": "today"
+      },
+      "priority": 90,
+      "pageScope": {
+        "modules": [
+          "dashboard"
+        ]
+      }
+    },
+    {
+      "id": "kpistats-overdue-now",
+      "kind": "capability",
+      "label": "目前逾期工單有幾張？",
+      "message": "目前逾期工單有幾張？",
+      "capabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "parameters": {
+        "timeRange": "today"
+      },
+      "priority": 80,
+      "pageScope": {
+        "modules": [
+          "dashboard"
+        ]
+      }
+    },
+    {
+      "id": "kpistats-completed-month",
+      "kind": "capability",
+      "label": "本月完工幾張工單？",
+      "message": "本月完工幾張工單？",
+      "capabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "parameters": {
+        "timeRange": "this_month"
+      },
+      "priority": 70,
+      "pageScope": {
+        "modules": [
+          "dashboard"
+        ]
+      }
+    }
+  ],
+  "followUps": [
+    {
+      "id": "follow-today-to-week",
+      "whenCapabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "whenParameters": {
+        "timeRange": "today"
+      },
+      "label": "那本週呢？",
+      "message": "查詢本週的工單統計",
+      "capabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "parameters": {
+        "timeRange": "this_week"
+      }
+    },
+    {
+      "id": "follow-today-to-month",
+      "whenCapabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "whenParameters": {
+        "timeRange": "today"
+      },
+      "label": "看本月",
+      "message": "查詢本月的工單統計",
+      "capabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "parameters": {
+        "timeRange": "this_month"
+      }
+    },
+    {
+      "id": "follow-week-to-today",
+      "whenCapabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "whenParameters": {
+        "timeRange": "this_week"
+      },
+      "label": "看今天",
+      "message": "查詢今天的工單統計",
+      "capabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "parameters": {
+        "timeRange": "today"
+      }
+    },
+    {
+      "id": "follow-week-to-month",
+      "whenCapabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "whenParameters": {
+        "timeRange": "this_week"
+      },
+      "label": "看本月",
+      "message": "查詢本月的工單統計",
+      "capabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "parameters": {
+        "timeRange": "this_month"
+      }
+    },
+    {
+      "id": "follow-month-to-week",
+      "whenCapabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "whenParameters": {
+        "timeRange": "this_month"
+      },
+      "label": "看本週",
+      "message": "查詢本週的工單統計",
+      "capabilityKey": "shinmone.dashboard.kpistats.snapshot",
+      "parameters": {
+        "timeRange": "this_week"
+      }
+    }
+  ]
+}

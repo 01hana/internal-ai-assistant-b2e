@@ -16,6 +16,7 @@ enum AssistantSessionStatus {
   active
   closed
   expired
+  deleted
 }
 
 enum AssistantMessageRole {
@@ -146,6 +147,7 @@ enum FeedbackRating {
 
 enum ReviewSourceType {
   failed_query
+  unsupported_question
   no_answer
   tool_failure
   negative_feedback
@@ -205,6 +207,12 @@ enum NoAnswerReason {
   missing_page_context
 }
 
+enum AssistantExperienceConfigStatus {
+  draft
+  active
+  retired
+}
+
 enum ClarificationQuestionStatus {
   pending
   answered
@@ -240,6 +248,7 @@ model Customer {
   auditEvents         AuditEvent[]
   integrationBindings IntegrationBinding[]
   gatewayIdentityAuditEvents GatewayIdentityAuditEvent[]
+  assistantExperienceConfigs AssistantExperienceConfig[]
 }
 
 model IntegrationBinding {
@@ -593,6 +602,8 @@ model AssistantSession {
   organizationId String
   actorId        String
   status         AssistantSessionStatus @default(active)
+  /// Feature 013: first user message, trimmed to 40 characters; null until the first message.
+  title          String?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
   lastMessageAt  DateTime?
@@ -614,6 +625,28 @@ model AssistantSession {
   @@index([customerId, integrationId, organizationId, hostApp, actorId], map: "AssistantSession_scope_integration_idx")
   @@index([customerId, status])
   @@index([customerId, updatedAt])
+}
+
+/// Feature 013: versioned greeting, Quick Reply and follow-up configuration per Customer integration.
+/// `payload` is validated by the provisioning command before it is written.
+model AssistantExperienceConfig {
+  id            String                          @id @default(cuid())
+  customerId    String
+  integrationId String
+  configVersion String
+  status        AssistantExperienceConfigStatus @default(draft)
+  /// Set to "<customerId>/<integrationId>" only while status is active, otherwise null.
+  /// The unique constraint guarantees at most one active configuration per integration.
+  activeSlot    String?                         @unique
+  payload       Json
+  checksum      String
+  createdAt     DateTime                        @default(now())
+  activatedAt   DateTime?
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@unique([customerId, integrationId, configVersion], map: "AssistantExperienceConfig_scope_version_key")
+  @@index([customerId, integrationId, status])
 }
 
 model AssistantMessage {

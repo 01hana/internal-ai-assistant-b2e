@@ -65,7 +65,7 @@ else
   printf 'subjectAltName=DNS:%s\nextendedKeyUsage=serverAuth\nkeyUsage=critical,digitalSignature,keyEncipherment\nbasicConstraints=CA:FALSE\n' "$CONNECTOR_TLS_HOST" > "$CA/connector-tls.ext"
   openssl x509 -req -in "$CA/connector-tls.csr" -CA "$CA/ca.crt" -CAkey "$CA/ca.key" -CAcreateserial \
     -days 825 -sha256 -extfile "$CA/connector-tls.ext" -out "$SEC/connector-tls.crt" 2>/dev/null
-  ok "connector-tls 憑證（SAN=$CONNECTOR_TLS_HOST，825 天）"
+  ok "connector-tls 憑證（SAN=${CONNECTOR_TLS_HOST}，825 天）"
 fi
 openssl verify -CAfile "$SEC/trusted-ca.pem" "$SEC/connector-tls.crt" >/dev/null || die "connector-tls 憑證驗證失敗"
 
@@ -115,6 +115,6 @@ else echo "DATABASE_URL=postgresql://assistant:$PGPW@postgres:5432/assistant?sch
 chmod 600 "$CFG"/*.env
 
 echo
-echo "完成。Public JWK（可公開）在 $PUB，kid 如下："
+echo "完成。Public JWK（可公開）在 ${PUB}，kid 如下："
 for f in "$PUB"/*.jwk.json; do printf '  %-22s %s\n' "$(basename "$f" .jwk.json)" "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["kid"])' "$f")"; done
 echo "內部 CA 私鑰在 $CA/ca.key，請勿複製到其他地方。"

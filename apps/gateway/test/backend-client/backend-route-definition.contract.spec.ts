@@ -7,13 +7,18 @@ const assistantControllerPath = join(repositoryRoot, 'src/assistant/assistant.co
 const gatewayBackendClientRoot = join(repositoryRoot, 'apps/gateway/src/backend-client');
 const definitionPath = join(gatewayBackendClientRoot, 'backend-route-definition.ts');
 
-type BackendRouteDefinitions = Readonly<Record<'create-session' | 'get-session' | 'get-session-messages' | 'send-stream-message', Readonly<{ method: string; path: string }>>>;
+type BackendRouteDefinitions = Readonly<Record<'create-session' | 'get-session' | 'get-session-messages' | 'send-stream-message' | 'list-sessions' | 'archive-session' | 'unarchive-session' | 'delete-session', Readonly<{ method: string; path: string }>>>;
 
 const expectedMappings: BackendRouteDefinitions = Object.freeze({
   'create-session': Object.freeze({ method: 'POST', path: '/api/v1/assistant/sessions' }),
   'get-session': Object.freeze({ method: 'GET', path: '/api/v1/assistant/sessions/:id' }),
   'get-session-messages': Object.freeze({ method: 'GET', path: '/api/v1/assistant/sessions/:id/messages' }),
-  'send-stream-message': Object.freeze({ method: 'POST', path: '/api/v1/assistant/sessions/:id/messages' })
+  'send-stream-message': Object.freeze({ method: 'POST', path: '/api/v1/assistant/sessions/:id/messages' }),
+  // Feature 013 US4: session list and archive.
+  'list-sessions': Object.freeze({ method: 'GET', path: '/api/v1/assistant/sessions' }),
+  'archive-session': Object.freeze({ method: 'POST', path: '/api/v1/assistant/sessions/:id/archive' }),
+  'unarchive-session': Object.freeze({ method: 'POST', path: '/api/v1/assistant/sessions/:id/unarchive' }),
+  'delete-session': Object.freeze({ method: 'DELETE', path: '/api/v1/assistant/sessions/:id' })
 });
 
 describe('Backend route definition compatibility contract (T063)', () => {
@@ -30,7 +35,12 @@ describe('Backend route definition compatibility contract (T063)', () => {
     ['controller prefix', mainSource, controllerSource.replace('@Controller("assistant")', '@Controller("assistants")')],
     ['path', mainSource, controllerSource.replace('@Post("sessions")', '@Post("session")')],
     [':id parameter name', mainSource, controllerSource.replace('sessions/:id/messages', 'sessions/:sessionId/messages')],
-    ['history query DTO', mainSource, controllerSource.replace('@Query() query: AssistantMessageHistoryQueryDto', '@Query() query: Record<string, string>')]
+    ['history query DTO', mainSource, controllerSource.replace('@Query() query: AssistantMessageHistoryQueryDto', '@Query() query: Record<string, string>')],
+    ['session list query DTO', mainSource, controllerSource.replace('@Query() query: AssistantSessionListQueryDto', '@Query() query: Record<string, string>')],
+    ['archive path', mainSource, controllerSource.replace('@Post("sessions/:id/archive")', '@Post("sessions/:id/close")')],
+    ['archive :id parameter name', mainSource, controllerSource.replace('sessions/:id/archive', 'sessions/:sessionId/archive')],
+    ['unarchive path', mainSource, controllerSource.replace('@Post("sessions/:id/unarchive")', '@Post("sessions/:id/restore")')],
+    ['delete method', mainSource, controllerSource.replace('@Delete("sessions/:id")', '@Post("sessions/:id/delete")')]
   ])('rejects Backend %s drift', (_kind, mutatedMain, mutatedController) => {
     expect(() => assertMatchesLockedRoutes(mutatedMain, mutatedController)).toThrow('Backend route surface no longer matches the locked Gateway contract.');
   });
@@ -59,16 +69,26 @@ function extractBackendSurface(mainSource: string, controllerSource: string): Ba
   const getSession = extractPostRoute(controllerSource, 'getSession');
   const getMessages = extractPostRoute(controllerSource, 'listMessages');
   const sendMessage = extractPostRoute(controllerSource, 'postMessage');
+  const listSessions = extractPostRoute(controllerSource, 'listSessions');
+  const archiveSession = extractPostRoute(controllerSource, 'archiveSession');
+  const archiveParameter = requiredMatch(archiveSession.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'archive parameter');
+  const unarchiveSession = extractPostRoute(controllerSource, 'unarchiveSession');
+  const deleteSession = extractPostRoute(controllerSource, 'deleteSession');
   const parameter = requiredMatch(sendMessage.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'message parameter');
   const getSessionParameter = requiredMatch(getSession.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'session parameter');
   const getMessagesParameter = requiredMatch(getMessages.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'history parameter');
 
-  if (parameter !== 'id' || getSessionParameter !== 'id' || getMessagesParameter !== 'id' || !/@Query\(\)\s+query:\s+AssistantMessageHistoryQueryDto/.test(getMessages.parameters)) throw new Error('Backend route surface no longer matches the locked Gateway contract.');
+  if (parameter !== 'id' || getSessionParameter !== 'id' || getMessagesParameter !== 'id' || !/@Query\(\)\s+query:\s+AssistantMessageHistoryQueryDto/.test(getMessages.parameters)
+    || archiveParameter !== 'id' || !/@Query\(\)\s+query:\s+AssistantSessionListQueryDto/.test(listSessions.parameters)) throw new Error('Backend route surface no longer matches the locked Gateway contract.');
   return Object.freeze({
     'create-session': Object.freeze({ method: createSession.method, path: route(globalPrefix, controllerPrefix, createSession.path) }),
     'get-session': Object.freeze({ method: getSession.method, path: route(globalPrefix, controllerPrefix, getSession.path) }),
     'get-session-messages': Object.freeze({ method: getMessages.method, path: route(globalPrefix, controllerPrefix, getMessages.path) }),
-    'send-stream-message': Object.freeze({ method: sendMessage.method, path: route(globalPrefix, controllerPrefix, sendMessage.path) })
+    'send-stream-message': Object.freeze({ method: sendMessage.method, path: route(globalPrefix, controllerPrefix, sendMessage.path) }),
+    'list-sessions': Object.freeze({ method: listSessions.method, path: route(globalPrefix, controllerPrefix, listSessions.path) }),
+    'archive-session': Object.freeze({ method: archiveSession.method, path: route(globalPrefix, controllerPrefix, archiveSession.path) }),
+    'unarchive-session': Object.freeze({ method: unarchiveSession.method, path: route(globalPrefix, controllerPrefix, unarchiveSession.path) }),
+    'delete-session': Object.freeze({ method: deleteSession.method, path: route(globalPrefix, controllerPrefix, deleteSession.path) })
   });
 }
 

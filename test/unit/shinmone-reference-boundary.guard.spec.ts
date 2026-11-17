@@ -6,6 +6,11 @@ const GENERIC_ROOTS = [
   'src/connectors/productized-business',
   'src/tools',
   'src/query-understanding',
+  // Feature 013 (T053): experience configuration, capability availability, sessions and review collection.
+  'src/assistant-experience',
+  'src/capabilities',
+  'src/assistant/session',
+  'src/feedback',
   'apps/customer-connector-runtime/src/bindings',
   'apps/customer-connector-runtime/src/credentials',
   'apps/customer-connector-runtime/src/invocation',

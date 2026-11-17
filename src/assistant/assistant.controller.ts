@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
+  Optional,
   Param,
   Post,
   Query,
@@ -22,10 +24,13 @@ import {
   CreateAssistantSessionDto,
   SendAssistantMessageDto,
   AssistantMessageHistoryQueryDto,
+  AssistantSessionListQueryDto,
 } from "./dto/assistant.dto";
+import { decodeSessionCursor, parseSessionListLimit } from "./session/session-cursor";
 import { AssistantHistoryService } from "./history/assistant-history.service";
 import { AssistantMessageService } from "./message/assistant-message.service";
 import { AssistantSessionService } from "./session/assistant-session.service";
+import { AssistantExperienceService } from "../assistant-experience/assistant-experience.service";
 
 @Controller("assistant")
 @UseGuards(IdentityGuard)
@@ -35,6 +40,8 @@ export class AssistantController {
     private readonly assistantMessageService: AssistantMessageService,
     private readonly assistantHistoryService: AssistantHistoryService,
     private readonly hostIntegrationRequestFactory: HostIntegrationRequestFactory,
+    /** Always injected by Nest; optional only so hand-built unit-test controllers stay valid. */
+    @Optional() private readonly experience?: AssistantExperienceService,
   ) {}
 
   @Post("sessions")
@@ -44,10 +51,75 @@ export class AssistantController {
   ) {
     const identityContext = getRequiredIdentityContext(request);
     const { host, pageContext } = this.hostIntegrationRequestFactory.create(identityContext, body.pageContext);
+    const opening = this.experience ? await this.experience.buildOpening(host, pageContext) : undefined;
     return this.assistantSessionService.createSession({
       requestId: identityContext.requestId,
       hostIntegrationContext: host,
       pageContext,
+      ...(opening ? { opening } : {}),
+    });
+  }
+
+  /** Feature 013 US4: the actor's own sessions that contain messages, newest first. */
+  @Get("sessions")
+  async listSessions(
+    @Req() request: IdentityRequest,
+    @Query() query: AssistantSessionListQueryDto,
+  ) {
+    const identityContext = getRequiredIdentityContext(request);
+    const { host } = this.hostIntegrationRequestFactory.create(identityContext, undefined);
+    return this.assistantSessionService.listSessionPage(createCustomerScopeFromHostIntegrationContext(host), {
+      limit: parseSessionListLimit(query.limit),
+      ...(query.status === 'archived' ? { archived: true } : {}),
+      ...(query.cursor === undefined ? {} : { cursor: decodeSessionCursor(query.cursor) }),
+    });
+  }
+
+  /** Feature 013 US4: archive (close) one of the actor's sessions. */
+  @Post("sessions/:id/archive")
+  @HttpCode(HttpStatus.OK)
+  async archiveSession(
+    @Req() request: IdentityRequest,
+    @Param("id") sessionId: string,
+  ) {
+    const identityContext = getRequiredIdentityContext(request);
+    const { host } = this.hostIntegrationRequestFactory.create(identityContext, undefined);
+    return this.assistantSessionService.archiveVisibleSession({
+      customerScope: createCustomerScopeFromHostIntegrationContext(host),
+      requestId: identityContext.requestId,
+      sessionId,
+    });
+  }
+
+  /** Feature 013 US4: move one of the actor's archived sessions back to the active list. */
+  @Post("sessions/:id/unarchive")
+  @HttpCode(HttpStatus.OK)
+  async unarchiveSession(
+    @Req() request: IdentityRequest,
+    @Param("id") sessionId: string,
+  ) {
+    const identityContext = getRequiredIdentityContext(request);
+    const { host } = this.hostIntegrationRequestFactory.create(identityContext, undefined);
+    return this.assistantSessionService.unarchiveVisibleSession({
+      customerScope: createCustomerScopeFromHostIntegrationContext(host),
+      requestId: identityContext.requestId,
+      sessionId,
+    });
+  }
+
+  /** Feature 013 US4: delete one of the actor's sessions (hidden for good; data retained for audit). */
+  @Delete("sessions/:id")
+  @HttpCode(HttpStatus.OK)
+  async deleteSession(
+    @Req() request: IdentityRequest,
+    @Param("id") sessionId: string,
+  ) {
+    const identityContext = getRequiredIdentityContext(request);
+    const { host } = this.hostIntegrationRequestFactory.create(identityContext, undefined);
+    return this.assistantSessionService.deleteVisibleSession({
+      customerScope: createCustomerScopeFromHostIntegrationContext(host),
+      requestId: identityContext.requestId,
+      sessionId,
     });
   }
 
@@ -78,6 +150,12 @@ export class AssistantController {
 
     const customerScope = createCustomerScopeFromHostIntegrationContext(host);
     await this.assistantSessionService.getVisibleSession(sessionId, customerScope);
+    // Feature 013: a choice is resolved and permission-checked before any SSE output; unknown or no
+    // longer permitted choices are indistinguishable from a missing session.
+    const experienceChoice = body.choiceId === undefined || !this.experience ? undefined
+      : await this.experience.resolveChoice(host, body.choiceId);
+    if (body.choiceId !== undefined && !experienceChoice) throw this.assistantSessionService.createSessionNotFoundError();
+    const message = experienceChoice ? experienceChoice.message : body.message!;
 
     response.status(HttpStatus.OK);
     response.setHeader("Content-Type", "text/event-stream; charset=utf-8");
@@ -94,7 +172,8 @@ export class AssistantController {
       const events = await this.assistantMessageService.sendMessage({
         requestId,
         sessionId,
-        message: body.message,
+        message,
+        ...(experienceChoice ? { experienceChoice } : {}),
         identityContext,
         hostIntegrationContext: host,
         pageContext,

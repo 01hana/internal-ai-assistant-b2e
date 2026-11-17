@@ -77,9 +77,10 @@ describe('US4 clarification required gate', () => {
         taskState: 'waiting_clarification',
         pendingClarification: expect.objectContaining({
           clarificationQuestionId: newClarifications[0].id,
-          reason: 'multiple_candidates',
+          // Feature 013 Decision 1: ambiguity is reported as an unrecognized capability, without candidates.
+          reason: 'CAPABILITY_NOT_RECOGNIZED',
           question: newClarifications[0].question,
-          candidateRefs: expect.any(Array),
+          candidateRefs: [],
           blocking: true
         })
       })
@@ -125,7 +126,10 @@ describe('US4 clarification required gate', () => {
 
     expect(response.status).toBe(200);
     expect(state.toolCalls).toHaveLength(initialToolCallCount);
-    expect(state.clarificationQuestions.at(-1)).toEqual(expect.objectContaining({ reason: 'tool_ambiguity' }));
+    // Feature 013 Decision 1: reported as an unrecognized capability with no candidates; still no tool execution.
+    expect(state.clarificationQuestions.at(-1)).toEqual(expect.objectContaining({
+      requestId: 'req-tool-metadata-ambiguity', reason: 'CAPABILITY_NOT_RECOGNIZED', status: 'pending',
+      metadata: expect.objectContaining({ candidateRefs: [] }) }));
     expect(parseSseResponse(response.text).map(({ event }) => event)).toEqual(['answer_delta', 'final']);
   });
 });

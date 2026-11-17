@@ -1,0 +1,25 @@
+{
+  "version": "1",
+  "configVersion": "1.0.0",
+  "customerId": "customer-a",
+  "integrationId": "integration-erp",
+  "hostApps": ["erp"],
+  "locale": "zh-TW",
+  "semanticReviewStatus": "HUMAN_VERIFIED",
+  "greeting": { "text": "你好，我可以協助查詢工單與訂單資訊。" },
+  "maxQuickReplies": 4,
+  "quickReplies": [
+    { "id": "overview", "kind": "capability_overview", "label": "你能查詢哪些資料？", "message": "你能查詢哪些資料？", "priority": 100 },
+    { "id": "work-orders-today", "kind": "capability", "label": "今天新增幾張工單？", "message": "今天新增多少工單？",
+      "capabilityKey": "work-orders.count", "parameters": { "timeRange": "today" }, "priority": 90 },
+    { "id": "work-orders-month", "kind": "capability", "label": "本月新增幾張工單？", "message": "本月新增多少工單？",
+      "capabilityKey": "work-orders.count", "parameters": { "timeRange": "this_month" }, "priority": 80,
+      "pageScope": { "modules": ["dashboard"] } }
+  ],
+  "followUps": [
+    { "id": "follow-week", "whenCapabilityKey": "work-orders.count", "whenParameters": { "timeRange": "today" },
+      "label": "那本週呢？", "message": "本週新增多少工單？", "capabilityKey": "work-orders.count", "parameters": { "timeRange": "this_week" } },
+    { "id": "follow-month", "whenCapabilityKey": "work-orders.count",
+      "label": "看本月", "message": "本月新增多少工單？", "capabilityKey": "work-orders.count", "parameters": { "timeRange": "this_month" } }
+  ]
+}
