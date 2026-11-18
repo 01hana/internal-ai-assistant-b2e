@@ -8,11 +8,11 @@ import { assertShinmoneModeSwitchServicesIdle, commitShinmoneSelection, resolveS
 import { assertDedicatedShinmoneRuntime, mergeLocalCapabilityPaths,
   mergeLocalServiceKeys, mergeScopedLocalEntries } from '../../connector-local/local-config-merge.mjs';
 import {
-  BACKEND_COMPILED_ENTRYPOINT, LocalAssistantError, ROOT, assertSafeState, beginAppliedConfigReconciliation, beginNetworkReconciliation,
+  ADMIN_COMPILED_ENTRYPOINT, BACKEND_COMPILED_ENTRYPOINT, LocalAssistantError, PORTS, ROOT, assertSafeState, beginAppliedConfigReconciliation, beginNetworkReconciliation,
   compiledFiles, hashFilesAndValues,
   bridgeBindingDeploymentMatches, bridgeBindingRouteMatches, connectorTlsAction, connectorTlsBindingsMatch,
   doctorFailureRootCause, doctorRootCauseFor, hostsBlockMatches, identityBridgeAction, idxVerifierRootCause,
-  inspectDockerContainerEnvironment, inspectDockerPublishedBindings, missingPrerequisites, networkChanged, parseCloudflaredHostname, parseIpv4Routes,
+  inspectDockerContainerEnvironment, inspectDockerPublishedBindings, localAdminEnvironment, missingPrerequisites, networkChanged, parseCloudflaredHostname, parseIpv4Routes,
   portDisposition, processAction, redact, renderHostsBlock, rollbackTargets, selectDockerSubnet, statusRecord,
   managedStopTargets, updateHostsContent,
   validateRootEnvironment
@@ -27,6 +27,35 @@ test('Backend launchers use the authoritative compiled entrypoint', () => {
   assert.match(localStart, /join\(ROOT, BACKEND_COMPILED_ENTRYPOINT\)/);
   assert.doesNotMatch(localStart, /args: \['dist\/main\.js'\]|join\(ROOT, 'dist\/main\.js'\)/);
   assert.equal(existsSync(join(ROOT, BACKEND_COMPILED_ENTRYPOINT)), true);
+});
+
+test('the admin API runs from the shared build on its own port with local-only defaults', () => {
+  const localStart = readFileSync(join(ROOT, 'dev/local-assistant/local-start.mjs'), 'utf8');
+  assert.equal(ADMIN_COMPILED_ENTRYPOINT, 'dist/src/admin-main.js');
+  assert.equal(PORTS.admin, 3200);
+  assert.match(localStart, /args: \[ADMIN_COMPILED_ENTRYPOINT\]/);
+  assert.match(readFileSync(join(ROOT, 'dev/local-assistant/local-status.mjs'), 'utf8'), /'admin', PORTS\.admin/);
+  assert.match(readFileSync(join(ROOT, 'dev/local-assistant/local-stop.mjs'), 'utf8'), /\['admin', 'gateway'/);
+
+  const packs = { '/packs/a.json': { customerId: 'customer-local-a' }, '/packs/b.json': { customerId: 'customer-local-a' } };
+  const backendEnv = { ASSISTANT_CAPABILITY_PACK_PATHS_JSON: JSON.stringify(Object.keys(packs)) };
+  const environment = localAdminEnvironment({ NODE_ENV: 'production', OTHER: 'x' }, backendEnv, 'postgresql://host/db', (path) => packs[path]);
+  assert.deepEqual(environment, {
+    DATABASE_URL: 'postgresql://host/db', ADMIN_WEB_ORIGIN: 'http://localhost:3200', ADMIN_COOKIE_SECURE: 'false', ADMIN_MAIL_TRANSPORT: 'log',
+    ADMIN_ENABLE_SWAGGER_DOCS: 'true', NODE_ENV: 'development', ADMIN_PORT: '3200', ADMIN_CUSTOMER_ID: 'customer-local-a'
+  });
+
+  const overridden = localAdminEnvironment({ ADMIN_CUSTOMER_ID: 'customer-override', ADMIN_WEB_ORIGIN: 'http://localhost:3300', ADMIN_PORT: '9999' },
+    { ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]' }, 'postgresql://host/db', () => assert.fail('packs are not read when overridden'));
+  assert.equal(overridden.ADMIN_CUSTOMER_ID, 'customer-override');
+  assert.equal(overridden.ADMIN_WEB_ORIGIN, 'http://localhost:3300');
+  assert.equal(overridden.ADMIN_PORT, '3200');
+
+  for (const paths of [[], ['/packs/a.json', '/packs/c.json']]) {
+    const read = (path) => ({ ...packs, '/packs/c.json': { customerId: 'customer-local-c' } })[path];
+    assert.throws(() => localAdminEnvironment({}, { ASSISTANT_CAPABILITY_PACK_PATHS_JSON: JSON.stringify(paths) }, 'db', read),
+      (error) => error instanceof LocalAssistantError && error.rootCause === 'LOCAL_ENV_INVALID' && /ADMIN_CUSTOMER_ID/.test(error.message));
+  }
 });
 
 test('local start restores the scoped selected mode and forwards it to the existing generator', () => {

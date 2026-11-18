@@ -11,7 +11,8 @@ const processes = [
   ['Customer Connector Runtime', 'connectorRuntime', PORTS.connectorRuntime, `http://127.0.0.1:${PORTS.connectorRuntime}/health`],
   ['JWKS local proxy', 'jwksProxy', PORTS.jwksProxy, `http://127.0.0.1:${PORTS.jwksProxy}/.well-known/jwks.json`],
   ['cloudflared', 'cloudflared', null, state.cloudflaredHostname ? `${state.cloudflaredHostname}/.well-known/jwks.json` : null],
-  ['Gateway', 'gateway', PORTS.gateway, `http://127.0.0.1:${PORTS.gateway}/health`]
+  ['Gateway', 'gateway', PORTS.gateway, `http://127.0.0.1:${PORTS.gateway}/health`],
+  ['Admin API', 'admin', PORTS.admin, `http://127.0.0.1:${PORTS.admin}/api/v1/admin/health`]
 ];
 for (const [label, key, port, url] of processes) {
   const metadata = state.services[key];

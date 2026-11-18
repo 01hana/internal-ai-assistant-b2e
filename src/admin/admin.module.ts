@@ -17,6 +17,7 @@ import { AdminConfigModule } from './config/admin-config.module';
 import { AdminCustomerCheck } from './config/admin-customer.check';
 import { AdminSettings } from './config/admin-settings';
 import { GroupsController } from './groups/groups.controller';
+import { AdminHealthController } from './health/admin-health.controller';
 import { GroupsService } from './groups/groups.service';
 import { AdminMailService } from './mail/admin-mail.service';
 import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mail/admin-mail.transport';
@@ -29,7 +30,7 @@ import { UsersService } from './users/users.service';
  */
 @Module({
   imports: [AdminConfigModule, PrismaModule, ThrottlerModule.forRoot(ADMIN_THROTTLERS)],
-  controllers: [AdminAuthController, GroupsController, UsersController],
+  controllers: [AdminAuthController, AdminHealthController, GroupsController, UsersController],
   providers: [
     // Order matters: session → CSRF → permission.
     { provide: APP_GUARD, useClass: AdminSessionGuard },

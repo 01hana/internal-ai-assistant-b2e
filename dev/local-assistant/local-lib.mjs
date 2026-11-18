@@ -11,10 +11,11 @@ export const ROOT = resolve(import.meta.dirname, '../..');
 export const STATE_DIR = join(ROOT, '.local-state/assistant');
 export const STATE_FILE = join(STATE_DIR, 'state.json');
 export const BACKEND_COMPILED_ENTRYPOINT = 'dist/src/main.js';
+export const ADMIN_COMPILED_ENTRYPOINT = 'dist/src/admin-main.js';
 export const HOSTS_BEGIN = '# BEGIN internal-ai-assistant-local';
 export const HOSTS_END = '# END internal-ai-assistant-local';
 export const HOSTNAMES = Object.freeze(['connector-runtime.local.test', 'shinmone-upstream.local.test']);
-export const PORTS = Object.freeze({ postgres: 5435, backend: 3000, connectorRuntime: 3100, connectorTls: 3443, shinmoneTls: 3444, identityBridge: 3107, jwksProxy: 3110, gateway: 4000 });
+export const PORTS = Object.freeze({ postgres: 5435, backend: 3000, connectorRuntime: 3100, connectorTls: 3443, shinmoneTls: 3444, identityBridge: 3107, jwksProxy: 3110, gateway: 4000, admin: 3200 });
 export const SECRET_KEY_PATTERN = /(?:access|refresh)[_-]?token|authorization|bearer|private[_-]?key|openai[_-]?api[_-]?key|canonical[_-]?jwt/i;
 
 export class LocalAssistantError extends Error {
@@ -569,8 +570,39 @@ export function generatedIdentityOverride(network) {
   return `services:\n  identity-bridge:\n    environment:\n      IDX_ALLOWED_CIDRS: ${network.idxAddress}/32\n    networks:\n      rehearsal:\n        ipv4_address: ${network.bridgeAddress}\n  idx-https-proxy:\n    networks:\n      rehearsal:\n        aliases: [idx-proxy.local]\n        ipv4_address: ${network.idxAddress}\nnetworks:\n  rehearsal:\n    ipam:\n      config:\n        - subnet: ${network.subnet}\n`;
 }
 
+/**
+ * Feature 014: environment of the local admin API. Defaults suit local development only (log mail
+ * transport, insecure cookie, Swagger on, website origin = the API itself so Swagger UI passes the
+ * Origin check); any ADMIN_* value in the root .env overrides them. ADMIN_CUSTOMER_ID defaults to the
+ * Customer of the local Capability Packs, so no customer ID is written into the code.
+ */
+export function localAdminEnvironment(rootEnv, backendEnv, databaseUrl, readPack = (path) => JSON.parse(readFileSync(path, 'utf8'))) {
+  const overrides = Object.fromEntries(Object.entries(rootEnv).filter(([key]) => key.startsWith('ADMIN_')));
+  const customerId = overrides.ADMIN_CUSTOMER_ID || localPackCustomerId(backendEnv.ASSISTANT_CAPABILITY_PACK_PATHS_JSON, readPack);
+  return {
+    DATABASE_URL: databaseUrl,
+    ADMIN_WEB_ORIGIN: `http://localhost:${PORTS.admin}`,
+    ADMIN_COOKIE_SECURE: 'false',
+    ADMIN_MAIL_TRANSPORT: 'log',
+    ADMIN_ENABLE_SWAGGER_DOCS: 'true',
+    ...overrides,
+    NODE_ENV: 'development',
+    ADMIN_PORT: String(PORTS.admin),
+    ADMIN_CUSTOMER_ID: customerId
+  };
+}
+
+function localPackCustomerId(rawPaths, readPack) {
+  let paths;
+  try { paths = JSON.parse(rawPaths ?? '[]'); } catch { paths = []; }
+  const customers = new Set((Array.isArray(paths) ? paths : []).map((path) => readPack(path)?.customerId).filter(Boolean));
+  if (customers.size === 1) return [...customers][0];
+  throw new LocalAssistantError('LOCAL_ENV_INVALID',
+    `Set ADMIN_CUSTOMER_ID in .env: the local Capability Packs name ${customers.size === 0 ? 'no' : 'more than one'} Customer.`);
+}
+
 export function rootCauseFor(name) {
-  return ({ backend: 'BACKEND_UNAVAILABLE', connectorRuntime: 'CONNECTOR_RUNTIME_UNAVAILABLE', jwksProxy: 'JWKS_TUNNEL_UNAVAILABLE', cloudflared: 'JWKS_TUNNEL_UNAVAILABLE', gateway: 'GATEWAY_UNAVAILABLE' })[name] ?? 'LOCAL_ENV_INVALID';
+  return ({ backend: 'BACKEND_UNAVAILABLE', connectorRuntime: 'CONNECTOR_RUNTIME_UNAVAILABLE', jwksProxy: 'JWKS_TUNNEL_UNAVAILABLE', cloudflared: 'JWKS_TUNNEL_UNAVAILABLE', gateway: 'GATEWAY_UNAVAILABLE', admin: 'ADMIN_API_UNAVAILABLE' })[name] ?? 'LOCAL_ENV_INVALID';
 }
 
 function validIpv4(value) {

@@ -27,6 +27,11 @@ describeDbBackedAdmin('admin auth (Feature 014)', () => {
   const issue = (userId: string, purpose: UserTokenPurpose) => ctx.app.get(UserTokenService).issue(userId, purpose);
   const auditTypes = async () => (await ctx.db.userAuditEvent.findMany({ orderBy: { timestamp: 'asc' } })).map((event) => event.eventType);
 
+  it('answers the health check without a session', async () => {
+    const { body } = await api(ctx.app).get('/api/v1/admin/health').expect(200);
+    expect(body.data).toEqual({ status: 'healthy' });
+  });
+
   describe('first login link (US2-1, US2-2)', () => {
     it('shows the account, sets the password once, then allows login', async () => {
       const user = await seedUser(ctx.db, { account: 'ops.admin', password: null, groups: ['admin'] });

@@ -18,7 +18,7 @@ From this Assistant repository, start every required Assistant-side local servic
 npm run local:start
 ```
 
-The command reconciles the active LAN address, its managed `/etc/hosts` block, a collision-free Identity Bridge Docker subnet, persistent local-only keys/certificates, PostgreSQL, Backend, Customer Connector Runtime, Connector HTTPS overlay, Identity Bridge, IDX HTTPS proxy, local JWKS proxy, cloudflared tunnel, Gateway Feature007 trust provisioning, Gateway, and the Gateway local signing authority. Re-running it is idempotent: healthy matching components are reused, unhealthy managed processes are restarted, and affected local containers are recreated when generated network configuration changes.
+The command reconciles the active LAN address, its managed `/etc/hosts` block, a collision-free Identity Bridge Docker subnet, persistent local-only keys/certificates, PostgreSQL, Backend, Customer Connector Runtime, Connector HTTPS overlay, Identity Bridge, IDX HTTPS proxy, local JWKS proxy, cloudflared tunnel, Gateway Feature007 trust provisioning, Gateway, the Gateway local signing authority, and the admin back-office API (port 3200, Swagger UI at `http://localhost:3200/api/v1/admin/docs`). Re-running it is idempotent: healthy matching components are reused, unhealthy managed processes are restarted, and affected local containers are recreated when generated network configuration changes.
 
 Use the companion commands for inspection and cleanup:
 
@@ -28,6 +28,8 @@ npm run local:doctor
 npm run local:doctor -- --idx
 npm run local:stop
 ```
+
+The local admin API uses development-only defaults: invitation and reset links are written to `.local-state/assistant/logs/admin.log` instead of being mailed, cookies are not marked `Secure`, Swagger UI is on, and the website origin is the API itself so Swagger UI passes the Origin check. `ADMIN_CUSTOMER_ID` defaults to the Customer of the local Capability Packs. Any `ADMIN_*` value in `.env` overrides these defaults (for example `ADMIN_WEB_ORIGIN` once the admin website runs locally). Create the first account with `npm run admin:bootstrap -- --account <account> --name <name> --email <email>`.
 
 `local:status` is read-only. `local:stop` stops only resources recorded as managed by this orchestration and preserves PostgreSQL data, local signing keys, local CAs, and connector authority. The optional `--idx` doctor delegates to the existing hidden-input diagnostic; `local:start` never asks for, logs, or persists a native AccessToken. Startup validates OpenAI configuration but never sends a live OpenAI request.
 

@@ -210,7 +210,7 @@ model UserAuditEvent {
 - `prepare-delivery.sh` 產生 `admin.env` 範本（`ADMIN_CUSTOMER_ID` 取自該客戶的設定；`ADMIN_WEB_ORIGIN`、`ADMIN_SMTP_*`、`ADMIN_MAIL_FROM` 由部署者填寫；SMTP 密碼以 compose secret 提供，不寫入 env 範本；不含任何主機位址）。
 - `admin-api` 需能連到 SMTP 伺服器：compose 網路加入 `egress`（或部署者指定的郵件網路）。
 - `deploy/demo/nginx-host-routes.example.conf` 新增後台網域範例（網站靜態檔與 `/api/v1/admin/` 轉送）。
-- 本機：`dev/local-assistant` 的 `PORTS` 新增 `admin: 3200`，`local:start` 啟動 `node dist/src/admin-main.js`（`ADMIN_CUSTOMER_ID` 取自本機 Shinmone 設定，`ADMIN_WEB_ORIGIN=http://localhost:3300`，`ADMIN_COOKIE_SECURE=false`、`ADMIN_MAIL_TRANSPORT=log` 僅限本機；邀請與重設連結寫入 `.local-state/assistant/logs/admin.log`）。
+- 本機：`dev/local-assistant` 的 `PORTS` 新增 `admin: 3200`，`local:start` 啟動 `node dist/src/admin-main.js`（`ADMIN_CUSTOMER_ID` 預設取自本機 Capability Pack 的 Customer，不寫死在程式；`ADMIN_WEB_ORIGIN` 預設為 API 本身 `http://localhost:3200`，讓 Swagger UI 通過 Origin 檢查，後台網站在本機啟動後於 `.env` 改為網站來源；`ADMIN_COOKIE_SECURE=false`、`ADMIN_MAIL_TRANSPORT=log`、`ADMIN_ENABLE_SWAGGER_DOCS=true` 僅限本機；`.env` 中任何 `ADMIN_*` 皆可覆寫預設；邀請與重設連結寫入 `.local-state/assistant/logs/admin.log`）。後台 API 提供公開的 `GET health`（含資料庫檢查），供 `local:start`／`local:status` 與容器 healthcheck 使用。
 
 ## D9. 測試
 

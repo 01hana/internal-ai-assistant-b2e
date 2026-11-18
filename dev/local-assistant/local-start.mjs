@@ -6,13 +6,13 @@ import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import {
-  BACKEND_COMPILED_ENTRYPOINT, LocalAssistantError, PORTS, ROOT, STATE_DIR, beginAppliedConfigReconciliation, beginNetworkReconciliation, bridgeBindingDeploymentMatches,
+  ADMIN_COMPILED_ENTRYPOINT, BACKEND_COMPILED_ENTRYPOINT, LocalAssistantError, PORTS, ROOT, STATE_DIR, beginAppliedConfigReconciliation, beginNetworkReconciliation, bridgeBindingDeploymentMatches,
   bridgeBindingRouteMatches, collectDockerCidrs, collectRouteCidrs,
   commandExists, compiledFiles, connectorBridgePrivateTarget, connectorTlsAction, connectorTlsBindingsMatch, detectLanAddress, doctorFailureRootCause,
   ensureGatewayKey, generatedIdentityOverride, hostDatabaseUrl, hostsBlockMatches, identityBridgeAction, inspectDockerContainerDns,
   inspectDockerContainerEnvironment, inspectDockerPublishedBindings, isManagedProcessAlive,
   hashFilesAndValues, httpHealthy, loadState, parseCloudflaredHostname, prerequisiteHint, prerequisiteReport, readEnvFile,
-  portOwner, run, saveState, selectDockerSubnet, startManagedProcess, stopPid, validateRootEnvironment,
+  localAdminEnvironment, portOwner, run, saveState, selectDockerSubnet, startManagedProcess, stopPid, validateRootEnvironment,
   verifyHostMappings, waitFor, writeEnvFile
 } from './local-lib.mjs';
 import { assertShinmoneModeSwitchServicesIdle, commitShinmoneSelection, resolveShinmoneStartup } from './local-shinmone-mode.mjs';
@@ -214,6 +214,18 @@ try {
     runKpiProvision('activate', databaseUrl);
     activationApplied = true;
   }
+
+  // Feature 014: the admin API runs from the same build; mail links go to its log (ADMIN_MAIL_TRANSPORT=log).
+  const adminConfigInputs = [join(ROOT, '.env'), join(ROOT, '.local-secrets/connector-local/backend.env'),
+    join(ROOT, ADMIN_COMPILED_ENTRYPOINT), ...compiledFiles(join(ROOT, 'dist/src'))];
+  const adminAction = await startManagedProcess({
+    state, name: 'admin', command: 'node', args: [ADMIN_COMPILED_ENTRYPOINT],
+    environment: localAdminEnvironment(rootEnv, backendEnv, databaseUrl), port: PORTS.admin,
+    health: () => httpHealthy(`http://127.0.0.1:${PORTS.admin}/api/v1/admin/health`, { expect: (body) => body?.data?.status === 'healthy' }),
+    configInputs: adminConfigInputs
+  });
+  if (adminAction !== 'REUSE') startedThisRun.push({ kind: 'process', name: 'admin' });
+  process.stdout.write(`[${adminAction}] Admin API (http://localhost:${PORTS.admin}/api/v1/admin/docs)\n`);
 
   const gatewayAction = await startManagedProcess({
     state, name: 'gateway', command: 'node', args: ['apps/gateway/dist/main.js'], environment: commonGatewayEnv, port: PORTS.gateway,

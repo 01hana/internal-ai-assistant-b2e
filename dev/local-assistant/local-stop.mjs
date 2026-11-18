@@ -6,7 +6,7 @@ import process from 'node:process';
 import { ROOT, STATE_DIR, connectorBridgePrivateTarget, isManagedProcessAlive, loadState, saveState, stopPid } from './local-lib.mjs';
 
 const state = loadState();
-for (const name of ['gateway', 'backend', 'cloudflared', 'jwksProxy', 'connectorRuntime']) {
+for (const name of ['admin', 'gateway', 'backend', 'cloudflared', 'jwksProxy', 'connectorRuntime']) {
   const metadata = state.services[name];
   if (!metadata) continue;
   if (isManagedProcessAlive(metadata)) await stopPid(metadata.pid);
