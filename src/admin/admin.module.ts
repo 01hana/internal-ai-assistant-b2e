@@ -20,6 +20,8 @@ import { GroupsController } from './groups/groups.controller';
 import { GroupsService } from './groups/groups.service';
 import { AdminMailService } from './mail/admin-mail.service';
 import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mail/admin-mail.transport';
+import { UsersController } from './users/users.controller';
+import { UsersService } from './users/users.service';
 
 /**
  * Feature 014: the admin back-office API, started only from src/admin-main.ts. It must not import the
@@ -27,7 +29,7 @@ import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mai
  */
 @Module({
   imports: [AdminConfigModule, PrismaModule, ThrottlerModule.forRoot(ADMIN_THROTTLERS)],
-  controllers: [AdminAuthController, GroupsController],
+  controllers: [AdminAuthController, GroupsController, UsersController],
   providers: [
     // Order matters: session → CSRF → permission.
     { provide: APP_GUARD, useClass: AdminSessionGuard },
@@ -47,7 +49,8 @@ import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mai
     GroupsService,
     UserAuditService,
     UserSessionService,
-    UserTokenService
+    UserTokenService,
+    UsersService
   ],
   exports: [ADMIN_CLOCK, AdminMailService, UserAuditService, UserSessionService, UserTokenService]
 })

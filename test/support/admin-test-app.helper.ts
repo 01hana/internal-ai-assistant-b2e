@@ -29,7 +29,12 @@ export class TestClock {
 
 export class RecordingMail implements AdminMailTransport {
   readonly sent: AdminMailMessage[] = [];
-  async send(message: AdminMailMessage) { this.sent.push(message); }
+  /** Set to make deliveries fail like an unreachable SMTP server. */
+  failing = false;
+  async send(message: AdminMailMessage) {
+    if (this.failing) throw new Error('SMTP unavailable');
+    this.sent.push(message);
+  }
   /** The token in the most recent link sent to `email`. */
   lastToken(email: string): string | undefined {
     const message = [...this.sent].reverse().find((entry) => entry.to === email);

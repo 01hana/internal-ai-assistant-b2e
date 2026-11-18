@@ -1,7 +1,7 @@
 # Tasks: Feature 014 — Admin Back-Office Foundation
 
 **Spec**: [`spec.md`](./spec.md)　**Design**: [`design.md`](./design.md)　**Plan**: [`plan.md`](./plan.md)
-**Status**: Phase 0–2 完成（Gate 2 PASS）；Phase 3 進行中
+**Status**: Phase 0–3 完成（Gate 3 PASS）；Phase 4 待開始
 
 ## Phase 0 — 基線
 
@@ -55,17 +55,19 @@
 
 ## Phase 3 — 權限、使用者與群組
 
-- [x] T018 `AdminAbilityFactory`（群組 → CASL 規則，含開發工程師可見性條件）、`UserPolicyService`（指派與保護規則）、`@RequirePermission`、`PermissionGuard`（未宣告即拒絕）。
-- [ ] T019 使用者 API：`getTable`（`accessibleBy`）、`getFilters`、讀取、建立、修改（含群組）、`batch` 停用／啟用、`resendInvite`、`DELETE`；開發工程師可見性、email 啟用後唯讀、指派規則與最後一位管理者檢查（含批次）。
+- [x] T018 `AdminAbilityFactory`（群組 → CASL 規則，含開發工程師可見性條件）、`users/user-policy.ts`（保護規則，純函式，單筆與批次共用）、`@RequirePermission`、`PermissionGuard`（未宣告即拒絕）。
+- [x] T019 使用者 API：`getTable`（`accessibleBy`）、`getFilters`、讀取、建立、修改（含群組）、`batch` 停用／啟用、`resendInvite`、`DELETE`；開發工程師可見性、email 啟用後唯讀、指派規則與最後一位管理者檢查（含批次）。
 - [x] T020 群組 API：`getTable`、`getOptions`、`getPermissions`、讀取、建立、修改、`DELETE`；權限驗證、內建群組不可改、有成員不可刪、非開發工程師看不到「開發工程師」群組。
-- [ ] T021 DB 測試：內建與自訂群組 × 全部 API 的允許／拒絕矩陣（SC-001）、開發工程師帳號與群組的可見性（SC-002）、指派與保護規則（SC-009）、US3、US4 全部情境、稽核事件（SC-004）、所有回應不含內部欄位（SC-007）、沒有能設定他人密碼的路由（SC-008）。
-- [ ] T022 **Gate 3**：Phase 3 測試、全套、typecheck、lint。`FEATURE014_GATE_3=PASS`。
+- [x] T021 DB 測試：內建與自訂群組 × 全部 API 的允許／拒絕矩陣（SC-001）、開發工程師帳號與群組的可見性（SC-002）、指派與保護規則（SC-009）、US3、US4 全部情境、稽核事件（SC-004）、所有回應不含內部欄位（SC-007）、沒有能設定他人密碼的路由（SC-008）。
+- [x] T022 **Gate 3**：Phase 3 測試、全套、typecheck、lint。`FEATURE014_GATE_3=PASS`。
 
 **Phase 3 執行證據**（分兩批）：
 
 - 第一批（2026-11-18，群組）：先查可用套件 —— DTO 以 `@nestjs/swagger` 的 `PartialType` 由建立 DTO 推導修改 DTO；查詢可見範圍以 `@casl/prisma` 的 `accessibleBy(ability, action).ofType('UserGroup')` 轉為 Prisma 條件；分頁只需 Prisma `skip`／`take`，不另裝分頁套件。共用：登入守衛為每個請求建立一次 CASL ability 並放在 `AdminPrincipal`，`@CurrentAdmin()` 取用；`@RequireAnyPermission(...)`（任一權限即可）；`common/table-query.ts`（`getTable` 的 `page`／`pageSize`／`sort`／`keyword`、排序欄位白名單、關鍵字條件）；`common/prisma-errors.ts`（P2002）。群組：`groups.controller.ts`／`groups.service.ts`／`groups.dto.ts` —— `getTable`、`getOptions`（`User:read` 或 `UserGroup:read`；非開發工程師不含「開發工程師」）、`getPermissions`、`GET :id`、`POST`、`PATCH :id`、`DELETE`（`ids`，全有或全無：不存在／看不到 404、內建 400、有成員 400）；內建群組不可修改或刪除；建立、修改、刪除皆寫稽核（修改含前後權限）；內建群組依 `code` 固定排序，不受資料庫定序影響。測試 `test/integration/admin-groups.spec.ts`。自我檢查修正：更新／刪除改依對應動作的可見範圍；名稱在 DTO 去除前後空白；`getOptions` 改為只依「是否為開發工程師」過濾（否則只有 `User:read` 的人會拿到空清單）。VM：typecheck、eslint 通過。
 - 第一批測試（使用者於 Mac，2026-11-18）：首輪 19 個失敗 —— `admin-auth` 與 `admin-groups` 兩個 DB 測試檔被 Jest 同時執行，都會重設同一批後台資料表而互相干擾（群組代碼重複、關聯不到群組、登入 500）。修正：測試輔助程式以 PostgreSQL advisory lock（由 Prisma interactive transaction 持有，交易結束即釋放）讓後台 DB 測試依序執行，不需新依賴、不需 `--runInBand`；app 啟動失敗時也會釋放。重跑：96 tests 全數通過（單元 50、架構 4、auth 26、groups 16）。
 - Swagger（2026-11-18，spec Decision 28）：`nest-cli.json` 啟用 `@nestjs/swagger` CLI plugin（`classValidatorShim`、`introspectComments`），build 時依 DTO 型別與 class-validator 自動產生欄位說明（Core 的文件一併受惠）；plugin 只讀 `*.dto.ts`，`common/table-query.ts` 改名為 `table-query.dto.ts`。`setupSwagger` 可傳入標題、說明與驗證方式（Core 預設不變：bearer）。後台新增 `ADMIN_ENABLE_SWAGGER_DOCS`（預設 false，production 拒絕）；開啟時 `/api/v1/admin/docs`，驗證為 `admin_session` cookie 與 `X-CSRF-Token` header，helmet 的 CSP 只在開啟時關閉（Swagger UI 需要 inline script）。本機使用：`ADMIN_WEB_ORIGIN` 需設為 Swagger 頁面的來源（`http://localhost:3200`）才能通過 Origin 檢查。測試 `test/integration/admin-docs.spec.ts`（預設 404；開啟後含路由與兩種驗證方式），環境驗證新增 production 拒絕案例。VM：typecheck、eslint、`nest build`（確認 DTO 產生 OpenAPI metadata）通過。
+- 第二批（2026-11-18，使用者）：`users/users.controller.ts`／`users.service.ts`／`users.dto.ts`／`user-policy.ts`／`account-rules.ts`。路由：`getTable`（`filters.groups`、`filters.status`、`keyword` 比對帳號／名稱／email、排序白名單 `account`／`name`／`lastLoginAt`／`createdAt`）、`getFilters`（群組選項沿用 `GroupsService.options`）、`GET :id`、`POST`（回應 `{ user, inviteSent }`）、`PUT :id`（`name`、`email`、`groupIds`）、`PATCH batch`（`{ ids, status }`）、`POST :id/resendInvite`、`DELETE`（`ids`）。可見範圍以 `accessibleBy(ability, action).ofType('User')` 查詢，非開發工程師看不到開發工程師帳號（404）。規則：只有開發工程師能指派「開發工程師」群組（403）；不可停用、刪除自己或把自己移出所屬內建群組；至少保留一位啟用中、非開發工程師的最高管理者（停用、刪除、移出群組、加入開發工程師群組皆檢查，含批次）；批次全有或全無；邀請中改 email 使舊邀請連結失效（寫 `admin_user_updated`）；已啟用者只有開發工程師能改 email，並撤銷其工作階段與未使用連結（`admin_user_email_changed`）；重寄邀請限尚未設定密碼且啟用中的使用者；刪除連帶移除工作階段、連結與群組關聯（cascade），稽核保留帳號快照；寄信於 commit 後進行，失敗時 `inviteSent: false`。帳號與 email 先查重（409 `ACCOUNT_TAKEN`／`EMAIL_TAKEN`），併發時以 P2002 退回 409。共用整理：`common/ids.dto.ts`（`IdsDto`、`uniqueIds`，群組刪除一併改用）、`common/dto-transforms.ts`（`trim`、`trimLower`）；bootstrap 改用共用的帳號規則與 class-validator 的 `isEmail`。錯誤回應：Core 的 `GlobalExceptionFilter` 新增選用的 `details`（例外物件帶 `details` 時才輸出，既有 Core 回應不變），後台以 `details.ids` 等說明是哪幾筆被拒（群組刪除原本附的 `ids` 先前會被過濾掉，一併修正）。測試 `test/integration/admin-users.spec.ts`（20 tests）；`RecordingMail.failing` 模擬寄信失敗。VM：typecheck、eslint 通過。
+- T022 Gate 3（使用者於 Mac，2026-11-18）：typecheck（Core、spec）通過；`npx eslint src test` 無錯誤；後台 DB 測試（users 20、groups 16、auth 26、docs 2）全數通過；Core 全套 281 suites 中 253 passed、28 skipped、0 failed，2535 tests 中 2285 passed、250 skipped（首次執行有 1 個偶發失敗，未留下紀錄，重跑未重現；後台測試皆通過）。`FEATURE014_GATE_3=PASS`。
 
 ## Phase 4 — 本機、部署與文件
 

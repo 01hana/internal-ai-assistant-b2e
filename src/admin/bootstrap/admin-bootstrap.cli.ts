@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import { NestFactory } from '@nestjs/core';
+import { isEmail } from 'class-validator';
 import { UserTokenPurpose } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AdminModule } from '../admin.module';
@@ -10,6 +11,7 @@ import { UserTokenService } from '../auth/user-token.service';
 import { AdminSettings } from '../config/admin-settings';
 import { AdminMailService } from '../mail/admin-mail.service';
 import { DEVELOPER_GROUP_CODE, SYSTEM_GROUP_CODES, SYSTEM_GROUPS } from '../permissions';
+import { ACCOUNT_PATTERN } from '../users/account-rules';
 
 /**
  * Feature 014 US1: creates the first developer account of a deployment. Runs only while there are no
@@ -20,8 +22,6 @@ import { DEVELOPER_GROUP_CODE, SYSTEM_GROUP_CODES, SYSTEM_GROUPS } from '../perm
 export type AdminBootstrapArguments = { account: string; name: string; email: string };
 
 const USAGE = 'Usage: --account <account> --name <name> --email <email>';
-const ACCOUNT_PATTERN = /^[a-z0-9._-]{3,64}$/;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function parseAdminBootstrapArguments(argv: readonly string[]): AdminBootstrapArguments {
   let values: { account?: string; name?: string; email?: string };
@@ -40,7 +40,7 @@ export function parseAdminBootstrapArguments(argv: readonly string[]): AdminBoot
   const email = values.email?.trim().toLowerCase();
   if (!account || !name || !email) throw new Error(USAGE);
   if (!ACCOUNT_PATTERN.test(account)) throw new Error('Account must be 3–64 characters: letters, digits, ".", "_" or "-".');
-  if (!EMAIL_PATTERN.test(email) || email.length > 254) throw new Error('Email is not valid.');
+  if (!isEmail(email) || email.length > 254) throw new Error('Email is not valid.');
   if (name.length > 100) throw new Error('Name must be at most 100 characters.');
   return { account, name, email };
 }

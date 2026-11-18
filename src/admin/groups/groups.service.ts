@@ -7,11 +7,12 @@ import { UserAuditService } from '../audit/user-audit.service';
 import { actorOf } from '../auth/admin-auth.service';
 import { selectableGroupsWhere } from '../authorization/admin-ability.factory';
 import type { AdminPrincipal } from '../common/admin-request';
+import { type IdsDto, uniqueIds } from '../common/ids.dto';
 import { isUniqueViolation } from '../common/prisma-errors';
 import type { RequestMeta } from '../common/request-meta';
 import { keywordWhere, orderByOf, pageArgs, type TablePage } from '../common/table-query.dto';
 import { isSystemGroupCode, normalizeCustomGroupPermissions, permissionCatalog, SYSTEM_GROUPS } from '../permissions';
-import type { CreateGroupDto, DeleteGroupsDto, GroupTableQueryDto, UpdateGroupDto } from './groups.dto';
+import type { CreateGroupDto, GroupTableQueryDto, UpdateGroupDto } from './groups.dto';
 
 export type GroupView = {
   id: string;
@@ -122,19 +123,19 @@ export class GroupsService {
   }
 
   /** All or nothing: every group must be visible, custom and without members. */
-  async remove(principal: AdminPrincipal, input: DeleteGroupsDto, meta: RequestMeta): Promise<{ deleted: number }> {
-    const ids = [...new Set(input.ids)];
+  async remove(principal: AdminPrincipal, input: IdsDto, meta: RequestMeta): Promise<{ deleted: number }> {
+    const ids = uniqueIds(input.ids);
     const groups = await this.prisma.db.userGroup.findMany({
       where: { AND: [this.visible(principal, 'delete'), { id: { in: ids } }] },
       include: { _count: { select: { users: true } } }
     });
     const missing = ids.filter((id) => !groups.some((group) => group.id === id));
-    if (missing.length > 0) throw new NotFoundException({ error: 'group_not_found', message: '找不到群組。', ids: missing });
+    if (missing.length > 0) throw new NotFoundException({ error: 'group_not_found', message: '找不到群組。', details: { ids: missing } });
     const locked = groups.filter((group) => group.isSystem);
-    if (locked.length > 0) throw new BadRequestException({ ...SYSTEM_GROUP_LOCKED, ids: locked.map((group) => group.id) });
+    if (locked.length > 0) throw new BadRequestException({ ...SYSTEM_GROUP_LOCKED, details: { ids: locked.map((group) => group.id) } });
     const inUse = groups.filter((group) => group._count.users > 0);
     if (inUse.length > 0) {
-      throw new BadRequestException({ error: 'group_has_members', message: '群組仍有成員，請先移除成員。', ids: inUse.map((group) => group.id) });
+      throw new BadRequestException({ error: 'group_has_members', message: '群組仍有成員，請先移除成員。', details: { ids: inUse.map((group) => group.id) } });
     }
 
     await this.prisma.db.$transaction(async (tx) => {
@@ -166,7 +167,7 @@ export class GroupsService {
 
 function validPermissions(values: readonly string[]): string[] {
   const result = normalizeCustomGroupPermissions(values);
-  if (!result.ok) throw new BadRequestException({ error: 'invalid_permissions', message: '包含不允許的權限。', invalid: result.invalid });
+  if (!result.ok) throw new BadRequestException({ error: 'invalid_permissions', message: '包含不允許的權限。', details: { invalid: result.invalid } });
   return result.permissions;
 }
 

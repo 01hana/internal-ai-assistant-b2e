@@ -223,7 +223,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 
 - `getTable` 的 body：`{ page, pageSize, sort?: { field, order }, filters?: { … }, keyword? }`；回應 `{ items, total }`。
 - 回應沿用 Core 的 envelope：`{ requestId, data }`／`{ requestId, error: { code, message } }`。
-- 批次操作（`users/batch`、`DELETE users`、`DELETE groups`）為全有或全無：任一筆違反規則即整批拒絕並說明是哪一筆。
+- 批次操作（`users/batch`、`DELETE users`、`DELETE groups`）為全有或全無：任一筆違反規則即整批拒絕並說明是哪一筆（`error.details.ids`）。
 
 ### 前端契約（給 `internal-ai-assistant-admin`）
 

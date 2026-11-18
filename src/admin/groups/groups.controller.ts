@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Req } from '@nestjs/common';
 import { RequireAnyPermission, RequirePermission } from '../authorization/route-access.decorator';
 import { type AdminPrincipal, type AdminRequest, CurrentAdmin, requestMeta } from '../common/admin-request';
-import { CreateGroupDto, DeleteGroupsDto, GroupTableQueryDto, UpdateGroupDto } from './groups.dto';
+import { IdsDto } from '../common/ids.dto';
+import { CreateGroupDto, GroupTableQueryDto, UpdateGroupDto } from './groups.dto';
 import { GroupsService } from './groups.service';
 
 /** Feature 014 US3. Paths follow the admin template (`groups/getTable`, `getOptions`, `DELETE groups` with `ids`). */
@@ -50,7 +51,7 @@ export class GroupsController {
 
   @Delete()
   @RequirePermission('delete', 'UserGroup')
-  remove(@CurrentAdmin() admin: AdminPrincipal, @Body() body: DeleteGroupsDto, @Req() request: AdminRequest) {
+  remove(@CurrentAdmin() admin: AdminPrincipal, @Body() body: IdsDto, @Req() request: AdminRequest) {
     return this.groups.remove(admin, body, requestMeta(request));
   }
 }

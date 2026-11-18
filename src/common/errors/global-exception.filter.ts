@@ -15,6 +15,8 @@ type ErrorResponseBody = {
   message?: string | string[];
   error?: string;
   statusCode?: number;
+  /** Optional structured context for the client (e.g. which records of a batch were rejected). */
+  details?: Record<string, unknown>;
 };
 
 @Catch()
@@ -33,7 +35,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       error: {
         code: this.toErrorCode(status, body.error),
         message: redactSecrets(this.toSafeMessage(status, body.message ?? httpException.message)),
-        details: status === HttpStatus.INTERNAL_SERVER_ERROR ? undefined : redactSecrets(this.toDetails(body.message))
+        details: status === HttpStatus.INTERNAL_SERVER_ERROR ? undefined : redactSecrets(this.toDetails(body.message) ?? body.details)
       }
     });
   }

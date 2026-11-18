@@ -1,11 +1,10 @@
 import { PartialType } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { trim } from '../common/dto-transforms';
 import { TableQueryDto } from '../common/table-query.dto';
 
 export class GroupTableQueryDto extends TableQueryDto {}
 
-const trim = () => Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
 
 export class CreateGroupDto {
   @trim()
@@ -28,11 +27,3 @@ export class CreateGroupDto {
 }
 
 export class UpdateGroupDto extends PartialType(CreateGroupDto) {}
-
-export class DeleteGroupsDto {
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(100)
-  @IsString({ each: true })
-  ids!: string[];
-}
