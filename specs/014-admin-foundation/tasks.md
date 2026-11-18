@@ -1,7 +1,7 @@
 # Tasks: Feature 014 — Admin Back-Office Foundation
 
 **Spec**: [`spec.md`](./spec.md)　**Design**: [`design.md`](./design.md)　**Plan**: [`plan.md`](./plan.md)
-**Status**: Phase 0–3 完成（Gate 3 PASS）；Phase 4 待開始
+**Status**: 完成（Gate 4 PASS，2026-11-19）；實際部署併入 Feature 015 後一起進行
 
 ## Phase 0 — 基線
 
@@ -74,10 +74,12 @@
 - [x] T023 本機：`PORTS.admin = 3200`，`local:start`／`local:status`／`local:stop` 納入後台 API。
 - [x] T024 部署：`compose.yaml` 新增 `admin-api`；`deploy.sh` 的 `app`、`upgrade` 與新增的 `admin-bootstrap`；`config/admin.env.example`（含 SMTP 設定）；nginx 範例；以 `admin-bootstrap` 的寄信結果確認 SMTP。
 - [x] T025 文件：`docs/architecture/admin-back-office.md`（結構、權限模型、部署）、`docs/frontend-integration/admin-api.md`（給後台前端的 API 與權限契約）、部署手冊新增後台步驟。
-- [ ] T026 **Gate 4**：全套、typecheck、lint、`npm run build` 產出 `dist/src/admin-main.js`、本機以 `admin:bootstrap` 建立帳號，從日誌取得連結，以 curl 走過 verifyToken → firstLogin → 登入 → profile → 建立使用者（日誌出現邀請連結）→ 登出 → forgot → reset。`FEATURE014_GATE_4=PASS`。
+- [x] T026 **Gate 4**：全套、typecheck、lint、`npm run build` 產出 `dist/src/admin-main.js`、本機以 `admin:bootstrap` 建立帳號，從日誌取得連結，以 curl 走過 verifyToken → firstLogin → 登入 → profile → 建立使用者（日誌出現邀請連結）→ 登出 → forgot → reset。`FEATURE014_GATE_4=PASS`。
 
 **Phase 4 執行證據**（分兩批）：
 
 - 第一批（2026-11-18，本機）：`dev/local-assistant/local-lib.mjs` 新增 `PORTS.admin = 3200`、`ADMIN_COMPILED_ENTRYPOINT`、`localAdminEnvironment()`（本機預設：`log` 寄信、非 Secure cookie、Swagger 開啟、網站來源為 API 本身 `http://localhost:3200`；`ADMIN_CUSTOMER_ID` 預設取自本機 Capability Pack 的唯一 Customer，找不到或有多個時要求在 `.env` 設定；`.env` 的 `ADMIN_*` 皆可覆寫，`NODE_ENV`、`ADMIN_PORT` 固定）。`local:start` 在 Backend 之後啟動後台 API（受管程序，重新 build 後自動重啟；日誌 `.local-state/assistant/logs/admin.log` 含邀請與重設連結），失敗時 `ROOT_CAUSE=ADMIN_API_UNAVAILABLE` 並回復本次啟動的服務；`local:status` 顯示、`local:stop` 停止後台 API。後台新增公開的 `GET health`（含資料庫檢查）。README 補上本機後台說明。測試：`dev/local-assistant/test/local-assistant.test.mjs` 新增一項（VM 執行 37 項全數通過），`admin-auth.spec.ts` 新增 health 測試。VM：typecheck、eslint 通過。
 - 第二批（2026-11-18，部署與文件）：`deploy/demo/compose.yaml` 新增 `admin-api`（Core image、`node dist/src/admin-main.js`、`admin.env`、`127.0.0.1:DEMO_ADMIN_HOST_PORT:3200`、`backend`／`egress`／`ingress`、依賴 migration、healthcheck `GET /api/v1/admin/health`、`ADMIN_TRUSTED_PROXY_HOPS=1`、`trusted_ca`）；`compose.images.yaml`、`compose.company-nginx.yaml`（別名 `ai-assistant-admin`）同步。`deploy.sh`：`preflight` 檢查 `admin.env`（`ADMIN_WEB_ORIGIN` 必須 https、必填項目）與 port；`app` 在 Core 之後啟動後台 API；`upgrade` 先檢查 `admin.env` 與 port 再變更，並在 Gateway 之後更新後台 API；新增 `admin-bootstrap`（`dc run --rm --no-deps admin-api node dist/src/admin/bootstrap/admin-bootstrap.cli.js …`）。新增 `config/admin.env.example`、`compose.env.example` 的 `DEMO_ADMIN_HOST_PORT`、nginx 範例的後台 server block、部署 README「後台 API」一節。後台新增 `ADMIN_TRUSTED_PROXY_HOPS`（預設 0，對應 Express `trust proxy`），否則在 Nginx 後方所有人共用同一個 IP 的速率限制，稽核也記不到真實 IP。設計調整：SMTP 密碼放在 `admin.env`（與其他服務一致），不另建 compose secret；不另做寄測試信指令，改以 `admin-bootstrap` 的寄信結果確認。文件：`docs/architecture/admin-back-office.md`、`docs/frontend-integration/admin-api.md`。測試：`admin-docs.spec.ts` 改名為 `admin-app-setup.spec.ts`，新增 trust proxy 兩項；環境驗證新增一項。VM：typecheck、eslint、`bash -n deploy.sh`、compose YAML 解析通過（VM 無 Docker，`docker compose config` 待主機或 Mac 確認）。
+- 第三批（2026-11-19，Gate 4 前置與調整）：新增 `npm run admin:local:bootstrap`（`dev/local-assistant/local-admin-bootstrap.mjs`，以與 `local:start` 相同的環境執行編譯後的 bootstrap CLI；本機 `.env` 不需填 `ADMIN_*`）。依使用者審查調整：`auth/login`、`auth/profile` 的 `rules` 改名為 `permissions`（spec Decision 30）；密碼最少字元數由 12 改為 8（Decision 29）。
+- T026 Gate 4（使用者於 Mac，2026-11-19）：build、typecheck、全套、`test:local-assistant`、eslint、後台 DB 測試通過；`local:start` 啟動後台 API，`admin:local:bootstrap` 建立帳號，於 Swagger 走過 verifyToken → firstLogin（重複使用連結 400）→ login → profile → 建立使用者（`admin.log` 出現邀請信）→ logout（之後 profile 401）→ forgot（`admin.log` 出現重設信）→ reset（舊密碼失敗、新密碼成功），結果皆符合預期。`rules`→`permissions` 與 8 字元的調整在 Gate 4 之後完成，以相關測試確認。`FEATURE014_GATE_4=PASS`。實際部署（主機 `admin.env`、SMTP、nginx）依使用者決定併入 Feature 015 後一起進行。
 

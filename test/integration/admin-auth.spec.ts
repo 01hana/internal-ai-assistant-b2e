@@ -85,8 +85,8 @@ describeDbBackedAdmin('admin auth (Feature 014)', () => {
       const profile = await api(ctx.app).get(`${base}/profile`).set('Cookie', cookie);
       expect(profile.status).toBe(200);
       expect(profile.body.data.user).toMatchObject({ account: 'ops.admin', status: true, invitationPending: false, groups: [expect.objectContaining({ code: 'admin' })] });
-      expect(profile.body.data.rules).toEqual(expect.arrayContaining([{ action: 'manage', subject: 'User' }, { action: 'manage', subject: 'Conversation' }]));
-      expect(profile.body.data.rules).not.toContainEqual({ action: 'manage', subject: 'all' });
+      expect(profile.body.data.permissions).toEqual(expect.arrayContaining([{ action: 'manage', subject: 'User' }, { action: 'manage', subject: 'Conversation' }]));
+      expect(profile.body.data.permissions).not.toContainEqual({ action: 'manage', subject: 'all' });
       for (const body of [response.body, profile.body]) {
         for (const field of INTERNAL_USER_FIELDS) expect(JSON.stringify(body)).not.toContain(field);
       }
@@ -95,14 +95,14 @@ describeDbBackedAdmin('admin auth (Feature 014)', () => {
     it('gives developers manage all', async () => {
       await seedUser(ctx.db, { account: 'dev.one', groups: ['developer'] });
       const { response } = await signIn(ctx.app, 'dev.one');
-      expect(response.body.data.rules).toEqual([{ action: 'manage', subject: 'all' }]);
+      expect(response.body.data.permissions).toEqual([{ action: 'manage', subject: 'all' }]);
     });
 
     it('gives custom groups exactly their permissions', async () => {
       await ctx.db.userGroup.create({ data: { name: '客服主管', permissions: ['Conversation:read', 'Feedback:read'] } });
       await seedUser(ctx.db, { account: 'cs.lead', groups: ['客服主管'] });
       const { response } = await signIn(ctx.app, 'cs.lead');
-      expect(response.body.data.rules).toEqual([{ action: 'read', subject: 'Conversation' }, { action: 'read', subject: 'Feedback' }]);
+      expect(response.body.data.permissions).toEqual([{ action: 'read', subject: 'Conversation' }, { action: 'read', subject: 'Feedback' }]);
     });
 
     it('revokes the session on logout', async () => {

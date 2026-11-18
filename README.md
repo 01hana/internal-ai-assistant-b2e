@@ -29,7 +29,7 @@ npm run local:doctor -- --idx
 npm run local:stop
 ```
 
-The local admin API uses development-only defaults: invitation and reset links are written to `.local-state/assistant/logs/admin.log` instead of being mailed, cookies are not marked `Secure`, Swagger UI is on, and the website origin is the API itself so Swagger UI passes the Origin check. `ADMIN_CUSTOMER_ID` defaults to the Customer of the local Capability Packs. Any `ADMIN_*` value in `.env` overrides these defaults (for example `ADMIN_WEB_ORIGIN` once the admin website runs locally). Create the first account with `npm run admin:bootstrap -- --account <account> --name <name> --email <email>`.
+The local admin API uses development-only defaults: invitation and reset links are written to `.local-state/assistant/logs/admin.log` instead of being mailed, cookies are not marked `Secure`, Swagger UI is on, and the website origin is the API itself so Swagger UI passes the Origin check. `ADMIN_CUSTOMER_ID` defaults to the Customer of the local Capability Packs. Any `ADMIN_*` value in `.env` overrides these defaults (for example `ADMIN_WEB_ORIGIN` once the admin website runs locally). Create the first account with `npm run admin:local:bootstrap -- --account <account> --name <name> --email <email>` (same environment as `local:start`; it prints the first-login link once).
 
 `local:status` is read-only. `local:stop` stops only resources recorded as managed by this orchestration and preserves PostgreSQL data, local signing keys, local CAs, and connector authority. The optional `--idx` doctor delegates to the existing hidden-input diagnostic; `local:start` never asks for, logs, or persists a native AccessToken. Startup validates OpenAI configuration but never sends a live OpenAI request.
 

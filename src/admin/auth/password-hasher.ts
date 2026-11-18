@@ -13,7 +13,7 @@ const SALT_LENGTH = 16;
 // scrypt needs 128 * N * r bytes; the default 32 MiB limit is too small for N = 2^15.
 const MAX_MEMORY = 128 * N * R * 2;
 
-export const PASSWORD_MIN_LENGTH = 12;
+export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
 function scrypt(password: string, salt: Buffer, keyLength: number, options: { N: number; r: number; p: number }): Promise<Buffer> {

@@ -162,7 +162,7 @@ model UserAuditEvent {
 - **撤銷**：登出、停用、重設密碼（`auth/reset`）設 `revokedAt`；刪除使用者時工作階段一併刪除。
 - **鎖定**：密碼錯誤 `failedLoginCount + 1`；達 5 次設 `lockedUntil = now + 15m` 並歸零；成功登入歸零。
 - **CSRF**：登入成功時另發 `admin_csrf` cookie（非 httpOnly、`SameSite=Strict`）；`CsrfGuard` 對 POST／PUT／PATCH／DELETE 檢查 header `X-CSRF-Token` 等於 cookie，且 `Origin` 等於 `ADMIN_WEB_ORIGIN`。`auth/login` 只檢查 `Origin`。
-- **`GET auth/profile`**：回傳 `{ user: { id, account, name, email, status, lastLoginAt, groups: [{ id, name, code }] }, rules }`。前端在開啟或重新整理頁面時呼叫（cookie 是 httpOnly，前端無法自己判斷是否已登入）、改密碼後呼叫；回 401 即導向登入頁。`auth/login` 成功的回應與它相同。
+- **`GET auth/profile`**：回傳 `{ user: { id, account, name, email, status, lastLoginAt, groups: [{ id, name, code }] }, permissions }`（`permissions` 為 CASL 規則 `[{ action, subject }]`）。前端在開啟或重新整理頁面時呼叫（cookie 是 httpOnly，前端無法自己判斷是否已登入）、改密碼後呼叫；回 401 即導向登入頁。`auth/login` 成功的回應與它相同。
 - **設定密碼的連結**（`UserTokenService`）：
   - 產生：32 bytes 隨機值（base64url），資料庫存 `sha256`；產生新代碼時，同一使用者同用途、未使用的舊代碼設為已使用（失效）。首次登入 72 小時、重設 1 小時。
   - `auth/verifyToken { token }` → `{ account, purpose }`；`auth/firstLogin { token, password }` 只接受 `first_login`、`auth/reset { token, password }` 只接受 `reset_password`。無效、已使用、過期、用途不符、使用者已停用或已刪除 → 一律 400 `invalid_or_expired_link`。
@@ -170,7 +170,7 @@ model UserAuditEvent {
   - `firstLogin` 只在使用者尚未設定密碼時有效（已設定則連結視為無效）。
   - `auth/forgot { email }`：一律回相同結果；只對「已設定密碼、啟用中」的使用者寄信；同一 email 15 分鐘內只寄一次（以最近一筆 `reset_password` 代碼的 `createdAt` 判斷）。
   - 連結網址：`${ADMIN_WEB_ORIGIN}/auth/firstLogin?token=…`、`${ADMIN_WEB_ORIGIN}/auth/reset?token=…`。
-- **密碼規則**：至少 12 字元、最多 128 字元；不得與帳號相同。
+- **密碼規則**：至少 8 字元、最多 128 字元；不得與帳號相同（首次登入與重設相同）。
 - **回應欄位白名單**：使用者一律經 `toUserView()` 轉換後回傳，只含 spec 允許的欄位與 `invitationPending = passwordHash === null`（SC-007）。
 - **速率限制**（`@nestjs/throttler`，行程內儲存；單一 `admin-api` 容器足夠，多個容器需改用共用儲存）：只套用在公開的 auth 端點（`@UseGuards(AdminThrottlerGuard)`）。`auth/login` 每個 IP 每分鐘 20 次、每個帳號每分鐘 10 次；`auth/forgot`、`auth/verifyToken`、`auth/firstLogin`、`auth/reset` 每個 IP 每分鐘 10 次。超過時回 429 `TOO_MANY_REQUESTS`（沿用後台錯誤格式）。
 

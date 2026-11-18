@@ -35,18 +35,18 @@
 
 | Method | Path | Body | 回應 `data` |
 | --- | --- | --- | --- |
-| POST | `auth/login` | `{ account, password }` | `{ user, rules }`，並設定兩個 cookie |
+| POST | `auth/login` | `{ account, password }` | `{ user, permissions }`，並設定兩個 cookie |
 | POST | `auth/logout` | — | `null` |
-| GET | `auth/profile` | — | `{ user, rules }` |
+| GET | `auth/profile` | — | `{ user, permissions }` |
 | POST | `auth/verifyToken` | `{ token }` | `{ account, purpose: 'first_login' \| 'reset_password' }` |
 | POST | `auth/firstLogin` | `{ token, password }` | `null` |
 | POST | `auth/forgot` | `{ email }` | `{ accepted: true }`（一律相同，不透露 email 是否存在） |
 | POST | `auth/reset` | `{ token, password }` | `null` |
 
-- 開啟或重新整理需要登入的頁面時呼叫 `auth/profile`：成功就用 `rules` 建立 ability（`createMongoAbility(rules)`，`@casl/ability`）；401 就導向登入頁。
-- `rules` 為 `[{ action, subject }]`，例如 `{ action: 'manage', subject: 'User' }`；開發工程師是 `{ action: 'manage', subject: 'all' }`。選單、路由與按鈕各自標註所需的 `{ action, subject }`，不要用路由名稱當 subject。
+- 開啟或重新整理需要登入的頁面時呼叫 `auth/profile`：成功就用 `permissions` 建立 ability（`createMongoAbility(permissions)`，`@casl/ability`）；401 就導向登入頁。
+- `permissions` 為 CASL 規則 `[{ action, subject }]`，例如 `{ action: 'manage', subject: 'User' }`；開發工程師是 `{ action: 'manage', subject: 'all' }`。選單、路由與按鈕各自標註所需的 `{ action, subject }`，不要用路由名稱當 subject。
 - 信件連結：首次登入 `/auth/firstLogin?token=…`、重設 `/auth/reset?token=…`。頁面讀到 token 後立即從網址移除，用 `auth/verifyToken` 取得帳號顯示；送出成功後導向登入頁。連結無效或過期時 `code` 為 `INVALID_OR_EXPIRED_LINK`。
-- 密碼規則：12–128 個字元、不可與帳號相同（`PASSWORD_TOO_SHORT`、`PASSWORD_TOO_LONG`、`PASSWORD_SAME_AS_ACCOUNT`）。
+- 密碼規則：8–128 個字元、不可與帳號相同（`PASSWORD_TOO_SHORT`、`PASSWORD_TOO_LONG`、`PASSWORD_SAME_AS_ACCOUNT`）。
 - 登入失敗一律為 `INVALID_CREDENTIALS`（不區分帳號不存在、密碼錯誤、停用或鎖定）。
 
 ## 4. 使用者 `users`

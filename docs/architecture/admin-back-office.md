@@ -47,7 +47,7 @@ src/admin/
 
 - **部署**：`deploy/demo/compose.yaml` 的 `admin-api` 服務（Core image、`command: [node, dist/src/admin-main.js]`、`admin.env`、`127.0.0.1:DEMO_ADMIN_HOST_PORT`、`egress` 連 SMTP、healthcheck 使用 `GET /api/v1/admin/health`）。`deploy.sh app`／`upgrade` 啟動或更新它，`deploy.sh admin-bootstrap` 建立第一個帳號。後台網站以獨立網域放在公司 Nginx 後方，網站與 API 同源（`ADMIN_TRUSTED_PROXY_HOPS=1`）。步驟見 [`deploy/demo/README.md`](../../deploy/demo/README.md)「後台 API」。
 - **正式環境限制**：`NODE_ENV=production` 時，`ADMIN_MAIL_TRANSPORT=log`、`ADMIN_COOKIE_SECURE=false`、`ADMIN_ENABLE_SWAGGER_DOCS=true` 都會拒絕啟動。
-- **本機**：`npm run local:start` 一併啟動（3200 埠，信件寫入 `.local-state/assistant/logs/admin.log`，Swagger UI 在 `/api/v1/admin/docs`）；`ADMIN_CUSTOMER_ID` 預設取自本機 Capability Pack，`.env` 的 `ADMIN_*` 可覆寫預設。第一個帳號以 `npm run admin:bootstrap -- --account … --name … --email …` 建立。
+- **本機**：`npm run local:start` 一併啟動（3200 埠，信件寫入 `.local-state/assistant/logs/admin.log`，Swagger UI 在 `/api/v1/admin/docs`）；`ADMIN_CUSTOMER_ID` 預設取自本機 Capability Pack，`.env` 的 `ADMIN_*` 可覆寫預設。第一個帳號以 `npm run admin:local:bootstrap -- --account … --name … --email …` 建立（與 `local:start` 相同的環境，連結只在終端機顯示一次）。
 
 ## 6. 擴充（Feature 015、016）
 

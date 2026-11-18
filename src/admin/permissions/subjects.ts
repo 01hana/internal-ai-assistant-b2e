@@ -1,6 +1,6 @@
 /**
  * Feature 014: the single source of admin back-office permissions. The admin frontend receives the
- * catalogue from `groups/getPermissions` and a user's rules from `auth/profile`; it keeps only the
+ * catalogue from `groups/getPermissions` and a user's permissions from `auth/profile`; it keeps only the
  * subject names as a type. A permission is `{ action, subject }` (CASL `can(action, subject)`),
  * written as `subject:action`. Only four actions exist; `manage` means all of them.
  */

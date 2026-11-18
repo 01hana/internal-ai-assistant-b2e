@@ -52,10 +52,10 @@ describe('admin password hashing', () => {
   });
 
   it.each([
-    ['short', 'a'.repeat(11), 'ops.admin', 'password_too_short'],
+    ['short', 'a'.repeat(7), 'ops.admin', 'password_too_short'],
     ['long', 'a'.repeat(129), 'ops.admin', 'password_too_long'],
     ['same as account', 'Ops.Admin.Account', 'ops.admin.account', 'password_same_as_account'],
-    ['valid', 'a'.repeat(12), 'ops.admin', null]
+    ['valid', 'a'.repeat(8), 'ops.admin', null]
   ])('checks password rules: %s', (_label, password, account, expected) => {
     expect(checkPasswordRules(password, account)).toBe(expected);
   });

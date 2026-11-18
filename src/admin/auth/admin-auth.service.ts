@@ -10,12 +10,13 @@ import type { RequestMeta } from '../common/request-meta';
 import { LOGIN_LOCK_MS, LOGIN_LOCK_THRESHOLD, RESET_PASSWORD_THROTTLE_MS } from '../config/admin-settings';
 import { AdminMailService } from '../mail/admin-mail.service';
 import { toUserView, type UserView } from '../users/user-view';
-import { checkPasswordRules, hashPassword, verifyAgainstDummy, verifyPassword } from './password-hasher';
+import { checkPasswordRules, hashPassword, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, verifyAgainstDummy, verifyPassword } from './password-hasher';
 import { generateSecretToken } from './secret-token';
 import { type SessionUser, UserSessionService } from './user-session.service';
 import { UserTokenService } from './user-token.service';
 
-export type ProfileView = { user: UserView; rules: AdminRule[] };
+/** `permissions` are CASL rules (`[{ action, subject }]`) for the website's ability. */
+export type ProfileView = { user: UserView; permissions: AdminRule[] };
 export type LoginResult = ProfileView & { sessionToken: string; csrfToken: string };
 
 const INVALID_CREDENTIALS = { error: 'invalid_credentials', message: '帳號或密碼錯誤。' };
@@ -77,7 +78,7 @@ export class AdminAuthService {
   }
 
   profile(user: SessionUser): ProfileView {
-    return { user: toUserView(user), rules: adminRules(user.groups) };
+    return { user: toUserView(user), permissions: adminRules(user.groups) };
   }
 
   async verifyToken(token: string, meta: RequestMeta): Promise<{ account: string; purpose: UserTokenPurpose }> {
@@ -152,7 +153,7 @@ function shortHash(value: string): string {
 }
 
 function passwordRuleMessage(violation: string): string {
-  if (violation === 'password_too_short') return '密碼至少需要 12 個字元。';
-  if (violation === 'password_too_long') return '密碼最多 128 個字元。';
+  if (violation === 'password_too_short') return `密碼至少需要 ${PASSWORD_MIN_LENGTH} 個字元。`;
+  if (violation === 'password_too_long') return `密碼最多 ${PASSWORD_MAX_LENGTH} 個字元。`;
   return '密碼不可與帳號相同。';
 }

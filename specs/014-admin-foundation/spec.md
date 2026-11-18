@@ -65,7 +65,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 **Acceptance Scenarios**:
 
 1. **Given** 首次登入連結（`<後台網站>/auth/firstLogin?token=…`），**when** 前端以 `POST auth/verifyToken` 驗證，**then** 回傳該連結對應的帳號（供畫面顯示）與用途；連結無效、已使用或過期時回通用錯誤「連結無效或已過期」。
-2. **Given** 有效的首次登入連結，**when** `POST auth/firstLogin` 送出 `{ token, password }`，**then** 設定密碼、連結失效（同一使用者其他未使用的首次登入連結一併失效）；寫入 `admin_password_set`；前端導向登入頁。新密碼至少 12 字元。連結有效 72 小時、只能使用一次。
+2. **Given** 有效的首次登入連結，**when** `POST auth/firstLogin` 送出 `{ token, password }`，**then** 設定密碼、連結失效（同一使用者其他未使用的首次登入連結一併失效）；寫入 `admin_password_set`；前端導向登入頁。新密碼至少 8 字元。連結有效 72 小時、只能使用一次。
 3. **Given** 正確的帳號與密碼，**when** `POST auth/login`，**then** 建立伺服器端工作階段，以 `HttpOnly; Secure; SameSite=Strict` cookie 回傳不透明的工作階段代碼（瀏覽器 JavaScript 讀不到），回應內容與 `auth/profile` 相同；寫入 `admin_login_succeeded`。
 4. **Given** 帳號不存在、密碼錯誤、使用者停用或尚未設定密碼，**when** 登入，**then** 一律回相同的通用錯誤（不透露是哪一種）；寫入 `admin_login_failed`（不記錄輸入的密碼）。
 5. **Given** 同一帳號連續 5 次密碼錯誤，**when** 再登入，**then** 鎖定 15 分鐘，期間即使密碼正確也拒絕。
@@ -228,7 +228,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 ### 前端契約（給 `internal-ai-assistant-admin`）
 
 - 以 cookie 維持登入，前端不保存任何 token；請求帶 `credentials: 'include'`，狀態變更請求帶 `X-CSRF-Token`（取自 CSRF cookie）。
-- 開啟或重新整理需要登入的頁面時呼叫 `GET auth/profile`：成功即以回傳的 CASL 規則 `createMongoAbility(rules)` 建立 ability；401 即導向登入頁。選單與路由各自標註所需 `{ action, subject }`，不以路由名稱當 subject。
+- 開啟或重新整理需要登入的頁面時呼叫 `GET auth/profile`：成功即以回傳的 CASL 規則 `createMongoAbility(permissions)`（`auth/profile` 回應的 `permissions` 欄位，格式為 CASL 規則 `[{ action, subject }]`） 建立 ability；401 即導向登入頁。選單與路由各自標註所需 `{ action, subject }`，不以路由名稱當 subject。
 - 首次登入頁 `/auth/firstLogin?token=…` 與重設頁 `/auth/reset?token=…`：讀取 token 後立即從網址移除，以 `auth/verifyToken` 取得帳號顯示，送出 `auth/firstLogin`／`auth/reset` 成功後導向登入頁。忘記密碼頁呼叫 `auth/forgot`，一律顯示相同的成功訊息。
 - 群組的權限矩陣以 `groups/getPermissions` 的清單產生（列為 subject、欄為 action），不在前端寫死。
 - 401 → 導向登入頁；403 → 顯示無權限，不登出。
@@ -283,3 +283,5 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 26. **不限制「最高管理者」群組的指派者**（2026-11-18）：具 `User:update` 即可指派；是否把使用者與群組管理權限交給自訂群組，由最高管理者設定群組時把關，保留客戶建立「與最高管理者同等權限」群組的彈性。保留的保護規則：只有開發工程師能指派「開發工程師」群組、不能停用或刪除自己、不能把自己移出所屬內建群組、至少保留一位啟用中的最高管理者、已啟用使用者的 email 唯讀、內建群組不可修改或刪除。
 27. **權限定義不另外打包**（2026-11-18）：放在 `src/admin/permissions/`，不建立獨立的 `packages/` 套件；後台前端在另一個 repo，改由 API 取得權限清單與規則，只在前端保留 subject 名稱的型別。之後若有多個前端或服務需要共用，再抽出成套件。
 28. **Swagger 只供本機測試**（2026-11-18）：`ADMIN_ENABLE_SWAGGER_DOCS=true` 時於 `/api/v1/admin/docs` 提供 Swagger UI，預設關閉，正式環境開啟即拒絕啟動。驗證方式為 session cookie 加 `X-CSRF-Token` header；DTO 欄位由 `@nestjs/swagger` CLI plugin 在 build 時依型別與 class-validator 自動產生，不逐一手寫 `@ApiProperty`。
+29. **密碼最少 8 字元**（2026-11-19）：首次登入與重設共用同一規則：8–128 字元、不可與帳號相同。
+30. **權限欄位統一叫 `permissions`**（2026-11-19）：`auth/login`、`auth/profile` 回應中使用者的權限欄位為 `permissions`（內容為 CASL 規則 `[{ action, subject }]`），與群組的 `permissions`（`subject:action` 字串）同名、格式依用途不同。
