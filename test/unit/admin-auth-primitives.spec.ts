@@ -15,7 +15,7 @@ const baseEnv = {
 describe('admin environment', () => {
   it('accepts a local configuration with the log mail transport and applies defaults', () => {
     const env = validateAdminEnvironment({ ...baseEnv });
-    expect(env).toMatchObject({ ADMIN_PORT: 3200, ADMIN_COOKIE_SECURE: 'true', ADMIN_MAIL_TRANSPORT: 'log', NODE_ENV: 'development' });
+    expect(env).toMatchObject({ ADMIN_PORT: 3200, ADMIN_COOKIE_SECURE: 'true', ADMIN_MAIL_TRANSPORT: 'log', ADMIN_ENABLE_SWAGGER_DOCS: 'false', NODE_ENV: 'development' });
   });
 
   it.each([
@@ -24,6 +24,8 @@ describe('admin environment', () => {
     ['log transport in production', { NODE_ENV: 'production' }, /ADMIN_MAIL_TRANSPORT=log/],
     ['insecure cookie in production', { NODE_ENV: 'production', ADMIN_MAIL_TRANSPORT: 'smtp', ADMIN_SMTP_HOST: 'smtp.example.test',
       ADMIN_SMTP_PORT: '587', ADMIN_MAIL_FROM: 'Admin <no-reply@example.test>', ADMIN_COOKIE_SECURE: 'false' }, /ADMIN_COOKIE_SECURE=false/],
+    ['Swagger docs in production', { NODE_ENV: 'production', ADMIN_MAIL_TRANSPORT: 'smtp', ADMIN_SMTP_HOST: 'smtp.example.test',
+      ADMIN_SMTP_PORT: '587', ADMIN_MAIL_FROM: 'Admin <no-reply@example.test>', ADMIN_ENABLE_SWAGGER_DOCS: 'true' }, /ADMIN_ENABLE_SWAGGER_DOCS=true/],
     ['smtp without host, port and sender', { ADMIN_MAIL_TRANSPORT: 'smtp' }, /ADMIN_SMTP_HOST.*ADMIN_SMTP_PORT.*ADMIN_MAIL_FROM/]
   ])('rejects %s', (_label, override, message) => {
     expect(() => validateAdminEnvironment({ ...baseEnv, ...override })).toThrow(message);

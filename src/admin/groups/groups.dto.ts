@@ -1,7 +1,7 @@
 import { PartialType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
-import { TableQueryDto } from '../common/table-query';
+import { TableQueryDto } from '../common/table-query.dto';
 
 export class GroupTableQueryDto extends TableQueryDto {}
 

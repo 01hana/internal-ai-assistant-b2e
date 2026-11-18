@@ -282,3 +282,4 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 25. **自訂群組可勾選的權限**：除 `all:manage` 外不限制（含 `User`、`UserGroup`），由客戶自由設定。
 26. **不限制「最高管理者」群組的指派者**（2026-11-18）：具 `User:update` 即可指派；是否把使用者與群組管理權限交給自訂群組，由最高管理者設定群組時把關，保留客戶建立「與最高管理者同等權限」群組的彈性。保留的保護規則：只有開發工程師能指派「開發工程師」群組、不能停用或刪除自己、不能把自己移出所屬內建群組、至少保留一位啟用中的最高管理者、已啟用使用者的 email 唯讀、內建群組不可修改或刪除。
 27. **權限定義不另外打包**（2026-11-18）：放在 `src/admin/permissions/`，不建立獨立的 `packages/` 套件；後台前端在另一個 repo，改由 API 取得權限清單與規則，只在前端保留 subject 名稱的型別。之後若有多個前端或服務需要共用，再抽出成套件。
+28. **Swagger 只供本機測試**（2026-11-18）：`ADMIN_ENABLE_SWAGGER_DOCS=true` 時於 `/api/v1/admin/docs` 提供 Swagger UI，預設關閉，正式環境開啟即拒絕啟動。驗證方式為 session cookie 加 `X-CSRF-Token` header；DTO 欄位由 `@nestjs/swagger` CLI plugin 在 build 時依型別與 class-validator 自動產生，不逐一手寫 `@ApiProperty`。

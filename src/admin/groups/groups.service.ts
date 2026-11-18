@@ -9,7 +9,7 @@ import { selectableGroupsWhere } from '../authorization/admin-ability.factory';
 import type { AdminPrincipal } from '../common/admin-request';
 import { isUniqueViolation } from '../common/prisma-errors';
 import type { RequestMeta } from '../common/request-meta';
-import { keywordWhere, orderByOf, pageArgs, type TablePage } from '../common/table-query';
+import { keywordWhere, orderByOf, pageArgs, type TablePage } from '../common/table-query.dto';
 import { isSystemGroupCode, normalizeCustomGroupPermissions, permissionCatalog, SYSTEM_GROUPS } from '../permissions';
 import type { CreateGroupDto, DeleteGroupsDto, GroupTableQueryDto, UpdateGroupDto } from './groups.dto';
 

@@ -38,6 +38,11 @@ export class AdminEnvironmentVariables {
   @IsIn(booleanStrings)
   ADMIN_COOKIE_SECURE: (typeof booleanStrings)[number] = 'true';
 
+  /** Serves Swagger UI at /api/v1/admin/docs. Local development only (rejected in production). */
+  @IsOptional()
+  @IsIn(booleanStrings)
+  ADMIN_ENABLE_SWAGGER_DOCS: (typeof booleanStrings)[number] = 'false';
+
   /** `log` writes mail links to the log instead of sending; local development only. */
   @IsOptional()
   @IsIn(mailTransports)
@@ -84,6 +89,9 @@ export function validateAdminEnvironment(config: Record<string, unknown>): Admin
     if (!validated.ADMIN_SMTP_HOST) messages.push('ADMIN_SMTP_HOST is required when ADMIN_MAIL_TRANSPORT=smtp.');
     if (!validated.ADMIN_SMTP_PORT) messages.push('ADMIN_SMTP_PORT is required when ADMIN_MAIL_TRANSPORT=smtp.');
     if (!validated.ADMIN_MAIL_FROM) messages.push('ADMIN_MAIL_FROM is required when ADMIN_MAIL_TRANSPORT=smtp.');
+  }
+  if (validated.ADMIN_ENABLE_SWAGGER_DOCS === 'true' && validated.NODE_ENV === 'production') {
+    messages.push('ADMIN_ENABLE_SWAGGER_DOCS=true is only allowed outside production.');
   }
   if (validated.ADMIN_COOKIE_SECURE === 'false' && validated.NODE_ENV === 'production') {
     messages.push('ADMIN_COOKIE_SECURE=false is only allowed outside production.');

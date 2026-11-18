@@ -41,6 +41,10 @@ export class AdminSettings {
     return this.env.ADMIN_COOKIE_SECURE === 'true';
   }
 
+  get swaggerDocs(): boolean {
+    return this.env.ADMIN_ENABLE_SWAGGER_DOCS === 'true';
+  }
+
   get mailTransport(): 'smtp' | 'log' {
     return this.env.ADMIN_MAIL_TRANSPORT;
   }

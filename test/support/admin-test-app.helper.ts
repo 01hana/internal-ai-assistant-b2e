@@ -70,7 +70,7 @@ async function acquireAdminDbLock(): Promise<() => Promise<void>> {
  * Points the admin API at the test database and makes sure the configured customer exists — the
  * admin API refuses to start without it (AdminCustomerCheck), so this must run before the app starts.
  */
-export async function configureAdminTestEnvironment(): Promise<void> {
+export async function configureAdminTestEnvironment(overrides: Record<string, string> = {}): Promise<void> {
   const db = createUs1DbClient(); // loads .env.test and checks it is a test database
   try {
     await db.customer.upsert({ where: { id: ADMIN_TEST_CUSTOMER }, create: { id: ADMIN_TEST_CUSTOMER }, update: {} });
@@ -81,14 +81,17 @@ export async function configureAdminTestEnvironment(): Promise<void> {
     ADMIN_WEB_ORIGIN: ADMIN_TEST_ORIGIN,
     ADMIN_CUSTOMER_ID: ADMIN_TEST_CUSTOMER,
     ADMIN_COOKIE_SECURE: 'false',
-    ADMIN_MAIL_TRANSPORT: 'log'
+    ADMIN_MAIL_TRANSPORT: 'log',
+    ADMIN_ENABLE_SWAGGER_DOCS: 'false',
+    ...overrides
   });
 }
 
-export async function createAdminTestApp(): Promise<AdminTestContext> {
+/** `env` overrides the test ADMIN_* settings for this app only (e.g. `{ ADMIN_ENABLE_SWAGGER_DOCS: 'true' }`). */
+export async function createAdminTestApp(env: Record<string, string> = {}): Promise<AdminTestContext> {
   const releaseLock = await acquireAdminDbLock();
   try {
-    await configureAdminTestEnvironment();
+    await configureAdminTestEnvironment(env);
     const clock = new TestClock();
     const mail = new RecordingMail();
     const moduleRef = await Test.createTestingModule({ imports: [AdminModule] })
