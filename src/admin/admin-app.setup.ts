@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser = require('cookie-parser');
 import helmet from 'helmet';
 import { setupSwagger } from '../common/docs/swagger.setup';
@@ -15,6 +16,8 @@ import { ADMIN_CSRF_HEADER, ADMIN_SESSION_COOKIE, AdminSettings } from './config
 export function configureAdminApp(app: INestApplication): void {
   const settings = app.get(AdminSettings);
   app.setGlobalPrefix('api/v1/admin');
+  // Behind nginx the peer is the proxy; the client IP (rate limits, audit) comes from X-Forwarded-For.
+  (app as NestExpressApplication).set('trust proxy', settings.trustedProxyHops);
   // The API returns JSON only; CSP matters for HTML, so it is relaxed only when Swagger UI is served.
   app.use(helmet(settings.swaggerDocs ? { contentSecurityPolicy: false } : {}));
   app.use(cookieParser());

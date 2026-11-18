@@ -88,6 +88,7 @@ export async function configureAdminTestEnvironment(overrides: Record<string, st
     ADMIN_COOKIE_SECURE: 'false',
     ADMIN_MAIL_TRANSPORT: 'log',
     ADMIN_ENABLE_SWAGGER_DOCS: 'false',
+    ADMIN_TRUSTED_PROXY_HOPS: '0',
     ...overrides
   });
 }

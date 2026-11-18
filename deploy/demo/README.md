@@ -13,9 +13,10 @@
 | bridge | `internal-ai-assistant-identity-bridge:TAG-amd64`；`dist/main.js` | 3000 | `127.0.0.1:DEMO_BRIDGE_HOST_PORT` | Connector TLS healthy、MenuDetail HTTPS、Signing/JWKS |
 | gateway | `internal-ai-assistant-gateway:TAG-amd64`；`dist/main.js` | 4000 | `127.0.0.1:DEMO_GATEWAY_HOST_PORT` | Migration success、Bridge healthy、TrustProfile |
 | core | `internal-ai-assistant-core:TAG`；`dist/src/main.js` | 3000 | 無 | Migration success、Gateway/Connector TLS healthy、PostgreSQL |
+| admin-api | `internal-ai-assistant-core:TAG`；`dist/src/admin-main.js` | 3200 | `127.0.0.1:DEMO_ADMIN_HOST_PORT` | Migration success、`ADMIN_CUSTOMER_ID` 已存在、SMTP |
 | edge | 可選 Nginx Profile | 8443/TLS | Operator 選定 | 公司既有 Nginx 主機不啟用 |
 
-每個應用服務指定 `linux/amd64`。`backend` Network 是 private；`egress` 只供需要出站的服務；`ingress` 供可選 Edge 與 Gateway/Bridge。只有 Gateway/Bridge 發布固定 Loopback Host Port。公司 Nginx 若不在 Host Network Namespace，這些 `127.0.0.1` Upstream 不能直接使用，須先由 IT 確認，不能改成 `0.0.0.0` 當作捷徑。公司 Host 的 80/443/9000 已在使用，本 Compose 不佔用它們。
+每個應用服務指定 `linux/amd64`。`backend` Network 是 private；`egress` 只供需要出站的服務；`ingress` 供可選 Edge 與 Gateway/Bridge。只有 Gateway/Bridge/後台 API 發布固定 Loopback Host Port。公司 Nginx 若不在 Host Network Namespace，這些 `127.0.0.1` Upstream 不能直接使用，須先由 IT 確認，不能改成 `0.0.0.0` 當作捷徑。公司 Host 的 80/443/9000 已在使用，本 Compose 不佔用它們。
 
 Gateway、Bridge、Connector 的 Image 使用非 root `node`；Core Dockerfile 目前沒有 `USER` 指令，Runtime User 為 root，須列入安全審查。PostgreSQL/Caddy 由核准 Image 決定。Compose 配有 healthcheck、依賴條件、`unless-stopped`、json-file 日誌輪替；migration 用 `restart: "no"`。Gateway `/health` 只是 Process Health；`/readiness` 目前固定 `productionReady: false`，不可當作正式信任鏈 Gate。
 
@@ -29,11 +30,21 @@ Gateway、Bridge、Connector 的 Image 使用非 root `node`；Core Dockerfile �
 
 Gateway `/health` 與 Bridge `/ready` 僅供內部/Host 健康查驗，不加入公開網站。核對公司 Nginx Network Namespace、TLS 憑證、公開 DNS、Allowed Origins、JWKS URL 與 Host Port 實際可達性。可選 `self-managed-https` Edge Profile 預設關閉，不能與公司 Nginx 搶 80/443。
 
+## 後台 API（Feature 014）
+
+後台 API 與 Core 使用同一個 image，以 `node dist/src/admin-main.js` 啟動為獨立容器 `admin-api`，路徑前綴 `/api/v1/admin`，一個部署只服務一個 Customer（`ADMIN_CUSTOMER_ID`，啟動時必須已存在）。架構見 [`docs/architecture/admin-back-office.md`](../../docs/architecture/admin-back-office.md)。
+
+1. **設定**：依 `config/admin.env.example` 建立 `$DEMO_CONFIG_DIR/admin.env`（權限 600）：`DATABASE_URL`（與 Core 相同）、`ADMIN_CUSTOMER_ID`、`ADMIN_WEB_ORIGIN`（後台網站的 `https://` 來源）、`ADMIN_MAIL_FROM` 與 `ADMIN_SMTP_*`。SMTP 密碼與其他服務的密碼一樣放在這個 env 檔。`compose.env` 新增 `DEMO_ADMIN_HOST_PORT`（核准的 loopback port）。`NODE_ENV=production` 下，信件改寫入日誌、cookie 不加 Secure、開啟 Swagger 都會拒絕啟動。
+2. **網路**：`admin-api` 需要能連到 SMTP 伺服器（`egress`）；`ADMIN_TRUSTED_PROXY_HOPS=1` 固定在 Compose，代表前面恰好有一層公司 Nginx，速率限制與稽核使用 Nginx 帶入的 `X-Forwarded-For`。不要讓外部直接連到 host port。
+3. **Nginx**：後台網站使用獨立網域，同一個 server block 提供網站靜態檔與 `/api/v1/admin/` 轉送（見 `nginx-host-routes.example.conf` 末段）；`/api/v1/admin/health` 只供主機與 Compose 健康檢查，不對外開放。Nginx 跑在 Docker 時，`compose.company-nginx.yaml` 讓 `admin-api` 以別名 `ai-assistant-admin` 加入公司代理網路。
+4. **首次部署**：`preflight` 會檢查 `admin.env` 與 port；`app` 在 Core 之後啟動 `admin-api` 並等 healthy。接著執行 `./deploy.sh admin-bootstrap <compose.env> --account <帳號> --name <名稱> --email <email>` 建立第一個帳號（開發工程師群組）：只在沒有任何後台使用者時可執行，寄出首次登入信並在終端機顯示一次連結（72 小時、單次有效）。寄信結果會顯示在輸出中，可藉此確認 SMTP 設定。之後的帳號一律由後台建立並寄邀請信。
+5. **升級既有部署**：新版的 `compose.yaml` 含 `admin-api`，缺少 `admin.env` 或 `DEMO_ADMIN_HOST_PORT` 時整個 Compose 專案都無法解析，所以 `upgrade` 會先檢查，缺少就停止且不做任何變更。準備好設定後執行 `upgrade`，它會在 Gateway 之後啟動／更新 `admin-api`；首次升級到含後台的版本後再執行一次 `admin-bootstrap`。
+
 ## 信任、TLS、Secrets 與正式資料
 
 Bridge 使用正式 IDX MenuDetail HTTPS 與 Destination CIDR Policy 核驗身分和 Entry，並以正式 Signing Key 發 Bridge JWT/JWKS；Connector Binding 必須走核准的 HTTPS。Gateway 驗 Bridge JWKS、Integration Binding/TrustProfile，簽 Internal JWT；Core 驗 Gateway JWKS，實施 Customer/Integration Session Ownership、Capability、Tool Policy、Query Scope、Evidence/History。Connector 驗 Signed Service Proof、Binding、Replay、Manifest Allowlist、HTTPS Destination 與 Credential Scope。`ASSISTANT_LLM_TOOL_SELECTION_ENABLED=true` 固定在 Compose；不能以關閉它處理測試失敗。Legacy `integrationId=NULL` Session 仍不得被接受。
 
-Operator 在 Git 與 Build Context 之外提供 `compose.env`、五個 Service Env Files、Active Pack 與 `secrets:` 所列私鑰、憑證、CA。範本在 `config/`，其中空值和 `REPLACE_WITH_...` 都不是可部署值。保持 Secret Source 最小讀取權限，並查驗容器 User 能讀取所需 Secret；Compose Secret Mount 本身不保證可讀。不要複製開發者 `.env`、真實 Token、合成 Signing Key 或測試 Customer。不要將展開後的 `docker compose config` 輸出附在紀錄中；用 `config --quiet`。
+Operator 在 Git 與 Build Context 之外提供 `compose.env`、六個 Service Env Files、Active Pack 與 `secrets:` 所列私鑰、憑證、CA。範本在 `config/`，其中空值和 `REPLACE_WITH_...` 都不是可部署值。保持 Secret Source 最小讀取權限，並查驗容器 User 能讀取所需 Secret；Compose Secret Mount 本身不保證可讀。不要複製開發者 `.env`、真實 Token、合成 Signing Key 或測試 Customer。不要將展開後的 `docker compose config` 輸出附在紀錄中；用 `config --quiet`。
 
 `DEMO_BACKEND_SUBNET` 不得與公司/VPN 網段衝突，須納入 Core/Bridge 對 Connector TLS DNS Alias 的 Destination Policy。Connector TLS 憑證 SAN 必須符合 `DEMO_CONNECTOR_TLS_HOST`，CA 加入 `trusted-ca.pem`，不可停用驗證。Bridge MenuDetail、Connector KPIStats 所需的正式 HTTPS URL、DNS、CIDR Allowlist、出站 Firewall 與 Credential Binding 仍待 IT/Backend 團隊確認；HTTP API 不能當作安全替代。Core Env 的 Pack Paths 必須指向掛載的正式 Active Pack；Repo 內 KPIStats Pack 仍是 inactive 且含本機識別值。
 

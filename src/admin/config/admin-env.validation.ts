@@ -25,6 +25,17 @@ export class AdminEnvironmentVariables {
   @Max(65535)
   ADMIN_PORT = 3200;
 
+  /**
+   * Reverse proxies in front of the API (Express `trust proxy` hop count). With 1, the client IP used
+   * for rate limits and audit is the one the proxy adds to X-Forwarded-For. 0 = connected directly.
+   */
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(0)
+  @Max(5)
+  ADMIN_TRUSTED_PROXY_HOPS = 0;
+
   /** The admin website origin, e.g. https://admin.example.com. Used for CORS, Origin checks and mail links. */
   @IsUrl({ require_tld: false, require_protocol: true, protocols: ['http', 'https'] })
   ADMIN_WEB_ORIGIN!: string;

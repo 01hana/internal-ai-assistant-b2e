@@ -179,7 +179,7 @@ model UserAuditEvent {
 - `AdminMailService.send({ to, subject, text, html })`，傳輸方式由 `ADMIN_MAIL_TRANSPORT` 決定：`smtp`（預設，`nodemailer` + `ADMIN_SMTP_*`）或 `log`（只把收件者、主旨與連結寫入日誌；`NODE_ENV=production` 時拒絕啟動）。
 - 範本：邀請信（帳號、連結、72 小時期限）、重設信（帳號、連結、1 小時期限、「若非本人申請請忽略」）。純文字與簡單 HTML，不含密碼或其他使用者資料；寄件者名稱與主旨中不放客戶專屬文字（由 `ADMIN_MAIL_FROM` 決定顯示名稱）。
 - 寄信失敗：建立使用者與重寄邀請時，使用者資料照常寫入，回應 `inviteSent: false`，稽核事件記錄寄送結果（不含 SMTP 錯誤細節中的帳密）；`auth/forgot` 寄信失敗時仍回相同結果，只寫日誌。
-- 啟動時不連 SMTP（避免郵件伺服器暫時不通導致後台無法啟動）；`local:doctor`／部署 preflight 另提供寄測試信的指令 `npm run admin:mail:test -- --to <email>`。
+- 啟動時不連 SMTP（避免郵件伺服器暫時不通導致後台無法啟動）。部署時以 `deploy.sh admin-bootstrap` 的寄信結果確認 SMTP 設定（輸出會顯示是否寄出，連結也同時顯示在終端機），不另設寄測試信的指令。
 
 ## D5. 列表（getTable／getFilters／getOptions）
 
@@ -207,9 +207,9 @@ model UserAuditEvent {
 
 - `deploy/demo/compose.yaml` 新增 `admin-api` 服務：`image` 與 `core` 相同、`command: [node, dist/src/admin-main.js]`、`env_file: admin.env`、`ports: 127.0.0.1:${DEMO_ADMIN_HOST_PORT}:3200`、`networks: [backend, ingress]`、依賴 `migrate` 完成。
 - `deploy.sh`：`app` 與 `upgrade` 一併啟動 `admin-api`；新增 `admin-bootstrap` 子指令（`dc run --rm admin-api node dist/src/admin/bootstrap/admin-bootstrap.cli.js …`）。
-- `prepare-delivery.sh` 產生 `admin.env` 範本（`ADMIN_CUSTOMER_ID` 取自該客戶的設定；`ADMIN_WEB_ORIGIN`、`ADMIN_SMTP_*`、`ADMIN_MAIL_FROM` 由部署者填寫；SMTP 密碼以 compose secret 提供，不寫入 env 範本；不含任何主機位址）。
-- `admin-api` 需能連到 SMTP 伺服器：compose 網路加入 `egress`（或部署者指定的郵件網路）。
-- `deploy/demo/nginx-host-routes.example.conf` 新增後台網域範例（網站靜態檔與 `/api/v1/admin/` 轉送）。
+- `admin.env` 範本為 `deploy/demo/config/admin.env.example`（與其他服務的範本一致；`DATABASE_URL`、`ADMIN_CUSTOMER_ID`、`ADMIN_WEB_ORIGIN`、`ADMIN_MAIL_FROM`、`ADMIN_SMTP_*` 由部署者填寫；SMTP 密碼與其他服務的密碼一樣放在權限 600 的 env 檔；不含任何主機位址）。`deploy.sh preflight` 檢查 `admin.env` 與 `DEMO_ADMIN_HOST_PORT`。
+- `admin-api` 需能連到 SMTP 伺服器：compose 網路加入 `egress`（或部署者指定的郵件網路）。前面恰好一層公司 Nginx：Compose 固定 `ADMIN_TRUSTED_PROXY_HOPS=1`（Express `trust proxy`），速率限制與稽核使用 Nginx 帶入的 `X-Forwarded-For`；預設 0（直接連線，例如本機）。
+- `deploy/demo/nginx-host-routes.example.conf` 新增後台網域範例（網站靜態檔與 `/api/v1/admin/` 轉送，網站與 API 同源；`health` 與 `docs` 不對外）；`compose.company-nginx.yaml` 讓 `admin-api` 以別名 `ai-assistant-admin` 加入公司代理網路。`upgrade` 在變更前檢查 `admin.env` 與 port（新版 compose 缺少它們時整個專案無法解析）。
 - 本機：`dev/local-assistant` 的 `PORTS` 新增 `admin: 3200`，`local:start` 啟動 `node dist/src/admin-main.js`（`ADMIN_CUSTOMER_ID` 預設取自本機 Capability Pack 的 Customer，不寫死在程式；`ADMIN_WEB_ORIGIN` 預設為 API 本身 `http://localhost:3200`，讓 Swagger UI 通過 Origin 檢查，後台網站在本機啟動後於 `.env` 改為網站來源；`ADMIN_COOKIE_SECURE=false`、`ADMIN_MAIL_TRANSPORT=log`、`ADMIN_ENABLE_SWAGGER_DOCS=true` 僅限本機；`.env` 中任何 `ADMIN_*` 皆可覆寫預設；邀請與重設連結寫入 `.local-state/assistant/logs/admin.log`）。後台 API 提供公開的 `GET health`（含資料庫檢查），供 `local:start`／`local:status` 與容器 healthcheck 使用。
 
 ## D9. 測試

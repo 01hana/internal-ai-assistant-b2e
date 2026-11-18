@@ -37,6 +37,10 @@ export class AdminSettings {
     return this.env.ADMIN_CUSTOMER_ID;
   }
 
+  get trustedProxyHops(): number {
+    return this.env.ADMIN_TRUSTED_PROXY_HOPS;
+  }
+
   get cookieSecure(): boolean {
     return this.env.ADMIN_COOKIE_SECURE === 'true';
   }

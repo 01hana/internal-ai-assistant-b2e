@@ -10,8 +10,9 @@
 #   ./deploy.sh edge       <compose.env>                 # 啟動 connector、connector-tls、bridge
 #   ./deploy.sh provision  <compose.env>                 # 先唯讀檢查，再建立 Customer、TrustProfile、簽章金鑰、工具政策
 #   ./deploy.sh experience <compose.env>                 # 先唯讀檢查，再寫入並啟用 Assistant 體驗設定（開場、Quick Reply、延伸建議）
-#   ./deploy.sh app        <compose.env>                 # 啟動 gateway → 啟用簽章金鑰 → 啟動 core
-#   ./deploy.sh upgrade    <compose.env> <images.tar> <sha256>  # 升級既有部署：備份 → 載入 → 切換 TAG → migration → 體驗設定 → core → gateway → edge
+#   ./deploy.sh app        <compose.env>                 # 啟動 gateway → 啟用簽章金鑰 → 啟動 core → 啟動後台 API
+#   ./deploy.sh admin-bootstrap <compose.env> --account <a> --name <n> --email <e>  # 建立第一個後台帳號（開發工程師），只在沒有任何後台使用者時可執行
+#   ./deploy.sh upgrade    <compose.env> <images.tar> <sha256>  # 升級既有部署：備份 → 載入 → 切換 TAG → migration → 體驗設定 → core → gateway → 後台 API → edge
 #   ./deploy.sh backup     <compose.env>                 # 備份資料庫到 backups/
 #   ./deploy.sh status     <compose.env>                 # 查看本專案容器狀態與最近日誌
 #   ./deploy.sh stop       <compose.env>                 # 只停止本專案容器，保留資料與日誌
@@ -25,7 +26,7 @@ die()  { echo "✗ $*" >&2; exit 1; }
 ok()   { echo "✓ $*"; }
 warn() { echo "! $*"; }
 
-[ -n "$CMD" ] && [ -n "$ENV_FILE" ] || { sed -n '2,16p' "$0"; exit 1; }
+[ -n "$CMD" ] && [ -n "$ENV_FILE" ] || { sed -n '2,18p' "$0"; exit 1; }
 [ -f "$ENV_FILE" ] || die "找不到 compose.env：$ENV_FILE"
 ENV_FILE="$(cd "$(dirname "$ENV_FILE")" && pwd)/$(basename "$ENV_FILE")"
 
@@ -103,6 +104,11 @@ start_edge() {
   wait_healthy bridge 120
 }
 
+start_admin() { # 需要 migration 完成、ADMIN_CUSTOMER_ID 已存在（provision 之後）
+  dc up -d --pull never --no-build --no-deps admin-api
+  wait_healthy admin-api 120
+}
+
 check_images() {
   local tpl ref arch
   for tpl in "${APP_IMAGES[@]}"; do
@@ -122,12 +128,12 @@ preflight() {
 
   echo "== compose.env"
   if grep -nE '=(REPLACE_WITH_|/absolute/path/)' "$ENV_FILE"; then warn "上列仍是範本值"; fail=1; else ok "沒有範本佔位值"; fi
-  for v in DEMO_IMAGE_TAG DEMO_POSTGRES_IMAGE DEMO_CADDY_IMAGE DEMO_CONFIG_DIR DEMO_SECRET_DIR DEMO_CAPABILITY_PACK_DIR DEMO_POSTGRES_USER DEMO_POSTGRES_DB DEMO_CONNECTOR_TLS_HOST DEMO_BACKEND_SUBNET DEMO_GATEWAY_HOST_PORT DEMO_BRIDGE_HOST_PORT; do
+  for v in DEMO_IMAGE_TAG DEMO_POSTGRES_IMAGE DEMO_CADDY_IMAGE DEMO_CONFIG_DIR DEMO_SECRET_DIR DEMO_CAPABILITY_PACK_DIR DEMO_POSTGRES_USER DEMO_POSTGRES_DB DEMO_CONNECTOR_TLS_HOST DEMO_BACKEND_SUBNET DEMO_GATEWAY_HOST_PORT DEMO_BRIDGE_HOST_PORT DEMO_ADMIN_HOST_PORT; do
     [ -n "$(envval $v)" ] || { warn "$v 未設定"; fail=1; }
   done
 
   echo "== 服務設定檔（${CONFIG_DIR}）"
-  for f in database core gateway bridge connector; do
+  for f in database core gateway bridge connector admin; do
     p="$CONFIG_DIR/$f.env"
     if [ ! -f "$p" ]; then warn "缺少 $p"; fail=1; continue; fi
     grep -qE '=REPLACE_WITH_' "$p" && { warn "$f.env 含範本值"; fail=1; }
@@ -136,6 +142,10 @@ preflight() {
     [ "$(stat -c %a "$p")" = 600 ] || warn "$f.env 權限是 $(stat -c %a "$p")，建議 600"
   done
   grep -qE '^OPENAI_API_KEY=.+' "$CONFIG_DIR/core.env" 2>/dev/null || { warn "core.env 的 OPENAI_API_KEY 尚未填入"; fail=1; }
+  grep -qE '^ADMIN_WEB_ORIGIN=https://' "$CONFIG_DIR/admin.env" 2>/dev/null || { warn "admin.env 的 ADMIN_WEB_ORIGIN 必須是後台網站的 https:// 網址"; fail=1; }
+  for v in ADMIN_CUSTOMER_ID ADMIN_MAIL_FROM ADMIN_SMTP_HOST ADMIN_SMTP_PORT; do
+    grep -qE "^$v=.+" "$CONFIG_DIR/admin.env" 2>/dev/null || { warn "admin.env 的 $v 尚未填入"; fail=1; }
+  done
   [ -s "$PACK_DIR/shinmone-scm-kpistats.json" ] || { warn "Active Pack 尚未上傳到 $PACK_DIR"; fail=1; }
   grep -qE '^GATEWAY_SIGNING_KEY_REFERENCE=file://' "$CONFIG_DIR/gateway.env" 2>/dev/null || { warn "gateway.env 的 GATEWAY_SIGNING_KEY_REFERENCE 必須是 file:///run/secrets/gateway_signing_key"; fail=1; }
 
@@ -146,7 +156,7 @@ preflight() {
   [ -d "$PACK_DIR" ] && ok "Active Pack 目錄存在" || { warn "找不到 Active Pack 目錄 $PACK_DIR"; fail=1; }
 
   echo "== Port 與網段"
-  for p in "$(envval DEMO_GATEWAY_HOST_PORT)" "$(envval DEMO_BRIDGE_HOST_PORT)"; do
+  for p in "$(envval DEMO_GATEWAY_HOST_PORT)" "$(envval DEMO_BRIDGE_HOST_PORT)" "$(envval DEMO_ADMIN_HOST_PORT)"; do
     [ -z "$p" ] && continue
     if ss -ltn "( sport = :$p )" 2>/dev/null | grep -q LISTEN; then
       dc ps --format '{{.Publishers}}' 2>/dev/null | grep -q ":$p->" && ok "127.0.0.1:$p 由本專案使用中" || { warn "Port $p 已被其他程式占用"; fail=1; }
@@ -214,8 +224,13 @@ case "$CMD" in
     provision activate-key || die "Gateway 簽章金鑰啟用失敗，Core 未啟動"
     dc up -d --pull never --no-build --no-deps core
     wait_healthy core 240
+    start_admin
     dc ps
     ok "所有服務已啟動。Compose healthy 不等於業務與安全驗收通過，請接著做 E2E 測試。" ;;
+  admin-bootstrap)
+    check_images
+    # 在後台 API 的 image 與 admin.env 內執行；邀請連結會寄出，並只在這個終端機顯示一次
+    dc run --rm --no-deps -T admin-api node dist/src/admin/bootstrap/admin-bootstrap.cli.js "${@:3}" ;;
   backup) backup_db manual ;;
   upgrade)
     TAR="${3:-}"; SUM="${4:-}"
@@ -230,6 +245,8 @@ print(tags[0] if len(tags) == 1 else "")' 2>/dev/null || true)"
     OLD_TAG="$TAG"
     [ "$NEW_TAG" != "$OLD_TAG" ] || die "新舊 TAG 相同（${NEW_TAG}）"
     [ -s "$DIR/provision/assistant-experience.json" ] || die "缺少 provision/assistant-experience.json（開發機執行 prepare-delivery.sh 後上傳）"
+    # Feature 014 起 compose.yaml 含後台 API；缺少設定時整個 compose 專案都無法解析，先停在這裡（尚未改動任何東西）
+    [ -s "$CONFIG_DIR/admin.env" ] && [ -n "$(envval DEMO_ADMIN_HOST_PORT)" ] || die "缺少 $CONFIG_DIR/admin.env 或 compose.env 的 DEMO_ADMIN_HOST_PORT（見 README「後台 API」），未做任何變更"
     echo "== 升級 $OLD_TAG → $NEW_TAG"
     [ "$(sha256sum "$TAR" | cut -c1-64)" = "$(cut -c1-64 "$SUM")" ] && ok "SHA-256 校驗通過" || die "SHA-256 不符，停止"
     docker load -i "$TAR"
@@ -244,12 +261,13 @@ print(tags[0] if len(tags) == 1 else "")' 2>/dev/null || true)"
     echo; echo "== 4/6 體驗設定"
     experience check || die "體驗設定檢查失敗，未寫入；服務仍在舊版執行"
     experience write
-    echo; echo "== 5/6 Core → Gateway（Core 先升級，避免新 Gateway 轉發舊 Core 不認得的請求）"
+    echo; echo "== 5/6 Core → Gateway → 後台 API（Core 先升級，避免新 Gateway 轉發舊 Core 不認得的請求）"
     dc up -d --pull never --no-build --no-deps core
     wait_healthy core 240
     dc up -d --pull never --no-build --no-deps gateway
     wait_healthy gateway 120
     provision activate-key || die "Gateway 簽章金鑰檢查失敗"
+    start_admin
     echo; echo "== 6/6 Connector / Bridge"
     start_edge
     echo; dc ps

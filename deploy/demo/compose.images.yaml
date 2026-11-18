@@ -11,3 +11,5 @@ services:
     build: !reset null
   connector:
     build: !reset null
+  admin-api:
+    build: !reset null

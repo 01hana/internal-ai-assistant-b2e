@@ -159,6 +159,38 @@ services:
     restart: unless-stopped
     logging: *logs
 
+  # Feature 014: back-office API — same Core image, its own process, port and env file. Serves one
+  # Customer (ADMIN_CUSTOMER_ID); needs egress only for the SMTP server.
+  admin-api:
+    image: internal-ai-assistant-core:${DEMO_IMAGE_TAG:?}
+    platform: linux/amd64
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    command: [node, dist/src/admin-main.js]
+    env_file: ${DEMO_CONFIG_DIR:?}/admin.env
+    environment:
+      NODE_ENV: production
+      ADMIN_PORT: "3200"
+      # The company nginx is the one proxy in front of the API (client IP from X-Forwarded-For).
+      ADMIN_TRUSTED_PROXY_HOPS: "1"
+      NODE_EXTRA_CA_CERTS: /run/secrets/trusted_ca
+    secrets: [trusted_ca]
+    ports:
+      - "127.0.0.1:${DEMO_ADMIN_HOST_PORT:?Set an approved loopback port}:3200"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [backend, egress, ingress]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3200/api/v1/admin/health').then(r=>r.json()).then(b=>{if(b.data?.status!=='healthy')process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+    restart: unless-stopped
+    logging: *logs
+
 networks:
   backend:
     internal: true

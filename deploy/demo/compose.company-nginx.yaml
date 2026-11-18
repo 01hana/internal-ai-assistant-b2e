@@ -6,6 +6,7 @@
 # Nginx UI 的 upstream：
 #   /api/v1/assistant/**            -> http://ai-assistant-gateway:4000
 #   /assistant-identity/**          -> http://ai-assistant-bridge:3000/  （去掉 /assistant-identity 前綴）
+#   後台網域 /api/v1/admin/**        -> http://ai-assistant-admin:3200     （保留完整路徑）
 services:
   gateway:
     networks:
@@ -15,6 +16,10 @@ services:
     networks:
       company-proxy:
         aliases: [ai-assistant-bridge]
+  admin-api:
+    networks:
+      company-proxy:
+        aliases: [ai-assistant-admin]
 
 networks:
   company-proxy:
