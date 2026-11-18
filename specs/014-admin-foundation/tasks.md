@@ -33,16 +33,20 @@
 
 ## Phase 2 — 登入與工作階段
 
-- [ ] T008 `src/admin-main.ts`、`AdminModule`、後台環境變數驗證（`ADMIN_PORT`、`ADMIN_WEB_ORIGIN`、`ADMIN_CUSTOMER_ID`、`ADMIN_COOKIE_SECURE`、`ADMIN_SMTP_*`、`ADMIN_MAIL_*`）。
-- [ ] T009 密碼雜湊（scrypt）與密碼規則；連結代碼服務（產生、驗證、使用、失效）；寄信服務（SMTP／log 傳輸、邀請信與重設信範本、`admin:mail:test`）；單元測試。
-- [ ] T010 工作階段服務（建立、驗證閒置／絕對逾時、撤銷、`lastSeenAt` 節流）；可注入時鐘的單元測試。
+- [x] T008 `src/admin-main.ts`、`AdminModule`、後台環境變數驗證（`ADMIN_PORT`、`ADMIN_WEB_ORIGIN`、`ADMIN_CUSTOMER_ID`、`ADMIN_COOKIE_SECURE`、`ADMIN_SMTP_*`、`ADMIN_MAIL_*`）。
+- [x] T009 密碼雜湊（scrypt）與密碼規則；連結代碼服務（產生、驗證、使用、失效）；寄信服務（SMTP／log 傳輸、邀請信與重設信範本、`admin:mail:test`）；單元測試。
+- [x] T010 工作階段服務（建立、驗證閒置／絕對逾時、撤銷、`lastSeenAt` 節流）；可注入時鐘的單元測試。
 - [ ] T011 `AdminAuthGuard`、`CsrfGuard`、登入限流。
 - [ ] T012 `auth/login`、`auth/logout`、`auth/profile`、`auth/verifyToken`、`auth/firstLogin`、`auth/forgot`、`auth/reset`；鎖定規則；`ADMIN_CUSTOMER_ID` 啟動檢查。
-- [ ] T013 `UserAuditService` 與登入相關事件。
+- [ ] T013 `UserAuditService` 與登入相關事件。（服務已於第一批完成；登入相關事件於第二批接上）
 - [ ] T014 `admin:bootstrap` CLI 與 npm script。
 - [ ] T015 DB 測試：US1、US2 全部情境；稽核事件、日誌與回應不含密碼、工作階段代碼與連結代碼。
 - [ ] T016 架構測試：`AppModule` 不引入 `src/admin/**`；`src/admin/**` 不引入 Assistant／LLM 模組；Core 路由沒有 `/admin`。
 - [ ] T017 **Gate 2**：Phase 2 測試、全套、typecheck、lint。`FEATURE014_GATE_2=PASS`。
+
+**Phase 2 執行證據**（分兩批）：
+
+- 第一批（2026-11-18，地基）：`src/admin-main.ts`（前綴 `api/v1/admin`、cookie-parser、只允許 `ADMIN_WEB_ORIGIN` 的 CORS、沿用 Core 的 ValidationPipe／filter／envelope）；`AdminModule`（只引入 `AdminConfigModule`、`PrismaModule`）；`admin-env.validation.ts`（獨立於 Core 的環境變數；`log` 寄信與 `ADMIN_COOKIE_SECURE=false` 在 production 拒絕；`smtp` 需 host、port、寄件者）；`AdminSettings`（逾時與期限常數、cookie 名稱、連結網址）；`AdminCustomerCheck`（`ADMIN_CUSTOMER_ID` 不存在即拒絕啟動）；`password-hasher.ts`（scrypt N=2^15、`timingSafeEqual`、帳號不存在時比對假雜湊、密碼規則）；`secret-token.ts`（32 bytes base64url、只存 sha256）；`UserTokenService`（產生時讓同用途舊連結失效、驗證狀態與用途、單次使用）；`UserSessionService`（閒置 30 分鐘／絕對 12 小時、`lastSeenAt` 每分鐘最多寫一次、撤銷）；`AdminMailService`（邀請信與重設信只含連結、帳號、期限；寄送失敗回 false，不記錄信件內容）與 `smtp`／`log` 傳輸；`UserAuditService`。單元測試 `admin-auth-primitives.spec.ts`、`admin-mail.spec.ts`。VM：Core 與 spec typecheck、eslint 通過；以 node 直接驗證雜湊、環境驗證與信件內容，結果與測試預期一致。
 
 ## Phase 3 — 權限、使用者與群組
 
