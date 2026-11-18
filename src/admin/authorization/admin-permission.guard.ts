@@ -1,7 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { AdminRequest } from '../common/admin-request';
-import { buildAdminAbility } from './admin-ability.factory';
 import { ROUTE_ACCESS, type RouteAccess } from './route-access.decorator';
 
 /** Rejects routes without an access declaration and signed-in users lacking the declared permission. */
@@ -15,7 +14,7 @@ export class AdminPermissionGuard implements CanActivate {
     if (access.kind !== 'permission') return true;
 
     const principal = context.switchToHttp().getRequest<AdminRequest>().adminPrincipal;
-    if (!principal || !buildAdminAbility(principal.user.groups).can(access.action, access.subject)) {
+    if (!principal || !access.anyOf.some(([action, subject]) => principal.ability.can(action, subject))) {
       throw new ForbiddenException({ error: 'permission_denied', message: '沒有權限。' });
     }
     return true;

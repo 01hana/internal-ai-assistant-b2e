@@ -16,6 +16,8 @@ import { ADMIN_CLOCK, systemClock } from './common/clock';
 import { AdminConfigModule } from './config/admin-config.module';
 import { AdminCustomerCheck } from './config/admin-customer.check';
 import { AdminSettings } from './config/admin-settings';
+import { GroupsController } from './groups/groups.controller';
+import { GroupsService } from './groups/groups.service';
 import { AdminMailService } from './mail/admin-mail.service';
 import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mail/admin-mail.transport';
 
@@ -25,7 +27,7 @@ import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mai
  */
 @Module({
   imports: [AdminConfigModule, PrismaModule, ThrottlerModule.forRoot(ADMIN_THROTTLERS)],
-  controllers: [AdminAuthController],
+  controllers: [AdminAuthController, GroupsController],
   providers: [
     // Order matters: session → CSRF → permission.
     { provide: APP_GUARD, useClass: AdminSessionGuard },
@@ -42,6 +44,7 @@ import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mai
     AdminCustomerCheck,
     AdminThrottlerGuard,
     AdminMailService,
+    GroupsService,
     UserAuditService,
     UserSessionService,
     UserTokenService

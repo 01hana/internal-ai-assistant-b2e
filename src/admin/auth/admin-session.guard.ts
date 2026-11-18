@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { isDeveloper } from '../authorization/admin-ability.factory';
+import { buildAdminAbility, isDeveloper } from '../authorization/admin-ability.factory';
 import { ROUTE_ACCESS, type RouteAccess } from '../authorization/route-access.decorator';
 import type { AdminRequest } from '../common/admin-request';
 import { ADMIN_SESSION_COOKIE } from '../config/admin-settings';
@@ -18,7 +18,12 @@ export class AdminSessionGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AdminRequest>();
     const found = await this.sessions.validate(request.cookies?.[ADMIN_SESSION_COOKIE]);
     if (!found) throw new UnauthorizedException({ error: 'session_required', message: '請重新登入。' });
-    request.adminPrincipal = { user: found.user, session: found.session, isDeveloper: isDeveloper(found.user.groups) };
+    request.adminPrincipal = {
+      user: found.user,
+      session: found.session,
+      isDeveloper: isDeveloper(found.user.groups),
+      ability: buildAdminAbility(found.user.groups)
+    };
     return true;
   }
 }

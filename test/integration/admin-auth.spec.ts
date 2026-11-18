@@ -2,7 +2,7 @@ import { UserTokenPurpose } from '../../src/generated/prisma/client';
 import { UserTokenService } from '../../src/admin/auth/user-token.service';
 import { runAdminBootstrap } from '../../src/admin/bootstrap/admin-bootstrap.cli';
 import {
-  ADMIN_TEST_ORIGIN, api, type AdminTestContext, configureAdminTestEnvironment, cookiesOf, createAdminTestApp, describeDbBackedAdmin, flush,
+  ADMIN_TEST_ORIGIN, api, type AdminTestContext, closeAdminTestApp, configureAdminTestEnvironment, cookiesOf, createAdminTestApp, describeDbBackedAdmin, flush,
   fromSite, INTERNAL_USER_FIELDS, resetAdminTables, seedUser, signIn
 } from '../support/admin-test-app.helper';
 
@@ -22,7 +22,7 @@ describeDbBackedAdmin('admin auth (Feature 014)', () => {
     ctx = await createAdminTestApp();
     await resetAdminTables(ctx.db);
   });
-  afterEach(async () => { await ctx.app.close(); });
+  afterEach(async () => { await closeAdminTestApp(ctx); });
 
   const issue = (userId: string, purpose: UserTokenPurpose) => ctx.app.get(UserTokenService).issue(userId, purpose);
   const auditTypes = async () => (await ctx.db.userAuditEvent.findMany({ orderBy: { timestamp: 'asc' } })).map((event) => event.eventType);
@@ -295,7 +295,7 @@ describeDbBackedAdmin('admin auth (Feature 014)', () => {
 describeDbBackedAdmin('admin bootstrap (Feature 014 US1)', () => {
   let ctx: AdminTestContext;
   beforeEach(async () => { ctx = await createAdminTestApp(); await resetAdminTables(ctx.db); await ctx.db.userGroup.deleteMany({}); });
-  afterEach(async () => { await ctx.app.close(); });
+  afterEach(async () => { await closeAdminTestApp(ctx); });
 
   it('creates the built-in groups and the first developer once, printing the first-login link', async () => {
     await configureAdminTestEnvironment();

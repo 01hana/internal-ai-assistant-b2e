@@ -10,7 +10,7 @@ export const ROUTE_ACCESS = 'admin:route-access';
 export type RouteAccess =
   | { kind: 'public' }
   | { kind: 'signedIn' }
-  | { kind: 'permission'; action: AdminAction; subject: AdminSubject };
+  | { kind: 'permission'; anyOf: ReadonlyArray<readonly [AdminAction, AdminSubject]> };
 
 /** No session needed (login, mail links, forgot password). Still subject to the Origin check. */
 export const PublicRoute = () => SetMetadata(ROUTE_ACCESS, { kind: 'public' } satisfies RouteAccess);
@@ -19,5 +19,8 @@ export const PublicRoute = () => SetMetadata(ROUTE_ACCESS, { kind: 'public' } sa
 export const SignedInRoute = () => SetMetadata(ROUTE_ACCESS, { kind: 'signedIn' } satisfies RouteAccess);
 
 /** A signed-in user whose groups grant `subject:action`. */
-export const RequirePermission = (action: AdminAction, subject: AdminSubject) =>
-  SetMetadata(ROUTE_ACCESS, { kind: 'permission', action, subject } satisfies RouteAccess);
+export const RequirePermission = (action: AdminAction, subject: AdminSubject) => RequireAnyPermission([action, subject]);
+
+/** A signed-in user whose groups grant at least one of the listed permissions. */
+export const RequireAnyPermission = (...anyOf: Array<readonly [AdminAction, AdminSubject]>) =>
+  SetMetadata(ROUTE_ACCESS, { kind: 'permission', anyOf } satisfies RouteAccess);

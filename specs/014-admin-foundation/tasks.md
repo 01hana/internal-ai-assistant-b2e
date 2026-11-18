@@ -55,11 +55,16 @@
 
 ## Phase 3 — 權限、使用者與群組
 
-- [ ] T018 `AdminAbilityFactory`（群組 → CASL 規則，含開發工程師可見性條件）、`UserPolicyService`（指派與保護規則）、`@RequirePermission`、`PermissionGuard`（未宣告即拒絕）。
+- [x] T018 `AdminAbilityFactory`（群組 → CASL 規則，含開發工程師可見性條件）、`UserPolicyService`（指派與保護規則）、`@RequirePermission`、`PermissionGuard`（未宣告即拒絕）。
 - [ ] T019 使用者 API：`getTable`（`accessibleBy`）、`getFilters`、讀取、建立、修改（含群組）、`batch` 停用／啟用、`resendInvite`、`DELETE`；開發工程師可見性、email 啟用後唯讀、指派規則與最後一位管理者檢查（含批次）。
-- [ ] T020 群組 API：`getTable`、`getOptions`、`getPermissions`、讀取、建立、修改、`DELETE`；權限驗證、內建群組不可改、有成員不可刪、非開發工程師看不到「開發工程師」群組。
+- [x] T020 群組 API：`getTable`、`getOptions`、`getPermissions`、讀取、建立、修改、`DELETE`；權限驗證、內建群組不可改、有成員不可刪、非開發工程師看不到「開發工程師」群組。
 - [ ] T021 DB 測試：內建與自訂群組 × 全部 API 的允許／拒絕矩陣（SC-001）、開發工程師帳號與群組的可見性（SC-002）、指派與保護規則（SC-009）、US3、US4 全部情境、稽核事件（SC-004）、所有回應不含內部欄位（SC-007）、沒有能設定他人密碼的路由（SC-008）。
 - [ ] T022 **Gate 3**：Phase 3 測試、全套、typecheck、lint。`FEATURE014_GATE_3=PASS`。
+
+**Phase 3 執行證據**（分兩批）：
+
+- 第一批（2026-11-18，群組）：先查可用套件 —— DTO 以 `@nestjs/swagger` 的 `PartialType` 由建立 DTO 推導修改 DTO；查詢可見範圍以 `@casl/prisma` 的 `accessibleBy(ability, action).ofType('UserGroup')` 轉為 Prisma 條件；分頁只需 Prisma `skip`／`take`，不另裝分頁套件。共用：登入守衛為每個請求建立一次 CASL ability 並放在 `AdminPrincipal`，`@CurrentAdmin()` 取用；`@RequireAnyPermission(...)`（任一權限即可）；`common/table-query.ts`（`getTable` 的 `page`／`pageSize`／`sort`／`keyword`、排序欄位白名單、關鍵字條件）；`common/prisma-errors.ts`（P2002）。群組：`groups.controller.ts`／`groups.service.ts`／`groups.dto.ts` —— `getTable`、`getOptions`（`User:read` 或 `UserGroup:read`；非開發工程師不含「開發工程師」）、`getPermissions`、`GET :id`、`POST`、`PATCH :id`、`DELETE`（`ids`，全有或全無：不存在／看不到 404、內建 400、有成員 400）；內建群組不可修改或刪除；建立、修改、刪除皆寫稽核（修改含前後權限）；內建群組依 `code` 固定排序，不受資料庫定序影響。測試 `test/integration/admin-groups.spec.ts`。自我檢查修正：更新／刪除改依對應動作的可見範圍；名稱在 DTO 去除前後空白；`getOptions` 改為只依「是否為開發工程師」過濾（否則只有 `User:read` 的人會拿到空清單）。VM：typecheck、eslint 通過。
+- 第一批測試（使用者於 Mac，2026-11-18）：首輪 19 個失敗 —— `admin-auth` 與 `admin-groups` 兩個 DB 測試檔被 Jest 同時執行，都會重設同一批後台資料表而互相干擾（群組代碼重複、關聯不到群組、登入 500）。修正：測試輔助程式以 PostgreSQL advisory lock（由 Prisma interactive transaction 持有，交易結束即釋放）讓後台 DB 測試依序執行，不需新依賴、不需 `--runInBand`；app 啟動失敗時也會釋放。重跑：96 tests 全數通過（單元 50、架構 4、auth 26、groups 16）。
 
 ## Phase 4 — 本機、部署與文件
 

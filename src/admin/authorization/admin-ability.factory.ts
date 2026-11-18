@@ -13,6 +13,11 @@ export type AdminRule = { action: AdminAbilityAction; subject: AdminAbilitySubje
 const HIDE_DEVELOPER_USERS = { groups: { none: { code: DEVELOPER_GROUP_CODE } } };
 const HIDE_DEVELOPER_GROUP = { OR: [{ code: null }, { code: ADMIN_GROUP_CODE }] };
 
+/** Groups a caller may see as choices, independent of UserGroup permissions. */
+export function selectableGroupsWhere(developer: boolean): Prisma.UserGroupWhereInput {
+  return developer ? {} : HIDE_DEVELOPER_GROUP;
+}
+
 export function isDeveloper(groups: readonly GroupLike[]): boolean {
   return groups.some((group) => group.code === DEVELOPER_GROUP_CODE);
 }

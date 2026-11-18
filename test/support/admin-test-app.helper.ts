@@ -37,7 +37,34 @@ export class RecordingMail implements AdminMailTransport {
   }
 }
 
-export type AdminTestContext = { app: INestApplication; db: PrismaClient; clock: TestClock; mail: RecordingMail };
+export type AdminTestContext = { app: INestApplication; db: PrismaClient; clock: TestClock; mail: RecordingMail; releaseLock: () => Promise<void> };
+
+/** Any constant; identifies the lock shared by all admin DB tests. */
+const ADMIN_DB_TEST_LOCK = 14_014;
+
+/**
+ * Admin DB tests all reset the same tables, so test files must not run them at the same time (Jest runs
+ * files in parallel). A PostgreSQL advisory lock serialises them across workers: it is held by an
+ * interactive transaction on its own connection and released when the transaction ends — also when
+ * a test crashes.
+ */
+async function acquireAdminDbLock(): Promise<() => Promise<void>> {
+  const lockClient = createUs1DbClient();
+  let release!: () => void;
+  const released = new Promise<void>((resolve) => { release = resolve; });
+  let acquired!: () => void;
+  const locked = new Promise<void>((resolve) => { acquired = resolve; });
+  const holder = lockClient.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ADMIN_DB_TEST_LOCK})`;
+    acquired();
+    await released;
+  }, { maxWait: 10 * 60_000, timeout: 10 * 60_000 });
+  await Promise.race([locked, holder]);
+  return async () => {
+    release();
+    await holder.finally(() => lockClient.$disconnect());
+  };
+}
 
 /**
  * Points the admin API at the test database and makes sure the configured customer exists — the
@@ -59,17 +86,32 @@ export async function configureAdminTestEnvironment(): Promise<void> {
 }
 
 export async function createAdminTestApp(): Promise<AdminTestContext> {
-  await configureAdminTestEnvironment();
-  const clock = new TestClock();
-  const mail = new RecordingMail();
-  const moduleRef = await Test.createTestingModule({ imports: [AdminModule] })
-    .overrideProvider(ADMIN_CLOCK).useValue(clock.now)
-    .overrideProvider(ADMIN_MAIL_TRANSPORT).useValue(mail)
-    .compile();
-  const app = moduleRef.createNestApplication({ logger: false });
-  configureAdminApp(app);
-  await app.init();
-  return { app, db: app.get(PrismaService).db, clock, mail };
+  const releaseLock = await acquireAdminDbLock();
+  try {
+    await configureAdminTestEnvironment();
+    const clock = new TestClock();
+    const mail = new RecordingMail();
+    const moduleRef = await Test.createTestingModule({ imports: [AdminModule] })
+      .overrideProvider(ADMIN_CLOCK).useValue(clock.now)
+      .overrideProvider(ADMIN_MAIL_TRANSPORT).useValue(mail)
+      .compile();
+    const app = moduleRef.createNestApplication({ logger: false });
+    configureAdminApp(app);
+    await app.init();
+    return { app, db: app.get(PrismaService).db, clock, mail, releaseLock };
+  } catch (error) {
+    await releaseLock();
+    throw error;
+  }
+}
+
+export async function closeAdminTestApp(ctx: AdminTestContext | undefined): Promise<void> {
+  if (!ctx) return;
+  try {
+    await ctx.app.close();
+  } finally {
+    await ctx.releaseLock();
+  }
 }
 
 /** Removes every back-office row and recreates the two built-in groups. */
