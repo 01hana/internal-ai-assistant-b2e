@@ -28,7 +28,7 @@
 | 0 | 基線：specs 索引、使用者在 Mac 安裝新依賴 | Gate 0：依賴安裝完成、既有全套通過 |
 | 1 | 權限契約套件、資料模型與 migration、Prisma client | Gate 1：契約單元測試、migration ledger、typecheck |
 | 2 | 後台進入點、寄信、設定密碼連結（firstLogin／forgot／reset）、登入／登出／profile、工作階段、CSRF、限流、稽核、bootstrap CLI | Gate 2：auth 單元與 DB 測試、架構測試 |
-| 3 | CASL ability、權限 guard、使用者 API、群組 API | Gate 3：權限矩陣、原廠可見性、指派規則、稽核 |
+| 3 | CASL ability、權限 guard、使用者 API、群組 API | Gate 3：權限矩陣、開發工程師可見性、指派規則、稽核 |
 | 4 | 本機啟動、部署設定、文件 | Gate 4：全套、typecheck、lint、build 產出 `dist/src/admin-main.js`、本機手動驗證 |
 
 每個 Gate 由使用者在 Mac 執行並回傳 JSON 結果；通過後由使用者 commit。

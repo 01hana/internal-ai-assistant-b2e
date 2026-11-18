@@ -20,7 +20,7 @@
 ```
 packages/admin-permission-contract/      # 權限唯一來源（無 Nest、無 Prisma 依賴）
   src/subjects.ts                         # SUBJECT_ACTIONS: { User: ['read','create','update','delete'], ... }
-  src/system-groups.ts                    # 三個內建群組的代碼、名稱與權限
+  src/system-groups.ts                    # 兩個內建群組（developer、admin）的代碼、名稱與權限
   src/permission-string.ts                # 'subject:action' <-> { action, subject }；'subject:manage' 展開
   src/rules.ts                            # toCaslRules(permissions) -> RawRuleOf<AppAbility>[]
   src/index.ts
@@ -56,11 +56,17 @@ src/admin/
 ## D2. 權限契約與 CASL
 
 - 型別：`type AdminAction = 'read' | 'create' | 'update' | 'delete' | 'manage'`；`type AdminSubject = keyof typeof SUBJECT_ACTIONS | 'all'`；`AppAbility = PureAbility<[AdminAction, AdminSubject | AdminSubjectRecord], PrismaQuery>`（`@casl/prisma` 的 `createPrismaAbility`）。
-- **`manage`**：CASL 內建的「任何動作」。`subject:manage` 等同該 subject 的四種動作；`all:manage` 等同全部（僅限原廠）。
+- **`manage`**：CASL 內建的「任何動作」。`subject:manage` 等同該 subject 的四種動作；`all:manage` 等同全部（只屬於兩個內建群組）。
 - **內建群組的權限只來自契約**：資料庫的內建群組列只存代碼與顯示名稱，`permissions` 欄位不使用；組 ability 時以代碼查契約。版本更新即生效，無需資料遷移。
 - **自訂群組**：`permissions` 存 `subject:action` 字串陣列；寫入前以契約驗證（未知的 subject 或 action、`all:manage` → 400）。
-- **原廠可見性**：非原廠使用者的 ability 對 `User` 加上條件 `{ groups: { none: { code: 'vendor_developer' } } }`、對 `UserGroup` 加上 `{ NOT: { code: 'vendor_developer' } }`。列表以 `accessibleBy(ability, 'read').User` 併入 Prisma `where`；單筆先查再以 `ability.can(action, subject('User', record))` 檢查，不符一律 404。（Phase 0 先驗證 `@casl/prisma` 支援這兩種關聯條件；若不支援，改在 service 以相同條件手寫 `where`，集中在一個函式。）
-- **指派規則**（service 檢查，不只是權限）：非原廠不得指派或移除 `vendor_developer`；不得停用或刪除自己；「最後一位可管理者」以「變更後的狀態」重新計算具 `User:update` 的啟用非原廠使用者數。批次操作先全部檢查再於同一 transaction 執行。
+- **開發工程師可見性**：非開發工程師的 ability 對 `User` 加上條件 `{ groups: { none: { code: 'developer' } } }`、對 `UserGroup` 加上 `{ OR: [{ code: null }, { code: 'admin' }] }`（不用 `NOT: { code: 'developer' }`：SQL 的 `NOT (code = …)` 遇到 `code` 為 NULL 的自訂群組會一併排除）。列表以 `accessibleBy(ability, 'read').ofType('User')` 併入 Prisma `where`；單筆先查再以 `ability.can(action, subject('User', record))` 檢查，不符一律 404。
+- **套件版本**：`@casl/ability` 7.x、`@casl/prisma` 2.x（支援 Prisma 7）。本 repo 的 Prisma client 輸出到 `src/generated/prisma`，因此由 `@casl/prisma/runtime` 匯入，型別以 `PrismaQueryFactory<Prisma.TypeMap>`（取自本 repo 產生的 client）定義，不依賴 `@prisma/client` 的預設型別。
+- **指派與保護規則**（service 檢查，不只是權限；集中在 `UserPolicyService`）：
+  - 只有開發工程師能指派或移除 `developer`。
+  - 不得停用或刪除自己，不得把自己移出所屬的內建群組。
+  - 「最後一位最高管理者」以「變更後的狀態」重新計算：屬於 `admin`、啟用中、且不屬於 `developer` 的使用者至少一位。
+  - email：`passwordHash` 不為空（已啟用）時只有開發工程師能修改；修改後撤銷工作階段與未使用的連結。
+  - 批次操作先全部檢查再於同一 transaction 執行，任一筆違規即整批拒絕。
 
 ## D3. 資料模型（migration `20261118000000_feature014_admin_foundation`）
 
@@ -100,7 +106,7 @@ model UserToken {
 
 model UserGroup {
   id          String   @id @default(cuid())
-  code        String?  @unique                       // 內建群組：vendor_developer / customer_admin / conversation_auditor
+  code        String?  @unique                       // 內建群組：developer / admin
   name        String   @unique
   description String?
   isSystem    Boolean  @default(false)
@@ -130,8 +136,10 @@ model UserAuditEvent {
   timestamp        DateTime @default(now())
   actorUserId      String?                            // 不建立外鍵：使用者刪除後紀錄仍完整
   actorAccount     String?                            // 帳號快照
+  actorIsDeveloper Boolean  @default(false)            // 015 對非開發工程師顯示為「開發工程師」
   eventType        String
   targetType       String?
+  targetIsDeveloper Boolean @default(false)
   targetId         String?
   ipSummary        String?
   userAgentSummary String?
@@ -178,21 +186,21 @@ model UserAuditEvent {
 
 - `POST users/getTable`：body `{ page = 1, pageSize = 20 (max 100), sort?: { field: 'account' | 'name' | 'lastLoginAt' | 'createdAt', order: 'asc' | 'desc' }, filters?: { groups?: string[], status?: boolean[] }, keyword? }`（`keyword` 比對帳號、名稱、email）。回應 `{ items, total }`。
 - `GET users/getFilters`：`{ groups: [{ value, label }], status: [{ value: true, label: '啟用' }, { value: false, label: '停用' }] }`（群組依呼叫者可見性過濾）。
-- `GET groups/getOptions`：`[{ id, label, isSystem }]`，非原廠不含「原廠開發者」。
+- `GET groups/getOptions`：`[{ id, label, isSystem }]`，非開發工程師不含「開發工程師」。
 - `GET groups/getPermissions`：`[{ subject, label, actions: ['read', …] }]`，不含 `all`。
 - `POST groups/getTable`：與使用者相同格式，另回傳每個群組的成員數。
 
 ## D6. 稽核
 
-`UserAuditService.record({ eventType, actor, target, before, after })`，事件類型：`admin_bootstrap`、`admin_login_succeeded`、`admin_login_failed`、`admin_logout`、`admin_password_set`（firstLogin）、`admin_password_reset_requested`、`admin_password_reset`、`admin_user_created`、`admin_user_updated`、`admin_user_groups_changed`、`admin_user_disabled`、`admin_user_enabled`、`admin_user_invite_resent`、`admin_user_deleted`、`admin_user_group_created`、`admin_user_group_updated`、`admin_user_group_deleted`。批次操作每個對象一筆，共用 `requestId`。`metadata` 只放 ID、帳號、群組代碼／名稱與權限字串，不放密碼、雜湊、cookie。登入失敗只記錄帳號的雜湊前 12 碼，不記錄輸入的帳號原文（避免把密碼誤打成帳號時外洩）。
+`UserAuditService.record({ eventType, actor, target, before, after })`，事件類型：`admin_bootstrap`、`admin_login_succeeded`、`admin_login_failed`、`admin_logout`、`admin_password_set`（firstLogin）、`admin_password_reset_requested`、`admin_password_reset`、`admin_user_created`、`admin_user_updated`、`admin_user_email_changed`、`admin_user_groups_changed`、`admin_user_disabled`、`admin_user_enabled`、`admin_user_invite_resent`、`admin_user_deleted`、`admin_user_group_created`、`admin_user_group_updated`、`admin_user_group_deleted`。批次操作每個對象一筆，共用 `requestId`。`metadata` 只放 ID、帳號、群組代碼／名稱與權限字串，不放密碼、雜湊、cookie。登入失敗只記錄帳號的雜湊前 12 碼，不記錄輸入的帳號原文（避免把密碼誤打成帳號時外洩）。
 
 ## D7. Bootstrap CLI
 
 `npm run admin:bootstrap -- --account <a> --name <n> --email <e>`（`dist/src/admin/bootstrap/admin-bootstrap.cli.js`）：
 
 1. 以 transaction 確認 `User` 為空。
-2. upsert 三個內建群組（`code`、`name`、`isSystem: true`）。
-3. 建立使用者（`passwordHash` 為空）並加入 `vendor_developer`。
+2. upsert 兩個內建群組（`developer`「開發工程師」、`admin`「最高管理者」，`isSystem: true`）。
+3. 建立使用者（`passwordHash` 為空）並加入 `developer`。
 4. 產生首次登入連結、嘗試寄信，並在終端機輸出連結一次（不寫入日誌檔）。
 5. 寫入 `admin_bootstrap` 稽核事件（含寄信結果，不含連結）。
 
@@ -207,7 +215,7 @@ model UserAuditEvent {
 
 ## D9. 測試
 
-- **單元**：契約（字串轉換、`manage` 展開、內建群組權限、`all:manage` 不可指派、只允許四種動作）、ability factory（三群組 × 全部權限的矩陣、原廠可見性條件）、密碼雜湊、工作階段逾時計算、CSRF guard。
-- **DB 整合**（`assistant_test`，`RUN_DB_BACKED_ADMIN_TESTS=true`；寄信以記錄收件內容的假傳輸替代）：邀請 → verifyToken → firstLogin → 登入、連結過期／重複使用／用途不符、forgot 不透露 email 是否存在與 15 分鐘限制、reset 撤銷工作階段、重寄邀請（含已設定密碼者被拒）、登入／鎖定／登出／逾時／停用／刪除、使用者與群組 API 的允許／拒絕矩陣、原廠可見性、指派規則與最後一位管理者（含批次）、稽核事件、bootstrap、`ADMIN_CUSTOMER_ID` 啟動檢查、回應不含內部欄位。
+- **單元**：契約（字串轉換、`manage` 展開、內建群組權限、`all:manage` 不可指派、只允許四種動作）、ability factory（兩個內建群組與數種自訂群組 × 全部權限的矩陣、開發工程師可見性條件）、密碼雜湊、工作階段逾時計算、CSRF guard。
+- **DB 整合**（`assistant_test`，`RUN_DB_BACKED_ADMIN_TESTS=true`；寄信以記錄收件內容的假傳輸替代）：邀請 → verifyToken → firstLogin → 登入、連結過期／重複使用／用途不符、forgot 不透露 email 是否存在與 15 分鐘限制、reset 撤銷工作階段、重寄邀請（含已設定密碼者被拒）、登入／鎖定／登出／逾時／停用／刪除、使用者與群組 API 的允許／拒絕矩陣、開發工程師可見性、email 啟用後唯讀、指派規則與最後一位最高管理者（含批次）、稽核事件、bootstrap、`ADMIN_CUSTOMER_ID` 啟動檢查、回應不含內部欄位。
 - **架構**：`AppModule` 不引入 `src/admin/**`；`src/admin/**` 不引入 `assistant`、`llm`、`query-understanding`；Core 路由清單沒有 `/api/v1/admin`。
 - **安全掃描**：測試結束後掃描稽核事件、日誌輸出與所有 API 回應，不得出現測試用的明文密碼、工作階段代碼或連結代碼；也確認沒有任何路由能設定他人密碼（SC-008）。

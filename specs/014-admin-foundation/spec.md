@@ -18,14 +18,15 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 - **後台權限與客戶系統權限分開**：客戶系統的 `permissionScopes`（例如 `menu:SCM_DASHBOARD:read`）只決定使用者透過 Assistant 能查什麼；後台權限只決定後台使用者在後台能看與能改什麼。兩者互不推導。
 - **後台使用者與 Assistant 使用者分開**：本 spec 的「使用者（User）」一律指後台帳號；客戶系統的使用者在既有資料中是 `actorId`，兩者沒有關聯。
 - **權限以 CASL 表示**：一條權限是一對 `{ action, subject }`，在 CASL 中寫作 `can(action, subject)`（動作在前）；儲存與顯示的字串格式為 `subject:action`（例如 `Conversation:read`）。動作只有 `read`、`create`、`update`、`delete` 四種；四種都有即為 `manage`。前後端使用同一份權限清單。
-- **權限掛在群組上**：使用者屬於一或多個使用者群組，權限取所屬群組的聯集；系統內建三個群組，客戶可另建自訂群組（決定 A 的延伸：客戶管理者可指派「對話稽核」，也可建立含 `Conversation:read` 的自訂群組；一律留稽核）。
-- **原廠與客戶以群組區分**：屬於「原廠開發者」群組的使用者是原廠帳號；非原廠使用者看不到、也不能修改原廠帳號與「原廠開發者」群組。
-- **有 `Conversation:read` 才看得到對話**：此權限同時涵蓋對話列表與對話內容；沒有它就無法進入對話頁面。內建群組中只有「原廠開發者」與「對話稽核」具備。
+- **權限掛在群組上**：使用者屬於一或多個使用者群組，權限取所屬群組的聯集。系統內建兩個群組：「開發工程師」（`developer`）與「最高管理者」（`admin`），兩者都擁有全部權限；其他群組由客戶自行建立並勾選權限（包含 `User`、`UserGroup`、`Conversation:read` 等，由客戶自由設定）。
+- **開發工程師與客戶以群組區分**：屬於「開發工程師」群組的使用者是我方帳號；其他使用者看不到、也不能修改開發工程師帳號與「開發工程師」群組。
+- **群組指派**：只有開發工程師能指派或移除「開發工程師」群組。「最高管理者」群組由最高管理者決定要指派給誰；客戶也可自建擁有全部權限（`all:manage` 除外）的群組，不需工程師修改程式。是否把使用者與群組的管理權限交給自訂群組，由最高管理者在設定群組權限時決定。
+- **有 `Conversation:read` 才看得到對話**：此權限同時涵蓋對話列表與對話內容；沒有它就無法進入對話頁面。兩個內建群組都具備（最高管理者擁有全部權限，因此限制其查看對話並無實質效果，以每次查看都留稽核作為控制）；自訂群組由最高管理者決定是否勾選。
 - **權限只在後端判斷**：前端依權限隱藏按鈕只是方便使用；每支後台 API 在後端檢查權限。
 - **後台操作皆留稽核**：登入、登出、使用者與群組變更，以及（015 起）每次查看對話內容。
 - **後台 API 不經過 Gateway**：Gateway 是客戶系統串接的入口；後台 API 是獨立行程與連接埠，只開放給後台網站。Core 的進入點不載入後台模組，Core 與 Gateway 上沒有任何 `/api/v1/admin` 路徑。
 - **API 寫法沿用既有後台範本**（`ecommerce-admin`）：列表以 `POST <資源>/getTable`、篩選選項以 `GET <資源>/getFilters`、下拉選項以 `GET <資源>/getOptions`、批次操作以 `PATCH <資源>/batch`、刪除以 `DELETE <資源>`（body 帶 `ids`）。
-- **密碼只由使用者本人設定**：管理者建立帳號後，後端寄出含一次性連結的邀請信，使用者點連結進入首次登入頁設定密碼；忘記密碼時同樣以寄信的連結重設。管理者、原廠皆無法查看或代為設定任何人的密碼。
+- **密碼只由使用者本人設定**：管理者建立帳號後，後端寄出含一次性連結的邀請信，使用者點連結進入首次登入頁設定密碼；忘記密碼時同樣以寄信的連結重設。管理者、開發工程師皆無法查看或代為設定任何人的密碼。
 - **寄信**：後台透過各部署設定的 SMTP 伺服器寄信（客戶的郵件伺服器或指定服務）；本機開發不寄信，改把連結寫入日誌。
 - **不在本 feature 範圍**：對話／回饋／無法回答問題／稽核的檢視 API 與頁面（015）、體驗設定編輯（016）、SSO、多因素驗證、多語系。
 - **後台前端**：新 repo `internal-ai-assistant-admin`（Nuxt 4 + Nuxt UI），以其自身的 spec 建置骨架；本 feature 定義它要遵守的 API 與權限契約（見「前端契約」）。
@@ -40,18 +41,18 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 
 1. **Given** 開啟 `specs/README.md`，**then** 013 為「完成」、合併日期 2026-11-17；014 列為進行中；`.specify/feature.json` 指向 014。
 
-### User Story 1 — 部署時建立第一位原廠開發者（Priority: P1）
+### User Story 1 — 部署時建立第一位開發工程師（Priority: P1）
 
-身為我方開發者，部署新客戶時，我需要一個指令建立該部署的第一個後台帳號（原廠開發者），之後才能登入後台建立其他使用者。
+身為我方開發者，部署新客戶時，我需要一個指令建立該部署的第一個後台帳號（開發工程師），之後才能登入後台建立其他使用者。
 
 **Why this priority**: 沒有它就無法進入後台；後台沒有「註冊」功能。
 
-**Independent Test**: 空資料庫執行指令 → 建立內建群組與一個屬於「原廠開發者」群組、尚未設定密碼的使用者，並寄出（也在終端機顯示）首次登入連結；再執行一次 → 拒絕，不覆寫。
+**Independent Test**: 空資料庫執行指令 → 建立內建群組與一個屬於「開發工程師」群組、尚未設定密碼的使用者，並寄出（也在終端機顯示）首次登入連結；再執行一次 → 拒絕，不覆寫。
 
 **Acceptance Scenarios**:
 
-1. **Given** 部署中沒有任何後台使用者，**when** 執行 `npm run admin:bootstrap -- --account <帳號> --name <名稱> --email <email>`（部署時 `deploy.sh admin-bootstrap`），**then** 建立三個內建群組（若不存在）與該使用者（屬「原廠開發者」群組、尚未設定密碼），產生首次登入連結：寄到該 email，並在終端機顯示一次（部署者即原廠開發者本人，寄信失敗時仍可使用）；寫入 `admin_bootstrap` 稽核事件。
-2. **Given** 已有任何後台使用者，**when** 再次執行，**then** 拒絕並說明原因，不建立、不修改任何資料。其他原廠開發者由已登入的原廠開發者在後台新增（每位開發者各自一個帳號）。
+1. **Given** 部署中沒有任何後台使用者，**when** 執行 `npm run admin:bootstrap -- --account <帳號> --name <名稱> --email <email>`（部署時 `deploy.sh admin-bootstrap`），**then** 建立兩個內建群組（若不存在）與該使用者（屬「開發工程師」群組、尚未設定密碼），產生首次登入連結：寄到該 email，並在終端機顯示一次（部署者即開發工程師本人，寄信失敗時仍可使用）；寫入 `admin_bootstrap` 稽核事件。
+2. **Given** 已有任何後台使用者，**when** 再次執行，**then** 拒絕並說明原因，不建立、不修改任何資料。其他開發工程師由已登入的開發工程師在後台新增（每位工程師各自一個帳號）；客戶的第一位最高管理者也由開發工程師建立。
 
 ### User Story 2 — 設定密碼、登入、登出與工作階段（Priority: P1）
 
@@ -77,51 +78,54 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 
 ### User Story 3 — 權限模型與群組（Priority: P1）
 
-身為我方開發者，我需要一份前後端共用的權限清單、三個內建群組，以及可由客戶自建的群組，讓每支後台 API 都能宣告並檢查所需權限。
+身為我方開發者，我需要一份前後端共用的權限清單、兩個內建群組，以及可由客戶自建的群組，讓每支後台 API 都能宣告並檢查所需權限。
 
 **Why this priority**: 015、016 的每支 API 都依賴它；「查看對話」權限的隔離是本後台最重要的安全要求。
 
-**Independent Test**: 不同群組的使用者呼叫同一組 API，只有具備對應權限者成功；非原廠使用者看不到原廠帳號與原廠群組；權限清單只有一份來源，前後端引用同一份。
+**Independent Test**: 不同群組的使用者呼叫同一組 API，只有具備對應權限者成功；非開發工程師看不到開發工程師帳號與「開發工程師」群組；權限清單只有一份來源，前後端引用同一份。
 
 **Acceptance Scenarios**:
 
-1. **Given** 權限契約套件 `packages/admin-permission-contract`，**then** 它匯出：subject 清單、每個 subject 允許的 action、內建群組的權限、「僅限原廠」的權限、`subject:action` 字串轉換，以及可直接餵給 CASL 的規則格式；不含任何客戶專屬內容。
+1. **Given** 權限契約套件 `packages/admin-permission-contract`，**then** 它匯出：subject 清單、每個 subject 允許的 action、內建群組的權限、自訂群組不可勾選的權限、`subject:action` 字串轉換，以及可直接餵給 CASL 的規則格式；不含任何客戶專屬內容。
 2. **Given** 一支後台 API 宣告所需權限（例如 `can('read', 'User')`），**when** 呼叫者的權限不包含它，**then** 403，並不執行任何查詢。
-3. **Given** 非原廠使用者，**when** 查詢使用者或群組列表、篩選或下拉選項，**then** 不出現原廠帳號與「原廠開發者」群組；以 ID 讀取或修改它們一律 404。
+3. **Given** 非開發工程師，**when** 查詢使用者或群組列表、篩選或下拉選項，**then** 不出現開發工程師帳號與「開發工程師」群組；以 ID 讀取或修改它們一律 404。
 4. **Given** `GET auth/profile`，**then** 回傳該使用者的 CASL 規則，前端以 `@casl/vue` 直接使用。
-5. **Given** 具 `UserGroup:create`／`update`，**when** 建立或修改自訂群組並勾選權限，**then** 只能勾選契約中允許的 `subject:action`（動作限 `read`／`create`／`update`／`delete`），且不得包含「僅限原廠」的權限（目前為 `all:manage`）；寫入 `admin_user_group_created`／`admin_user_group_updated`（含變更前後的權限）。
+5. **Given** 具 `UserGroup:create`／`update`，**when** 建立或修改自訂群組並勾選權限，**then** 只能勾選契約中允許的 `subject:action`（動作限 `read`／`create`／`update`／`delete`），且不得包含 `all:manage`（全部權限只屬於兩個內建群組）；`User`、`UserGroup` 可以勾選；寫入 `admin_user_group_created`／`admin_user_group_updated`（含變更前後的權限）。
 6. **Given** 內建群組，**when** 修改其權限、改名或刪除，**then** 400（內建群組的權限只能隨版本更新，由契約套件定義）。
 7. **Given** 自訂群組仍有成員，**when** 刪除，**then** 400；沒有成員才可刪除，寫入 `admin_user_group_deleted`。
 
 ### User Story 4 — 使用者管理（Priority: P1）
 
-身為客戶管理者，我可以新增後台使用者、指定群組、停用、刪除，並在需要時重寄邀請信；我無法查看或設定任何人的密碼；所有變更都有紀錄。
+身為最高管理者，我可以新增後台使用者、指定群組、停用、刪除，並在需要時重寄邀請信；我無法查看或設定任何人的密碼；所有變更都有紀錄。客戶也可以把使用者管理權限交給自訂群組。
 
-**Why this priority**: 讓客戶自行管理後台使用者（決定 A）。
+**Why this priority**: 讓客戶自行管理後台使用者。
 
-**Independent Test**: 客戶管理者能建立使用者並加入「對話稽核」或自訂群組，對方收到邀請信；不能指派「原廠開發者」群組、不能修改原廠帳號、不能停用或刪除自己、不能移除最後一位可管理使用者的人；每次變更都有稽核事件。
+**Independent Test**: 最高管理者能建立使用者並加入自訂群組，對方收到邀請信；只有開發工程師能指派「開發工程師」群組；沒有人能停用或刪除自己、移除最後一位最高管理者；啟用後的 email 不可修改；每次變更都有稽核事件。
 
 **Acceptance Scenarios**:
 
 1. **Given** 具 `User:create`，**when** 建立使用者（帳號、名稱、email、群組），**then** 建立尚未設定密碼的使用者，並寄出首次登入邀請信；寫入 `admin_user_created`。帳號 3–64 字元，限英數字與 `.`、`_`、`-`；帳號與 email 皆唯一（不分大小寫）。寄信失敗時使用者仍建立成功，回應以 `inviteSent: false` 告知，管理者可稍後重寄。
-2. **Given** 具 `User:update`，**when** 修改使用者（名稱、email、群組），**then** 非原廠使用者只能指派自訂群組與內建的「客戶管理者」「對話稽核」；指派「原廠開發者」群組回 403，只有原廠開發者能指派或移除它。群組變更寫入 `admin_user_groups_changed`（含變更前後的群組），其他欄位變更寫入 `admin_user_updated`。帳號建立後不可修改。修改尚未設定密碼的使用者的 email 時，舊的邀請連結失效（需重寄）。
-3. **Given** 非原廠使用者，**when** 修改、停用、刪除、重寄邀請的對象是原廠帳號，**then** 404。
-4. **Given** 任何使用者，**when** 停用或刪除自己，**then** 400。
-5. **Given** 僅剩一位具 `User:update` 的啟用非原廠使用者，**when** 停用、刪除他、移除他的群組、或修改群組使他失去該權限，**then** 400（避免客戶被鎖在後台外）。
-6. **Given** 具 `User:update`，**when** `PATCH users/batch` 以 `{ ids, status }` 停用或啟用，**then** 停用立即撤銷這些使用者的所有工作階段；分別寫入 `admin_user_disabled`／`admin_user_enabled`。
-7. **Given** 具 `User:update`，**when** `POST users/:id/resendInvite`，**then** 僅限尚未設定密碼的使用者：舊的首次登入連結失效、寄出新連結；已設定密碼者回 400（請使用者自行「忘記密碼」）。寫入 `admin_user_invite_resent`。
-8. **Given** 具 `User:delete`，**when** `DELETE users` 以 `{ ids }` 刪除，**then** 撤銷其工作階段、刪除其未使用的連結與群組關聯；稽核事件保留（以使用者 ID 與帳號快照記錄，不依賴使用者資料仍存在）；寫入 `admin_user_deleted`。被刪除的帳號名稱與 email 可再次使用。
-9. **Given** 任何 API，**then** 沒有可讓他人查看、設定或重設某使用者密碼的端點。
+2. **Given** 具 `User:update`，**when** 修改使用者（名稱、群組；尚未設定密碼者可改 email），**then** 群組變更寫入 `admin_user_groups_changed`（含變更前後的群組），其他欄位變更寫入 `admin_user_updated`。帳號建立後不可修改。修改邀請中使用者的 email 時，舊的邀請連結失效（需重寄）。
+3. **Given** 使用者已設定密碼（已啟用），**when** 非開發工程師修改其 email，**then** 400；email 改為唯讀，需要更改時由客戶通知開發工程師處理（開發工程師修改時寫入 `admin_user_email_changed`，並撤銷該使用者的工作階段與未使用的連結）。理由：若可任意修改 email，修改者就能把 email 改成自己的信箱，再以「忘記密碼」取得對方帳號。
+4. **Given** 具 `User:update` 的使用者（無論屬於哪個群組），**when** 指派或移除「最高管理者」群組，**then** 依其權限允許（`User:update` 即可），並受 US4-6、US4-7 的保護規則限制；寫入 `admin_user_groups_changed`。是否把 `User`、`UserGroup` 權限交給自訂群組由最高管理者決定（Decision 26）。
+5. **Given** 非開發工程師，**when** 指派「開發工程師」群組，**then** 403；**when** 修改、停用、刪除、重寄邀請的對象是開發工程師帳號，**then** 404。
+6. **Given** 任何使用者，**when** 停用或刪除自己、或把自己移出所屬的內建群組，**then** 400。
+7. **Given** 僅剩一位啟用中的最高管理者（開發工程師不計入），**when** 停用、刪除他或將他移出「最高管理者」群組，**then** 400（避免客戶被鎖在後台外）。
+8. **Given** 具 `User:update`，**when** `PATCH users/batch` 以 `{ ids, status }` 停用或啟用，**then** 停用立即撤銷這些使用者的所有工作階段；分別寫入 `admin_user_disabled`／`admin_user_enabled`。
+9. **Given** 具 `User:update`，**when** `POST users/:id/resendInvite`，**then** 僅限尚未設定密碼的使用者：舊的首次登入連結失效、寄出新連結；已設定密碼者回 400（請使用者自行「忘記密碼」）。寫入 `admin_user_invite_resent`。
+10. **Given** 具 `User:delete`，**when** `DELETE users` 以 `{ ids }` 刪除，**then** 撤銷其工作階段、刪除其未使用的連結與群組關聯；稽核事件保留（以使用者 ID 與帳號快照記錄，不依賴使用者資料仍存在）；寫入 `admin_user_deleted`。被刪除的帳號名稱與 email 可再次使用。
+11. **Given** 任何 API，**then** 沒有可讓他人查看、設定或重設某使用者密碼的端點。
 
 ### User Story 5 — 後台稽核紀錄（Priority: P1）
 
-身為原廠或客戶管理者，我需要事後追查誰在何時登入、改了哪個使用者或群組。
+身為開發工程師或最高管理者，我需要事後追查誰在何時登入、改了哪個使用者或群組。
 
 **Independent Test**: US1–US4 的每個狀態變更都產生一筆後台稽核事件；事件不含密碼、雜湊或工作階段代碼；稽核事件無法透過 API 修改或刪除。
 
 **Acceptance Scenarios**:
 
-1. **Given** US1–US4 的任一事件，**then** `UserAuditEvent` 新增一筆：時間、`requestId`、執行者（ID 與帳號快照）、事件類型、目標類型與 ID、來源 IP 與 User-Agent 摘要、變更前後摘要。
+1. **Given** US1–US4 的任一事件，**then** `UserAuditEvent` 新增一筆：時間、`requestId`、執行者（ID、帳號快照、是否為開發工程師）、事件類型、目標類型與 ID、來源 IP 與 User-Agent 摘要、變更前後摘要。
+3. **Given** 非開發工程師檢視稽核紀錄（015），**then** 執行者或對象為開發工程師時一律顯示為「開發工程師」，不顯示其帳號、名稱或 email。
 2. **Given** 任何後台 API，**then** 沒有修改或刪除稽核事件的端點；檢視 API 在 015 提供（`AuditEvent:read`）。
 
 ### Edge Cases
@@ -132,6 +136,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 - 同時存在多個未使用的連結（例如重寄）時，只有最新的有效。
 - 登入回應時間不因「帳號不存在」與「密碼錯誤」而明顯不同（不存在時仍做一次雜湊比對）。
 - 停用或刪除後，既有工作階段立即失效，不等逾時。
+- 開發工程師帳號同時屬於「最高管理者」群組時，仍視為開發工程師（不計入「最後一位最高管理者」，對其他人隱藏）。
 - `ADMIN_CUSTOMER_ID` 未設定或不存在於資料庫：後台 API 拒絕啟動並說明原因。
 - 部署升級後既有使用者、群組與工作階段不受影響（migration 只新增）；新版本若在契約中新增 subject，內建群組的權限隨之更新，自訂群組不自動取得新權限。
 
@@ -145,7 +150,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 - **FR-004** CSRF：登入時另發非 httpOnly 的 CSRF cookie，狀態變更請求須以 `X-CSRF-Token` header 帶回相同值，並檢查 `Origin` 為設定的後台網站來源。
 - **FR-005** CORS 只允許設定的後台網站來源，並允許攜帶 cookie。`auth/login`、`auth/forgot`、`auth/verifyToken`、`auth/firstLogin`、`auth/reset` 有速率限制。
 - **FR-006** 權限契約 `packages/admin-permission-contract` 為唯一來源；後端以 `@casl/ability` 判斷、以 `@casl/prisma` 將條件轉為查詢；每支後台 API 以 decorator 宣告所需權限，未宣告的 API 一律拒絕。
-- **FR-007** 群組指派與自訂群組規則見 US3-3、US3-5～7、US4-2～5；群組變更、停用、刪除立即生效。
+- **FR-007** 群組指派與自訂群組規則見 US3-3、US3-5～7、US4-2～7；群組變更、停用、刪除立即生效。
 - **FR-008** 後台稽核寫入獨立的 `UserAuditEvent`（既有 `AuditEvent` 記錄 Assistant 的問答與工具呼叫，要求 `organizationId`、`hostApp`、`actorId`，不適用於後台使用者；015 的稽核頁可同時查兩者）。
 - **FR-009** `admin:bootstrap` 指令只在沒有任何後台使用者時執行；`deploy.sh` 新增 `admin-bootstrap` 步驟；部署設定新增 `admin-api` 服務（與 `core` 同一 image、不同啟動指令）與 `ADMIN_CUSTOMER_ID`。
 - **FR-010** 本機開發：`npm run local:start` 一併啟動後台 API（連接埠 3200）；不自動建立使用者，由開發者執行 `admin:bootstrap`。
@@ -167,26 +172,25 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 | `ReviewItem` | `read`、`update` | 無法回答的問題、待審項目（`update` 為標記處理狀態） | 015 |
 | `Feedback` | `read` | 👍／👎 與對應回答 | 015 |
 | `ExperienceConfig` | `read`、`create`、`update` | 問候語與 Quick Reply（`update` 含啟用版本） | 016 |
-| `all` | `manage` | 全部 subject 的全部動作（僅限原廠，不可加入自訂群組） | 014 |
+| `all` | `manage` | 全部 subject 的全部動作（只屬於兩個內建群組，不可加入自訂群組） | 014 |
 
 ### 內建群組
 
 | 群組 | 代碼 | 權限 | 誰可以指派 |
 | --- | --- | --- | --- |
-| 原廠開發者 | `vendor_developer` | `all:manage` | 原廠開發者 |
-| 客戶管理者 | `customer_admin` | `User:manage`、`UserGroup:manage`、`AuditEvent:read`、`Stats:read`、`Feedback:read`、`ExperienceConfig:read/create/update`（**不含** `Conversation:read`） | 原廠開發者、客戶管理者 |
-| 對話稽核 | `conversation_auditor` | `Conversation:read`、`ReviewItem:read/update`、`Feedback:read` | 原廠開發者、客戶管理者 |
+| 開發工程師 | `developer` | `all:manage`；對其他人隱藏 | 開發工程師 |
+| 最高管理者 | `admin` | `all:manage`（看不到、也不能修改開發工程師帳號與「開發工程師」群組） | 開發工程師、最高管理者 |
 
-一個使用者可屬於多個群組，權限取聯集。
+其他群組皆為客戶自建，權限由客戶勾選（`all:manage` 除外）。一個使用者可屬於多個群組，權限取聯集。
 
 ### Key Entities（資料表）
 
 - **User**（後台使用者）：`id`、`account`（唯一、小寫）、`name`、`email`（必填、唯一、小寫）、`status`（布林，`true` 為啟用）、`lastLoginAt`、`createdAt`、`updatedAt`——以上為 API 可回傳的欄位；另以 `groups` 回傳所屬群組、以 `invitationPending`（尚未設定密碼）供「重寄邀請信」使用。內部欄位 `passwordHash`（尚未設定密碼時為空）、`failedLoginCount`、`lockedUntil`、`passwordChangedAt` 只供後端使用（FR-011）。
-- **UserGroup**（使用者群組）：`id`、`code`（內建群組的固定代碼；自訂群組為空）、`name`（唯一）、`description`、`isSystem`、`permissions`（自訂群組的 `subject:action` 清單；內建群組由契約套件決定，不存於此）、`createdAt`、`updatedAt`。
+- **UserGroup**（使用者群組）：`id`、`code`（內建群組的固定代碼 `developer`／`admin`；自訂群組為空）、`name`（唯一）、`description`、`isSystem`、`permissions`（自訂群組的 `subject:action` 清單；內建群組由契約套件決定，不存於此）、`createdAt`、`updatedAt`。
 - **使用者與群組的對應**：多對多。一個欄位只能存一個群組，因此不在 `User` 上放 `groupId`，而以 Prisma 的隱含多對多關聯（`User.groups` ↔ `UserGroup.users`）表示：Prisma 自動建立只有兩個外鍵欄的對應表 `_UserToUserGroup`，schema 中不另外宣告 model；誰在何時變更群組由稽核事件記錄。
 - **UserToken**（設定密碼連結）：`id`、`userId`、`purpose`（`first_login`／`reset_password`）、`tokenHash`、`expiresAt`、`usedAt`、`createdAt`。邀請信與重設信的連結各一筆；只存代碼雜湊。
 - **UserSession**（登入工作階段）：`id`、`tokenHash`、`userId`、`createdAt`、`lastSeenAt`、`expiresAt`、`revokedAt`、`ipSummary`、`userAgentSummary`。每次登入一筆；cookie 只放隨機代碼，後端以它找到這筆紀錄，才能做到登出、停用、重設密碼後立即失效。
-- **UserAuditEvent**（後台稽核）：`id`、`requestId`、`timestamp`、`actorUserId`（登入失敗時為空）、`actorAccount`（帳號快照）、`eventType`、`targetType`、`targetId`、`ipSummary`、`userAgentSummary`、`metadata`（不含密碼、雜湊、工作階段代碼）。不與 `User` 建立外鍵，使用者刪除後紀錄仍完整。
+- **UserAuditEvent**（後台稽核）：`id`、`requestId`、`timestamp`、`actorUserId`（登入失敗時為空）、`actorAccount`（帳號快照）、`actorIsDeveloper`、`eventType`、`targetType`、`targetId`、`targetIsDeveloper`、`ipSummary`、`userAgentSummary`、`metadata`（不含密碼、雜湊、工作階段代碼）。不與 `User` 建立外鍵，使用者刪除後紀錄仍完整；`actorIsDeveloper`／`targetIsDeveloper` 供 015 對非開發工程師隱藏開發工程師的身分。
 
 ### API（014）
 
@@ -205,7 +209,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 | GET | `users/getFilters` | `User:read` | 列表篩選選項（群組、狀態） |
 | GET | `users/:id` | `User:read` | 單一使用者 |
 | POST | `users` | `User:create` | 建立並寄出邀請信；回應含 `inviteSent` |
-| PUT | `users/:id` | `User:update` | 修改名稱、email、群組 |
+| PUT | `users/:id` | `User:update` | 修改名稱、群組；email 只在邀請中可改（開發工程師除外） |
 | PATCH | `users/batch` | `User:update` | 批次停用／啟用（`{ ids, status }`） |
 | POST | `users/:id/resendInvite` | `User:update` | 重寄邀請信（僅限尚未設定密碼者） |
 | DELETE | `users` | `User:delete` | 批次刪除（`{ ids }`） |
@@ -232,8 +236,9 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 
 ## Success Criteria
 
-- **SC-001** 三個內建群組對所有 014 API 的允許／拒絕矩陣全部有測試，且與「內建群組」表一致；自訂群組依勾選的權限得到相同結果。
-- **SC-002** 非原廠使用者在所有列表、篩選、下拉選項與單筆 API 中都看不到原廠帳號與「原廠開發者」群組，也無法修改它們。
+- **SC-001** 兩個內建群組與數種自訂群組（含／不含 `User`、`UserGroup`、`Conversation:read`）對所有 014 API 的允許／拒絕矩陣全部有測試，結果與權限表一致。
+- **SC-002** 非開發工程師在所有列表、篩選、下拉選項與單筆 API 中都看不到開發工程師帳號與「開發工程師」群組，也無法修改它們。
+- **SC-009** 只有開發工程師能指派「開發工程師」群組；任何人都無法停用或刪除自己、移除最後一位最高管理者，或修改已啟用使用者的 email（開發工程師除外）。
 - **SC-003** 登出、停用、刪除、重設密碼、逾時後，舊工作階段代碼一律 401；連結代碼使用後或過期即失效；資料庫與日誌中找不到明文密碼、工作階段代碼或連結代碼（`ADMIN_MAIL_TRANSPORT=log` 的本機日誌除外）。
 - **SC-008** 沒有任何 API 能讓他人查看、設定或重設某使用者的密碼。
 - **SC-004** US1–US4 的每個狀態變更都有對應的 `UserAuditEvent`。
@@ -254,19 +259,25 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 2. **登入**：以自訂使用者名稱（帳號）登入；資料以「使用者」與「使用者群組」組成，權限掛在群組上，可自建群組；一個使用者可屬於多個群組。
 3. **逾時**：閒置 30 分鐘、絕對 12 小時。
 4. **多因素驗證**：本 feature 不做。
-5. **原廠帳號**：每位開發者各自一個帳號；第一個由 `admin:bootstrap` 建立，其他在後台新增。
-6. **指派「對話稽核」**：客戶管理者可指派（決定 A），每次留稽核。
+5. **開發工程師帳號**：每位工程師各自一個帳號；第一個由 `admin:bootstrap` 建立，其他在後台新增。
+6. **（2026-11-17 晚間修訂）內建群組**：只有「開發工程師」（`developer`）與「最高管理者」（`admin`），兩者皆擁有全部權限；取消「對話稽核」等其他內建群組，查看對話改為可勾選的權限 `Conversation:read`。
 7. **分支**：`014-admin-foundation`，後續 015、016 沿用同一分支。
 8. **API 路徑與寫法**：前綴 `/api/v1/admin`；登入為 `auth/login`，其餘沿用既有後台範本（`auth/profile`、`auth/firstLogin`、`auth/forgot`、`auth/reset`、`<資源>/getTable`、`getFilters`、`getOptions`、`batch`、`DELETE <資源>` 帶 `ids`；群組路徑為 `groups`）。範本沒有的操作以同樣風格命名：`auth/logout`、`auth/verifyToken`、`users/:id/resendInvite`、`groups/getPermissions`。
 9. **使用者欄位**：名稱欄位為 `name`；`status` 為布林；`email` 必填且唯一；密碼雜湊等內部欄位任何 API 都不回傳。
 10. **動作只有四種**：`read`、`create`、`update`、`delete`，四種都有即 `manage`；變更群組、停用、重設密碼歸 `User:update`，處理待審項目歸 `ReviewItem:update`，啟用體驗設定版本歸 `ExperienceConfig:update`。
-11. **對話**：`Conversation:read` 同時涵蓋列表與內容；客戶管理者預設不具備。
+11. **對話**：`Conversation:read` 同時涵蓋列表與內容；內建群組皆具備，自訂群組由客戶決定。
 12. **使用者與群組的對應**：多對多，以 Prisma 隱含多對多表示（不在 `User` 上放單一 `groupId`）。
 13. **後台稽核表**：命名為 `UserAuditEvent`（既有的 `AuditEvent` 為 Assistant 稽核，同名會衝突）。
-14. **不帶 `customerId`**：後台資料表不放 `customerId`；後台 API 以部署設定 `ADMIN_CUSTOMER_ID` 決定讀取哪個客戶的 Assistant 資料；原廠與客戶以群組區分。
+14. **不帶 `customerId`**：後台資料表不放 `customerId`；後台 API 以部署設定 `ADMIN_CUSTOMER_ID` 決定讀取哪個客戶的 Assistant 資料；開發工程師與客戶以群組區分。
 15. **刪除使用者**：依範本提供刪除；稽核紀錄以 ID 與帳號快照保留，不受刪除影響。
 16. **密碼只由本人設定**：建立帳號後寄出首次登入連結（`auth/firstLogin`）；不提供自行改密碼或由管理者重設密碼的 API；管理者無法查看或代設任何人的密碼。
 17. **忘記密碼**：照範本提供 `auth/forgot`（輸入 email 寄出重設連結）與 `auth/reset`；使用者想更換密碼也走這個流程。
 18. **重寄邀請信**：`users/:id/resendInvite`，僅限尚未設定密碼的使用者。
 19. **連結期限**：首次登入 72 小時、重設 1 小時，皆只能使用一次。
 20. **設定密碼後**：導向登入頁重新登入，不自動登入。
+21. **寄信服務**：目前先使用公司的寄信服務（SMTP）；之後若客戶要求改用自己的郵件伺服器，只需調整該部署的設定。
+22. **email 啟用後唯讀**：使用者設定密碼後 email 不可修改；需要時由客戶通知開發工程師處理（避免以修改 email 加「忘記密碼」盜用帳號）。
+23. **體驗設定**：客戶可自行修改；目前沒有「僅限開發工程師」的功能。
+24. **稽核顯示**：非開發工程師檢視稽核紀錄時，開發工程師一律顯示為「開發工程師」。
+25. **自訂群組可勾選的權限**：除 `all:manage` 外不限制（含 `User`、`UserGroup`），由客戶自由設定。
+26. **不限制「最高管理者」群組的指派者**（2026-11-18）：具 `User:update` 即可指派；是否把使用者與群組管理權限交給自訂群組，由最高管理者設定群組時把關，保留客戶建立「與最高管理者同等權限」群組的彈性。保留的保護規則：只有開發工程師能指派「開發工程師」群組、不能停用或刪除自己、不能把自己移出所屬內建群組、至少保留一位啟用中的最高管理者、已啟用使用者的 email 唯讀、內建群組不可修改或刪除。
