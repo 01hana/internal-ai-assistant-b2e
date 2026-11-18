@@ -1,7 +1,15 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { RequestIdMiddleware } from '../common/request-id/request-id.middleware';
 import { PrismaModule } from '../prisma/prisma.module';
 import { UserAuditService } from './audit/user-audit.service';
+import { AdminAuthController } from './auth/admin-auth.controller';
+import { AdminAuthService } from './auth/admin-auth.service';
+import { AdminSessionGuard } from './auth/admin-session.guard';
+import { CsrfGuard } from './auth/csrf.guard';
+import { ADMIN_THROTTLERS, AdminThrottlerGuard } from './auth/admin-throttler.guard';
+import { AdminPermissionGuard } from './authorization/admin-permission.guard';
 import { UserSessionService } from './auth/user-session.service';
 import { UserTokenService } from './auth/user-token.service';
 import { ADMIN_CLOCK, systemClock } from './common/clock';
@@ -16,8 +24,13 @@ import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mai
  * Assistant, LLM or query modules, and Core's AppModule must not import it (architecture tests).
  */
 @Module({
-  imports: [AdminConfigModule, PrismaModule],
+  imports: [AdminConfigModule, PrismaModule, ThrottlerModule.forRoot(ADMIN_THROTTLERS)],
+  controllers: [AdminAuthController],
   providers: [
+    // Order matters: session → CSRF → permission.
+    { provide: APP_GUARD, useClass: AdminSessionGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
+    { provide: APP_GUARD, useClass: AdminPermissionGuard },
     { provide: ADMIN_CLOCK, useValue: systemClock },
     {
       provide: ADMIN_MAIL_TRANSPORT,
@@ -25,7 +38,9 @@ import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mai
       useFactory: (settings: AdminSettings) =>
         settings.mailTransport === 'log' ? new LogMailTransport() : new SmtpMailTransport(settings.mailFrom, settings.smtp)
     },
+    AdminAuthService,
     AdminCustomerCheck,
+    AdminThrottlerGuard,
     AdminMailService,
     UserAuditService,
     UserSessionService,

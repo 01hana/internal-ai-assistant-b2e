@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AdminEnvironmentVariables } from './admin-env.validation';
+import { Inject, Injectable } from '@nestjs/common';
+import type { AdminEnvironmentVariables } from './admin-env.validation';
+
+/** The validated admin environment (see AdminConfigModule). */
+export const ADMIN_ENVIRONMENT = Symbol('ADMIN_ENVIRONMENT');
 
 /** Feature 014 timings (spec FR-003, FR-012, US2). */
 export const ADMIN_SESSION_IDLE_MS = 30 * 60 * 1000;
@@ -21,39 +23,39 @@ export type SmtpSettings = { host: string; port: number; secure: boolean; user?:
 /** Typed view of the admin environment. */
 @Injectable()
 export class AdminSettings {
-  constructor(private readonly config: ConfigService<AdminEnvironmentVariables, true>) {}
+  constructor(@Inject(ADMIN_ENVIRONMENT) private readonly env: AdminEnvironmentVariables) {}
 
   get port(): number {
-    return this.config.get('ADMIN_PORT', { infer: true });
+    return this.env.ADMIN_PORT;
   }
 
   get webOrigin(): string {
-    return new URL(this.config.get('ADMIN_WEB_ORIGIN', { infer: true })).origin;
+    return new URL(this.env.ADMIN_WEB_ORIGIN).origin;
   }
 
   get customerId(): string {
-    return this.config.get('ADMIN_CUSTOMER_ID', { infer: true });
+    return this.env.ADMIN_CUSTOMER_ID;
   }
 
   get cookieSecure(): boolean {
-    return this.config.get('ADMIN_COOKIE_SECURE', { infer: true }) === 'true';
+    return this.env.ADMIN_COOKIE_SECURE === 'true';
   }
 
   get mailTransport(): 'smtp' | 'log' {
-    return this.config.get('ADMIN_MAIL_TRANSPORT', { infer: true });
+    return this.env.ADMIN_MAIL_TRANSPORT;
   }
 
   get mailFrom(): string {
-    return this.config.get('ADMIN_MAIL_FROM', { infer: true }) ?? '';
+    return this.env.ADMIN_MAIL_FROM ?? '';
   }
 
   get smtp(): SmtpSettings {
     return {
-      host: this.config.get('ADMIN_SMTP_HOST', { infer: true }) ?? '',
-      port: this.config.get('ADMIN_SMTP_PORT', { infer: true }) ?? 0,
-      secure: this.config.get('ADMIN_SMTP_SECURE', { infer: true }) === 'true',
-      user: this.config.get('ADMIN_SMTP_USER', { infer: true }) || undefined,
-      password: this.config.get('ADMIN_SMTP_PASSWORD', { infer: true }) || undefined
+      host: this.env.ADMIN_SMTP_HOST ?? '',
+      port: this.env.ADMIN_SMTP_PORT ?? 0,
+      secure: this.env.ADMIN_SMTP_SECURE === 'true',
+      user: this.env.ADMIN_SMTP_USER || undefined,
+      password: this.env.ADMIN_SMTP_PASSWORD || undefined
     };
   }
 

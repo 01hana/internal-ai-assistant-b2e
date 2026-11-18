@@ -35,7 +35,7 @@ src/admin/
     auth.controller.ts                    # auth/login、logout、profile、verifyToken、firstLogin、forgot、reset
     session.guard.ts                      # 讀 cookie → 驗證工作階段 → 掛上 AdminPrincipal
     csrf.guard.ts                         # 狀態變更請求檢查 X-CSRF-Token 與 Origin
-    login-rate-limiter.ts                 # 依 IP 與帳號的行程內限流
+    admin-throttler.guard.ts              # @nestjs/throttler：依 IP 與帳號限制公開 auth 端點
   authorization/
     admin-ability.factory.ts              # 依使用者的群組組出 CASL ability
     require-permission.decorator.ts       # @RequirePermission('read', 'User')
@@ -48,7 +48,7 @@ src/admin/
   bootstrap/admin-bootstrap.cli.ts        # npm run admin:bootstrap
 ```
 
-- **進入點** `src/admin-main.ts`：`NestFactory.create(AdminModule)`，設定 `setGlobalPrefix('api/v1/admin')`、`cookie-parser`、CORS（只允許 `ADMIN_WEB_ORIGIN`、`credentials: true`）、`ValidationPipe`、既有 filter 與 interceptor。
+- **進入點** `src/admin-main.ts`：`NestFactory.create(AdminModule)` 後呼叫 `configureAdminApp()`（`src/admin/admin-app.setup.ts`，測試共用同一份）：`setGlobalPrefix('api/v1/admin')`、`helmet`（安全性標頭）、`cookie-parser`、CORS（只允許 `ADMIN_WEB_ORIGIN`、`credentials: true`）、`ValidationPipe`、既有 filter 與 interceptor。
 - `src/app.module.ts` 不變；以架構測試鎖定「`AppModule` 不引入 `src/admin/**`」與「`src/admin/**` 不引入 Assistant／LLM 模組」。
 - `nest build` 以 `tsc` 編譯 tsconfig 涵蓋的整個 `src/`，`dist/src/admin-main.js` 會與 `dist/src/main.js` 一併產出，不需調整 build 設定；以測試確認 build 後檔案存在。
 
@@ -172,7 +172,7 @@ model UserAuditEvent {
   - 連結網址：`${ADMIN_WEB_ORIGIN}/auth/firstLogin?token=…`、`${ADMIN_WEB_ORIGIN}/auth/reset?token=…`。
 - **密碼規則**：至少 12 字元、最多 128 字元；不得與帳號相同。
 - **回應欄位白名單**：使用者一律經 `toUserView()` 轉換後回傳，只含 spec 允許的欄位與 `invitationPending = passwordHash === null`（SC-007）。
-- **速率限制**（行程內記憶體；單一 `admin-api` 容器足夠）：`auth/login` 每個 IP 每分鐘 20 次、每個帳號每分鐘 10 次；`auth/forgot`、`auth/verifyToken`、`auth/firstLogin`、`auth/reset` 每個 IP 每分鐘 10 次。
+- **速率限制**（`@nestjs/throttler`，行程內儲存；單一 `admin-api` 容器足夠，多個容器需改用共用儲存）：只套用在公開的 auth 端點（`@UseGuards(AdminThrottlerGuard)`）。`auth/login` 每個 IP 每分鐘 20 次、每個帳號每分鐘 10 次；`auth/forgot`、`auth/verifyToken`、`auth/firstLogin`、`auth/reset` 每個 IP 每分鐘 10 次。超過時回 429 `TOO_MANY_REQUESTS`（沿用後台錯誤格式）。
 
 ## D4a. 寄信
 
@@ -216,5 +216,5 @@ model UserAuditEvent {
 
 - **單元**：權限定義（字串轉換、`manage` 展開、內建群組權限、`all:manage` 不可指派、只允許四種動作）、ability factory（兩個內建群組與數種自訂群組 × 全部權限的矩陣、開發工程師可見性條件）、密碼雜湊、工作階段逾時計算、CSRF guard。
 - **DB 整合**（`assistant_test`，`RUN_DB_BACKED_ADMIN_TESTS=true`；寄信以記錄收件內容的假傳輸替代）：邀請 → verifyToken → firstLogin → 登入、連結過期／重複使用／用途不符、forgot 不透露 email 是否存在與 15 分鐘限制、reset 撤銷工作階段、重寄邀請（含已設定密碼者被拒）、登入／鎖定／登出／逾時／停用／刪除、使用者與群組 API 的允許／拒絕矩陣、開發工程師可見性、email 啟用後唯讀、指派規則與最後一位最高管理者（含批次）、稽核事件、bootstrap、`ADMIN_CUSTOMER_ID` 啟動檢查、回應不含內部欄位。
-- **架構**：`AppModule` 不引入 `src/admin/**`；`src/admin/**` 不引入 `assistant`、`llm`、`query-understanding`；Core 路由清單沒有 `/api/v1/admin`。
+- **架構**：`src/admin/**` 與 `src/admin-main.ts` 以外的程式不引入後台程式；`src/admin/**` 不引入 Assistant、LLM、檢索、連接器等模組（015 需要時再逐一放行）；每個後台 controller 方法都宣告存取方式；`src/main.ts` 不啟動後台。
 - **安全掃描**：測試結束後掃描稽核事件、日誌輸出與所有 API 回應，不得出現測試用的明文密碼、工作階段代碼或連結代碼；也確認沒有任何路由能設定他人密碼（SC-008）。

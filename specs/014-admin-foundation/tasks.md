@@ -1,7 +1,7 @@
 # Tasks: Feature 014 — Admin Back-Office Foundation
 
 **Spec**: [`spec.md`](./spec.md)　**Design**: [`design.md`](./design.md)　**Plan**: [`plan.md`](./plan.md)
-**Status**: Phase 0–1 完成（Gate 1 PASS）；Phase 2 進行中
+**Status**: Phase 0–2 完成（Gate 2 PASS）；Phase 3 進行中
 
 ## Phase 0 — 基線
 
@@ -36,17 +36,22 @@
 - [x] T008 `src/admin-main.ts`、`AdminModule`、後台環境變數驗證（`ADMIN_PORT`、`ADMIN_WEB_ORIGIN`、`ADMIN_CUSTOMER_ID`、`ADMIN_COOKIE_SECURE`、`ADMIN_SMTP_*`、`ADMIN_MAIL_*`）。
 - [x] T009 密碼雜湊（scrypt）與密碼規則；連結代碼服務（產生、驗證、使用、失效）；寄信服務（SMTP／log 傳輸、邀請信與重設信範本、`admin:mail:test`）；單元測試。
 - [x] T010 工作階段服務（建立、驗證閒置／絕對逾時、撤銷、`lastSeenAt` 節流）；可注入時鐘的單元測試。
-- [ ] T011 `AdminAuthGuard`、`CsrfGuard`、登入限流。
-- [ ] T012 `auth/login`、`auth/logout`、`auth/profile`、`auth/verifyToken`、`auth/firstLogin`、`auth/forgot`、`auth/reset`；鎖定規則；`ADMIN_CUSTOMER_ID` 啟動檢查。
-- [ ] T013 `UserAuditService` 與登入相關事件。（服務已於第一批完成；登入相關事件於第二批接上）
-- [ ] T014 `admin:bootstrap` CLI 與 npm script。
-- [ ] T015 DB 測試：US1、US2 全部情境；稽核事件、日誌與回應不含密碼、工作階段代碼與連結代碼。
-- [ ] T016 架構測試：`AppModule` 不引入 `src/admin/**`；`src/admin/**` 不引入 Assistant／LLM 模組；Core 路由沒有 `/admin`。
-- [ ] T017 **Gate 2**：Phase 2 測試、全套、typecheck、lint。`FEATURE014_GATE_2=PASS`。
+- [x] T011 `AdminAuthGuard`、`CsrfGuard`、登入限流。
+- [x] T012 `auth/login`、`auth/logout`、`auth/profile`、`auth/verifyToken`、`auth/firstLogin`、`auth/forgot`、`auth/reset`；鎖定規則；`ADMIN_CUSTOMER_ID` 啟動檢查。
+- [x] T013 `UserAuditService` 與登入相關事件。
+- [x] T014 `admin:bootstrap` CLI 與 npm script。
+- [x] T015 DB 測試：US1、US2 全部情境；稽核事件、日誌與回應不含密碼、工作階段代碼與連結代碼。
+- [x] T016 架構測試：`AppModule` 不引入 `src/admin/**`；`src/admin/**` 不引入 Assistant／LLM 模組；Core 路由沒有 `/admin`。
+- [x] T017 **Gate 2**：Phase 2 測試、全套、typecheck、lint。`FEATURE014_GATE_2=PASS`。
 
 **Phase 2 執行證據**（分兩批）：
 
 - 第一批（2026-11-18，地基）：`src/admin-main.ts`（前綴 `api/v1/admin`、cookie-parser、只允許 `ADMIN_WEB_ORIGIN` 的 CORS、沿用 Core 的 ValidationPipe／filter／envelope）；`AdminModule`（只引入 `AdminConfigModule`、`PrismaModule`）；`admin-env.validation.ts`（獨立於 Core 的環境變數；`log` 寄信與 `ADMIN_COOKIE_SECURE=false` 在 production 拒絕；`smtp` 需 host、port、寄件者）；`AdminSettings`（逾時與期限常數、cookie 名稱、連結網址）；`AdminCustomerCheck`（`ADMIN_CUSTOMER_ID` 不存在即拒絕啟動）；`password-hasher.ts`（scrypt N=2^15、`timingSafeEqual`、帳號不存在時比對假雜湊、密碼規則）；`secret-token.ts`（32 bytes base64url、只存 sha256）；`UserTokenService`（產生時讓同用途舊連結失效、驗證狀態與用途、單次使用）；`UserSessionService`（閒置 30 分鐘／絕對 12 小時、`lastSeenAt` 每分鐘最多寫一次、撤銷）；`AdminMailService`（邀請信與重設信只含連結、帳號、期限；寄送失敗回 false，不記錄信件內容）與 `smtp`／`log` 傳輸；`UserAuditService`。單元測試 `admin-auth-primitives.spec.ts`、`admin-mail.spec.ts`。VM：Core 與 spec typecheck、eslint 通過；以 node 直接驗證雜湊、環境驗證與信件內容，結果與測試預期一致。
+- 第二批（2026-11-18，對外）：三個全域 guard，依序為 `AdminSessionGuard`（非公開路由驗證 cookie 工作階段）→ `CsrfGuard`（狀態變更請求檢查 `Origin`，已登入者另需 `X-CSRF-Token` 與 CSRF cookie 相同）→ `AdminPermissionGuard`（未宣告 `@PublicRoute`／`@SignedInRoute`／`@RequirePermission` 的路由一律 403）；`admin-ability.factory.ts`（開發工程師 `manage all`；最高管理者展開為各 subject 的 `manage`；非開發工程師對 `User`／`UserGroup` 加上隱藏開發工程師的條件；`auth/profile` 回傳的規則不含條件）；`AdminRateLimiter`（行程內，登入每 IP 每分鐘 20 次、每帳號 10 次，連結與忘記密碼每 IP 10 次）；`AdminAuthService`／`AdminAuthController`（`auth/login`、`logout`、`profile`、`verifyToken`、`firstLogin`、`forgot`、`reset`；登入失敗一律相同錯誤，帳號不存在、停用、未啟用、鎖定時仍比對假雜湊；忘記密碼一律回相同結果、寄信不等待；稽核只記錄帳號雜湊前 12 碼）；session cookie `HttpOnly; SameSite=Strict; Path=/api/v1/admin`，CSRF cookie 可由網站讀取；`toUserView()` 只輸出允許的欄位；`admin:bootstrap`（`src/admin/bootstrap/admin-bootstrap.cli.ts`、`scripts/admin-bootstrap.ts`、npm script）。DB 測試 `test/integration/admin-auth.spec.ts`（`RUN_DB_BACKED_ADMIN_TESTS=true`，輔助 `test/support/admin-test-app.helper.ts`：每個測試一個新 app、可調整的時鐘、記錄寄信內容的傳輸），架構測試 `test/architecture/admin-boundary.guard.spec.ts`。VM：typecheck（Core、spec、scripts）與 eslint 通過。
+- 發現：Core 既有 `admin/assistant/review-items`（Feature 001），SC-006 改寫為「Core 不載入後台模組」；兩者在部署上不衝突（spec Scope）。
+- 發現：本 repo 使用 TypeScript 6.0.3，預設開啟 CommonJS 預設匯入相容，`import x from 'cookie-parser'` 可正常執行；仍依 repo 既有測試慣例改用 `import x = require(...)`。
+- Gate 2（使用者於 Mac，2026-11-18）：typecheck、eslint 通過；build 產出 `dist/src/admin-main.js` 與 `dist/src/admin/bootstrap/admin-bootstrap.cli.js`。首輪 Phase 2 測試 23 個 DB 測試失敗、架構測試無法執行：`AdminConfigModule` 以 `ConfigModule.forRoot({ validate })` 在**載入檔案時**驗證環境變數，測試先載入模組才設定 `ADMIN_*`。修正為只在載入時讀 `.env`、建立應用程式時才驗證（`ADMIN_ENVIRONMENT` provider），`AdminSettings` 改讀驗證後的物件。第二輪 23 個失敗：測試輔助程式在後台啟動後才建立測試客戶，`AdminCustomerCheck` 正確拒絕啟動；改為啟動前先建立。第三輪：Phase 2 全部 77 tests 通過（單元 50、架構 4、DB 23）。Core 全套（首輪，排除上述兩檔）2280 passed、0 failed；Gateway 1451 passed、0 failed。`FEATURE014_GATE_2=PASS`。
+- Gate 2 後改用套件（2026-11-18，使用者同意）：手寫的 `AdminRateLimiter` 改為 `@nestjs/throttler` 6.8.0（`AdminThrottlerGuard`，具名限制 `ip`、`account`，429 沿用後台錯誤格式，只套用在公開 auth 端點）；新增 `helmet` 8.3.0 安全性標頭（原本缺少）；bootstrap 參數改用 Node 內建 `util.parseArgs`。HTTP 設定抽出為 `configureAdminApp()`，進入點與測試共用。新增測試：安全性標頭、連結端點每 IP 10 次、登入每帳號 10 次。保留手寫：scrypt 雜湊（Node 內建演算法，免原生套件）、資料庫工作階段（需依使用者撤銷全部工作階段）、CSRF（Origin + double submit + SameSite=Strict）。VM：typecheck、eslint 通過；以 node 驗證 helmet 匯入、`parseArgs` 結果與帳號限制的鍵值。
 
 ## Phase 3 — 權限、使用者與群組
 
