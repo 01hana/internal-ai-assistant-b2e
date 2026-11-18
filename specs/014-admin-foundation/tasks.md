@@ -1,7 +1,7 @@
 # Tasks: Feature 014 — Admin Back-Office Foundation
 
 **Spec**: [`spec.md`](./spec.md)　**Design**: [`design.md`](./design.md)　**Plan**: [`plan.md`](./plan.md)
-**Status**: Phase 0 完成（Gate 0 PASS）；Phase 1 進行中
+**Status**: Phase 0–1 完成（Gate 1 PASS）；Phase 2 進行中
 
 ## Phase 0 — 基線
 
@@ -16,12 +16,20 @@
 - 寄信：先使用公司的寄信服務（SMTP 設定於部署時提供）。
 - T003 Gate 0（使用者於 Mac，2026-11-18）：typecheck 通過；Core 全套 273 suites 中 249 passed、24 skipped、0 failed，2416 tests 中 2230 passed、186 skipped；Gateway 82 suites 中 72 passed、10 skipped、0 failed，1570 tests 中 1451 passed、119 skipped（與 Feature 013 Gate 8 相同）。`FEATURE014_GATE_0=PASS`。
 
-## Phase 1 — 權限契約與資料模型
+## Phase 1 — 權限定義與資料模型
 
-- [ ] T004 新增 `packages/admin-permission-contract`（subjects、兩個內建群組、自訂群組不可勾選的權限、`subject:action` 轉換、`toCaslRules`），build 設定比照 `internal-identity-contract`；根 `package.json` 以 `file:` 引用。
-- [ ] T005 契約單元測試：字串雙向轉換、未知權限拒絕、內建群組權限與 spec 表格一致、`all:manage` 不可出現在自訂群組、動作只允許 `read`／`create`／`update`／`delete`（與 `manage`）。
-- [ ] T006 Prisma schema 新增 `User`、`UserGroup`（兩者隱含多對多）、`UserToken`、`UserSession`、`UserAuditEvent`；migration `20261118000000_feature014_admin_foundation`；ledger 登記 hash。
-- [ ] T007 **Gate 1**：使用者 `npx prisma generate`、migrate（本機與測試資料庫）、契約測試、typecheck。`FEATURE014_GATE_1=PASS`。
+- [x] T004 新增權限定義 `src/admin/permissions/`（subjects、兩個內建群組、自訂群組不可勾選的權限、`subject:action` 轉換、`effectivePermissions`、`toCaslRules`）。
+- [x] T005 權限單元測試：字串雙向轉換、未知權限拒絕、內建群組權限與 spec 表格一致、`all:manage` 不可出現在自訂群組、動作只允許 `read`／`create`／`update`／`delete`（與 `manage`）。
+- [x] T006 Prisma schema 新增 `User`、`UserGroup`（兩者隱含多對多）、`UserToken`、`UserSession`、`UserAuditEvent`；migration `20261118000000_feature014_admin_foundation`；ledger 登記 hash。
+- [x] T007 **Gate 1**：使用者 `npx prisma generate`、migrate（本機與測試資料庫）、`prisma migrate diff` 確認 migration 與 schema 一致、權限測試、typecheck。`FEATURE014_GATE_1=PASS`。
+
+**Phase 1 執行證據（2026-11-18）**：
+
+- T004：權限定義放在 `src/admin/permissions/`（不依賴 NestJS、Prisma）：`subjects.ts`（8 個 subject、四種動作、中文標籤、`permissionCatalog()`）、`permission-string.ts`（`parsePermission`／`formatPermission`／`expandPermission`／`normalizeCustomGroupPermissions`：`subject:manage` 展開、去重、依目錄排序、拒絕未知權限與 `all:manage`）、`system-groups.ts`（`developer` 開發工程師、`admin` 最高管理者，皆 `all:manage`）、`rules.ts`（`effectivePermissions` 以群組聯集計算，內建群組權限只取自定義檔；`toCaslRules`）。原先做成獨立套件 `packages/admin-permission-contract`，經檢討後不打包（spec Decision 27），`package.json` 與 `Dockerfile` 不需修改。
+- T005：`test/unit/admin-permissions.spec.ts`。VM 無法執行 jest，改以 `tsc` 編譯後用 node 驗證相同案例，結果與測試預期一致。
+- T006：schema 新增 `User`、`UserGroup`（隱含多對多 `_UserToUserGroup`）、`UserToken`（`UserTokenPurpose`）、`UserSession`、`UserAuditEvent`；migration `20261118000000_feature014_admin_foundation` 依 Prisma 產生格式手寫（只新增，`_UserToUserGroup` 採 Prisma 6+ 的複合主鍵 `_AB_pkey`），ledger hash `1f2ff84319671afd0f52065832e6a26360392980737cea6497a51923f940c591`。手寫 SQL 與 schema 是否一致，於 Gate 1 以 `prisma migrate diff` 確認。
+- T007 Gate 1（使用者於 Mac，2026-11-18）：`prisma generate`（Core 與 Gateway client 一併更新）、本機與測試資料庫 `migrate deploy` 完成；typecheck（Core、spec、Gateway）通過；`admin-permissions` 22 tests、`repository-safety.guard`（含 migration ledger）5 tests 全數通過。`prisma migrate diff`（資料庫 → schema）回報 5 筆差異，全部是 Feature 005 `Managed*` 表既有的索引名稱：當初 migration 以 PostgreSQL 63 字元截斷產生名稱，與 Prisma 現行的截斷規則不同（例如 `…_enabled_lifecycle_` vs `…_enabled_lifecy_idx`）；欄位與作用相同，無功能影響；014 的新表、索引與外鍵沒有任何差異，手寫 migration 與 schema 一致。`FEATURE014_GATE_1=PASS`。
+- 既有索引名稱差異列為後續小整理（不在 014 範圍）：於 schema 以 `map:` 標註資料庫中的實際名稱即可消除，不需 migration。
 
 ## Phase 2 — 登入與工作階段
 

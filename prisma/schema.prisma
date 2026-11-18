@@ -1250,3 +1250,110 @@ model RetrievalCandidate {
   @@index([customerId, chunkId])
   @@index([customerId, selected])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 014: admin back-office. These tables belong to the admin API only
+// (src/admin, started from src/admin-main.ts). One deployment serves one customer,
+// so they carry no customerId; "User" is a back-office account, unrelated to the
+// Assistant's end users (who are only actorId strings).
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id                String        @id @default(cuid())
+  /// Login name, stored in lower case.
+  account           String        @unique
+  name              String
+  /// Stored in lower case; read-only once the password is set (developers excepted).
+  email             String        @unique
+  /// true = active.
+  status            Boolean       @default(true)
+  /// Null until the user sets a password from the first-login link.
+  passwordHash      String?
+  failedLoginCount  Int           @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  passwordChangedAt DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  groups   UserGroup[]
+  tokens   UserToken[]
+  sessions UserSession[]
+
+  @@index([status])
+}
+
+model UserGroup {
+  id          String   @id @default(cuid())
+  /// Built-in groups only ("developer", "admin"); null for custom groups.
+  code        String?  @unique
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  /// Custom groups only: "subject:action" strings. Built-in groups take their permissions from
+  /// @internal-ai-assistant/admin-permission-contract and leave this empty.
+  permissions String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users User[]
+}
+
+enum UserTokenPurpose {
+  first_login
+  reset_password
+}
+
+model UserToken {
+  id        String           @id @default(cuid())
+  userId    String
+  purpose   UserTokenPurpose
+  /// sha256 of the link token; the token itself is never stored.
+  tokenHash String           @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+}
+
+model UserSession {
+  id               String    @id @default(cuid())
+  /// sha256 of the session cookie value; the cookie value itself is never stored.
+  tokenHash        String    @unique
+  userId           String
+  createdAt        DateTime  @default(now())
+  lastSeenAt       DateTime  @default(now())
+  /// Absolute expiry (12 hours after login); idle expiry is derived from lastSeenAt.
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  ipSummary        String?
+  userAgentSummary String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+}
+
+/// Append-only audit of back-office actions. No foreign key to User, so records survive user deletion.
+model UserAuditEvent {
+  id                String   @id @default(cuid())
+  requestId         String
+  timestamp         DateTime @default(now())
+  actorUserId       String?
+  actorAccount      String?
+  actorIsDeveloper  Boolean  @default(false)
+  eventType         String
+  targetType        String?
+  targetId          String?
+  targetIsDeveloper Boolean  @default(false)
+  ipSummary         String?
+  userAgentSummary  String?
+  metadata          Json?
+
+  @@index([timestamp])
+  @@index([actorUserId, timestamp])
+  @@index([eventType, timestamp])
+}

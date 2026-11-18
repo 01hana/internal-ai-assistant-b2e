@@ -1011,6 +1011,23 @@ export type EnumRetrievalStrategyWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumRetrievalStrategyFilter<$PrismaModel>
 }
 
+export type EnumUserTokenPurposeFilter<$PrismaModel = never> = {
+  equals?: $Enums.UserTokenPurpose | Prisma.EnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  in?: $Enums.UserTokenPurpose[] | Prisma.ListEnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.UserTokenPurpose[] | Prisma.ListEnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumUserTokenPurposeFilter<$PrismaModel> | $Enums.UserTokenPurpose
+}
+
+export type EnumUserTokenPurposeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.UserTokenPurpose | Prisma.EnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  in?: $Enums.UserTokenPurpose[] | Prisma.ListEnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.UserTokenPurpose[] | Prisma.ListEnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumUserTokenPurposeWithAggregatesFilter<$PrismaModel> | $Enums.UserTokenPurpose
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumUserTokenPurposeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumUserTokenPurposeFilter<$PrismaModel>
+}
+
 export type NestedStringFilter<$PrismaModel = never> = {
   equals?: string | Prisma.StringFieldRefInput<$PrismaModel>
   in?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
@@ -1954,6 +1971,23 @@ export type NestedEnumRetrievalStrategyWithAggregatesFilter<$PrismaModel = never
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumRetrievalStrategyFilter<$PrismaModel>
   _max?: Prisma.NestedEnumRetrievalStrategyFilter<$PrismaModel>
+}
+
+export type NestedEnumUserTokenPurposeFilter<$PrismaModel = never> = {
+  equals?: $Enums.UserTokenPurpose | Prisma.EnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  in?: $Enums.UserTokenPurpose[] | Prisma.ListEnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.UserTokenPurpose[] | Prisma.ListEnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumUserTokenPurposeFilter<$PrismaModel> | $Enums.UserTokenPurpose
+}
+
+export type NestedEnumUserTokenPurposeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.UserTokenPurpose | Prisma.EnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  in?: $Enums.UserTokenPurpose[] | Prisma.ListEnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.UserTokenPurpose[] | Prisma.ListEnumUserTokenPurposeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumUserTokenPurposeWithAggregatesFilter<$PrismaModel> | $Enums.UserTokenPurpose
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumUserTokenPurposeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumUserTokenPurposeFilter<$PrismaModel>
 }
 
 

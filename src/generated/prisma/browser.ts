@@ -199,3 +199,28 @@ export type RetrievalRun = Prisma.RetrievalRunModel
  * 
  */
 export type RetrievalCandidate = Prisma.RetrievalCandidateModel
+/**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel
+/**
+ * Model UserGroup
+ * 
+ */
+export type UserGroup = Prisma.UserGroupModel
+/**
+ * Model UserToken
+ * 
+ */
+export type UserToken = Prisma.UserTokenModel
+/**
+ * Model UserSession
+ * 
+ */
+export type UserSession = Prisma.UserSessionModel
+/**
+ * Model UserAuditEvent
+ * Append-only audit of back-office actions. No foreign key to User, so records survive user deletion.
+ */
+export type UserAuditEvent = Prisma.UserAuditEventModel

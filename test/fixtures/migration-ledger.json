@@ -14,6 +14,7 @@
     "20261028000000_assistant_session_integration_ownership": "6929dcaa330650f3d1ff42786ba751883eede70419e7b150cdd7950a0e95e7ff",
     "20261029000000_assistant_session_integration_whitespace_check": "1d3604ca9f8ea46dc3ab09935d33e500f764660a7900eb8ca2e5c7844c2cbe1f",
     "20261116000000_feature013_assistant_experience": "83f1c6a4b9a6a70408cf11c93f8ed8aee5efa76d9eddd2aa9df3da72b8473429",
-    "20261117000000_feature013_session_deleted": "7f6f181aa47f0e38cecfab3cdde70f8c142f800cb7fddc4c522cfa6215488e2c"
+    "20261117000000_feature013_session_deleted": "7f6f181aa47f0e38cecfab3cdde70f8c142f800cb7fddc4c522cfa6215488e2c",
+    "20261118000000_feature014_admin_foundation": "1f2ff84319671afd0f52065832e6a26360392980737cea6497a51923f940c591"
   }
 }

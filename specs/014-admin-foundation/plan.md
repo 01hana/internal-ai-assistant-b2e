@@ -4,7 +4,7 @@
 
 ## Summary
 
-在 Core 的程式庫內建立獨立行程的後台 API（`src/admin/` + `src/admin-main.ts`），提供使用者、使用者群組、登入工作階段、CASL 權限與後台稽核；權限清單以 `packages/admin-permission-contract` 為唯一來源，供後台前端共用。部署時以同一個 Core image、不同指令啟動 `admin-api` 容器。
+在 Core 的程式庫內建立獨立行程的後台 API（`src/admin/` + `src/admin-main.ts`），提供使用者、使用者群組、登入工作階段、CASL 權限與後台稽核；權限清單以 `src/admin/permissions/` 為唯一來源；後台前端經由 API 取得。部署時以同一個 Core image、不同指令啟動 `admin-api` 容器。
 
 ## Technical Context and Existing Interfaces
 
@@ -26,7 +26,7 @@
 | Phase | 內容 | Gate |
 | --- | --- | --- |
 | 0 | 基線：specs 索引、使用者在 Mac 安裝新依賴 | Gate 0：依賴安裝完成、既有全套通過 |
-| 1 | 權限契約套件、資料模型與 migration、Prisma client | Gate 1：契約單元測試、migration ledger、typecheck |
+| 1 | 權限定義（`src/admin/permissions/`）、資料模型與 migration、Prisma client | Gate 1：權限單元測試、migration 與 schema 一致、ledger、typecheck |
 | 2 | 後台進入點、寄信、設定密碼連結（firstLogin／forgot／reset）、登入／登出／profile、工作階段、CSRF、限流、稽核、bootstrap CLI | Gate 2：auth 單元與 DB 測試、架構測試 |
 | 3 | CASL ability、權限 guard、使用者 API、群組 API | Gate 3：權限矩陣、開發工程師可見性、指派規則、稽核 |
 | 4 | 本機啟動、部署設定、文件 | Gate 4：全套、typecheck、lint、build 產出 `dist/src/admin-main.js`、本機手動驗證 |

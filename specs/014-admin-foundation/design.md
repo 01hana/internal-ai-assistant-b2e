@@ -18,15 +18,14 @@
 ## D1. 程式結構
 
 ```
-packages/admin-permission-contract/      # 權限唯一來源（無 Nest、無 Prisma 依賴）
-  src/subjects.ts                         # SUBJECT_ACTIONS: { User: ['read','create','update','delete'], ... }
-  src/system-groups.ts                    # 兩個內建群組（developer、admin）的代碼、名稱與權限
-  src/permission-string.ts                # 'subject:action' <-> { action, subject }；'subject:manage' 展開
-  src/rules.ts                            # toCaslRules(permissions) -> RawRuleOf<AppAbility>[]
-  src/index.ts
 src/admin-main.ts                         # 後台進入點（與 src/main.ts 並列）
 src/admin/
   admin.module.ts                         # AdminModule：只引入 PrismaModule、config、admin 子模組
+  permissions/                            # 權限唯一來源（不依賴 NestJS、Prisma；可單元測試）
+    subjects.ts                           # 8 個 subject、四種動作、中文標籤、permissionCatalog()
+    permission-string.ts                  # 'subject:action' <-> { action, subject }；manage 展開；自訂群組權限驗證
+    system-groups.ts                      # 兩個內建群組（developer、admin）的代碼、名稱與權限
+    rules.ts                              # effectivePermissions(groups)、toCaslRules(permissions)
   config/admin-env.validation.ts          # ADMIN_PORT、ADMIN_WEB_ORIGIN、ADMIN_CUSTOMER_ID、ADMIN_COOKIE_SECURE、ADMIN_SMTP_*、ADMIN_MAIL_*
   config/admin-customer.provider.ts       # 啟動時確認 ADMIN_CUSTOMER_ID 存在，提供給 015 的查詢使用
   auth/
@@ -53,12 +52,12 @@ src/admin/
 - `src/app.module.ts` 不變；以架構測試鎖定「`AppModule` 不引入 `src/admin/**`」與「`src/admin/**` 不引入 Assistant／LLM 模組」。
 - `nest build` 以 `tsc` 編譯 tsconfig 涵蓋的整個 `src/`，`dist/src/admin-main.js` 會與 `dist/src/main.js` 一併產出，不需調整 build 設定；以測試確認 build 後檔案存在。
 
-## D2. 權限契約與 CASL
+## D2. 權限定義與 CASL
 
 - 型別：`type AdminAction = 'read' | 'create' | 'update' | 'delete' | 'manage'`；`type AdminSubject = keyof typeof SUBJECT_ACTIONS | 'all'`；`AppAbility = PureAbility<[AdminAction, AdminSubject | AdminSubjectRecord], PrismaQuery>`（`@casl/prisma` 的 `createPrismaAbility`）。
 - **`manage`**：CASL 內建的「任何動作」。`subject:manage` 等同該 subject 的四種動作；`all:manage` 等同全部（只屬於兩個內建群組）。
-- **內建群組的權限只來自契約**：資料庫的內建群組列只存代碼與顯示名稱，`permissions` 欄位不使用；組 ability 時以代碼查契約。版本更新即生效，無需資料遷移。
-- **自訂群組**：`permissions` 存 `subject:action` 字串陣列；寫入前以契約驗證（未知的 subject 或 action、`all:manage` → 400）。
+- **內建群組的權限只來自 `src/admin/permissions/`**：資料庫的內建群組列只存代碼與顯示名稱，`permissions` 欄位不使用；組 ability 時以代碼查權限定義。版本更新即生效，無需資料遷移。
+- **自訂群組**：`permissions` 存 `subject:action` 字串陣列；寫入前以權限定義驗證（未知的 subject 或 action、`all:manage` → 400）。
 - **開發工程師可見性**：非開發工程師的 ability 對 `User` 加上條件 `{ groups: { none: { code: 'developer' } } }`、對 `UserGroup` 加上 `{ OR: [{ code: null }, { code: 'admin' }] }`（不用 `NOT: { code: 'developer' }`：SQL 的 `NOT (code = …)` 遇到 `code` 為 NULL 的自訂群組會一併排除）。列表以 `accessibleBy(ability, 'read').ofType('User')` 併入 Prisma `where`；單筆先查再以 `ability.can(action, subject('User', record))` 檢查，不符一律 404。
 - **套件版本**：`@casl/ability` 7.x、`@casl/prisma` 2.x（支援 Prisma 7）。本 repo 的 Prisma client 輸出到 `src/generated/prisma`，因此由 `@casl/prisma/runtime` 匯入，型別以 `PrismaQueryFactory<Prisma.TypeMap>`（取自本 repo 產生的 client）定義，不依賴 `@prisma/client` 的預設型別。
 - **指派與保護規則**（service 檢查，不只是權限；集中在 `UserPolicyService`）：
@@ -215,7 +214,7 @@ model UserAuditEvent {
 
 ## D9. 測試
 
-- **單元**：契約（字串轉換、`manage` 展開、內建群組權限、`all:manage` 不可指派、只允許四種動作）、ability factory（兩個內建群組與數種自訂群組 × 全部權限的矩陣、開發工程師可見性條件）、密碼雜湊、工作階段逾時計算、CSRF guard。
+- **單元**：權限定義（字串轉換、`manage` 展開、內建群組權限、`all:manage` 不可指派、只允許四種動作）、ability factory（兩個內建群組與數種自訂群組 × 全部權限的矩陣、開發工程師可見性條件）、密碼雜湊、工作階段逾時計算、CSRF guard。
 - **DB 整合**（`assistant_test`，`RUN_DB_BACKED_ADMIN_TESTS=true`；寄信以記錄收件內容的假傳輸替代）：邀請 → verifyToken → firstLogin → 登入、連結過期／重複使用／用途不符、forgot 不透露 email 是否存在與 15 分鐘限制、reset 撤銷工作階段、重寄邀請（含已設定密碼者被拒）、登入／鎖定／登出／逾時／停用／刪除、使用者與群組 API 的允許／拒絕矩陣、開發工程師可見性、email 啟用後唯讀、指派規則與最後一位最高管理者（含批次）、稽核事件、bootstrap、`ADMIN_CUSTOMER_ID` 啟動檢查、回應不含內部欄位。
 - **架構**：`AppModule` 不引入 `src/admin/**`；`src/admin/**` 不引入 `assistant`、`llm`、`query-understanding`；Core 路由清單沒有 `/api/v1/admin`。
 - **安全掃描**：測試結束後掃描稽核事件、日誌輸出與所有 API 回應，不得出現測試用的明文密碼、工作階段代碼或連結代碼；也確認沒有任何路由能設定他人密碼（SC-008）。

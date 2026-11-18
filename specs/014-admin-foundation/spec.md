@@ -86,12 +86,12 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 
 **Acceptance Scenarios**:
 
-1. **Given** 權限契約套件 `packages/admin-permission-contract`，**then** 它匯出：subject 清單、每個 subject 允許的 action、內建群組的權限、自訂群組不可勾選的權限、`subject:action` 字串轉換，以及可直接餵給 CASL 的規則格式；不含任何客戶專屬內容。
+1. **Given** 權限定義 `src/admin/permissions/`（唯一來源，不依賴 NestJS 或 Prisma），**then** 它提供：subject 清單與中文標籤、每個 subject 允許的 action、兩個內建群組的權限、自訂群組不可勾選的權限、`subject:action` 字串轉換，以及可直接餵給 CASL 的規則格式；不含任何客戶專屬內容。
 2. **Given** 一支後台 API 宣告所需權限（例如 `can('read', 'User')`），**when** 呼叫者的權限不包含它，**then** 403，並不執行任何查詢。
 3. **Given** 非開發工程師，**when** 查詢使用者或群組列表、篩選或下拉選項，**then** 不出現開發工程師帳號與「開發工程師」群組；以 ID 讀取或修改它們一律 404。
 4. **Given** `GET auth/profile`，**then** 回傳該使用者的 CASL 規則，前端以 `@casl/vue` 直接使用。
-5. **Given** 具 `UserGroup:create`／`update`，**when** 建立或修改自訂群組並勾選權限，**then** 只能勾選契約中允許的 `subject:action`（動作限 `read`／`create`／`update`／`delete`），且不得包含 `all:manage`（全部權限只屬於兩個內建群組）；`User`、`UserGroup` 可以勾選；寫入 `admin_user_group_created`／`admin_user_group_updated`（含變更前後的權限）。
-6. **Given** 內建群組，**when** 修改其權限、改名或刪除，**then** 400（內建群組的權限只能隨版本更新，由契約套件定義）。
+5. **Given** 具 `UserGroup:create`／`update`，**when** 建立或修改自訂群組並勾選權限，**then** 只能勾選權限定義中允許的 `subject:action`（動作限 `read`／`create`／`update`／`delete`），且不得包含 `all:manage`（全部權限只屬於兩個內建群組）；`User`、`UserGroup` 可以勾選；寫入 `admin_user_group_created`／`admin_user_group_updated`（含變更前後的權限）。
+6. **Given** 內建群組，**when** 修改其權限、改名或刪除，**then** 400（內建群組的權限只能隨版本更新，由 `src/admin/permissions/` 定義）。
 7. **Given** 自訂群組仍有成員，**when** 刪除，**then** 400；沒有成員才可刪除，寫入 `admin_user_group_deleted`。
 
 ### User Story 4 — 使用者管理（Priority: P1）
@@ -138,7 +138,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 - 停用或刪除後，既有工作階段立即失效，不等逾時。
 - 開發工程師帳號同時屬於「最高管理者」群組時，仍視為開發工程師（不計入「最後一位最高管理者」，對其他人隱藏）。
 - `ADMIN_CUSTOMER_ID` 未設定或不存在於資料庫：後台 API 拒絕啟動並說明原因。
-- 部署升級後既有使用者、群組與工作階段不受影響（migration 只新增）；新版本若在契約中新增 subject，內建群組的權限隨之更新，自訂群組不自動取得新權限。
+- 部署升級後既有使用者、群組與工作階段不受影響（migration 只新增）；新版本若在權限定義中新增 subject，內建群組的權限隨之更新，自訂群組不自動取得新權限。
 
 ## Requirements
 
@@ -149,7 +149,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 - **FR-003** 工作階段存於資料庫（可撤銷），cookie 只放不透明代碼；資料庫只存代碼的雜湊。閒置 30 分鐘、絕對 12 小時逾時。
 - **FR-004** CSRF：登入時另發非 httpOnly 的 CSRF cookie，狀態變更請求須以 `X-CSRF-Token` header 帶回相同值，並檢查 `Origin` 為設定的後台網站來源。
 - **FR-005** CORS 只允許設定的後台網站來源，並允許攜帶 cookie。`auth/login`、`auth/forgot`、`auth/verifyToken`、`auth/firstLogin`、`auth/reset` 有速率限制。
-- **FR-006** 權限契約 `packages/admin-permission-contract` 為唯一來源；後端以 `@casl/ability` 判斷、以 `@casl/prisma` 將條件轉為查詢；每支後台 API 以 decorator 宣告所需權限，未宣告的 API 一律拒絕。
+- **FR-006** 權限定義 `src/admin/permissions/` 為唯一來源；後端以 `@casl/ability` 判斷、以 `@casl/prisma` 將條件轉為查詢；每支後台 API 以 decorator 宣告所需權限，未宣告的 API 一律拒絕。
 - **FR-007** 群組指派與自訂群組規則見 US3-3、US3-5～7、US4-2～7；群組變更、停用、刪除立即生效。
 - **FR-008** 後台稽核寫入獨立的 `UserAuditEvent`（既有 `AuditEvent` 記錄 Assistant 的問答與工具呼叫，要求 `organizationId`、`hostApp`、`actorId`，不適用於後台使用者；015 的稽核頁可同時查兩者）。
 - **FR-009** `admin:bootstrap` 指令只在沒有任何後台使用者時執行；`deploy.sh` 新增 `admin-bootstrap` 步驟；部署設定新增 `admin-api` 服務（與 `core` 同一 image、不同啟動指令）與 `ADMIN_CUSTOMER_ID`。
@@ -186,7 +186,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 ### Key Entities（資料表）
 
 - **User**（後台使用者）：`id`、`account`（唯一、小寫）、`name`、`email`（必填、唯一、小寫）、`status`（布林，`true` 為啟用）、`lastLoginAt`、`createdAt`、`updatedAt`——以上為 API 可回傳的欄位；另以 `groups` 回傳所屬群組、以 `invitationPending`（尚未設定密碼）供「重寄邀請信」使用。內部欄位 `passwordHash`（尚未設定密碼時為空）、`failedLoginCount`、`lockedUntil`、`passwordChangedAt` 只供後端使用（FR-011）。
-- **UserGroup**（使用者群組）：`id`、`code`（內建群組的固定代碼 `developer`／`admin`；自訂群組為空）、`name`（唯一）、`description`、`isSystem`、`permissions`（自訂群組的 `subject:action` 清單；內建群組由契約套件決定，不存於此）、`createdAt`、`updatedAt`。
+- **UserGroup**（使用者群組）：`id`、`code`（內建群組的固定代碼 `developer`／`admin`；自訂群組為空）、`name`（唯一）、`description`、`isSystem`、`permissions`（自訂群組的 `subject:action` 清單；內建群組由 `src/admin/permissions/` 決定，不存於此）、`createdAt`、`updatedAt`。
 - **使用者與群組的對應**：多對多。一個欄位只能存一個群組，因此不在 `User` 上放 `groupId`，而以 Prisma 的隱含多對多關聯（`User.groups` ↔ `UserGroup.users`）表示：Prisma 自動建立只有兩個外鍵欄的對應表 `_UserToUserGroup`，schema 中不另外宣告 model；誰在何時變更群組由稽核事件記錄。
 - **UserToken**（設定密碼連結）：`id`、`userId`、`purpose`（`first_login`／`reset_password`）、`tokenHash`、`expiresAt`、`usedAt`、`createdAt`。邀請信與重設信的連結各一筆；只存代碼雜湊。
 - **UserSession**（登入工作階段）：`id`、`tokenHash`、`userId`、`createdAt`、`lastSeenAt`、`expiresAt`、`revokedAt`、`ipSummary`、`userAgentSummary`。每次登入一筆；cookie 只放隨機代碼，後端以它找到這筆紀錄，才能做到登出、停用、重設密碼後立即失效。
@@ -232,7 +232,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 - 首次登入頁 `/auth/firstLogin?token=…` 與重設頁 `/auth/reset?token=…`：讀取 token 後立即從網址移除，以 `auth/verifyToken` 取得帳號顯示，送出 `auth/firstLogin`／`auth/reset` 成功後導向登入頁。忘記密碼頁呼叫 `auth/forgot`，一律顯示相同的成功訊息。
 - 群組的權限矩陣以 `groups/getPermissions` 的清單產生（列為 subject、欄為 action），不在前端寫死。
 - 401 → 導向登入頁；403 → 顯示無權限，不登出。
-- 權限型別由 `packages/admin-permission-contract` 提供（前端引用或同步一份，方式由前端 spec 決定）。
+- 前端不引用後端程式：權限矩陣取自 `groups/getPermissions`、使用者權限取自 `auth/profile`；選單與路由所需的 subject 名稱在前端以型別檔維護，並以測試比對 `groups/getPermissions` 的回傳，避免兩邊不一致。
 
 ## Success Criteria
 
@@ -242,7 +242,7 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 - **SC-003** 登出、停用、刪除、重設密碼、逾時後，舊工作階段代碼一律 401；連結代碼使用後或過期即失效；資料庫與日誌中找不到明文密碼、工作階段代碼或連結代碼（`ADMIN_MAIL_TRANSPORT=log` 的本機日誌除外）。
 - **SC-008** 沒有任何 API 能讓他人查看、設定或重設某使用者的密碼。
 - **SC-004** US1–US4 的每個狀態變更都有對應的 `UserAuditEvent`。
-- **SC-005** 權限契約只有一份來源；新增 subject 或 action 只需修改契約套件。
+- **SC-005** 權限清單在後端只有一份（`src/admin/permissions/`）；新增 subject 或 action 只需修改該處，前端經由 API 取得。
 - **SC-006** Core、Gateway 的既有測試全數通過；Core 與 Gateway 上沒有 `/api/v1/admin` 路徑；客戶系統串接的 API 行為不變。
 - **SC-007** 所有後台 API 的回應都不含 FR-011 列出的內部欄位（以測試掃描每個端點的回應）。
 
@@ -281,3 +281,4 @@ Feature 013 之後，後端已累積多種「有記錄、沒有人看得到」�
 24. **稽核顯示**：非開發工程師檢視稽核紀錄時，開發工程師一律顯示為「開發工程師」。
 25. **自訂群組可勾選的權限**：除 `all:manage` 外不限制（含 `User`、`UserGroup`），由客戶自由設定。
 26. **不限制「最高管理者」群組的指派者**（2026-11-18）：具 `User:update` 即可指派；是否把使用者與群組管理權限交給自訂群組，由最高管理者設定群組時把關，保留客戶建立「與最高管理者同等權限」群組的彈性。保留的保護規則：只有開發工程師能指派「開發工程師」群組、不能停用或刪除自己、不能把自己移出所屬內建群組、至少保留一位啟用中的最高管理者、已啟用使用者的 email 唯讀、內建群組不可修改或刪除。
+27. **權限定義不另外打包**（2026-11-18）：放在 `src/admin/permissions/`，不建立獨立的 `packages/` 套件；後台前端在另一個 repo，改由 API 取得權限清單與規則，只在前端保留 subject 名稱的型別。之後若有多個前端或服務需要共用，再抽出成套件。

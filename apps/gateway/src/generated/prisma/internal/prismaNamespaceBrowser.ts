@@ -86,7 +86,12 @@ export const ModelName = {
   KnowledgeDocument: 'KnowledgeDocument',
   KnowledgeChunk: 'KnowledgeChunk',
   RetrievalRun: 'RetrievalRun',
-  RetrievalCandidate: 'RetrievalCandidate'
+  RetrievalCandidate: 'RetrievalCandidate',
+  User: 'User',
+  UserGroup: 'UserGroup',
+  UserToken: 'UserToken',
+  UserSession: 'UserSession',
+  UserAuditEvent: 'UserAuditEvent'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -767,6 +772,85 @@ export const RetrievalCandidateScalarFieldEnum = {
 } as const
 
 export type RetrievalCandidateScalarFieldEnum = (typeof RetrievalCandidateScalarFieldEnum)[keyof typeof RetrievalCandidateScalarFieldEnum]
+
+
+export const UserScalarFieldEnum = {
+  id: 'id',
+  account: 'account',
+  name: 'name',
+  email: 'email',
+  status: 'status',
+  passwordHash: 'passwordHash',
+  failedLoginCount: 'failedLoginCount',
+  lockedUntil: 'lockedUntil',
+  lastLoginAt: 'lastLoginAt',
+  passwordChangedAt: 'passwordChangedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const UserGroupScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  name: 'name',
+  description: 'description',
+  isSystem: 'isSystem',
+  permissions: 'permissions',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserGroupScalarFieldEnum = (typeof UserGroupScalarFieldEnum)[keyof typeof UserGroupScalarFieldEnum]
+
+
+export const UserTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  purpose: 'purpose',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type UserTokenScalarFieldEnum = (typeof UserTokenScalarFieldEnum)[keyof typeof UserTokenScalarFieldEnum]
+
+
+export const UserSessionScalarFieldEnum = {
+  id: 'id',
+  tokenHash: 'tokenHash',
+  userId: 'userId',
+  createdAt: 'createdAt',
+  lastSeenAt: 'lastSeenAt',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  ipSummary: 'ipSummary',
+  userAgentSummary: 'userAgentSummary'
+} as const
+
+export type UserSessionScalarFieldEnum = (typeof UserSessionScalarFieldEnum)[keyof typeof UserSessionScalarFieldEnum]
+
+
+export const UserAuditEventScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  timestamp: 'timestamp',
+  actorUserId: 'actorUserId',
+  actorAccount: 'actorAccount',
+  actorIsDeveloper: 'actorIsDeveloper',
+  eventType: 'eventType',
+  targetType: 'targetType',
+  targetId: 'targetId',
+  targetIsDeveloper: 'targetIsDeveloper',
+  ipSummary: 'ipSummary',
+  userAgentSummary: 'userAgentSummary',
+  metadata: 'metadata'
+} as const
+
+export type UserAuditEventScalarFieldEnum = (typeof UserAuditEventScalarFieldEnum)[keyof typeof UserAuditEventScalarFieldEnum]
 
 
 export const SortOrder = {

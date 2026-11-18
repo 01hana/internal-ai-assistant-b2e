@@ -391,3 +391,11 @@ export const RegisteredUpstreamTrustProfileLifecycle = {
 } as const
 
 export type RegisteredUpstreamTrustProfileLifecycle = (typeof RegisteredUpstreamTrustProfileLifecycle)[keyof typeof RegisteredUpstreamTrustProfileLifecycle]
+
+
+export const UserTokenPurpose = {
+  first_login: 'first_login',
+  reset_password: 'reset_password'
+} as const
+
+export type UserTokenPurpose = (typeof UserTokenPurpose)[keyof typeof UserTokenPurpose]
