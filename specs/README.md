@@ -25,6 +25,6 @@
 | — | post-feature012-consolidation（無 spec） | 完成 | 2026-10 – 11-14 | 2026-11-14 | — |
 | 013 | assistant-conversation-experience | 完成 | 2026-11-15 – 11-17 | 2026-11-17 | — |
 | 014 | admin-foundation | 完成（與 015 一起合併） | 2026-11-17 – 11-19 | — | — |
-| 015 | admin-operations | 進行中 | 2026-11-19 – | — | — |
+| 015 | admin-operations | 完成（與 014 一起合併） | 2026-11-19 | — | — |
 
 新 feature 開始時在表格新增一列；合併回 main 時更新狀態與日期。

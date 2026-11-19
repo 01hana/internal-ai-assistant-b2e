@@ -1,4 +1,4 @@
-# 後台管理 API 架構（Feature 014）
+# 後台管理 API 架構（Feature 014、015）
 
 客戶管理後台（使用者、群組，之後的統計、對話稽核、體驗設定）的後端。規格與決策見 [`specs/014-admin-foundation/`](../../specs/014-admin-foundation/spec.md)；前端串接見 [`docs/frontend-integration/admin-api.md`](../frontend-integration/admin-api.md)。
 
@@ -20,6 +20,7 @@ src/admin/
   audit/ mail/    UserAuditEvent、邀請與重設信
   bootstrap/      第一個帳號的 CLI
   health/         GET health（含資料庫檢查）
+  conversations/ stats/ feedback/ review-items/ audit-events/   015 營運檢視（唯讀；待審項目可改處理狀態）
   common/         分頁查詢、批次 ids、DTO transform、請求資訊
 ```
 
@@ -49,6 +50,15 @@ src/admin/
 - **正式環境限制**：`NODE_ENV=production` 時，`ADMIN_MAIL_TRANSPORT=log`、`ADMIN_COOKIE_SECURE=false`、`ADMIN_ENABLE_SWAGGER_DOCS=true` 都會拒絕啟動。
 - **本機**：`npm run local:start` 一併啟動（3200 埠，信件寫入 `.local-state/assistant/logs/admin.log`，Swagger UI 在 `/api/v1/admin/docs`）；`ADMIN_CUSTOMER_ID` 預設取自本機 Capability Pack，`.env` 的 `ADMIN_*` 可覆寫預設。第一個帳號以 `npm run admin:local:bootstrap -- --account … --name … --email …` 建立（與 `local:start` 相同的環境，連結只在終端機顯示一次）。
 
-## 6. 擴充（Feature 015、016）
+## 6. 營運檢視（Feature 015）
+
+- **唯讀讀取 Assistant 資料**：後台以 Prisma 直接查 `AssistantSession`、`AssistantMessage`、`FeedbackEvent`、`ReviewItem`、`AuditEvent`，一律以 `ADMIN_CUSTOMER_ID` 過濾；不 import Core 的 Assistant、feedback 等模組（架構測試以實際路徑判斷）。
+- **對話內容只有一個出口**：`conversations/conversation-content.ts` 檢查 `Conversation:read`，依序「讀取 → 寫 `admin_conversation_viewed` → 回傳」，稽核寫入失敗就不回傳內容。列表只含對話標題，不寫稽核。
+- **統計**在 PostgreSQL 彙總（`date_trunc`、`AT TIME ZONE ADMIN_TIME_ZONE`、`generate_series` 補 0），參數化的 `$queryRaw`。
+- **待審項目對應的訊息**：`COALESCE(suggestedImprovement->>'messageId', sourceId)`，集中在 `review-items/review-item-source.ts`。處理狀態寫在 `ReviewItem`（`note`、`resolvedAt`），處理紀錄以 `admin_review_item_updated` 稽核為準。
+- **開發工程師遮蔽**集中在 `audit/audit-actor.ts`（後台稽核與待審項目的處理紀錄共用）。
+- Core 舊的 `/api/v1/admin/assistant/review-items` 已移除；架構測試確保 Core 沒有 `/admin` 路由。
+
+## 7. 擴充（Feature 016 之後）
 
 新增 subject 或動作只需修改 `src/admin/permissions/subjects.ts`：內建群組自動取得，自訂群組不會自動取得。新模組放在 `src/admin/<模組>/`，在 `AdminModule` 註冊，並為每個路由宣告權限；若需要讀取 Assistant 的資料，於架構測試逐一放行所需模組。

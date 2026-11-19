@@ -16,6 +16,9 @@ import { ADMIN_CLOCK, systemClock } from './common/clock';
 import { AdminConfigModule } from './config/admin-config.module';
 import { AdminCustomerCheck } from './config/admin-customer.check';
 import { AdminSettings } from './config/admin-settings';
+import { AdminAuditService } from './audit-events/admin-audit.service';
+import { AssistantAuditService } from './audit-events/assistant-audit.service';
+import { AdminAuditController, AssistantAuditController } from './audit-events/audit-events.controller';
 import { ConversationContentService } from './conversations/conversation-content';
 import { ConversationsController } from './conversations/conversations.controller';
 import { ConversationsService } from './conversations/conversations.service';
@@ -40,7 +43,7 @@ import { UsersService } from './users/users.service';
 @Module({
   imports: [AdminConfigModule, PrismaModule, ThrottlerModule.forRoot(ADMIN_THROTTLERS)],
   controllers: [
-    AdminAuthController, AdminHealthController, ConversationsController, FeedbackController, GroupsController, ReviewItemsController, StatsController, UsersController
+    AdminAuditController, AdminAuthController, AdminHealthController, AssistantAuditController, ConversationsController, FeedbackController, GroupsController, ReviewItemsController, StatsController, UsersController
   ],
   providers: [
     // Order matters: session → CSRF → permission.
@@ -54,9 +57,11 @@ import { UsersService } from './users/users.service';
       useFactory: (settings: AdminSettings) =>
         settings.mailTransport === 'log' ? new LogMailTransport() : new SmtpMailTransport(settings.mailFrom, settings.smtp)
     },
+    AdminAuditService,
     AdminAuthService,
     AdminCustomerCheck,
     AdminThrottlerGuard,
+    AssistantAuditService,
     AdminMailService,
     ConversationContentService,
     ConversationsService,

@@ -1,4 +1,4 @@
-# 前端串接指南：後台管理 API（Feature 014）
+# 前端串接指南：後台管理 API（Feature 014、015）
 
 給後台網站（`internal-ai-assistant-admin`，Nuxt 4 + Nuxt UI）串接用。架構見 [`docs/architecture/admin-back-office.md`](../architecture/admin-back-office.md)；本機啟動 API 後，完整的欄位說明可在 Swagger UI `http://localhost:3200/api/v1/admin/docs` 查看與試打。
 
@@ -89,6 +89,83 @@
 - 權限矩陣以 `groups/getPermissions` 產生（列為 subject、欄為 action），不要寫死在前端；`permissions` 送 `subject:action` 字串，例如 `["User:read", "Conversation:read"]`。
 - 內建群組不可修改或刪除（`SYSTEM_GROUP_LOCKED`）；有成員的群組不可刪除（`GROUP_HAS_MEMBERS`）；名稱重複為 `GROUP_NAME_TAKEN`；不允許的權限為 `INVALID_PERMISSIONS`（`details.invalid`）。
 
-## 6. subject 名稱的型別
+## 6. 營運檢視（Feature 015）
+
+### 6.1 對話內容的權限與稽核
+
+- **問答文字**（對話標題、訊息內容）一律需要 `Conversation:read`。只有 `Feedback:read`、`ReviewItem:read` 的人看得到評分、原因、狀態等資料，看不到問答文字。
+- **讀取內容會留稽核**：`conversations/:id`、`feedback/:id`、`reviewItems/:id`（有 `Conversation:read` 時）每次都寫一筆 `admin_conversation_viewed`；列表不寫。前端不要為了預覽而預先呼叫詳情 API。
+- 客戶系統使用者只有 `actorId`、`organizationId`、`hostApp`，沒有姓名，直接顯示這三個值。
+- 列表的 `filters.from`／`filters.to` 為 ISO 8601 時間（`from` 含、`to` 不含），前端依使用者時區換算後送出。
+- 狀態、類型等代碼的中文標籤由各自的 `getFilters` 提供（`{ value, label }`），回應只回代碼。
+
+### 6.2 對話 `conversations`（`Conversation:read`）
+
+| Method | Path | Body／Query | 回應 `data` |
+| --- | --- | --- | --- |
+| POST | `conversations/getTable` | `{ page, pageSize, sort?, keyword?, filters?: { status?, hostApp?, organizationId?, actorId?, from?, to?, hasNegativeFeedback?, hasUnanswered? } }` | `{ items, total }` |
+| GET | `conversations/getFilters` | — | `{ status: [{ value, label }], hostApps: [{ value, label }] }` |
+| GET | `conversations/:id` | — | 對話與訊息（留稽核） |
+
+- 列表每一列：`{ id, title, actorId, organizationId, hostApp, status, messageCount, createdAt, lastMessageAt, hasNegativeFeedback, hasUnanswered }`。`status` 預設不含 `deleted`（使用者已刪除的對話，要看時明確傳入）；`keyword` 比對標題；`sort.field` 為 `lastMessageAt`（預設，新到舊）或 `createdAt`；`period` 篩選最後訊息時間。
+- `hasUnanswered`：有「無法回答」「權限不足」「工具失敗」的回答（「需澄清」不算）。
+- 詳情：對話欄位加上 `truncated` 與 `messages: [{ id, role: 'user' | 'assistant', content, answerDecision, createdAt, feedback: [{ id, rating, reason, comment, createdAt }], reviewItems: [{ id, sourceType, status }] }]`，依時間排序；超過 500 則時只回最新 500 則，`truncated: true`。
+
+### 6.3 統計 `stats`（`Stats:read`）
+
+`GET stats/getSummary?from=YYYY-MM-DD&to=YYYY-MM-DD&granularity=day|week`（日期為部署時區 `timeZone` 的日期，含頭尾，最長 366 天；週從星期一開始）：
+
+```json
+{
+  "from": "2026-11-01", "to": "2026-11-30", "granularity": "day", "timeZone": "Asia/Taipei",
+  "usage": { "total": { "sessions": 12, "questions": 40, "actors": 5 }, "series": [{ "period": "2026-11-01", "sessions": 1, "questions": 3, "actors": 1 }] },
+  "answers": { "labels": { "answered": "已回答", "no_answer": "無法回答" }, "total": { "answered": 30, "no_answer": 5 }, "series": [{ "period": "2026-11-01", "answered": 2, "no_answer": 1 }] }
+}
+```
+
+- `series` 涵蓋期間內每一天（或每一週），沒有資料為 0；`answers` 的每一筆都含全部回答結果的鍵（上例為節錄）。
+- `usage.total.actors` 是整段期間的不重複人數（不是各期間相加）。使用者已刪除的對話照樣計入。
+- 期間錯誤為 400 `INVALID_PERIOD`。
+
+### 6.4 回饋 `feedback`（`Feedback:read`）
+
+| Method | Path | Body | 回應 `data` |
+| --- | --- | --- | --- |
+| POST | `feedback/getTable` | `{ page, pageSize, sort?, keyword?, filters?: { rating?, hasComment?, from?, to? } }` | `{ items: [{ id, rating, reason, comment, answerDecision, createdAt, sessionId, messageId }], total }` |
+| GET | `feedback/getFilters` | — | `{ rating: [{ value, label }] }` |
+| GET | `feedback/:id` | — | 回饋欄位加 `conversation` |
+
+- `keyword` 比對原因與留言；`sort.field` 為 `createdAt`。
+- `conversation`：有 `Conversation:read` 時為 `{ sessionId, sessionStatus, question, answer }`（`question`／`answer` 為 `{ id, content, answerDecision, createdAt }` 或 `null`），並留稽核；沒有時為 `null`。
+
+### 6.5 待審項目 `reviewItems`（讀取 `ReviewItem:read`、更新 `ReviewItem:update`）
+
+| Method | Path | Body | 回應 `data` |
+| --- | --- | --- | --- |
+| POST | `reviewItems/getTable` | `{ page, pageSize, sort?, keyword?, filters?: { status?, sourceType?, priority?, from?, to? } }` | `{ items, total }` |
+| GET | `reviewItems/getFilters` | — | `{ sourceType, status, priority }`（各為 `[{ value, label }]`） |
+| GET | `reviewItems/:id` | — | 項目、`suggestedImprovement`、`history`、`conversation` |
+| PATCH | `reviewItems/batch` | `{ ids, status, note? }` | `{ updated }` |
+
+- 列表每一列：`{ id, sourceType, status, priority, summary, note, createdAt, updatedAt, resolvedAt, sessionId, messageId }`（來源訊息已不存在時 `sessionId`、`messageId` 為 `null`）。`status` 預設為 `open`、`in_review`；`keyword` 比對摘要；`sort.field` 為 `createdAt`（預設）或 `priority`。
+- 狀態：`open` 待處理、`in_review` 處理中、`resolved` 已解決、`dismissed` 不處理，可任意切換。改為已解決／不處理時記錄 `resolvedAt`（已是關閉狀態則保留原時間），改回其他狀態時清除。`note` 最多 500 字，有傳才覆寫。
+- 批次全有或全無：任一筆找不到（或屬於其他客戶）為 404 `REVIEW_ITEM_NOT_FOUND`，`details.ids` 列出是哪幾筆。
+- `history`：`[{ at, actor: { account, label }, before, after, note }]`；處理者為開發工程師時，非開發工程師看到 `{ account: null, label: '開發工程師' }`。
+- `conversation` 同回饋。
+
+### 6.6 稽核（`AuditEvent:read`）
+
+| Method | Path | Body | 回應 `data` |
+| --- | --- | --- | --- |
+| POST | `auditEvents/getTable` | `{ page, pageSize, sort?, filters?: { eventType?, actorId?, sessionId?, requestId?, from?, to? } }` | `{ items, total }` |
+| GET | `auditEvents/getFilters` | — | `{ eventType: [{ value, label }] }`（此客戶出現過的事件，標籤即代碼） |
+| POST | `adminAuditEvents/getTable` | `{ page, pageSize, sort?, filters?: { eventType?, actorAccount?, from?, to? } }` | `{ items, total }` |
+| GET | `adminAuditEvents/getFilters` | — | `{ eventType: [{ value, label }] }` |
+
+- Assistant 稽核每一列：`{ id, timestamp, eventType, requestId, actorId, organizationId, hostApp, sessionId, messageId, decision, durationMs }`（不含 `metadata`）。
+- 後台稽核每一列：`{ id, timestamp, requestId, eventType, actor: { account, label }, targetType, targetId, ipSummary, userAgentSummary, metadata }`。非開發工程師看到開發工程師為「開發工程師」（`account: null`）；對象是開發工程師帳號的事件，`targetId` 與 `metadata` 為 `null`；以 `actorAccount` 篩選時不會查出開發工程師的紀錄。
+- `sort.field` 為 `timestamp`（預設，新到舊）。沒有修改或刪除稽核的 API。
+
+## 7. subject 名稱的型別
 
 前端不引用後端程式。選單與路由所需的 subject 名稱在前端以型別檔維護（`User`、`UserGroup`、`AuditEvent`、`Stats`、`Conversation`、`ReviewItem`、`Feedback`、`ExperienceConfig`），並以測試比對 `groups/getPermissions` 的回傳，避免兩邊不一致。

@@ -1,7 +1,7 @@
 # Tasks: Feature 015 — Admin Operations View
 
 **Spec**: [`spec.md`](./spec.md)　**Design**: [`design.md`](./design.md)　**Plan**: [`plan.md`](./plan.md)
-**Status**: Phase 2 完成（Gate 2 PASS），待開始 Phase 3
+**Status**: 完成（Gate 3 PASS，2026-11-19）；與 014 一起合併到 main，實際部署與 014 一起進行
 
 ## Phase 0 — 基線與共用
 
@@ -56,7 +56,16 @@
 
 ## Phase 3 — 稽核與文件
 
-- [ ] T015 稽核 API：`auditEvents/getTable`、`getFilters`；`adminAuditEvents/getTable`、`getFilters`（開發工程師遮蔽、`actorAccount` 篩選限制）。
-- [ ] T016 DB 測試：權限、客戶隔離、Assistant 稽核不含 `metadata`、遮蔽規則。
-- [ ] T017 文件：`docs/frontend-integration/admin-api.md`（新 API、權限與內容規則）、`docs/architecture/admin-back-office.md`、部署 README 的 `ADMIN_TIME_ZONE`。
-- [ ] T018 **Gate 3**：全套、typecheck、lint、build；本機 `local:start` 以 Swagger 走過各 API（有／無 `Conversation:read` 的帳號各一）。`FEATURE015_GATE_3=PASS`。
+- [x] T015 稽核 API：`auditEvents/getTable`、`getFilters`；`adminAuditEvents/getTable`、`getFilters`（開發工程師遮蔽、`actorAccount` 篩選限制）。
+- [x] T016 DB 測試：權限、客戶隔離、Assistant 稽核不含 `metadata`、遮蔽規則。
+- [x] T017 文件：`docs/frontend-integration/admin-api.md`（新 API、權限與內容規則）、`docs/architecture/admin-back-office.md`、部署 README 的 `ADMIN_TIME_ZONE`。
+- [x] T018 **Gate 3**：全套、typecheck、lint、build；本機 `local:start` 以 Swagger 走過各 API（有／無 `Conversation:read` 的帳號各一）。`FEATURE015_GATE_3=PASS`。
+
+**Phase 3 執行證據（2026-11-19）**：
+
+- T015 `audit-events/`：`auditEvents/getTable`（`select` 只取 US5-1 的欄位，不取 `metadata`、`permissionResult`、`evidenceRefIds`；篩選事件類型、使用者、對話、request、期間）、`getFilters`（此客戶出現過的事件類型）；`adminAuditEvents/getTable`（篩選事件類型、執行者帳號、期間；以 `audit-actor.ts` 遮蔽開發工程師；對象為開發工程師帳號時 `targetId`、`metadata` 為 null；非開發工程師以帳號篩選時加上 `actorIsDeveloper: false`）、`getFilters`（後台事件類型與中文標籤）。兩個 controller 只有讀取路由。
+- T016 `admin-audit-events.spec.ts`（6 tests）：Assistant 稽核不含 `metadata`、客戶隔離、各篩選、事件類型選項；後台稽核的開發工程師遮蔽（含 `targetId`／`metadata`、帳號篩選）、事件類型驗證；權限與沒有修改／刪除稽核的路由。
+- T017 文件：`docs/frontend-integration/admin-api.md` 新增「6. 營運檢視」（內容權限與稽核、各 API 的 body 與回應、狀態規則、遮蔽規則）；`docs/architecture/admin-back-office.md` 新增「6. 營運檢視」；部署 README 加上 `ADMIN_TIME_ZONE`（`admin.env.example` 已於 T003 加入）。VM：typecheck、eslint 通過。
+- Swagger 範例：`PeriodFilterDto` 的 `from`／`to` 加上 `@example`（Swagger CLI plugin 讀取 JSDoc），範例 body 不再是無效的 `"string"`。
+- T018 Gate 3（使用者於 Mac，2026-11-19）：build、typecheck、eslint 通過；Core 全套 284 suites、2561 tests（2277 passed、284 skipped、0 failed）；後台 DB 測試 9 個檔案 98 tests 全數通過。本機 `local:start` 以 Swagger 檢查：開發工程師帳號讀取對話、統計、回饋與待審項目詳情（含問答）、批次更新待審項目與處理紀錄、後台稽核中的 `admin_conversation_viewed`；只有營運權限（無 `Conversation:read`）的帳號：對話 API 403、詳情的 `conversation` 為 null、開發工程師顯示為「開發工程師」——使用者回報皆無問題。`FEATURE015_GATE_3=PASS`。
+
