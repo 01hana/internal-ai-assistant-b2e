@@ -107,6 +107,7 @@ Feature 014 建好了後台的使用者、群組、登入、權限與稽核，�
 | GET | `conversations/:id` | `Conversation:read` | 對話內容（留稽核） |
 | GET | `stats/getSummary` | `Stats:read` | 使用量與回答結果分布 |
 | POST | `feedback/getTable` | `Feedback:read` | 回饋列表 |
+| GET | `feedback/getFilters` | `Feedback:read` | 評分選項 |
 | GET | `feedback/:id` | `Feedback:read` | 回饋詳情（有 `Conversation:read` 才含問答，留稽核） |
 | POST | `reviewItems/getTable` | `ReviewItem:read` | 待審項目列表 |
 | GET | `reviewItems/getFilters` | `ReviewItem:read` | 類型、狀態、優先度選項 |

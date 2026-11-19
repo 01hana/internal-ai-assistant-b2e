@@ -19,11 +19,15 @@ import { AdminSettings } from './config/admin-settings';
 import { ConversationContentService } from './conversations/conversation-content';
 import { ConversationsController } from './conversations/conversations.controller';
 import { ConversationsService } from './conversations/conversations.service';
+import { FeedbackController } from './feedback/feedback.controller';
+import { FeedbackService } from './feedback/feedback.service';
 import { GroupsController } from './groups/groups.controller';
 import { AdminHealthController } from './health/admin-health.controller';
 import { GroupsService } from './groups/groups.service';
 import { AdminMailService } from './mail/admin-mail.service';
 import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mail/admin-mail.transport';
+import { ReviewItemsController } from './review-items/review-items.controller';
+import { ReviewItemsService } from './review-items/review-items.service';
 import { StatsController } from './stats/stats.controller';
 import { StatsService } from './stats/stats.service';
 import { UsersController } from './users/users.controller';
@@ -35,7 +39,9 @@ import { UsersService } from './users/users.service';
  */
 @Module({
   imports: [AdminConfigModule, PrismaModule, ThrottlerModule.forRoot(ADMIN_THROTTLERS)],
-  controllers: [AdminAuthController, AdminHealthController, ConversationsController, GroupsController, StatsController, UsersController],
+  controllers: [
+    AdminAuthController, AdminHealthController, ConversationsController, FeedbackController, GroupsController, ReviewItemsController, StatsController, UsersController
+  ],
   providers: [
     // Order matters: session → CSRF → permission.
     { provide: APP_GUARD, useClass: AdminSessionGuard },
@@ -54,7 +60,9 @@ import { UsersService } from './users/users.service';
     AdminMailService,
     ConversationContentService,
     ConversationsService,
+    FeedbackService,
     GroupsService,
+    ReviewItemsService,
     StatsService,
     UserAuditService,
     UserSessionService,

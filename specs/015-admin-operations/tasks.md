@@ -1,7 +1,7 @@
 # Tasks: Feature 015 — Admin Operations View
 
 **Spec**: [`spec.md`](./spec.md)　**Design**: [`design.md`](./design.md)　**Plan**: [`plan.md`](./plan.md)
-**Status**: Phase 1 完成（Gate 1 PASS），待開始 Phase 2
+**Status**: Phase 2 第一批（回饋、待審項目）實作完成，待測試
 
 ## Phase 0 — 基線與共用
 
@@ -35,11 +35,18 @@
 
 ## Phase 2 — 回饋、待審項目、移除舊路由
 
-- [ ] T010 回饋 API：`feedback/getTable`、`GET :id`（有 `Conversation:read` 才含問答並留稽核）。
-- [ ] T011 待審項目 API：`reviewItems/getTable`、`getFilters`、`GET :id`（處理紀錄、問答）、`PATCH batch`（全有或全無、`resolvedAt`、稽核）。
+- [x] T010 回饋 API：`feedback/getTable`、`GET :id`（有 `Conversation:read` 才含問答並留稽核）。
+- [x] T011 待審項目 API：`reviewItems/getTable`、`getFilters`、`GET :id`（處理紀錄、問答）、`PATCH batch`（全有或全無、`resolvedAt`、稽核）。
 - [ ] T012 移除 Core `/api/v1/admin/assistant/review-items` 與只供它使用的 service 方法、DTO、測試；改寫相關 integration 測試。
 - [ ] T013 DB 測試：權限矩陣、沒有 `Conversation:read` 時回應不含問答、開發工程師遮蔽、批次規則、客戶隔離。
 - [ ] T014 **Gate 2**：Phase 2 測試、Core 全套、typecheck、lint。`FEATURE015_GATE_2=PASS`。
+
+**Phase 2 執行證據**（分兩批）：
+
+- 第一批（2026-11-19，回饋與待審項目）：
+  - T010 `feedback/`：`getTable`（評分、期間、有無留言、關鍵字比對原因與留言；回應不含問答文字）、`getFilters`（評分選項，spec API 表補上此路由）、`GET :id`（以 `ConversationContentService.readExchange` 取被評價的回答與前一則提問，沒有 `Conversation:read` 時為 null，有則先稽核再回傳）。
+  - T011 `review-items/`（路徑 `reviewItems`）：`getTable`（預設 `open`、`in_review`；類型、優先度、期間、關鍵字比對摘要；以 `messageIdOf()` 對應訊息並一次查出 `sessionId`；不含 `suggestedImprovement` 與問答文字）、`getFilters`、`GET :id`（`suggestedImprovement`、處理紀錄、問答）、`PATCH batch`（全有或全無；逐筆更新狀態，`note` 有給才覆寫；改為已解決／不處理時設定 `resolvedAt`，已是關閉狀態則保留原時間，改回其他狀態時清除；每筆寫 `admin_review_item_updated`，`metadata` 含前後狀態與備註）。處理紀錄的執行者以共用的 `audit/audit-actor.ts` 顯示（非開發工程師看到開發工程師為「開發工程師」，Phase 3 的後台稽核沿用）。
+  - T013（部分）：`admin-feedback.spec.ts`（4 tests）、`admin-review-items.spec.ts`（8 tests）：列表不含問答文字、篩選與選項、詳情的內容權限與稽核、批次狀態與 `resolvedAt`、全有或全無、開發工程師遮蔽、權限、客戶隔離。VM：typecheck、eslint 通過。
 
 ## Phase 3 — 稽核與文件
 
