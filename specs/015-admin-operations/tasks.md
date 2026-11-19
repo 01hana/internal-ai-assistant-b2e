@@ -1,7 +1,7 @@
 # Tasks: Feature 015 — Admin Operations View
 
 **Spec**: [`spec.md`](./spec.md)　**Design**: [`design.md`](./design.md)　**Plan**: [`plan.md`](./plan.md)
-**Status**: Phase 2 第一批（回饋、待審項目）實作完成，待測試
+**Status**: Phase 2 完成（Gate 2 PASS），待開始 Phase 3
 
 ## Phase 0 — 基線與共用
 
@@ -37,9 +37,9 @@
 
 - [x] T010 回饋 API：`feedback/getTable`、`GET :id`（有 `Conversation:read` 才含問答並留稽核）。
 - [x] T011 待審項目 API：`reviewItems/getTable`、`getFilters`、`GET :id`（處理紀錄、問答）、`PATCH batch`（全有或全無、`resolvedAt`、稽核）。
-- [ ] T012 移除 Core `/api/v1/admin/assistant/review-items` 與只供它使用的 service 方法、DTO、測試；改寫相關 integration 測試。
-- [ ] T013 DB 測試：權限矩陣、沒有 `Conversation:read` 時回應不含問答、開發工程師遮蔽、批次規則、客戶隔離。
-- [ ] T014 **Gate 2**：Phase 2 測試、Core 全套、typecheck、lint。`FEATURE015_GATE_2=PASS`。
+- [x] T012 移除 Core `/api/v1/admin/assistant/review-items` 與只供它使用的 service 方法、DTO、測試；改寫相關 integration 測試。
+- [x] T013 DB 測試：權限矩陣、沒有 `Conversation:read` 時回應不含問答、開發工程師遮蔽、批次規則、客戶隔離。
+- [x] T014 **Gate 2**：Phase 2 測試、Core 全套、typecheck、lint。`FEATURE015_GATE_2=PASS`。
 
 **Phase 2 執行證據**（分兩批）：
 
@@ -47,6 +47,12 @@
   - T010 `feedback/`：`getTable`（評分、期間、有無留言、關鍵字比對原因與留言；回應不含問答文字）、`getFilters`（評分選項，spec API 表補上此路由）、`GET :id`（以 `ConversationContentService.readExchange` 取被評價的回答與前一則提問，沒有 `Conversation:read` 時為 null，有則先稽核再回傳）。
   - T011 `review-items/`（路徑 `reviewItems`）：`getTable`（預設 `open`、`in_review`；類型、優先度、期間、關鍵字比對摘要；以 `messageIdOf()` 對應訊息並一次查出 `sessionId`；不含 `suggestedImprovement` 與問答文字）、`getFilters`、`GET :id`（`suggestedImprovement`、處理紀錄、問答）、`PATCH batch`（全有或全無；逐筆更新狀態，`note` 有給才覆寫；改為已解決／不處理時設定 `resolvedAt`，已是關閉狀態則保留原時間，改回其他狀態時清除；每筆寫 `admin_review_item_updated`，`metadata` 含前後狀態與備註）。處理紀錄的執行者以共用的 `audit/audit-actor.ts` 顯示（非開發工程師看到開發工程師為「開發工程師」，Phase 3 的後台稽核沿用）。
   - T013（部分）：`admin-feedback.spec.ts`（4 tests）、`admin-review-items.spec.ts`（8 tests）：列表不含問答文字、篩選與選項、詳情的內容權限與稽核、批次狀態與 `resolvedAt`、全有或全無、開發工程師遮蔽、權限、客戶隔離。VM：typecheck、eslint 通過。
+- 第一批測試（使用者於 Mac，2026-11-19）：後台 DB 測試 92 tests 全數通過；已 commit（`2b196ee`）。
+- 第二批（2026-11-19，移除 Core 舊的審核 API）：
+  - T012：刪除 `src/feedback/review-item.controller.ts`，`FeedbackModule` 移除 controller；`ReviewItemService` 刪除 `listForReview`、`getForReview`、`markResolved`、`markDismissed` 及只供它們使用的 `transitionReviewItem`、`hasValidSource`、`isVisibleIntegrationSession`、`toReviewItemResponse` 與兩個 input 型別；`feedback.dto.ts` 刪除 `ReviewItemsQueryDto`、`ReviewItemDecisionDto`。建立待審項目的三個方法不變。
+  - 測試：刪除 `test/contract/review-items.contract.spec.ts`、`test/integration/customer-review-isolation.spec.ts`（只測舊路由，客戶隔離改由後台 `admin-review-items.spec.ts` 覆蓋）；`customer-feedback-isolation.spec.ts` 刪除以舊讀取方法驗證的一項；`unsupported-question-review-item.spec.ts` 刪除以舊路由篩選的兩項（建立時的客戶與不複製提問文字，已由同檔第一項以資料驗證）。架構測試新增：Core（`src/admin/` 以外）沒有 `@Controller('admin…')`。
+  - 文件：`docs/architecture/assistant-conversation-experience.md` 改為說明由後台 `reviewItems/*` 檢視。VM：typecheck、eslint 通過。
+- T014 Gate 2（使用者於 Mac，2026-11-19）：首輪 Core 全套 2 個失敗：(1) 架構測試以字串比對 import 路徑，把後台自己的 `src/admin/feedback/` 誤判為 Core 的 `src/feedback/` —— 改為先把 import 換算成 `src/` 下的實際位置再判斷所屬模組；(2) `session-list.spec.ts`「pages without duplicates or gaps」建立對話時回應沒有 `data`（記憶體測試資料，與本次變更無關；同檔其他測試通過，重跑未重現，推測即 014 Gate 3 那次未留紀錄的偶發失敗）—— 測試輔助函式改為建立失敗時在錯誤中附上 HTTP 狀態與回應，再出現時可追查。重跑：Core 全套 283 suites（0 failed）、後台 DB 測試 8 個檔案 92 tests 全數通過；typecheck、eslint 通過。`FEATURE015_GATE_2=PASS`。
 
 ## Phase 3 — 稽核與文件
 

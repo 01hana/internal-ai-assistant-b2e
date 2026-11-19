@@ -30,7 +30,8 @@ Core (`/api/v1/assistant`, internal identity) and Gateway (same public paths, fi
 | POST | `/sessions/:id/archive` | New. Closes the session; audit `session_archived`. |
 | POST | `/sessions/:id/unarchive` | New. Archived → active; audit `session_unarchived`. |
 | DELETE | `/sessions/:id` | New. Active or archived → `deleted` (hidden from the user for good; messages and audit retained); audit `session_deleted`. |
-| GET | `/admin/assistant/review-items?sourceType=unsupported_question` | New filter value. |
+
+Questions no capability recognizes are stored as `ReviewItem` (`sourceType: unsupported_question`). They are reviewed in the admin API (`reviewItems/*`, see [`admin-api.md`](../frontend-integration/admin-api.md)); Core's former `/admin/assistant/review-items` route was removed in Feature 015.
 
 ## Audit events
 

@@ -22,9 +22,12 @@ describe('session history list and archive', () => {
 
   const headers = (claims = customerA) =>
     createAuthorizedInternalIdentityHeaders(fixture, { claims, requestId: `req-f013-list-${++counter}` });
-  const createSession = async (claims = customerA) =>
-    (await request(app.getHttpServer()).post('/api/v1/assistant/sessions').set(headers(claims)).send({ pageContext: { module: 'orders' } }))
-      .body.data.sessionId as string;
+  const createSession = async (claims = customerA) => {
+    const response = await request(app.getHttpServer()).post('/api/v1/assistant/sessions').set(headers(claims)).send({ pageContext: { module: 'orders' } });
+    // Name the status and error when creation fails, instead of a TypeError on `data`.
+    if (!response.body.data) throw new Error(`session creation failed: ${response.status} ${JSON.stringify(response.body)}`);
+    return response.body.data.sessionId as string;
+  };
   const say = async (sessionId: string, message: string, claims = customerA) => {
     const response = await request(app.getHttpServer()).post(`/api/v1/assistant/sessions/${sessionId}/messages`)
       .set(headers(claims)).send({ message, pageContext: { module: 'orders' } });

@@ -37,8 +37,6 @@ describe('unsupported question ReviewItems', () => {
   }
 
   const unsupportedItems = () => state.reviewItems.filter((item) => item.sourceType === UNSUPPORTED);
-  const reviewerHeaders = (customer: 'customerA' | 'customerB', requestId: string) => createAuthorizedInternalIdentityHeaders(fixture, {
-    claims: { ...fixture.canonicalClaims[customer], roles: ['admin'], permission_scopes: ['assistant:review'] }, requestId });
 
   it('records a question deterministic resolution does not recognize, linked to the user message without copying it', async () => {
     const question = '幫我看一下明天的天氣';
@@ -85,33 +83,5 @@ describe('unsupported question ReviewItems', () => {
       module: 'orders', entityType: 'order', entityId: 'SO-10001', visibleColumns: ['status'] } });
     expect(final?.answerDecision).toBe('answered');
     expect(unsupportedItems()).toEqual([]);
-  });
-
-  it('can be filtered by sourceType in the review-items API and stays within the Customer (T047)', async () => {
-    await send('req-f013-unsupported-api', { message: '幫我看一下明天的天氣' });
-    const [item] = unsupportedItems();
-
-    const listA = await request(app.getHttpServer()).get(`/api/v1/admin/assistant/review-items?sourceType=${UNSUPPORTED}`)
-      .set(reviewerHeaders('customerA', 'req-f013-review-list-a'));
-    expect(listA.status).toBe(200);
-    const itemsA = (listA.body.data?.items ?? listA.body.items) as Array<{ reviewItemId: string; sourceType: string }>;
-    expect(itemsA.map((entry) => entry.reviewItemId)).toEqual([item.id]);
-    expect(itemsA.every((entry) => entry.sourceType === UNSUPPORTED)).toBe(true);
-    expect(JSON.stringify(listA.body)).not.toContain('天氣');
-
-    const listB = await request(app.getHttpServer()).get(`/api/v1/admin/assistant/review-items?sourceType=${UNSUPPORTED}`)
-      .set(reviewerHeaders('customerB', 'req-f013-review-list-b'));
-    expect(listB.status).toBe(200);
-    expect(JSON.stringify(listB.body)).not.toContain(item.id);
-
-    const getB = await request(app.getHttpServer()).get(`/api/v1/admin/assistant/review-items/${item.id}`)
-      .set(reviewerHeaders('customerB', 'req-f013-review-get-b'));
-    expect(getB.status).toBe(404);
-  });
-
-  it('rejects an unknown sourceType filter', async () => {
-    const response = await request(app.getHttpServer()).get('/api/v1/admin/assistant/review-items?sourceType=unsupported')
-      .set(reviewerHeaders('customerA', 'req-f013-review-bad-filter'));
-    expect(response.status).toBe(400);
   });
 });

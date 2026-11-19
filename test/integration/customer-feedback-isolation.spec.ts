@@ -91,21 +91,6 @@ describe('T064 Customer A/B FeedbackEvent isolation expected-red', () => {
     expect(snapshot()).toEqual(before);
   });
 
-  it('keeps Review Items in their original Integration and leaves state unchanged on denial', async () => {
-    const reviewer = await verifiedIdentityContext('customerA', 'req-review-other-integration', 'integration-other');
-    const scope = createCustomerScopeFromIdentityContext(reviewer);
-    const before = snapshot();
-    const service = app.get(ReviewItemService);
-    expect(await service.getForReview({ customerScope: scope, identityContext: reviewer,
-      reviewItemId: 'review-item-open-feedback-001' })).toBeNull();
-    expect(await service.markResolved({ customerScope: scope, identityContext: reviewer,
-      requestId: reviewer.requestId, reviewItemId: 'review-item-open-feedback-001' })).toBeNull();
-    expect((await service.listForReview({ customerScope: scope, identityContext: reviewer }))
-      .some((item) => item.reviewItemId === 'review-item-open-feedback-001')).toBe(false);
-    expect(snapshot()).toEqual(before);
-    expect(state.reviewItems.find((item) => item.id === 'review-item-open-feedback-001')?.status).toBe('open');
-  });
-
   it('qualifies ToolCall and Evidence lookup by Customer before using a same-message foreign relation', async () => {
     state.toolCalls.push({
       ...state.toolCalls.find((item) => item.id === 'tool-call-hidden-001')!,

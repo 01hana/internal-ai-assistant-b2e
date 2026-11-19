@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 import { AdminModule } from '../../src/admin/admin.module';
 import { ROUTE_ACCESS } from '../../src/admin/authorization/route-access.decorator';
 
@@ -32,10 +32,15 @@ describe('admin API boundary (Feature 014)', () => {
   });
 
   it('does not load the Assistant runtime, LLM, retrieval or connectors', () => {
-    const forbidden = /\/(assistant|assistant-experience|llm|query-understanding|query-scope|retrieval|tools|connectors|capabilities|host-integration|identity|approvals|evidence|feedback)(\/|$)/;
+    // Resolved against src/, so the admin API's own folders (e.g. src/admin/feedback) are not mistaken for Core modules.
+    const forbidden = new Set(['assistant', 'assistant-experience', 'llm', 'query-understanding', 'query-scope', 'retrieval', 'tools', 'connectors',
+      'capabilities', 'host-integration', 'identity', 'approvals', 'evidence', 'feedback']);
+    const coreModuleOf = (file: string, specifier: string) => relative(src, join(dirname(file), specifier)).split(sep)[0];
     const offenders = sourceFiles(join(src, 'admin'))
       .concat(join(src, 'admin-main.ts'))
-      .flatMap((file) => importsOf(file).filter((specifier) => specifier.startsWith('.') && forbidden.test(specifier)).map((specifier) => `${relative(root, file)} -> ${specifier}`));
+      .flatMap((file) => importsOf(file)
+        .filter((specifier) => specifier.startsWith('.') && forbidden.has(coreModuleOf(file, specifier)))
+        .map((specifier) => `${relative(root, file)} -> ${specifier}`));
     expect(offenders).toEqual([]);
   });
 
@@ -48,6 +53,14 @@ describe('admin API boundary (Feature 014)', () => {
         .filter((name) => !Reflect.getMetadata(ROUTE_ACCESS, (controller.prototype as Record<string, unknown>)[name] as object) && !Reflect.getMetadata(ROUTE_ACCESS, controller))
         .map((name) => `${controller.name}.${name}`));
     expect(undeclared).toEqual([]);
+  });
+
+  it('leaves every /admin route to the admin API: Core has no admin controllers (Feature 015 removed review-items)', () => {
+    const offenders = sourceFiles(src)
+      .filter((file) => !isAdminFile(file))
+      .filter((file) => /@Controller\(\s*['"`]\/?admin\b/.test(readFileSync(file, 'utf8')))
+      .map((file) => relative(root, file));
+    expect(offenders).toEqual([]);
   });
 
   it('keeps the admin API on its own prefix, set up in one place shared by the entry point and the tests', () => {
