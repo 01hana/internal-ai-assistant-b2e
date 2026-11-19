@@ -41,7 +41,7 @@ test('the admin API runs from the shared build on its own port with local-only d
   const backendEnv = { ASSISTANT_CAPABILITY_PACK_PATHS_JSON: JSON.stringify(Object.keys(packs)) };
   const environment = localAdminEnvironment({ NODE_ENV: 'production', OTHER: 'x' }, backendEnv, 'postgresql://host/db', (path) => packs[path]);
   assert.deepEqual(environment, {
-    DATABASE_URL: 'postgresql://host/db', ADMIN_WEB_ORIGIN: 'http://localhost:3200', ADMIN_COOKIE_SECURE: 'false', ADMIN_MAIL_TRANSPORT: 'log',
+    DATABASE_URL: 'postgresql://host/db', ADMIN_WEB_ORIGIN: 'http://localhost:3300,http://localhost:3200', ADMIN_COOKIE_SECURE: 'false', ADMIN_MAIL_TRANSPORT: 'log',
     ADMIN_ENABLE_SWAGGER_DOCS: 'true', NODE_ENV: 'development', ADMIN_PORT: '3200', ADMIN_CUSTOMER_ID: 'customer-local-a'
   });
 

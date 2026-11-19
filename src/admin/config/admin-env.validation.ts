@@ -1,5 +1,5 @@
 import { plainToInstance, Transform } from 'class-transformer';
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsTimeZone, IsUrl, Max, Min, validateSync } from 'class-validator';
+import { ArrayNotEmpty, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsTimeZone, IsUrl, Max, Min, validateSync } from 'class-validator';
 
 const runtimeEnvironments = ['development', 'test', 'production'] as const;
 const booleanStrings = ['true', 'false'] as const;
@@ -36,9 +36,14 @@ export class AdminEnvironmentVariables {
   @Max(5)
   ADMIN_TRUSTED_PROXY_HOPS = 0;
 
-  /** The admin website origin, e.g. https://admin.example.com. Used for CORS, Origin checks and mail links. */
-  @IsUrl({ require_tld: false, require_protocol: true, protocols: ['http', 'https'] })
-  ADMIN_WEB_ORIGIN!: string;
+  /**
+   * The admin website origin(s), comma-separated, e.g. `https://admin.example.com`. Every one is allowed
+   * by CORS and the Origin check; mail links use the first. Locally: the website and Swagger UI.
+   */
+  @Transform(({ value }) => (typeof value === 'string' ? value.split(',').map((origin) => origin.trim()).filter(Boolean) : value))
+  @ArrayNotEmpty()
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ['http', 'https'] }, { each: true })
+  ADMIN_WEB_ORIGIN!: string[];
 
   /** The one customer this deployment serves; must exist in the Customer table. */
   @IsString()

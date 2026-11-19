@@ -21,6 +21,7 @@ describe('admin environment', () => {
   it.each([
     ['missing customer', { ADMIN_CUSTOMER_ID: undefined }, /ADMIN_CUSTOMER_ID/],
     ['missing web origin', { ADMIN_WEB_ORIGIN: undefined }, /ADMIN_WEB_ORIGIN/],
+    ['an invalid origin in the list', { ADMIN_WEB_ORIGIN: 'https://admin.example.test, not a url' }, /ADMIN_WEB_ORIGIN/],
     ['log transport in production', { NODE_ENV: 'production' }, /ADMIN_MAIL_TRANSPORT=log/],
     ['insecure cookie in production', { NODE_ENV: 'production', ADMIN_MAIL_TRANSPORT: 'smtp', ADMIN_SMTP_HOST: 'smtp.example.test',
       ADMIN_SMTP_PORT: '587', ADMIN_MAIL_FROM: 'Admin <no-reply@example.test>', ADMIN_COOKIE_SECURE: 'false' }, /ADMIN_COOKIE_SECURE=false/],
@@ -31,6 +32,11 @@ describe('admin environment', () => {
     ['smtp without host, port and sender', { ADMIN_MAIL_TRANSPORT: 'smtp' }, /ADMIN_SMTP_HOST.*ADMIN_SMTP_PORT.*ADMIN_MAIL_FROM/]
   ])('rejects %s', (_label, override, message) => {
     expect(() => validateAdminEnvironment({ ...baseEnv, ...override })).toThrow(message);
+  });
+
+  it('accepts several comma-separated website origins', () => {
+    expect(validateAdminEnvironment({ ...baseEnv, ADMIN_WEB_ORIGIN: 'http://localhost:3300, http://localhost:3200' }).ADMIN_WEB_ORIGIN)
+      .toEqual(['http://localhost:3300', 'http://localhost:3200']);
   });
 
   it('accepts a production SMTP configuration', () => {

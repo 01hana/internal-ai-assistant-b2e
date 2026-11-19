@@ -29,8 +29,14 @@ export class AdminSettings {
     return this.env.ADMIN_PORT;
   }
 
+  /** Origins allowed by CORS and the Origin check. */
+  get webOrigins(): string[] {
+    return this.env.ADMIN_WEB_ORIGIN.map((origin) => new URL(origin).origin);
+  }
+
+  /** The admin website mail links point to: the first configured origin. */
   get webOrigin(): string {
-    return new URL(this.env.ADMIN_WEB_ORIGIN).origin;
+    return this.webOrigins[0];
   }
 
   get customerId(): string {

@@ -12,6 +12,8 @@ export const STATE_DIR = join(ROOT, '.local-state/assistant');
 export const STATE_FILE = join(STATE_DIR, 'state.json');
 export const BACKEND_COMPILED_ENTRYPOINT = 'dist/src/main.js';
 export const ADMIN_COMPILED_ENTRYPOINT = 'dist/src/admin-main.js';
+/** Dev server port of the admin website repo (internal-ai-assistant-admin). */
+export const LOCAL_ADMIN_WEBSITE_PORT = 3300;
 export const HOSTS_BEGIN = '# BEGIN internal-ai-assistant-local';
 export const HOSTS_END = '# END internal-ai-assistant-local';
 export const HOSTNAMES = Object.freeze(['connector-runtime.local.test', 'shinmone-upstream.local.test']);
@@ -581,7 +583,8 @@ export function localAdminEnvironment(rootEnv, backendEnv, databaseUrl, readPack
   const customerId = overrides.ADMIN_CUSTOMER_ID || localPackCustomerId(backendEnv.ASSISTANT_CAPABILITY_PACK_PATHS_JSON, readPack);
   return {
     DATABASE_URL: databaseUrl,
-    ADMIN_WEB_ORIGIN: `http://localhost:${PORTS.admin}`,
+    // The admin website (dev server) first, so mail links open it; Swagger UI second.
+    ADMIN_WEB_ORIGIN: `http://localhost:${LOCAL_ADMIN_WEBSITE_PORT},http://localhost:${PORTS.admin}`,
     ADMIN_COOKIE_SECURE: 'false',
     ADMIN_MAIL_TRANSPORT: 'log',
     ADMIN_ENABLE_SWAGGER_DOCS: 'true',

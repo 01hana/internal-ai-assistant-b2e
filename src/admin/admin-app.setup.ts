@@ -21,7 +21,7 @@ export function configureAdminApp(app: INestApplication): void {
   // The API returns JSON only; CSP matters for HTML, so it is relaxed only when Swagger UI is served.
   app.use(helmet(settings.swaggerDocs ? { contentSecurityPolicy: false } : {}));
   app.use(cookieParser());
-  app.enableCors({ origin: settings.webOrigin, credentials: true });
+  app.enableCors({ origin: settings.webOrigins, credentials: true });
   app.useGlobalPipes(new ValidationPipe({ forbidNonWhitelisted: true, transform: true, whitelist: true }));
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(new RequestIdInterceptor(), new ResponseEnvelopeInterceptor());
@@ -31,7 +31,7 @@ export function configureAdminApp(app: INestApplication): void {
 /**
  * Swagger UI at /api/v1/admin/docs. Sign in with `auth/login` (the browser keeps the session cookie),
  * then paste the `admin_csrf` cookie value under "Authorize" → csrf so state changes send X-CSRF-Token.
- * ADMIN_WEB_ORIGIN must be the Swagger page origin (e.g. http://localhost:3200) for the Origin check.
+ * ADMIN_WEB_ORIGIN must include the Swagger page origin (e.g. http://localhost:3200) for the Origin check.
  */
 function setupAdminSwagger(app: INestApplication): void {
   setupSwagger(app, {

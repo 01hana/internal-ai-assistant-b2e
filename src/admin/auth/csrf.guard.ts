@@ -19,7 +19,7 @@ export class CsrfGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AdminRequest>();
     if (!STATE_CHANGING.has(request.method)) return true;
 
-    if (request.header('origin') !== this.settings.webOrigin) {
+    if (!this.settings.webOrigins.includes(request.header('origin') ?? '')) {
       throw new ForbiddenException({ error: 'origin_not_allowed', message: '請求來源不被允許。' });
     }
     const access = this.reflector.getAllAndOverride<RouteAccess | undefined>(ROUTE_ACCESS, [context.getHandler(), context.getClass()]);

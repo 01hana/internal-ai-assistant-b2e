@@ -69,3 +69,7 @@
 - Swagger 範例：`PeriodFilterDto` 的 `from`／`to` 加上 `@example`（Swagger CLI plugin 讀取 JSDoc），範例 body 不再是無效的 `"string"`。
 - T018 Gate 3（使用者於 Mac，2026-11-19）：build、typecheck、eslint 通過；Core 全套 284 suites、2561 tests（2277 passed、284 skipped、0 failed）；後台 DB 測試 9 個檔案 98 tests 全數通過。本機 `local:start` 以 Swagger 檢查：開發工程師帳號讀取對話、統計、回饋與待審項目詳情（含問答）、批次更新待審項目與處理紀錄、後台稽核中的 `admin_conversation_viewed`；只有營運權限（無 `Conversation:read`）的帳號：對話 API 403、詳情的 `conversation` 為 null、開發工程師顯示為「開發工程師」——使用者回報皆無問題。`FEATURE015_GATE_3=PASS`。
 
+## 後續調整（合併前）
+
+- 2026-11-19（後台前端 `internal-ai-assistant-admin` spec 001 的 T001）：`ADMIN_WEB_ORIGIN` 支援逗號分隔的多個來源（`@Transform` 拆成陣列，`@IsUrl({ each: true })` 逐一驗證）；`AdminSettings.webOrigins` 供 CORS 與 Origin 檢查，`webOrigin`（第一個）供信件連結；`local:start` 預設 `http://localhost:3300,http://localhost:3200`（網站 dev server 在前，信件連結開啟網站；Swagger UI 在後）。測試：環境驗證（多來源、清單中有無效值）、`admin-app-setup.spec.ts` 新增來源測試（清單中任一可用、其他 403、信件連結用第一個）、本機腳本預設值。文件：前端串接、架構、README、`admin.env.example`。
+

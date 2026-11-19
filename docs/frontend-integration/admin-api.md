@@ -8,8 +8,8 @@
 - 登入狀態只靠 cookie，前端**不保存任何 token**：
   - `admin_session`：httpOnly，前端讀不到也不需要讀。
   - `admin_csrf`：前端可讀；所有 `POST`／`PUT`／`PATCH`／`DELETE` 都要把它的值放在 `X-CSRF-Token` header。
-- 請求一律帶 cookie（`credentials: 'include'`）；API 另會檢查 `Origin` 必須是設定的後台網站來源（`ADMIN_WEB_ORIGIN`）。
-- **本機開發**：建議用 Nuxt 的 dev proxy 讓網站與 API 同源，並在 API 的 `.env` 設定 `ADMIN_WEB_ORIGIN=http://localhost:3000`（Nuxt dev server 的來源），重新執行 `npm run local:start`：
+- 請求一律帶 cookie（`credentials: 'include'`）；API 另會檢查 `Origin` 必須是設定的後台網站來源之一（`ADMIN_WEB_ORIGIN`，可用逗號設定多個；信件連結使用第一個）。
+- **本機開發**：用 Nuxt 的 dev proxy 讓網站與 API 同源（dev server 3300 埠）。`npm run local:start` 預設 `ADMIN_WEB_ORIGIN=http://localhost:3300,http://localhost:3200`，同時允許網站與 Swagger UI，信件連結指向網站：
 
   ```ts
   // nuxt.config.ts

@@ -1,3 +1,4 @@
+import { AdminSettings } from '../../src/admin/config/admin-settings';
 import { api, type AdminTestContext, closeAdminTestApp, createAdminTestApp, describeDbBackedAdmin, fromSite, resetAdminTables, seedUser } from '../support/admin-test-app.helper';
 
 /** Feature 014: HTTP setup of the admin API (configureAdminApp) — Swagger UI and reverse-proxy client IPs. */
@@ -23,6 +24,19 @@ describeDbBackedAdmin('admin API setup (Feature 014)', () => {
       });
       expect(body.security).toEqual([{ session: [] }, { csrf: [] }]);
       await api(ctx.app).get('/api/v1/admin/docs').expect(200);
+    });
+  });
+
+  describe('website origins', () => {
+    it('accepts every configured origin, rejects others, and links mail to the first', async () => {
+      ctx = await createAdminTestApp({ ADMIN_WEB_ORIGIN: 'https://admin.example.test,http://localhost:3200' });
+      await resetAdminTables(ctx.db);
+      await seedUser(ctx.db, { account: 'ops.admin', groups: ['admin'] });
+      const login = (origin: string) => api(ctx!.app).post('/api/v1/admin/auth/login').set('Origin', origin).send({ account: 'ops.admin', password: 'correct horse battery' });
+      await login('http://localhost:3200').expect(200);
+      await login('https://admin.example.test').expect(200);
+      await login('https://evil.example.test').expect(403);
+      expect(ctx.app.get(AdminSettings).linkUrl('/auth/firstLogin', 'token')).toMatch(/^https:\/\/admin\.example\.test\/auth\/firstLogin/);
     });
   });
 

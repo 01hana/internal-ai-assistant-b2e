@@ -7,7 +7,7 @@
 - 程式在 Core 的 `src/admin/`，以獨立進入點 `src/admin-main.ts`（`dist/src/admin-main.js`）啟動：與 Core 同一份 build 與 Docker image，但為獨立行程、連接埠 3200、路徑前綴 `/api/v1/admin`。
 - Core 的 `AppModule` 不引入後台；後台不引入 Assistant、LLM、檢索、連接器等模組，也不接受 Gateway 或 Core 的身分 token（架構測試 `test/architecture/admin-boundary.guard.spec.ts` 鎖定）。
 - 一個部署只服務一個 Customer：後台資料表沒有 `customerId`，由 `ADMIN_CUSTOMER_ID` 決定；該 Customer 不存在時拒絕啟動。
-- HTTP 設定集中在 `admin-app.setup.ts`（helmet、cookie、CORS 只允許 `ADMIN_WEB_ORIGIN`、驗證、錯誤格式、`trust proxy`、本機 Swagger），進入點與測試共用。
+- HTTP 設定集中在 `admin-app.setup.ts`（helmet、cookie、CORS 只允許 `ADMIN_WEB_ORIGIN` 列出的來源、驗證、錯誤格式、`trust proxy`、本機 Swagger），進入點與測試共用。
 
 ```
 src/admin/
@@ -28,7 +28,7 @@ src/admin/
 
 - 以帳號登入；密碼以 Node 內建 `scrypt` 加鹽雜湊。密碼只能由本人透過信件連結設定（首次登入 72 小時、重設 1 小時，單次有效，資料庫只存 sha256 雜湊），沒有任何能設定他人密碼的 API。
 - 工作階段存在資料庫（`UserSession`），httpOnly cookie `admin_session` 只放不透明代碼；閒置 30 分鐘、絕對 12 小時逾時；停用、刪除、重設密碼、開發工程師修改 email 時立即撤銷。
-- CSRF：double-submit cookie `admin_csrf` 對 `X-CSRF-Token` header，另檢查 `Origin` 必須等於 `ADMIN_WEB_ORIGIN`。
+- CSRF：double-submit cookie `admin_csrf` 對 `X-CSRF-Token` header，另檢查 `Origin` 必須是 `ADMIN_WEB_ORIGIN`。
 - 連續 5 次密碼錯誤鎖定 15 分鐘；公開的 auth 端點以 `@nestjs/throttler` 依 IP 與帳號限流（行程內儲存，單一容器足夠）。
 
 ## 3. 權限模型
