@@ -1,7 +1,7 @@
 # Tasks: Feature 015 — Admin Operations View
 
 **Spec**: [`spec.md`](./spec.md)　**Design**: [`design.md`](./design.md)　**Plan**: [`plan.md`](./plan.md)
-**Status**: Phase 0 完成（Gate 0 PASS），待開始 Phase 1
+**Status**: Phase 1 完成（Gate 1 PASS），待開始 Phase 2
 
 ## Phase 0 — 基線與共用
 
@@ -21,10 +21,17 @@
 
 ## Phase 1 — 對話與統計
 
-- [ ] T006 對話 API：`conversations/getTable`、`getFilters`、`GET :id`（留稽核、500 則上限）。
-- [ ] T007 統計 API：`stats/getSummary`（使用量、回答結果分布、時區、補 0、366 天上限）。
-- [ ] T008 DB 測試：權限矩陣、客戶隔離、篩選與排序、`deleted` 預設排除、內容稽核（含稽核失敗不回傳內容）、統計日界與 `week`。
-- [ ] T009 **Gate 1**：Phase 1 測試、typecheck、lint。`FEATURE015_GATE_1=PASS`。
+- [x] T006 對話 API：`conversations/getTable`、`getFilters`、`GET :id`（留稽核、500 則上限）。
+- [x] T007 統計 API：`stats/getSummary`（使用量、回答結果分布、時區、補 0、366 天上限）。
+- [x] T008 DB 測試：權限矩陣、客戶隔離、篩選與排序、`deleted` 預設排除、內容稽核（含稽核失敗不回傳內容）、統計日界與 `week`。
+- [x] T009 **Gate 1**：Phase 1 測試、typecheck、lint。`FEATURE015_GATE_1=PASS`。
+
+**Phase 1 執行證據（2026-11-19）**：
+
+- T006：`conversations/`（controller、service、dto）。列表條件：此客戶、狀態（預設排除 `deleted`）、`hostApp`／`organizationId`／`actorId`、最後訊息時間期間、`hasNegativeFeedback`／`hasUnanswered`（以 `some`／`none` 關聯條件）、標題關鍵字；`messageCount` 以 Prisma 的篩選關聯計數；兩個標記對本頁對話各查一次（`distinct: ['sessionId']`）；`lastMessageAt` 排序時沒有訊息的對話一律排在最後。`GET :id` 取最新 500 則（多取一則判斷 `truncated`），附每則訊息的回饋與待審項目，先寫 `admin_conversation_viewed` 再回傳。待審項目與訊息的對應集中在 `review-items/review-item-source.ts`（`messageIdOf()` 與等價的 SQL `COALESCE("suggestedImprovement"->>'messageId', "sourceId")`，一次查出多則訊息的項目）。
+- T007：`stats/`。三個參數化的 `$queryRaw`：使用量序列（`generate_series` 產生每個區間，LEFT JOIN 新對話數、提問數、使用人數）、回答結果（依區間與 `answerDecision` 計數）、整段期間的使用人數。期間在 SQL 內換算：當地日期的午夜 `AT TIME ZONE ADMIN_TIME_ZONE` 再轉回資料庫儲存的 UTC；區間為 `date_trunc(day|week, 當地時間)`。參數一律加型別轉換（`::text`、`::date`），避免 PostgreSQL 無法推斷參數型別。回答結果的鍵一律包含全部 `AnswerDecisionStatus`。
+- T008：`admin-conversations.spec.ts`（8 tests：列表、篩選與排序、篩選選項、內容與稽核、已刪除對話與客戶隔離、稽核失敗不回傳內容、500 則上限、權限）、`admin-stats.spec.ts`（5 tests：台北日界 15:59Z／16:00Z、補 0、已刪除對話計入、週、`ADMIN_TIME_ZONE=UTC`、期間驗證、權限）。測試輔助新增 `signInWithPermissions()`。VM：typecheck、eslint 通過（DB 測試由使用者於 Mac 執行）。
+- T009 Gate 1（使用者於 Mac，2026-11-19）：首次執行 8 個失敗，原因是測試資料庫尚未套用 015 migration（`ReviewItem.updatedAt` 不存在），以 `.env.test` 的 `DATABASE_URL` 執行 `prisma migrate deploy` 後重跑：後台 DB 測試 6 個檔案 80 tests 全數通過（其後一次執行曾出現失敗但未留下輸出，再執行兩次皆通過；如再出現需保留輸出追查）。typecheck、eslint 通過。自我檢查修正：測試輔助程式的預設環境補上 `ADMIN_TIME_ZONE`，避免設定 `UTC` 的測試影響同一檔案之後的測試。`FEATURE015_GATE_1=PASS`。
 
 ## Phase 2 — 回饋、待審項目、移除舊路由
 

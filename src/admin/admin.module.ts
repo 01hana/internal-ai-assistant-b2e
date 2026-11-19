@@ -17,11 +17,15 @@ import { AdminConfigModule } from './config/admin-config.module';
 import { AdminCustomerCheck } from './config/admin-customer.check';
 import { AdminSettings } from './config/admin-settings';
 import { ConversationContentService } from './conversations/conversation-content';
+import { ConversationsController } from './conversations/conversations.controller';
+import { ConversationsService } from './conversations/conversations.service';
 import { GroupsController } from './groups/groups.controller';
 import { AdminHealthController } from './health/admin-health.controller';
 import { GroupsService } from './groups/groups.service';
 import { AdminMailService } from './mail/admin-mail.service';
 import { ADMIN_MAIL_TRANSPORT, LogMailTransport, SmtpMailTransport } from './mail/admin-mail.transport';
+import { StatsController } from './stats/stats.controller';
+import { StatsService } from './stats/stats.service';
 import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 
@@ -31,7 +35,7 @@ import { UsersService } from './users/users.service';
  */
 @Module({
   imports: [AdminConfigModule, PrismaModule, ThrottlerModule.forRoot(ADMIN_THROTTLERS)],
-  controllers: [AdminAuthController, AdminHealthController, GroupsController, UsersController],
+  controllers: [AdminAuthController, AdminHealthController, ConversationsController, GroupsController, StatsController, UsersController],
   providers: [
     // Order matters: session → CSRF → permission.
     { provide: APP_GUARD, useClass: AdminSessionGuard },
@@ -49,7 +53,9 @@ import { UsersService } from './users/users.service';
     AdminThrottlerGuard,
     AdminMailService,
     ConversationContentService,
+    ConversationsService,
     GroupsService,
+    StatsService,
     UserAuditService,
     UserSessionService,
     UserTokenService,

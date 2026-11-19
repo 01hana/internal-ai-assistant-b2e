@@ -89,6 +89,7 @@ export async function configureAdminTestEnvironment(overrides: Record<string, st
     ADMIN_MAIL_TRANSPORT: 'log',
     ADMIN_ENABLE_SWAGGER_DOCS: 'false',
     ADMIN_TRUSTED_PROXY_HOPS: '0',
+    ADMIN_TIME_ZONE: 'Asia/Taipei',
     ...overrides
   });
 }
@@ -181,6 +182,13 @@ export async function signIn(app: INestApplication, account: string, password = 
     cookie: `admin_session=${cookies.admin_session.value}; admin_csrf=${cookies.admin_csrf.value}`,
     csrf: cookies.admin_csrf.value
   };
+}
+
+/** Signs in a new user whose only group is a custom group with exactly these permissions. */
+export async function signInWithPermissions(ctx: AdminTestContext, account: string, permissions: string[]): Promise<Signed> {
+  await ctx.db.userGroup.create({ data: { name: `${account}-group`, permissions } });
+  await seedUser(ctx.db, { account, groups: [`${account}-group`] });
+  return signIn(ctx.app, account);
 }
 
 /** Lets fire-and-forget work (e.g. the reset mail) finish. */
