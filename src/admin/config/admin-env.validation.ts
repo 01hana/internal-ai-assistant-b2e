@@ -1,5 +1,5 @@
 import { plainToInstance, Transform } from 'class-transformer';
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Max, Min, validateSync } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsTimeZone, IsUrl, Max, Min, validateSync } from 'class-validator';
 
 const runtimeEnvironments = ['development', 'test', 'production'] as const;
 const booleanStrings = ['true', 'false'] as const;
@@ -48,6 +48,11 @@ export class AdminEnvironmentVariables {
   @IsOptional()
   @IsIn(booleanStrings)
   ADMIN_COOKIE_SECURE: (typeof booleanStrings)[number] = 'true';
+
+  /** IANA time zone used to split statistics into days and weeks (Feature 015). */
+  @IsOptional()
+  @IsTimeZone()
+  ADMIN_TIME_ZONE = 'Asia/Taipei';
 
   /** Serves Swagger UI at /api/v1/admin/docs. Local development only (rejected in production). */
   @IsOptional()

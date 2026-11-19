@@ -24,10 +24,12 @@ export type AdminAuditEventType =
   | 'admin_user_deleted'
   | 'admin_user_group_created'
   | 'admin_user_group_updated'
-  | 'admin_user_group_deleted';
+  | 'admin_user_group_deleted'
+  | 'admin_conversation_viewed'
+  | 'admin_review_item_updated';
 
 export type AuditActor = { id: string; account: string; isDeveloper: boolean };
-export type AuditTarget = { type: 'User' | 'UserGroup'; id: string; isDeveloper?: boolean };
+export type AuditTarget = { type: 'User' | 'UserGroup' | 'AssistantSession' | 'ReviewItem'; id: string; isDeveloper?: boolean };
 
 export type AdminAuditRecord = {
   eventType: AdminAuditEventType;

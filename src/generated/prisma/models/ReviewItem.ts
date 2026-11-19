@@ -34,6 +34,8 @@ export type ReviewItemMinAggregateOutputType = {
   summary: string | null
   createdAt: Date | null
   resolvedAt: Date | null
+  note: string | null
+  updatedAt: Date | null
 }
 
 export type ReviewItemMaxAggregateOutputType = {
@@ -46,6 +48,8 @@ export type ReviewItemMaxAggregateOutputType = {
   summary: string | null
   createdAt: Date | null
   resolvedAt: Date | null
+  note: string | null
+  updatedAt: Date | null
 }
 
 export type ReviewItemCountAggregateOutputType = {
@@ -59,6 +63,8 @@ export type ReviewItemCountAggregateOutputType = {
   suggestedImprovement: number
   createdAt: number
   resolvedAt: number
+  note: number
+  updatedAt: number
   _all: number
 }
 
@@ -73,6 +79,8 @@ export type ReviewItemMinAggregateInputType = {
   summary?: true
   createdAt?: true
   resolvedAt?: true
+  note?: true
+  updatedAt?: true
 }
 
 export type ReviewItemMaxAggregateInputType = {
@@ -85,6 +93,8 @@ export type ReviewItemMaxAggregateInputType = {
   summary?: true
   createdAt?: true
   resolvedAt?: true
+  note?: true
+  updatedAt?: true
 }
 
 export type ReviewItemCountAggregateInputType = {
@@ -98,6 +108,8 @@ export type ReviewItemCountAggregateInputType = {
   suggestedImprovement?: true
   createdAt?: true
   resolvedAt?: true
+  note?: true
+  updatedAt?: true
   _all?: true
 }
 
@@ -184,6 +196,8 @@ export type ReviewItemGroupByOutputType = {
   suggestedImprovement: runtime.JsonValue | null
   createdAt: Date
   resolvedAt: Date | null
+  note: string | null
+  updatedAt: Date
   _count: ReviewItemCountAggregateOutputType | null
   _min: ReviewItemMinAggregateOutputType | null
   _max: ReviewItemMaxAggregateOutputType | null
@@ -218,6 +232,8 @@ export type ReviewItemWhereInput = {
   suggestedImprovement?: Prisma.JsonNullableFilter<"ReviewItem">
   createdAt?: Prisma.DateTimeFilter<"ReviewItem"> | Date | string
   resolvedAt?: Prisma.DateTimeNullableFilter<"ReviewItem"> | Date | string | null
+  note?: Prisma.StringNullableFilter<"ReviewItem"> | string | null
+  updatedAt?: Prisma.DateTimeFilter<"ReviewItem"> | Date | string
   customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
 }
 
@@ -232,6 +248,8 @@ export type ReviewItemOrderByWithRelationInput = {
   suggestedImprovement?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  note?: Prisma.SortOrderInput | Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   customer?: Prisma.CustomerOrderByWithRelationInput
 }
 
@@ -250,6 +268,8 @@ export type ReviewItemWhereUniqueInput = Prisma.AtLeast<{
   suggestedImprovement?: Prisma.JsonNullableFilter<"ReviewItem">
   createdAt?: Prisma.DateTimeFilter<"ReviewItem"> | Date | string
   resolvedAt?: Prisma.DateTimeNullableFilter<"ReviewItem"> | Date | string | null
+  note?: Prisma.StringNullableFilter<"ReviewItem"> | string | null
+  updatedAt?: Prisma.DateTimeFilter<"ReviewItem"> | Date | string
   customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
 }, "id" | "customerId_id">
 
@@ -264,6 +284,8 @@ export type ReviewItemOrderByWithAggregationInput = {
   suggestedImprovement?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  note?: Prisma.SortOrderInput | Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   _count?: Prisma.ReviewItemCountOrderByAggregateInput
   _max?: Prisma.ReviewItemMaxOrderByAggregateInput
   _min?: Prisma.ReviewItemMinOrderByAggregateInput
@@ -283,6 +305,8 @@ export type ReviewItemScalarWhereWithAggregatesInput = {
   suggestedImprovement?: Prisma.JsonNullableWithAggregatesFilter<"ReviewItem">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ReviewItem"> | Date | string
   resolvedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ReviewItem"> | Date | string | null
+  note?: Prisma.StringNullableWithAggregatesFilter<"ReviewItem"> | string | null
+  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ReviewItem"> | Date | string
 }
 
 export type ReviewItemCreateInput = {
@@ -295,6 +319,8 @@ export type ReviewItemCreateInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   resolvedAt?: Date | string | null
+  note?: string | null
+  updatedAt?: Date | string
   customer: Prisma.CustomerCreateNestedOneWithoutReviewItemsInput
 }
 
@@ -309,6 +335,8 @@ export type ReviewItemUncheckedCreateInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   resolvedAt?: Date | string | null
+  note?: string | null
+  updatedAt?: Date | string
 }
 
 export type ReviewItemUpdateInput = {
@@ -321,6 +349,8 @@ export type ReviewItemUpdateInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   customer?: Prisma.CustomerUpdateOneRequiredWithoutReviewItemsNestedInput
 }
 
@@ -335,6 +365,8 @@ export type ReviewItemUncheckedUpdateInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ReviewItemCreateManyInput = {
@@ -348,6 +380,8 @@ export type ReviewItemCreateManyInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   resolvedAt?: Date | string | null
+  note?: string | null
+  updatedAt?: Date | string
 }
 
 export type ReviewItemUpdateManyMutationInput = {
@@ -360,6 +394,8 @@ export type ReviewItemUpdateManyMutationInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ReviewItemUncheckedUpdateManyInput = {
@@ -373,6 +409,8 @@ export type ReviewItemUncheckedUpdateManyInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ReviewItemListRelationFilter = {
@@ -401,6 +439,8 @@ export type ReviewItemCountOrderByAggregateInput = {
   suggestedImprovement?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrder
+  note?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type ReviewItemMaxOrderByAggregateInput = {
@@ -413,6 +453,8 @@ export type ReviewItemMaxOrderByAggregateInput = {
   summary?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrder
+  note?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type ReviewItemMinOrderByAggregateInput = {
@@ -425,6 +467,8 @@ export type ReviewItemMinOrderByAggregateInput = {
   summary?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrder
+  note?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type ReviewItemCreateNestedManyWithoutCustomerInput = {
@@ -491,6 +535,8 @@ export type ReviewItemCreateWithoutCustomerInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   resolvedAt?: Date | string | null
+  note?: string | null
+  updatedAt?: Date | string
 }
 
 export type ReviewItemUncheckedCreateWithoutCustomerInput = {
@@ -503,6 +549,8 @@ export type ReviewItemUncheckedCreateWithoutCustomerInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   resolvedAt?: Date | string | null
+  note?: string | null
+  updatedAt?: Date | string
 }
 
 export type ReviewItemCreateOrConnectWithoutCustomerInput = {
@@ -545,6 +593,8 @@ export type ReviewItemScalarWhereInput = {
   suggestedImprovement?: Prisma.JsonNullableFilter<"ReviewItem">
   createdAt?: Prisma.DateTimeFilter<"ReviewItem"> | Date | string
   resolvedAt?: Prisma.DateTimeNullableFilter<"ReviewItem"> | Date | string | null
+  note?: Prisma.StringNullableFilter<"ReviewItem"> | string | null
+  updatedAt?: Prisma.DateTimeFilter<"ReviewItem"> | Date | string
 }
 
 export type ReviewItemCreateManyCustomerInput = {
@@ -557,6 +607,8 @@ export type ReviewItemCreateManyCustomerInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   resolvedAt?: Date | string | null
+  note?: string | null
+  updatedAt?: Date | string
 }
 
 export type ReviewItemUpdateWithoutCustomerInput = {
@@ -569,6 +621,8 @@ export type ReviewItemUpdateWithoutCustomerInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ReviewItemUncheckedUpdateWithoutCustomerInput = {
@@ -581,6 +635,8 @@ export type ReviewItemUncheckedUpdateWithoutCustomerInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ReviewItemUncheckedUpdateManyWithoutCustomerInput = {
@@ -593,6 +649,8 @@ export type ReviewItemUncheckedUpdateManyWithoutCustomerInput = {
   suggestedImprovement?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -608,6 +666,8 @@ export type ReviewItemSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   suggestedImprovement?: boolean
   createdAt?: boolean
   resolvedAt?: boolean
+  note?: boolean
+  updatedAt?: boolean
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["reviewItem"]>
 
@@ -622,6 +682,8 @@ export type ReviewItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   suggestedImprovement?: boolean
   createdAt?: boolean
   resolvedAt?: boolean
+  note?: boolean
+  updatedAt?: boolean
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["reviewItem"]>
 
@@ -636,6 +698,8 @@ export type ReviewItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   suggestedImprovement?: boolean
   createdAt?: boolean
   resolvedAt?: boolean
+  note?: boolean
+  updatedAt?: boolean
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["reviewItem"]>
 
@@ -650,9 +714,11 @@ export type ReviewItemSelectScalar = {
   suggestedImprovement?: boolean
   createdAt?: boolean
   resolvedAt?: boolean
+  note?: boolean
+  updatedAt?: boolean
 }
 
-export type ReviewItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "sourceType" | "sourceId" | "status" | "priority" | "summary" | "suggestedImprovement" | "createdAt" | "resolvedAt", ExtArgs["result"]["reviewItem"]>
+export type ReviewItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "sourceType" | "sourceId" | "status" | "priority" | "summary" | "suggestedImprovement" | "createdAt" | "resolvedAt" | "note" | "updatedAt", ExtArgs["result"]["reviewItem"]>
 export type ReviewItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }
@@ -679,6 +745,11 @@ export type $ReviewItemPayload<ExtArgs extends runtime.Types.Extensions.Internal
     suggestedImprovement: runtime.JsonValue | null
     createdAt: Date
     resolvedAt: Date | null
+    /**
+     * Feature 015: last note from the admin back-office; the full history is in UserAuditEvent.
+     */
+    note: string | null
+    updatedAt: Date
   }, ExtArgs["result"]["reviewItem"]>
   composites: {}
 }
@@ -1113,6 +1184,8 @@ export interface ReviewItemFieldRefs {
   readonly suggestedImprovement: Prisma.FieldRef<"ReviewItem", 'Json'>
   readonly createdAt: Prisma.FieldRef<"ReviewItem", 'DateTime'>
   readonly resolvedAt: Prisma.FieldRef<"ReviewItem", 'DateTime'>
+  readonly note: Prisma.FieldRef<"ReviewItem", 'String'>
+  readonly updatedAt: Prisma.FieldRef<"ReviewItem", 'DateTime'>
 }
     
 

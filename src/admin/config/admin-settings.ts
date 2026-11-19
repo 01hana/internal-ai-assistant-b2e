@@ -37,6 +37,10 @@ export class AdminSettings {
     return this.env.ADMIN_CUSTOMER_ID;
   }
 
+  get timeZone(): string {
+    return this.env.ADMIN_TIME_ZONE;
+  }
+
   get trustedProxyHops(): number {
     return this.env.ADMIN_TRUSTED_PROXY_HOPS;
   }

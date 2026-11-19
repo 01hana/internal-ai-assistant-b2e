@@ -16,6 +16,7 @@ import { ADMIN_CLOCK, systemClock } from './common/clock';
 import { AdminConfigModule } from './config/admin-config.module';
 import { AdminCustomerCheck } from './config/admin-customer.check';
 import { AdminSettings } from './config/admin-settings';
+import { ConversationContentService } from './conversations/conversation-content';
 import { GroupsController } from './groups/groups.controller';
 import { AdminHealthController } from './health/admin-health.controller';
 import { GroupsService } from './groups/groups.service';
@@ -47,6 +48,7 @@ import { UsersService } from './users/users.service';
     AdminCustomerCheck,
     AdminThrottlerGuard,
     AdminMailService,
+    ConversationContentService,
     GroupsService,
     UserAuditService,
     UserSessionService,

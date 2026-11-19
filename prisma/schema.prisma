@@ -999,6 +999,9 @@ model ReviewItem {
   suggestedImprovement Json?
   createdAt            DateTime         @default(now())
   resolvedAt           DateTime?
+  /// Feature 015: last note from the admin back-office; the full history is in UserAuditEvent.
+  note                 String?
+  updatedAt            DateTime         @default(now()) @updatedAt
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
 
