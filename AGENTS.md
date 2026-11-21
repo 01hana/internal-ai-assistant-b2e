@@ -73,3 +73,8 @@ Core 指 `src/`、`test/`（客戶以外的測試）、`scripts/`、`packages/`�
 
 - `deploy/demo/`、`dev/`（Demo 部署與本機工具）
 - 部分 Core 測試使用新模 fixture 當測試資料（例：`test/unit/connectors-module.spec.ts`、`test/integration/feature011-*.spec.ts`）
+
+## 7. 程式寫法
+
+- 新寫的程式、腳本與設定一律使用 ES Modules（`import` / `export`）；需要獨立執行的 JavaScript 腳本用 `.mjs`，不新增 `.cjs` 或 `require()`。
+- 例外：工具只接受 CommonJS 的設定檔（例：`jest.config.cjs`），以及必須載入 CommonJS 編譯產物的既有腳本；改寫既有 `.cjs` 時，以 `createRequire` 或動態 `import()` 載入 CommonJS 產物，並實際執行驗證後再替換。

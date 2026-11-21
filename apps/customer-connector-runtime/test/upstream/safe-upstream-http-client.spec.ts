@@ -23,7 +23,7 @@ describe('Phase 6 one-shot safe HTTPS shell', () => {
       outgoing.destroy = jest.fn(); return outgoing;
     });
     const client = new SafeUpstreamHttpClient(transport as never);
-    const lookup = (_host: string, _options: object, cb: Function) => cb(null, '93.184.216.34', 4);
+    const lookup = (_host: string, _options: object, cb: (error: Error | null, address: string, family: number) => void) => cb(null, '93.184.216.34', 4);
     const result = await client.execute(request, appliedCredentialRequest({ request: request, 'X-Inventory-Key': 'secret' }), lookup, new AbortController().signal);
     expect(result.ok).toBe(true);
     expect(transport).toHaveBeenCalledTimes(1);
@@ -63,7 +63,8 @@ describe('Phase 6 one-shot safe HTTPS shell', () => {
       const address = server.address(); if (!address || typeof address === 'string') throw new Error('fixture');
       const fixed = { ...request, service: { ...request.service, hostname: 'phase6-upstream.test', port: address.port } };
       const factory = ((options: object, callback: (response: unknown) => void) => nativeHttpsRequest({ ...options, ca: tlsFixture.certificate }, callback as never)) as never;
-      const lookup = (_host: string, options: { all?: boolean }, callback: Function) => options.all
+      type LookupCallback = (error: Error | null, address: string | Array<{ address: string; family: number }>, family?: number) => void;
+      const lookup = (_host: string, options: { all?: boolean }, callback: LookupCallback) => options.all
         ? callback(null, [{ address: '127.0.0.1', family: 4 }]) : callback(null, '127.0.0.1', 4);
       const result = await new SafeUpstreamHttpClient(factory).execute(fixed, appliedCredentialRequest({ request }), lookup as never, new AbortController().signal);
       expect(result.ok).toBe(true);

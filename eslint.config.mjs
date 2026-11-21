@@ -27,6 +27,10 @@ export default tseslint.config(
     languageOptions: {
       sourceType: 'commonjs',
       globals: globals.node
+    },
+    // CommonJS files load modules with require().
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off'
     }
   }
 );

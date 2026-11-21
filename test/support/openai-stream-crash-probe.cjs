@@ -1,7 +1,5 @@
 // Run under --unhandled-rejections=strict. This uses no API key or network client.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { OpenAiProvider } = require('../../src/llm/openai/openai.provider');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { LlmExecutionService } = require('../../src/llm/llm-execution.service');
 
 async function check(mode) {

@@ -13,8 +13,8 @@ describe('Bridge binding exact destination policy', () => {
     expect(policy.validate(['10.21.2.3'])).toEqual({ ok: false, code: 'CONNECTOR_DESTINATION_REJECTED' });
   });
 
-  it.each(['0.0.0.0', '169.254.169.254', '224.0.0.1', '::', 'fe80::1', 'fd00:ec2::254', 'ff00::1'])
-    ('denies unconditional unsafe destination %s even under a matching allowlist', (address) => {
+  it.each(['0.0.0.0', '169.254.169.254', '224.0.0.1', '::', 'fe80::1', 'fd00:ec2::254', 'ff00::1'])(
+    'denies unconditional unsafe destination %s even under a matching allowlist', (address) => {
       const cidr = address.includes(':') ? `${address}/128` : `${address}/32`;
       const policy = new ConnectorBindingDestinationPolicy({ mode: 'allowlisted_networks', allowedCidrs: [cidr] });
       expect(policy.validate([address])).toEqual({ ok: false, code: 'CONNECTOR_DESTINATION_REJECTED' });
