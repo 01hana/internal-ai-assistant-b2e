@@ -24,7 +24,7 @@
 | 012 | grounded-llm-conversation-sse-streaming | 完成 | 2026-10-04 – 10-07 | 2026-11-14 | — |
 | — | post-feature012-consolidation（無 spec） | 完成 | 2026-10 – 11-14 | 2026-11-14 | — |
 | 013 | assistant-conversation-experience | 完成 | 2026-11-15 – 11-17 | 2026-11-17 | — |
-| 014 | admin-foundation | 完成（與 015 一起合併） | 2026-11-17 – 11-19 | — | — |
-| 015 | admin-operations | 完成（與 014 一起合併） | 2026-11-19 | — | — |
+| 014 | admin-foundation | 完成 | 2026-11-17 – 11-19 | 2026-11-21（與 015 一起） | — |
+| 015 | admin-operations | 完成 | 2026-11-19 – 11-21 | 2026-11-21（與 014 一起） | — |
 
 新 feature 開始時在表格新增一列；合併回 main 時更新狀態與日期。
