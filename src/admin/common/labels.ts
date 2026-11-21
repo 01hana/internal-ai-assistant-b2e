@@ -61,6 +61,7 @@ export const ADMIN_AUDIT_EVENT_LABELS = {
   admin_password_set: '設定密碼',
   admin_password_reset_requested: '申請重設密碼',
   admin_password_reset: '重設密碼',
+  admin_password_changed: '修改密碼',
   admin_user_created: '建立使用者',
   admin_user_updated: '修改使用者',
   admin_user_email_changed: '修改使用者 email',

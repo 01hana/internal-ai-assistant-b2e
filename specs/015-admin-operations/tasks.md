@@ -73,3 +73,6 @@
 
 - 2026-11-19（後台前端 `internal-ai-assistant-admin` spec 001 的 T001）：`ADMIN_WEB_ORIGIN` 支援逗號分隔的多個來源（`@Transform` 拆成陣列，`@IsUrl({ each: true })` 逐一驗證）；`AdminSettings.webOrigins` 供 CORS 與 Origin 檢查，`webOrigin`（第一個）供信件連結；`local:start` 預設 `http://localhost:3300,http://localhost:3200`（網站 dev server 在前，信件連結開啟網站；Swagger UI 在後）。測試：環境驗證（多來源、清單中有無效值）、`admin-app-setup.spec.ts` 新增來源測試（清單中任一可用、其他 403、信件連結用第一個）、本機腳本預設值。文件：前端串接、架構、README、`admin.env.example`。
 
+## 追加（2026-11-21，後台前端需要）
+
+- [x] T900 `PUT auth/profile` 修改自己的密碼：驗證目前密碼、新舊不可相同、套用密碼規則；登出其他工作階段（保留目前的）、使目前的重設連結失效；稽核 `admin_password_changed`（修改密碼）；每 IP 限流同信件連結端點。測試：`test/integration/admin-auth.spec.ts`「changing one's own password」。文件：`docs/frontend-integration/admin-api.md` §3。

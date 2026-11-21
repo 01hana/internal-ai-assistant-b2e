@@ -22,6 +22,17 @@ export class SetPasswordDto extends TokenDto {
   password!: string;
 }
 
+/** Changing one's own password while signed in. */
+export class ChangePasswordDto {
+  @IsString()
+  @MaxLength(256)
+  currentPassword!: string;
+
+  @IsString()
+  @MaxLength(256)
+  newPassword!: string;
+}
+
 export class ForgotPasswordDto {
   @IsEmail()
   @MaxLength(254)

@@ -14,6 +14,7 @@ export type AdminAuditEventType =
   | 'admin_password_set'
   | 'admin_password_reset_requested'
   | 'admin_password_reset'
+  | 'admin_password_changed'
   | 'admin_user_created'
   | 'admin_user_updated'
   | 'admin_user_email_changed'

@@ -113,6 +113,29 @@ export class AdminAuthService {
   }
 
   /**
+   * A signed-in user changes their own password: the current one must match, the new one follows the
+   * rules and differs from it. Other sessions are signed out and outstanding reset links stop working;
+   * this session stays.
+   */
+  async changePassword(principal: AdminPrincipal, currentPassword: string, newPassword: string, meta: RequestMeta): Promise<void> {
+    const { user, session } = principal;
+    if (user.passwordHash === null || !(await verifyPassword(currentPassword, user.passwordHash))) {
+      throw new BadRequestException({ error: 'current_password_incorrect', message: '目前的密碼不正確。' });
+    }
+    if (newPassword === currentPassword) throw new BadRequestException({ error: 'password_unchanged', message: '新密碼不可與目前的密碼相同。' });
+    const violation = checkPasswordRules(newPassword, user.account);
+    if (violation) throw new BadRequestException({ error: violation, message: passwordRuleMessage(violation) });
+
+    const passwordHash = await hashPassword(newPassword);
+    await this.prisma.db.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: user.id }, data: { passwordHash, passwordChangedAt: this.clock(), failedLoginCount: 0, lockedUntil: null } });
+      await this.tokens.invalidate(user.id, UserTokenPurpose.reset_password, tx);
+      await this.sessions.revokeOthers(user.id, session.id, tx);
+      await this.audit.record({ eventType: 'admin_password_changed', meta, actor: actorOf(user), target: targetOf(user) }, tx);
+    });
+  }
+
+  /**
    * Always answers the same way, whether or not the email exists. Mail goes out only for active users
    * who have set a password, at most once per 15 minutes, and is sent without awaiting so the response
    * time does not reveal whether the email exists.

@@ -38,6 +38,7 @@
 | POST | `auth/login` | `{ account, password }` | `{ user, permissions }`，並設定兩個 cookie |
 | POST | `auth/logout` | — | `null` |
 | GET | `auth/profile` | — | `{ user, permissions }` |
+| PUT | `auth/profile` | `{ currentPassword, newPassword }` | `null`（修改自己的密碼） |
 | POST | `auth/verifyToken` | `{ token }` | `{ account, purpose: 'first_login' \| 'reset_password' }` |
 | POST | `auth/firstLogin` | `{ token, password }` | `null` |
 | POST | `auth/forgot` | `{ email }` | `{ accepted: true }`（一律相同，不透露 email 是否存在） |
@@ -47,6 +48,7 @@
 - `permissions` 為 CASL 規則 `[{ action, subject }]`，例如 `{ action: 'manage', subject: 'User' }`；開發工程師是 `{ action: 'manage', subject: 'all' }`。選單、路由與按鈕各自標註所需的 `{ action, subject }`，不要用路由名稱當 subject。
 - 信件連結：首次登入 `/auth/firstLogin?token=…`、重設 `/auth/reset?token=…`。頁面讀到 token 後立即從網址移除，用 `auth/verifyToken` 取得帳號顯示；送出成功後導向登入頁。連結無效或過期時 `code` 為 `INVALID_OR_EXPIRED_LINK`。
 - 密碼規則：8–128 個字元、不可與帳號相同（`PASSWORD_TOO_SHORT`、`PASSWORD_TOO_LONG`、`PASSWORD_SAME_AS_ACCOUNT`）。
+- 修改自己的密碼（`PUT auth/profile`）：目前的密碼錯誤為 `CURRENT_PASSWORD_INCORRECT`，新舊相同為 `PASSWORD_UNCHANGED`，另套用上面的密碼規則；成功後其他裝置的登入全部登出（目前這個保留），尚未使用的重設密碼連結失效，並留下 `admin_password_changed` 稽核。每個 IP 每分鐘 10 次。
 - 登入失敗一律為 `INVALID_CREDENTIALS`（不區分帳號不存在、密碼錯誤、停用或鎖定）。
 
 ## 4. 使用者 `users`

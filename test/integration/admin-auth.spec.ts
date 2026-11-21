@@ -280,6 +280,49 @@ describeDbBackedAdmin('admin auth (Feature 014)', () => {
     });
   });
 
+  describe('changing one\'s own password (PUT auth/profile)', () => {
+    const change = (signed: Awaited<ReturnType<typeof signIn>>, body: object) => fromSite(api(ctx.app).put(`${base}/profile`), signed).send(body);
+
+    it('changes the password, keeps this session, signs out the others and voids reset links', async () => {
+      await seedUser(ctx.db, { account: 'ops.admin', email: 'ops@example.test' });
+      const here = await signIn(ctx.app, 'ops.admin');
+      const elsewhere = await signIn(ctx.app, 'ops.admin');
+      await fromSite(api(ctx.app).post(`${base}/forgot`)).send({ email: 'ops@example.test' });
+      await flush();
+      const resetToken = ctx.mail.lastToken('ops@example.test')!;
+
+      const changed = await change(here, { currentPassword: PASSWORD, newPassword: NEW_PASSWORD });
+      expect(changed.status).toBe(200);
+      expect(changed.body.data).toBeNull();
+      expect((await api(ctx.app).get(`${base}/profile`).set('Cookie', here.cookie)).status).toBe(200);
+      expect((await api(ctx.app).get(`${base}/profile`).set('Cookie', elsewhere.cookie)).status).toBe(401);
+      expect((await fromSite(api(ctx.app).post(`${base}/verifyToken`)).send({ token: resetToken })).status).toBe(400);
+      expect((await fromSite(api(ctx.app).post(`${base}/login`)).send({ account: 'ops.admin', password: PASSWORD })).status).toBe(401);
+      await signIn(ctx.app, 'ops.admin', NEW_PASSWORD);
+      expect(await auditTypes()).toContain('admin_password_changed');
+    });
+
+    it('rejects a wrong current password, an unchanged one and one that breaks the rules', async () => {
+      await seedUser(ctx.db, { account: 'ops.admin' });
+      const signed = await signIn(ctx.app, 'ops.admin');
+      const wrong = await change(signed, { currentPassword: 'not my password', newPassword: NEW_PASSWORD });
+      expect(wrong.status).toBe(400);
+      expect(wrong.body.error.code).toBe('CURRENT_PASSWORD_INCORRECT');
+      expect((await change(signed, { currentPassword: PASSWORD, newPassword: PASSWORD })).body.error.code).toBe('PASSWORD_UNCHANGED');
+      expect((await change(signed, { currentPassword: PASSWORD, newPassword: 'short' })).body.error.code).toBe('PASSWORD_TOO_SHORT');
+      expect((await change(signed, { currentPassword: PASSWORD, newPassword: 'ops.admin' })).status).toBe(400);
+      expect(await auditTypes()).not.toContain('admin_password_changed');
+    });
+
+    it('requires a session and the CSRF header', async () => {
+      expect((await fromSite(api(ctx.app).put(`${base}/profile`)).send({ currentPassword: PASSWORD, newPassword: NEW_PASSWORD })).status).toBe(401);
+      await seedUser(ctx.db, { account: 'ops.admin' });
+      const signed = await signIn(ctx.app, 'ops.admin');
+      const noCsrf = await api(ctx.app).put(`${base}/profile`).set('Origin', ADMIN_TEST_ORIGIN).set('Cookie', signed.cookie).send({ currentPassword: PASSWORD, newPassword: NEW_PASSWORD });
+      expect(noCsrf.status).toBe(403);
+    });
+  });
+
   it('never stores or logs plain passwords, session tokens or link tokens (SC-003)', async () => {
     const user = await seedUser(ctx.db, { account: 'ops.admin', password: null, email: 'ops@example.test' });
     const { token } = await issue(user.id, UserTokenPurpose.first_login);

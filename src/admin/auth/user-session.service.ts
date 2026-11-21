@@ -58,6 +58,11 @@ export class UserSessionService {
     await db.userSession.updateMany({ where: { id: sessionId, revokedAt: null }, data: { revokedAt: this.clock() } });
   }
 
+  /** Every other session of the user (after a password change on this one). */
+  async revokeOthers(userId: string, keepSessionId: string, db: Db = this.prisma.db): Promise<void> {
+    await db.userSession.updateMany({ where: { userId, id: { not: keepSessionId }, revokedAt: null }, data: { revokedAt: this.clock() } });
+  }
+
   async revokeAllForUser(userId: string, db: Db = this.prisma.db): Promise<void> {
     await db.userSession.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: this.clock() } });
   }

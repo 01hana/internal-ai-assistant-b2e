@@ -1,11 +1,11 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { CookieOptions, Response } from 'express';
 import { UserTokenPurpose } from '../../generated/prisma/client';
 import { PublicRoute, SignedInRoute } from '../authorization/route-access.decorator';
 import { type AdminRequest, requestMeta } from '../common/admin-request';
 import { ADMIN_CSRF_COOKIE, ADMIN_SESSION_ABSOLUTE_MS, ADMIN_SESSION_COOKIE, AdminSettings } from '../config/admin-settings';
-import { ForgotPasswordDto, LoginDto, SetPasswordDto, TokenDto } from './auth.dto';
+import { ChangePasswordDto, ForgotPasswordDto, LoginDto, SetPasswordDto, TokenDto } from './auth.dto';
 import { AdminAuthService, type ProfileView } from './admin-auth.service';
 import { AdminThrottlerGuard, LINK_ENDPOINT_LIMITS, SKIP_ACCOUNT_LIMIT } from './admin-throttler.guard';
 
@@ -41,6 +41,17 @@ export class AdminAuthController {
   @SignedInRoute()
   profile(@Req() request: AdminRequest): ProfileView {
     return this.auth.profile(request.adminPrincipal!.user);
+  }
+
+  /** Changes the signed-in user's password (limited per IP like the mail-link endpoints). */
+  @Put('profile')
+  @SignedInRoute()
+  @UseGuards(AdminThrottlerGuard)
+  @Throttle(LINK_ENDPOINT_LIMITS)
+  @SkipThrottle(SKIP_ACCOUNT_LIMIT)
+  async changePassword(@Body() body: ChangePasswordDto, @Req() request: AdminRequest): Promise<null> {
+    await this.auth.changePassword(request.adminPrincipal!, body.currentPassword, body.newPassword, requestMeta(request));
+    return null;
   }
 
   @Post('verifyToken')
