@@ -1,3 +1,4 @@
+import { isGatewayFeedbackInput, toGatewayFeedbackInput, type GatewayFeedbackInput } from './assistant-feedback-input';
 import { hasMessageOrChoiceId } from './assistant-message-input';
 import type { CanonicalGatewayIdentity } from '../identity/canonical-gateway-identity';
 import { BACKEND_ROUTE_DEFINITIONS } from './backend-route-definition';
@@ -33,7 +34,7 @@ export type GatewaySessionListQuery = Readonly<{
 export const GATEWAY_SESSION_LIST_LIMIT_PATTERN = /^[0-9]{1,3}$/;
 export const GATEWAY_SESSION_LIST_CURSOR_PATTERN = /^[A-Za-z0-9_-]{1,200}$/;
 
-type ReadOperation = 'get-session' | 'get-session-messages' | 'list-sessions' | 'archive-session' | 'unarchive-session' | 'delete-session';
+type ReadOperation = 'get-session' | 'get-session-messages' | 'list-sessions' | 'archive-session' | 'unarchive-session' | 'delete-session' | 'submit-feedback';
 
 export type GatewayBackendReadResponse = Readonly<{
   statusCode: number;
@@ -132,6 +133,12 @@ export class GatewayBackendClient {
     return this.fetchRead(identity, 'archive-session', sessionId, undefined, input, SESSION_READ_FAILURES);
   }
 
+  /** Feedback on one Assistant answer; Core checks that the message belongs to the actor's Customer. */
+  async submitFeedback(identity: CanonicalGatewayIdentity, messageId: string, feedback: GatewayFeedbackInput, input: ReadInput): Promise<GatewayBackendReadResponse> {
+    if (!isNonBlankString(messageId) || !isGatewayFeedbackInput(feedback) || !isReadInput(input)) throw new BackendUnavailableError();
+    return this.fetchRead(identity, 'submit-feedback', messageId, undefined, input, FEEDBACK_FAILURES, toGatewayFeedbackInput(feedback));
+  }
+
   async sendStreamMessage(
     identity: CanonicalGatewayIdentity,
     sessionId: string,
@@ -169,14 +176,16 @@ export class GatewayBackendClient {
   private async fetchRead(
     identity: CanonicalGatewayIdentity,
     operation: ReadOperation,
-    sessionId: string | undefined,
+    resourceId: string | undefined,
     query: Readonly<{ limit?: string; cursor?: string; order?: string; status?: string }> | undefined,
     input: ReadInput,
-    safeFailureStatuses: readonly number[]
+    safeFailureStatuses: readonly number[],
+    requestBody?: Readonly<Record<string, unknown>>
   ): Promise<GatewayBackendReadResponse> {
     const token = await this.dependencies.internalTokenIssuer.issue(identity);
     const route = BACKEND_ROUTE_DEFINITIONS[operation];
-    const path = sessionId === undefined ? route.path : route.path.replace(':id', encodeURIComponent(sessionId));
+    // The one path parameter of the fixed route (`:id` or `:messageId`).
+    const path = resourceId === undefined ? route.path : route.path.replace(/:[A-Za-z]+/, encodeURIComponent(resourceId));
     const url = new URL(path, this.dependencies.backendBaseUrl);
     if (query) {
       if (query.limit !== undefined) url.searchParams.set('limit', query.limit);
@@ -190,9 +199,11 @@ export class GatewayBackendClient {
         headers: {
           authorization: `Bearer ${token}`,
           accept: 'application/json',
+          ...(requestBody === undefined ? {} : { 'content-type': 'application/json' }),
           ...correlationHeader('x-request-id', input.requestId),
           ...correlationHeader('traceparent', input.traceparent)
         },
+        ...(requestBody === undefined ? {} : { body: JSON.stringify(requestBody) }),
         signal: this.dependencies.createTimeoutSignal(this.dependencies.timeoutMilliseconds)
       });
       if (typeof response.json !== 'function') throw new BackendUnavailableError();
@@ -253,6 +264,8 @@ function isSessionListQuery(value: unknown): value is GatewaySessionListQuery {
 
 const SESSION_READ_FAILURES: readonly number[] = Object.freeze([401, 403, 404]);
 const SESSION_LIST_FAILURES: readonly number[] = Object.freeze([400, 401, 403]);
+/** Feedback: invalid input or not an answer (400), identity (401/403), message not found for this Customer (404). */
+const FEEDBACK_FAILURES: readonly number[] = Object.freeze([400, 401, 403, 404]);
 
 function isSafeBackendReadFailure(statusCode: number, body: unknown, allowedStatuses: readonly number[]): boolean {
   if (!allowedStatuses.includes(statusCode) || !isRecord(body) || !isNonBlankString(body.requestId) || !isRecord(body.error)) return false;

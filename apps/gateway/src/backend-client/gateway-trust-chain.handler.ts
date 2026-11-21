@@ -1,3 +1,4 @@
+import { isGatewayFeedbackInput, type GatewayFeedbackInput } from './assistant-feedback-input';
 import { hasMessageOrChoiceId } from './assistant-message-input';
 import { GATEWAY_SESSION_LIST_CURSOR_PATTERN, GATEWAY_SESSION_LIST_LIMIT_PATTERN } from './gateway-backend-client.service';
 import type { GatewayBackendClient, GatewayBackendReadResponse, GatewayHistoryQuery, GatewaySessionListQuery } from './gateway-backend-client.service';
@@ -43,10 +44,18 @@ type ListSessionsInput = Readonly<{
   traceparent?: string;
 }>;
 
+type SubmitFeedbackInput = Readonly<{
+  authorization?: string;
+  messageId: string;
+  feedback: GatewayFeedbackInput;
+  requestId: string;
+  traceparent?: string;
+}>;
+
 type GatewayTrustChainHandlerDependencies = Readonly<{
   upstreamTokenVerifier: UpstreamTokenVerifier;
   canonicalIdentityResolver: Pick<CanonicalIdentityResolver, 'resolve'>;
-  gatewayBackendClient: Pick<GatewayBackendClient, 'createSession' | 'getSession' | 'getSessionMessages' | 'sendStreamMessage' | 'listSessions' | 'archiveSession' | 'unarchiveSession' | 'deleteSession'>;
+  gatewayBackendClient: Pick<GatewayBackendClient, 'createSession' | 'getSession' | 'getSessionMessages' | 'sendStreamMessage' | 'listSessions' | 'archiveSession' | 'unarchiveSession' | 'deleteSession' | 'submitFeedback'>;
 }>;
 
 /** Coordinates the fixed identity-to-transport chain without owning either authority. */
@@ -130,6 +139,15 @@ export class GatewayTrustChainHandler {
     });
   }
 
+  async submitFeedback(input: SubmitFeedbackInput): Promise<GatewayBackendReadResponse> {
+    if (!isSubmitFeedbackInput(input)) throw new GatewayTrustChainInputError();
+    const canonicalIdentity = await resolveCanonicalIdentity(this.dependencies, input.authorization, input.requestId);
+    return this.dependencies.gatewayBackendClient.submitFeedback(canonicalIdentity, input.messageId, input.feedback, {
+      requestId: input.requestId,
+      traceparent: input.traceparent
+    });
+  }
+
   async deleteSession(input: GetSessionInput): Promise<GatewayBackendReadResponse> {
     if (!isGetSessionInput(input)) throw new GatewayTrustChainInputError();
     const canonicalIdentity = await resolveCanonicalIdentity(this.dependencies, input.authorization, input.requestId);
@@ -176,6 +194,12 @@ function isSendStreamMessageInput(value: unknown): value is SendStreamMessageInp
 function isGetSessionInput(value: unknown): value is GetSessionInput {
   if (!isRecord(value) || Object.keys(value).some((key) => key !== 'authorization' && key !== 'sessionId' && key !== 'requestId' && key !== 'traceparent')) return false;
   return isOptionalString(value.authorization) && isNonBlankString(value.sessionId) && isNonBlankString(value.requestId) && isOptionalString(value.traceparent);
+}
+
+function isSubmitFeedbackInput(value: unknown): value is SubmitFeedbackInput {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'authorization' && key !== 'messageId' && key !== 'feedback' && key !== 'requestId' && key !== 'traceparent')) return false;
+  return isOptionalString(value.authorization) && isNonBlankString(value.messageId) && isGatewayFeedbackInput(value.feedback)
+    && isNonBlankString(value.requestId) && isOptionalString(value.traceparent);
 }
 
 function isGetSessionMessagesInput(value: unknown): value is GetSessionMessagesInput {

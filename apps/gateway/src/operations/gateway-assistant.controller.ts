@@ -7,6 +7,7 @@ import type { GatewayHistoryQuery, GatewaySessionListQuery } from '../backend-cl
 import { IdentityResolutionError } from '../integration-registry/canonical-identity-resolver.service';
 import { IdentityServiceUnavailableError } from '../signing/identity-service-unavailable.error';
 import { UpstreamAuthenticationError, UpstreamIdentityServiceUnavailableError } from '../upstream-auth/upstream-auth.error';
+import { isGatewayFeedbackInput, toGatewayFeedbackInput, type GatewayFeedbackInput } from '../backend-client/assistant-feedback-input';
 import { hasMessageOrChoiceId } from '../backend-client/assistant-message-input';
 
 /**
@@ -119,6 +120,28 @@ export class GatewayAssistantController {
     const result = await this.trustChainHandler.deleteSession({
       authorization,
       sessionId,
+      requestId: normalizeRequestId(requestIdHeader),
+      traceparent: optionalHeader(traceparent)
+    }).catch((error) => { throw projectTrustChainError(error); });
+    writeReadResponse(response, result);
+  }
+
+  /** Feedback on one Assistant answer: rating, optional intent, reason and comment. No query is accepted. */
+  @Post('messages/:id/feedback')
+  async submitFeedback(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('x-request-id') requestIdHeader: string | undefined,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Param('id') messageId: string,
+    @Query() query: unknown,
+    @Body() body: unknown,
+    @Res() response: Response
+  ): Promise<void> {
+    const feedback = readFeedbackInput(body, query);
+    const result = await this.trustChainHandler.submitFeedback({
+      authorization,
+      messageId,
+      feedback,
       requestId: normalizeRequestId(requestIdHeader),
       traceparent: optionalHeader(traceparent)
     }).catch((error) => { throw projectTrustChainError(error); });
@@ -254,6 +277,11 @@ function readSessionListQuery(query: unknown): GatewaySessionListQuery {
     || (status !== undefined && status !== 'archived')) throw new BadRequestException('Invalid Gateway operation input.');
   return Object.freeze({ ...(limit === undefined ? {} : { limit }), ...(cursor === undefined ? {} : { cursor }),
     ...(status === undefined ? {} : { status: 'archived' as const }) });
+}
+
+function readFeedbackInput(body: unknown, query: unknown): GatewayFeedbackInput {
+  if (!isRecord(query) || Object.keys(query).length !== 0 || !isGatewayFeedbackInput(body)) throw new BadRequestException('Invalid Gateway operation input.');
+  return toGatewayFeedbackInput(body);
 }
 
 function writeReadResponse(response: Response, result: Readonly<{ statusCode: number; body: unknown }>): void {

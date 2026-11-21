@@ -4,10 +4,11 @@ import { join, resolve } from 'node:path';
 const repositoryRoot = resolve(__dirname, '../../../..');
 const mainPath = join(repositoryRoot, 'src/main.ts');
 const assistantControllerPath = join(repositoryRoot, 'src/assistant/assistant.controller.ts');
+const feedbackControllerPath = join(repositoryRoot, 'src/feedback/feedback.controller.ts');
 const gatewayBackendClientRoot = join(repositoryRoot, 'apps/gateway/src/backend-client');
 const definitionPath = join(gatewayBackendClientRoot, 'backend-route-definition.ts');
 
-type BackendRouteDefinitions = Readonly<Record<'create-session' | 'get-session' | 'get-session-messages' | 'send-stream-message' | 'list-sessions' | 'archive-session' | 'unarchive-session' | 'delete-session', Readonly<{ method: string; path: string }>>>;
+type BackendRouteDefinitions = Readonly<Record<'create-session' | 'get-session' | 'get-session-messages' | 'send-stream-message' | 'list-sessions' | 'archive-session' | 'unarchive-session' | 'delete-session' | 'submit-feedback', Readonly<{ method: string; path: string }>>>;
 
 const expectedMappings: BackendRouteDefinitions = Object.freeze({
   'create-session': Object.freeze({ method: 'POST', path: '/api/v1/assistant/sessions' }),
@@ -18,15 +19,18 @@ const expectedMappings: BackendRouteDefinitions = Object.freeze({
   'list-sessions': Object.freeze({ method: 'GET', path: '/api/v1/assistant/sessions' }),
   'archive-session': Object.freeze({ method: 'POST', path: '/api/v1/assistant/sessions/:id/archive' }),
   'unarchive-session': Object.freeze({ method: 'POST', path: '/api/v1/assistant/sessions/:id/unarchive' }),
-  'delete-session': Object.freeze({ method: 'DELETE', path: '/api/v1/assistant/sessions/:id' })
+  'delete-session': Object.freeze({ method: 'DELETE', path: '/api/v1/assistant/sessions/:id' }),
+  // Feedback on an Assistant answer (FeedbackController).
+  'submit-feedback': Object.freeze({ method: 'POST', path: '/api/v1/assistant/messages/:messageId/feedback' })
 });
 
 describe('Backend route definition compatibility contract (T063)', () => {
   const mainSource = readFileSync(mainPath, 'utf8');
   const controllerSource = readFileSync(assistantControllerPath, 'utf8');
+  const feedbackSource = readFileSync(feedbackControllerPath, 'utf8');
 
   it('derives the locked Gateway operations from the existing Backend bootstrap and controller', () => {
-    expect(extractBackendSurface(mainSource, controllerSource)).toEqual(expectedMappings);
+    expect(extractBackendSurface(mainSource, controllerSource, feedbackSource)).toEqual(expectedMappings);
   });
 
   it.each([
@@ -42,7 +46,15 @@ describe('Backend route definition compatibility contract (T063)', () => {
     ['unarchive path', mainSource, controllerSource.replace('@Post("sessions/:id/unarchive")', '@Post("sessions/:id/restore")')],
     ['delete method', mainSource, controllerSource.replace('@Delete("sessions/:id")', '@Post("sessions/:id/delete")')]
   ])('rejects Backend %s drift', (_kind, mutatedMain, mutatedController) => {
-    expect(() => assertMatchesLockedRoutes(mutatedMain, mutatedController)).toThrow('Backend route surface no longer matches the locked Gateway contract.');
+    expect(() => assertMatchesLockedRoutes(mutatedMain, mutatedController, feedbackSource)).toThrow('Backend route surface no longer matches the locked Gateway contract.');
+  });
+
+  it.each([
+    ['feedback controller prefix', feedbackSource.replace("@Controller('assistant/messages')", "@Controller('assistant/answers')")],
+    ['feedback path', feedbackSource.replace("@Post(':messageId/feedback')", "@Post(':messageId/rating')")],
+    ['feedback method', feedbackSource.replace("@Post(':messageId/feedback')", "@Put(':messageId/feedback')")]
+  ])('rejects Backend %s drift', (_kind, mutatedFeedback) => {
+    expect(() => assertMatchesLockedRoutes(mainSource, controllerSource, mutatedFeedback)).toThrow('Backend route surface no longer matches the locked Gateway contract.');
   });
 
   it('rejects generic caller-selected routing and proxy patterns if a Gateway backend-client source tree is introduced', () => {
@@ -56,13 +68,13 @@ describe('Backend route definition compatibility contract (T063)', () => {
   });
 });
 
-function assertMatchesLockedRoutes(mainSource: string, controllerSource: string): void {
-  if (JSON.stringify(extractBackendSurface(mainSource, controllerSource)) !== JSON.stringify(expectedMappings)) {
+function assertMatchesLockedRoutes(mainSource: string, controllerSource: string, feedbackSource: string): void {
+  if (JSON.stringify(extractBackendSurface(mainSource, controllerSource, feedbackSource)) !== JSON.stringify(expectedMappings)) {
     throw new Error('Backend route surface no longer matches the locked Gateway contract.');
   }
 }
 
-function extractBackendSurface(mainSource: string, controllerSource: string): BackendRouteDefinitions {
+function extractBackendSurface(mainSource: string, controllerSource: string, feedbackSource: string): BackendRouteDefinitions {
   const globalPrefix = requiredMatch(mainSource, /app\.setGlobalPrefix\(\s*["']([^"']+)["']\s*\)/, 'global prefix');
   const controllerPrefix = requiredMatch(controllerSource, /@Controller\(\s*["']([^"']+)["']\s*\)/, 'controller prefix');
   const createSession = extractPostRoute(controllerSource, 'createSession');
@@ -74,6 +86,8 @@ function extractBackendSurface(mainSource: string, controllerSource: string): Ba
   const archiveParameter = requiredMatch(archiveSession.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'archive parameter');
   const unarchiveSession = extractPostRoute(controllerSource, 'unarchiveSession');
   const deleteSession = extractPostRoute(controllerSource, 'deleteSession');
+  const feedbackPrefix = requiredMatch(feedbackSource, /@Controller\(\s*["']([^"']+)["']\s*\)/, 'feedback controller prefix');
+  const submitFeedback = extractPostRoute(feedbackSource, 'submitFeedback');
   const parameter = requiredMatch(sendMessage.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'message parameter');
   const getSessionParameter = requiredMatch(getSession.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'session parameter');
   const getMessagesParameter = requiredMatch(getMessages.parameters, /@Param\(\s*["']([^"']+)["']\s*\)/, 'history parameter');
@@ -88,7 +102,8 @@ function extractBackendSurface(mainSource: string, controllerSource: string): Ba
     'list-sessions': Object.freeze({ method: listSessions.method, path: route(globalPrefix, controllerPrefix, listSessions.path) }),
     'archive-session': Object.freeze({ method: archiveSession.method, path: route(globalPrefix, controllerPrefix, archiveSession.path) }),
     'unarchive-session': Object.freeze({ method: unarchiveSession.method, path: route(globalPrefix, controllerPrefix, unarchiveSession.path) }),
-    'delete-session': Object.freeze({ method: deleteSession.method, path: route(globalPrefix, controllerPrefix, deleteSession.path) })
+    'delete-session': Object.freeze({ method: deleteSession.method, path: route(globalPrefix, controllerPrefix, deleteSession.path) }),
+    'submit-feedback': Object.freeze({ method: submitFeedback.method, path: route(globalPrefix, feedbackPrefix, submitFeedback.path) })
   });
 }
 

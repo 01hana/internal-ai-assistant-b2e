@@ -101,6 +101,18 @@ SSE `final` 事件的 `data` 可能多一個 `suggestions`（沒有時不會出�
 - `POST /sessions/:id/unarchive`（不帶 body 與 query）：把已封存的對話移回一般列表，回 `{ sessionId, status: "active" }`。對話不存在、不是已封存、或不屬於該使用者：404。已封存的對話要先取消封存才能開啟。
 - `DELETE /sessions/:id`（不帶 body 與 query）：刪除一般或已封存的對話，回 `{ sessionId, status: "deleted" }`。刪除後兩個列表都不會出現，也無法讀取或取消封存（404）；後端仍保留資料作為稽核紀錄，使用者無法復原。
 
+## 5b. 回饋
+
+`POST /messages/:messageId/feedback`（Gateway 轉送到 Core 的同一路徑）：
+
+```json
+{ "rating": "negative", "intent": "not_helpful", "reason": "答非所問", "comment": "…" }
+```
+
+- `rating` 必填（`positive`、`negative`、`neutral`）；`intent`（`correction`、`unsafe`、`not_helpful`、`missing_evidence`、`other`）、`reason`（最多 160 字）、`comment`（最多 1000 字）可省略；其他欄位與 query 一律回 400。
+- 成功回 201：`{ requestId, data: { feedbackEventId, messageId, rating, intent, reviewItemId } }`；負評會建立待審項目（`reviewItemId`）。
+- 訊息不存在或不屬於該客戶：404；不是助理的回答：400。
+
 ## 6. 錯誤與相容性
 
 - 錯誤格式與現有端點相同：`{ requestId, error: { code, message } }`；Gateway 層的身分錯誤照舊（401／403／503）。

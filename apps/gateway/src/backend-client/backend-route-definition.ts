@@ -6,7 +6,8 @@ export type BackendRouteOperation =
   | 'list-sessions'
   | 'archive-session'
   | 'unarchive-session'
-  | 'delete-session';
+  | 'delete-session'
+  | 'submit-feedback';
 
 export type BackendRouteDefinition = Readonly<{
   method: 'GET' | 'POST' | 'DELETE';
@@ -46,5 +47,9 @@ export const BACKEND_ROUTE_DEFINITIONS: Readonly<Record<BackendRouteOperation, B
   'delete-session': Object.freeze({
     method: 'DELETE',
     path: '/api/v1/assistant/sessions/:id'
+  }),
+  'submit-feedback': Object.freeze({
+    method: 'POST',
+    path: '/api/v1/assistant/messages/:messageId/feedback'
   })
 });

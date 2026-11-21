@@ -100,7 +100,7 @@ describe('Gateway trust-chain handler contract (T068)', () => {
 
   it('requires exactly the fixed server-owned handler methods (Feature 013 adds list, archive, unarchive and delete)', () => {
     const Handler = loadGatewayTrustChainHandler();
-    expect(Object.getOwnPropertyNames(Handler.prototype).sort()).toEqual(['archiveSession', 'constructor', 'createSession', 'deleteSession', 'getSession', 'getSessionMessages', 'listSessions', 'sendStreamMessage', 'unarchiveSession']);
+    expect(Object.getOwnPropertyNames(Handler.prototype).sort()).toEqual(['archiveSession', 'constructor', 'createSession', 'deleteSession', 'getSession', 'getSessionMessages', 'listSessions', 'sendStreamMessage', 'submitFeedback', 'unarchiveSession']);
   });
 
   it('has no legacy verifier, multi-profile implementation, registry, or binding authority', () => {
