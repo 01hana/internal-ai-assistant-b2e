@@ -482,24 +482,19 @@ describe('internal assistant core deterministic eval baseline', () => {
       expect(negativeResponse.status).toBe(201);
       expect(duplicateNegativeResponse.status).toBe(201);
       expect(positiveResponse.body.data.reviewItemId).toBeNull();
-      expect(duplicateNegativeResponse.body.data.reviewItemId).not.toBe(negativeResponse.body.data.reviewItemId);
-      expect(testApp.state.feedbackEvents).toHaveLength(initialFeedbackCount + 3);
+      // One feedback per answer: the later ratings update it, and the repeated negative keeps one review item.
+      expect(duplicateNegativeResponse.body.data.reviewItemId).toBe(negativeResponse.body.data.reviewItemId);
+      expect(duplicateNegativeResponse.body.data.feedbackEventId).toBe(positiveResponse.body.data.feedbackEventId);
+      expect(testApp.state.feedbackEvents).toHaveLength(initialFeedbackCount + 1);
       const newReviews = testApp.state.reviewItems.slice(initialReviewCount);
-      expect(newReviews).toHaveLength(2);
-      expect(newReviews).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            customerId: 'customer-a',
-            sourceType: 'negative_feedback',
-            sourceId: negativeResponse.body.data.feedbackEventId
-          }),
-          expect.objectContaining({
-            customerId: 'customer-a',
-            sourceType: 'negative_feedback',
-            sourceId: duplicateNegativeResponse.body.data.feedbackEventId
-          })
-        ])
-      );
+      expect(newReviews).toEqual([
+        expect.objectContaining({
+          customerId: 'customer-a',
+          sourceType: 'negative_feedback',
+          sourceId: negativeResponse.body.data.feedbackEventId,
+          status: 'open'
+        })
+      ]);
       expect(testApp.state.auditEvents).toEqual(
         expect.arrayContaining([
           expect.objectContaining({

@@ -591,7 +591,8 @@ export const FeedbackEventScalarFieldEnum = {
   toolCallIds: 'toolCallIds',
   evidenceRefIds: 'evidenceRefIds',
   answerDecision: 'answerDecision',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type FeedbackEventScalarFieldEnum = (typeof FeedbackEventScalarFieldEnum)[keyof typeof FeedbackEventScalarFieldEnum]

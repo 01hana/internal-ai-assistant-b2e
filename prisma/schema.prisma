@@ -977,11 +977,15 @@ model FeedbackEvent {
   evidenceRefIds String[]
   answerDecision AnswerDecisionStatus?
   createdAt      DateTime              @default(now())
+  /// Changing the rating or adding a reason updates the answer's one feedback.
+  updatedAt      DateTime              @default(now()) @updatedAt
 
   customer Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
   message  AssistantMessage @relation(fields: [customerId, messageId], references: [customerId, id], onDelete: Cascade)
 
   @@unique([customerId, id])
+  /// One feedback per answer.
+  @@unique([customerId, messageId])
   @@index([requestId])
   @@index([messageId, rating])
   @@index([customerId, requestId])

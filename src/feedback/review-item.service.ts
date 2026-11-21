@@ -20,7 +20,15 @@ export interface CreateReviewItemFromFeedbackInput {
   customerScope: CustomerScope;
   requestId: string; sessionId: string; messageId: string; identityContext: RequestIdentityContext;
   feedbackEventId: string; answerDecision: AnswerDecisionStatus; rating: FeedbackRating; intent: string; reason?: string; comment?: string; toolCallIds: string[]; evidenceRefIds: string[];
+  /** The answer was not rated negatively before: a closed review item for this feedback opens again. */
+  reopen?: boolean;
 }
+/** The user rated an answer positively after a negative rating. */
+export interface WithdrawFeedbackReviewInput {
+  customerScope: CustomerScope; requestId: string; sessionId: string; messageId: string; feedbackEventId: string;
+}
+/** Notes written on a feedback review item when the user changes the rating. */
+export const FEEDBACK_REVIEW_NOTES = { withdrawn: '使用者改為正面評價', reopened: '使用者再次給予負面評價' } as const;
 /** Feature 013 US5: a question the assistant could not map to any capability. The user's text is never copied. */
 export interface CreateUnsupportedQuestionInput {
   customerScope: CustomerScope; identityContext: RequestIdentityContext;
@@ -43,6 +51,22 @@ export class ReviewItemService {
     assertCustomerScopeMatchesIdentityContext(input.customerScope, input.identityContext);
     if (database) return this.createFeedbackInDatabase(input, database);
     return this.prisma.db.$transaction((transaction) => this.createFeedbackInDatabase(input, transaction as ReviewTransactionClient));
+  }
+
+  /**
+   * The user rated an answer positively after a negative rating: a review item still waiting for
+   * someone (`open`) is dismissed with a note; one already being handled is left alone.
+   */
+  async withdrawFeedbackReview(input: WithdrawFeedbackReviewInput, database: ReviewTransactionClient) {
+    const item = await database.reviewItem.findFirst({ where: { customerId: input.customerScope.customerId,
+      sourceType: { in: FEEDBACK_REVIEW_SOURCES }, sourceId: input.feedbackEventId, status: ReviewItemStatus.open } });
+    if (!item) return null;
+    const dismissed = await database.reviewItem.update({ where: { id: item.id },
+      data: { status: ReviewItemStatus.dismissed, resolvedAt: new Date(), note: FEEDBACK_REVIEW_NOTES.withdrawn } });
+    await this.auditWriter.append({ customerScope: input.customerScope, requestId: input.requestId, sessionId: input.sessionId,
+      messageId: input.messageId, eventType: 'review_item_updated', metadata: toJsonInput({ reviewItemId: item.id,
+        feedbackEventId: input.feedbackEventId, status: ReviewItemStatus.dismissed, cause: 'feedback_changed_to_positive' }) }, database);
+    return dismissed;
   }
 
   /** Every occurrence is recorded (no de-duplication): the count itself is the demand signal. */
@@ -77,9 +101,17 @@ export class ReviewItemService {
     const feedback = await database.feedbackEvent.findFirst({ where: { customerId: input.customerScope.customerId, id: input.feedbackEventId, messageId: input.messageId } });
     if (!feedback || feedback.answerDecision !== input.answerDecision) throw reviewNotFound();
     const sourceType = toFeedbackReviewSourceType(input);
-    const existing = await database.reviewItem.findFirst({ where: { customerId: input.customerScope.customerId, sourceType, sourceId: input.feedbackEventId, status: ReviewItemStatus.open } });
-    if (existing) return existing;
-    const reviewItem = await database.reviewItem.create({ data: { customerId: input.customerScope.customerId, sourceType, sourceId: input.feedbackEventId, status: ReviewItemStatus.open, priority: toFeedbackReviewPriority(input), summary: `${input.intent}: feedback requires review`, suggestedImprovement: toJsonInput({ requestId: input.requestId, messageId: input.messageId, feedbackEventId: input.feedbackEventId, answerDecision: input.answerDecision, toolCallIds: input.toolCallIds, evidenceRefIds: input.evidenceRefIds, rating: input.rating, intent: input.intent, reasonProvided: Boolean(input.reason), commentProvided: Boolean(input.comment) }) } });
+    const fields = { sourceType, priority: toFeedbackReviewPriority(input), summary: `${input.intent}: feedback requires review`, suggestedImprovement: toJsonInput({ requestId: input.requestId, messageId: input.messageId, feedbackEventId: input.feedbackEventId, answerDecision: input.answerDecision, toolCallIds: input.toolCallIds, evidenceRefIds: input.evidenceRefIds, rating: input.rating, intent: input.intent, reasonProvided: Boolean(input.reason), commentProvided: Boolean(input.comment) }) };
+    // One review item per feedback (and one feedback per answer): a later rating or reason updates it.
+    const existing = await database.reviewItem.findFirst({ where: { customerId: input.customerScope.customerId, sourceType: { in: FEEDBACK_REVIEW_SOURCES }, sourceId: input.feedbackEventId } });
+    if (existing) {
+      const reopen = Boolean(input.reopen) && CLOSED_REVIEW_STATUSES.includes(existing.status);
+      const updated = await database.reviewItem.update({ where: { id: existing.id }, data: { ...fields,
+        ...(reopen ? { status: ReviewItemStatus.open, resolvedAt: null, note: FEEDBACK_REVIEW_NOTES.reopened } : {}) } });
+      await this.auditWriter.append({ customerScope: input.customerScope, requestId: input.requestId, sessionId: input.sessionId, messageId: input.messageId, eventType: 'review_item_updated', decision: input.answerDecision, metadata: toJsonInput({ reviewItemId: existing.id, sourceType, feedbackEventId: input.feedbackEventId, rating: input.rating, intent: input.intent, reasonProvided: Boolean(input.reason), commentProvided: Boolean(input.comment), reopened: reopen }) }, database);
+      return updated;
+    }
+    const reviewItem = await database.reviewItem.create({ data: { customerId: input.customerScope.customerId, sourceId: input.feedbackEventId, status: ReviewItemStatus.open, ...fields } });
     await this.auditWriter.append({ customerScope: input.customerScope, requestId: input.requestId, sessionId: input.sessionId, messageId: input.messageId, eventType: 'review_item_created', decision: input.answerDecision, evidenceRefIds: input.evidenceRefIds, metadata: toJsonInput({ reviewItemId: reviewItem.id, sourceType, feedbackEventId: input.feedbackEventId, answerDecision: input.answerDecision, rating: input.rating, intent: input.intent, reasonProvided: Boolean(input.reason), commentProvided: Boolean(input.comment), toolCallIds: input.toolCallIds, evidenceRefIds: input.evidenceRefIds }) }, database);
     return reviewItem;
   }
@@ -95,6 +127,8 @@ export class ReviewItemService {
   }
 }
 
+const FEEDBACK_REVIEW_SOURCES: ReviewSourceType[] = [ReviewSourceType.negative_feedback, ReviewSourceType.missing_evidence];
+const CLOSED_REVIEW_STATUSES: ReviewItemStatus[] = [ReviewItemStatus.resolved, ReviewItemStatus.dismissed];
 type ReviewTransactionClient = Pick<PrismaClient, 'assistantSession' | 'assistantMessage' | 'answerDecision' | 'feedbackEvent' | 'toolCall' | 'evidenceRef' | 'reviewItem' | 'auditEvent'> & AuditTransactionClient;
 function reviewNotFound(): Error { return new Error('Review resource not found.'); }
 function toReviewSourceType(reason: NoAnswerReason): ReviewSourceType { if (reason === NoAnswerReason.tool_failure) return ReviewSourceType.tool_failure; if (reason === NoAnswerReason.no_evidence) return ReviewSourceType.no_answer; if (reason === NoAnswerReason.permission_denied) return ReviewSourceType.permission_mapping_issue; if (reason === NoAnswerReason.evidence_conflict) return ReviewSourceType.missing_evidence; return ReviewSourceType.failed_query; }

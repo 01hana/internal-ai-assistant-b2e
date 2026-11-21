@@ -35,6 +35,7 @@ export type FeedbackEventMinAggregateOutputType = {
   intent: string | null
   answerDecision: $Enums.AnswerDecisionStatus | null
   createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type FeedbackEventMaxAggregateOutputType = {
@@ -48,6 +49,7 @@ export type FeedbackEventMaxAggregateOutputType = {
   intent: string | null
   answerDecision: $Enums.AnswerDecisionStatus | null
   createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type FeedbackEventCountAggregateOutputType = {
@@ -63,6 +65,7 @@ export type FeedbackEventCountAggregateOutputType = {
   evidenceRefIds: number
   answerDecision: number
   createdAt: number
+  updatedAt: number
   _all: number
 }
 
@@ -78,6 +81,7 @@ export type FeedbackEventMinAggregateInputType = {
   intent?: true
   answerDecision?: true
   createdAt?: true
+  updatedAt?: true
 }
 
 export type FeedbackEventMaxAggregateInputType = {
@@ -91,6 +95,7 @@ export type FeedbackEventMaxAggregateInputType = {
   intent?: true
   answerDecision?: true
   createdAt?: true
+  updatedAt?: true
 }
 
 export type FeedbackEventCountAggregateInputType = {
@@ -106,6 +111,7 @@ export type FeedbackEventCountAggregateInputType = {
   evidenceRefIds?: true
   answerDecision?: true
   createdAt?: true
+  updatedAt?: true
   _all?: true
 }
 
@@ -194,6 +200,7 @@ export type FeedbackEventGroupByOutputType = {
   evidenceRefIds: string[]
   answerDecision: $Enums.AnswerDecisionStatus | null
   createdAt: Date
+  updatedAt: Date
   _count: FeedbackEventCountAggregateOutputType | null
   _min: FeedbackEventMinAggregateOutputType | null
   _max: FeedbackEventMaxAggregateOutputType | null
@@ -230,6 +237,7 @@ export type FeedbackEventWhereInput = {
   evidenceRefIds?: Prisma.StringNullableListFilter<"FeedbackEvent">
   answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"FeedbackEvent"> | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFilter<"FeedbackEvent"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"FeedbackEvent"> | Date | string
   customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageScalarRelationFilter, Prisma.AssistantMessageWhereInput>
 }
@@ -247,6 +255,7 @@ export type FeedbackEventOrderByWithRelationInput = {
   evidenceRefIds?: Prisma.SortOrder
   answerDecision?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   customer?: Prisma.CustomerOrderByWithRelationInput
   message?: Prisma.AssistantMessageOrderByWithRelationInput
 }
@@ -254,6 +263,7 @@ export type FeedbackEventOrderByWithRelationInput = {
 export type FeedbackEventWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   customerId_id?: Prisma.FeedbackEventCustomerIdIdCompoundUniqueInput
+  customerId_messageId?: Prisma.FeedbackEventCustomerIdMessageIdCompoundUniqueInput
   AND?: Prisma.FeedbackEventWhereInput | Prisma.FeedbackEventWhereInput[]
   OR?: Prisma.FeedbackEventWhereInput[]
   NOT?: Prisma.FeedbackEventWhereInput | Prisma.FeedbackEventWhereInput[]
@@ -268,9 +278,10 @@ export type FeedbackEventWhereUniqueInput = Prisma.AtLeast<{
   evidenceRefIds?: Prisma.StringNullableListFilter<"FeedbackEvent">
   answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"FeedbackEvent"> | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFilter<"FeedbackEvent"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"FeedbackEvent"> | Date | string
   customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
   message?: Prisma.XOR<Prisma.AssistantMessageScalarRelationFilter, Prisma.AssistantMessageWhereInput>
-}, "id" | "customerId_id">
+}, "id" | "customerId_id" | "customerId_messageId">
 
 export type FeedbackEventOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -285,6 +296,7 @@ export type FeedbackEventOrderByWithAggregationInput = {
   evidenceRefIds?: Prisma.SortOrder
   answerDecision?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   _count?: Prisma.FeedbackEventCountOrderByAggregateInput
   _max?: Prisma.FeedbackEventMaxOrderByAggregateInput
   _min?: Prisma.FeedbackEventMinOrderByAggregateInput
@@ -306,6 +318,7 @@ export type FeedbackEventScalarWhereWithAggregatesInput = {
   evidenceRefIds?: Prisma.StringNullableListFilter<"FeedbackEvent">
   answerDecision?: Prisma.EnumAnswerDecisionStatusNullableWithAggregatesFilter<"FeedbackEvent"> | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"FeedbackEvent"> | Date | string
+  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"FeedbackEvent"> | Date | string
 }
 
 export type FeedbackEventCreateInput = {
@@ -319,6 +332,7 @@ export type FeedbackEventCreateInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  updatedAt?: Date | string
   customer: Prisma.CustomerCreateNestedOneWithoutFeedbackEventsInput
   message: Prisma.AssistantMessageCreateNestedOneWithoutFeedbackEventsInput
 }
@@ -336,6 +350,7 @@ export type FeedbackEventUncheckedCreateInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type FeedbackEventUpdateInput = {
@@ -349,6 +364,7 @@ export type FeedbackEventUpdateInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   customer?: Prisma.CustomerUpdateOneRequiredWithoutFeedbackEventsNestedInput
   message?: Prisma.AssistantMessageUpdateOneRequiredWithoutFeedbackEventsNestedInput
 }
@@ -366,6 +382,7 @@ export type FeedbackEventUncheckedUpdateInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FeedbackEventCreateManyInput = {
@@ -381,6 +398,7 @@ export type FeedbackEventCreateManyInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type FeedbackEventUpdateManyMutationInput = {
@@ -394,6 +412,7 @@ export type FeedbackEventUpdateManyMutationInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FeedbackEventUncheckedUpdateManyInput = {
@@ -409,6 +428,7 @@ export type FeedbackEventUncheckedUpdateManyInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FeedbackEventListRelationFilter = {
@@ -426,6 +446,11 @@ export type FeedbackEventCustomerIdIdCompoundUniqueInput = {
   id: string
 }
 
+export type FeedbackEventCustomerIdMessageIdCompoundUniqueInput = {
+  customerId: string
+  messageId: string
+}
+
 export type FeedbackEventCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
@@ -439,6 +464,7 @@ export type FeedbackEventCountOrderByAggregateInput = {
   evidenceRefIds?: Prisma.SortOrder
   answerDecision?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type FeedbackEventMaxOrderByAggregateInput = {
@@ -452,6 +478,7 @@ export type FeedbackEventMaxOrderByAggregateInput = {
   intent?: Prisma.SortOrder
   answerDecision?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type FeedbackEventMinOrderByAggregateInput = {
@@ -465,6 +492,7 @@ export type FeedbackEventMinOrderByAggregateInput = {
   intent?: Prisma.SortOrder
   answerDecision?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type FeedbackEventCreateNestedManyWithoutCustomerInput = {
@@ -584,6 +612,7 @@ export type FeedbackEventCreateWithoutCustomerInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  updatedAt?: Date | string
   message: Prisma.AssistantMessageCreateNestedOneWithoutFeedbackEventsInput
 }
 
@@ -599,6 +628,7 @@ export type FeedbackEventUncheckedCreateWithoutCustomerInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type FeedbackEventCreateOrConnectWithoutCustomerInput = {
@@ -643,6 +673,7 @@ export type FeedbackEventScalarWhereInput = {
   evidenceRefIds?: Prisma.StringNullableListFilter<"FeedbackEvent">
   answerDecision?: Prisma.EnumAnswerDecisionStatusNullableFilter<"FeedbackEvent"> | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFilter<"FeedbackEvent"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"FeedbackEvent"> | Date | string
 }
 
 export type FeedbackEventCreateWithoutMessageInput = {
@@ -656,6 +687,7 @@ export type FeedbackEventCreateWithoutMessageInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  updatedAt?: Date | string
   customer: Prisma.CustomerCreateNestedOneWithoutFeedbackEventsInput
 }
 
@@ -670,6 +702,7 @@ export type FeedbackEventUncheckedCreateWithoutMessageInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type FeedbackEventCreateOrConnectWithoutMessageInput = {
@@ -710,6 +743,7 @@ export type FeedbackEventCreateManyCustomerInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type FeedbackEventUpdateWithoutCustomerInput = {
@@ -723,6 +757,7 @@ export type FeedbackEventUpdateWithoutCustomerInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   message?: Prisma.AssistantMessageUpdateOneRequiredWithoutFeedbackEventsNestedInput
 }
 
@@ -738,6 +773,7 @@ export type FeedbackEventUncheckedUpdateWithoutCustomerInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FeedbackEventUncheckedUpdateManyWithoutCustomerInput = {
@@ -752,6 +788,7 @@ export type FeedbackEventUncheckedUpdateManyWithoutCustomerInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FeedbackEventCreateManyMessageInput = {
@@ -765,6 +802,7 @@ export type FeedbackEventCreateManyMessageInput = {
   evidenceRefIds?: Prisma.FeedbackEventCreateevidenceRefIdsInput | string[]
   answerDecision?: $Enums.AnswerDecisionStatus | null
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type FeedbackEventUpdateWithoutMessageInput = {
@@ -778,6 +816,7 @@ export type FeedbackEventUpdateWithoutMessageInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   customer?: Prisma.CustomerUpdateOneRequiredWithoutFeedbackEventsNestedInput
 }
 
@@ -792,6 +831,7 @@ export type FeedbackEventUncheckedUpdateWithoutMessageInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FeedbackEventUncheckedUpdateManyWithoutMessageInput = {
@@ -805,6 +845,7 @@ export type FeedbackEventUncheckedUpdateManyWithoutMessageInput = {
   evidenceRefIds?: Prisma.FeedbackEventUpdateevidenceRefIdsInput | string[]
   answerDecision?: Prisma.NullableEnumAnswerDecisionStatusFieldUpdateOperationsInput | $Enums.AnswerDecisionStatus | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -822,6 +863,7 @@ export type FeedbackEventSelect<ExtArgs extends runtime.Types.Extensions.Interna
   evidenceRefIds?: boolean
   answerDecision?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["feedbackEvent"]>
@@ -839,6 +881,7 @@ export type FeedbackEventSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   evidenceRefIds?: boolean
   answerDecision?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["feedbackEvent"]>
@@ -856,6 +899,7 @@ export type FeedbackEventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   evidenceRefIds?: boolean
   answerDecision?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["feedbackEvent"]>
@@ -873,9 +917,10 @@ export type FeedbackEventSelectScalar = {
   evidenceRefIds?: boolean
   answerDecision?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
 }
 
-export type FeedbackEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "messageId" | "rating" | "reason" | "comment" | "intent" | "toolCallIds" | "evidenceRefIds" | "answerDecision" | "createdAt", ExtArgs["result"]["feedbackEvent"]>
+export type FeedbackEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "requestId" | "messageId" | "rating" | "reason" | "comment" | "intent" | "toolCallIds" | "evidenceRefIds" | "answerDecision" | "createdAt" | "updatedAt", ExtArgs["result"]["feedbackEvent"]>
 export type FeedbackEventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
   message?: boolean | Prisma.AssistantMessageDefaultArgs<ExtArgs>
@@ -908,6 +953,10 @@ export type $FeedbackEventPayload<ExtArgs extends runtime.Types.Extensions.Inter
     evidenceRefIds: string[]
     answerDecision: $Enums.AnswerDecisionStatus | null
     createdAt: Date
+    /**
+     * Changing the rating or adding a reason updates the answer's one feedback.
+     */
+    updatedAt: Date
   }, ExtArgs["result"]["feedbackEvent"]>
   composites: {}
 }
@@ -1345,6 +1394,7 @@ export interface FeedbackEventFieldRefs {
   readonly evidenceRefIds: Prisma.FieldRef<"FeedbackEvent", 'String[]'>
   readonly answerDecision: Prisma.FieldRef<"FeedbackEvent", 'AnswerDecisionStatus'>
   readonly createdAt: Prisma.FieldRef<"FeedbackEvent", 'DateTime'>
+  readonly updatedAt: Prisma.FieldRef<"FeedbackEvent", 'DateTime'>
 }
     
 

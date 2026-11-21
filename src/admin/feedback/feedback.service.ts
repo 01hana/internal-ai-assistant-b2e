@@ -57,6 +57,6 @@ function filtersWhere(filters: FeedbackFiltersDto | undefined): Prisma.FeedbackE
 function feedbackView(feedback: FeedbackWithSession) {
   return {
     id: feedback.id, rating: feedback.rating, reason: feedback.reason, comment: feedback.comment, answerDecision: feedback.answerDecision,
-    createdAt: feedback.createdAt.toISOString(), sessionId: feedback.message.sessionId, messageId: feedback.messageId
+    createdAt: feedback.createdAt.toISOString(), updatedAt: feedback.updatedAt.toISOString(), sessionId: feedback.message.sessionId, messageId: feedback.messageId
   };
 }

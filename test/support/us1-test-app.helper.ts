@@ -323,6 +323,7 @@ type FeedbackEventRecord = {
   evidenceRefIds: string[];
   answerDecision: string | null;
   createdAt: Date;
+  updatedAt?: Date;
 };
 
 type KnowledgeDocumentRecord = {
@@ -1571,6 +1572,27 @@ function createPrismaMock(state: MockState) {
         const records = state.feedbackEvents.filter((item) => matchesWhere(item, where));
         records.forEach((record) => Object.assign(record, data));
         return { count: records.length };
+      }),
+      // One feedback per answer (unique customerId + messageId).
+      upsert: jest.fn(async ({ where, create, update }: { where: Record<string, unknown>; create: Partial<FeedbackEventRecord>; update: Partial<FeedbackEventRecord> }) => {
+        const existing = state.feedbackEvents.find((item) => matchesWhere(item, where));
+        if (existing) return Object.assign(existing, update, { updatedAt: nextDate() });
+        const record: FeedbackEventRecord = {
+          id: `feedback-event-${state.feedbackEvents.length + 1}`,
+          customerId: requireCustomerId(create.customerId, 'FeedbackEvent'),
+          requestId: create.requestId ?? 'req-generated',
+          messageId: create.messageId ?? 'message-owned-assistant-001',
+          rating: (create.rating as FeedbackRating | undefined) ?? FeedbackRating.positive,
+          reason: (create.reason as string | null | undefined) ?? null,
+          comment: (create.comment as string | null | undefined) ?? null,
+          intent: (create.intent as string | null | undefined) ?? null,
+          toolCallIds: (create.toolCallIds as string[] | undefined) ?? [],
+          evidenceRefIds: (create.evidenceRefIds as string[] | undefined) ?? [],
+          answerDecision: (create.answerDecision as string | null | undefined) ?? null,
+          createdAt: nextDate()
+        };
+        state.feedbackEvents.push(record);
+        return record;
       })
     },
     knowledgeDocument: {

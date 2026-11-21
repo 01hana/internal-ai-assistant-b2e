@@ -110,7 +110,9 @@ SSE `final` 事件的 `data` 可能多一個 `suggestions`（沒有時不會出�
 ```
 
 - `rating` 必填（`positive`、`negative`、`neutral`）；`intent`（`correction`、`unsafe`、`not_helpful`、`missing_evidence`、`other`）、`reason`（最多 160 字）、`comment`（最多 1000 字）可省略；其他欄位與 query 一律回 400。
-- 成功回 201：`{ requestId, data: { feedbackEventId, messageId, rating, intent, reviewItemId } }`；負評會建立待審項目（`reviewItemId`）。
+- 成功回 201：`{ requestId, data: { feedbackEventId, messageId, rating, intent, reviewItemId } }`。
+- 每則回答只有一筆回饋：再送一次（改評分、補原因或說明）會更新同一筆，`feedbackEventId` 不變；欄位以最後一次送出的為準，沒送的 `reason`、`comment` 會清空。
+- 負評建立一筆待審項目（`reviewItemId`），之後補原因會更新同一筆；改成正面時，還沒有人處理（待處理）的待審項目自動改為「不處理」；再改回負評時重新開啟。
 - 訊息不存在或不屬於該客戶：404；不是助理的回答：400。
 
 ## 6. 錯誤與相容性

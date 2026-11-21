@@ -74,7 +74,8 @@ export async function seedConversation(db: PrismaClient, seed: ConversationSeed)
       if (exchange.feedback) {
         const feedback = await db.feedbackEvent.create({
           data: { customerId, requestId, messageId: answer.id, rating: exchange.feedback.rating, reason: exchange.feedback.reason ?? null,
-            comment: exchange.feedback.comment ?? null, answerDecision: answer.answerDecision, createdAt: new Date(exchange.at.getTime() + 2000) }
+            comment: exchange.feedback.comment ?? null, answerDecision: answer.answerDecision, createdAt: new Date(exchange.at.getTime() + 2000),
+            updatedAt: new Date(exchange.at.getTime() + 2000) }
         });
         result.feedbackId = feedback.id;
       }

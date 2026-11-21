@@ -207,62 +207,53 @@ describe('feedback to review linkage integration', () => {
     );
   });
 
-  it('creates a Customer-owned review source for each distinct actionable FeedbackEvent', async () => {
+  it('keeps one feedback and one review item per answer, following later ratings and reasons', async () => {
     addAssistantMessage('message-feedback-dedupe-001');
     const initialFeedbackCount = state.feedbackEvents.length;
     const initialReviewCount = state.reviewItems.length;
-    const initialReviewCreatedAuditCount = state.auditEvents.filter((event) => event.eventType === 'review_item_created').length;
-    const initialFeedbackAuditCount = state.auditEvents.filter((event) => event.eventType === 'feedback_received').length;
-
-    const firstResponse = await request(app.getHttpServer())
+    const send = (requestId: string, body: Record<string, unknown>) => request(app.getHttpServer())
       .post('/api/v1/assistant/messages/message-feedback-dedupe-001/feedback')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-feedback-link-dedupe-1' }))
-      .send({
-        rating: 'negative',
-        intent: 'not_helpful'
-      });
-    const secondResponse = await request(app.getHttpServer())
-      .post('/api/v1/assistant/messages/message-feedback-dedupe-001/feedback')
-      .set(createIdentityHeaders({ 'x-request-id': 'req-feedback-link-dedupe-2' }))
-      .send({
-        rating: 'negative',
-        intent: 'not_helpful'
-      });
+      .set(createIdentityHeaders({ 'x-request-id': requestId }))
+      .send(body);
 
-    expect(firstResponse.status).toBe(201);
-    expect(secondResponse.status).toBe(201);
-    expect(state.feedbackEvents).toHaveLength(initialFeedbackCount + 2);
-    expect(state.reviewItems).toHaveLength(initialReviewCount + 2);
-    const [firstFeedback, secondFeedback] = state.feedbackEvents.slice(-2);
-    const firstReview = state.reviewItems.find((item) => item.id === firstResponse.body.data.reviewItemId);
-    const secondReview = state.reviewItems.find((item) => item.id === secondResponse.body.data.reviewItemId);
+    const negative = await send('req-feedback-once-1', { rating: 'negative' });
+    const withReason = await send('req-feedback-once-2', { rating: 'negative', intent: 'not_helpful', reason: '答案不正確', comment: '數字和報表不同' });
+    expect([negative.status, withReason.status]).toEqual([201, 201]);
+    expect(state.feedbackEvents).toHaveLength(initialFeedbackCount + 1);
+    expect(state.reviewItems).toHaveLength(initialReviewCount + 1);
+    expect(withReason.body.data.feedbackEventId).toBe(negative.body.data.feedbackEventId);
+    expect(withReason.body.data.reviewItemId).toBe(negative.body.data.reviewItemId);
+    const feedback = state.feedbackEvents.at(-1);
+    expect(feedback).toEqual(expect.objectContaining({ rating: 'negative', intent: 'not_helpful', reason: '答案不正確', comment: '數字和報表不同', requestId: 'req-feedback-once-2' }));
+    const review = () => state.reviewItems.find((item) => item.id === negative.body.data.reviewItemId);
+    expect(review()).toEqual(expect.objectContaining({ sourceType: 'negative_feedback', sourceId: feedback?.id, status: 'open' }));
 
-    expect(firstFeedback).toEqual(expect.objectContaining({ customerId: 'customer-a' }));
-    expect(secondFeedback).toEqual(expect.objectContaining({ customerId: 'customer-a' }));
-    expect(firstFeedback?.id).not.toBe(secondFeedback?.id);
-    expect(firstReview).toEqual(
-      expect.objectContaining({
-        customerId: 'customer-a',
-        sourceType: 'negative_feedback',
-        sourceId: firstFeedback?.id,
-        status: 'open'
-      })
-    );
-    expect(secondReview).toEqual(
-      expect.objectContaining({
-        customerId: 'customer-a',
-        sourceType: 'negative_feedback',
-        sourceId: secondFeedback?.id,
-        status: 'open'
-      })
-    );
-    expect(firstReview?.id).not.toBe(secondReview?.id);
-    expect(firstReview?.sourceId).not.toBe(secondReview?.sourceId);
-    expect(state.auditEvents.filter((event) => event.eventType === 'review_item_created')).toHaveLength(
-      initialReviewCreatedAuditCount + 2
-    );
-    expect(state.auditEvents.filter((event) => event.eventType === 'feedback_received')).toHaveLength(
-      initialFeedbackAuditCount + 2
-    );
+    // Changed to positive: the untouched review item is dismissed, the reason is cleared.
+    const positive = await send('req-feedback-once-3', { rating: 'positive' });
+    expect(positive.body.data).toEqual(expect.objectContaining({ feedbackEventId: feedback?.id, rating: 'positive', reviewItemId: null }));
+    expect(state.feedbackEvents.at(-1)).toEqual(expect.objectContaining({ rating: 'positive', reason: null, comment: null }));
+    expect(review()).toEqual(expect.objectContaining({ status: 'dismissed', note: '使用者改為正面評價' }));
+
+    // Negative again: the same review item opens again.
+    const again = await send('req-feedback-once-4', { rating: 'negative' });
+    expect(again.body.data.reviewItemId).toBe(negative.body.data.reviewItemId);
+    expect(review()).toEqual(expect.objectContaining({ status: 'open', resolvedAt: null, note: '使用者再次給予負面評價' }));
+    expect(state.feedbackEvents).toHaveLength(initialFeedbackCount + 1);
+    expect(state.reviewItems).toHaveLength(initialReviewCount + 1);
+    expect(state.auditEvents.filter((event) => event.eventType === 'feedback_received').at(-1)?.metadata)
+      .toEqual(expect.objectContaining({ rating: 'negative', previousRating: 'positive' }));
+  });
+
+  it('leaves a review item someone is handling when the rating turns positive', async () => {
+    addAssistantMessage('message-feedback-handled-001');
+    const send = (requestId: string, body: Record<string, unknown>) => request(app.getHttpServer())
+      .post('/api/v1/assistant/messages/message-feedback-handled-001/feedback')
+      .set(createIdentityHeaders({ 'x-request-id': requestId }))
+      .send(body);
+    const negative = await send('req-feedback-handled-1', { rating: 'negative' });
+    const item = state.reviewItems.find((entry) => entry.id === negative.body.data.reviewItemId)!;
+    item.status = 'in_review' as never;
+    await send('req-feedback-handled-2', { rating: 'positive' });
+    expect(item.status).toBe('in_review');
   });
 });

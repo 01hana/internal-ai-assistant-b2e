@@ -133,11 +133,11 @@
 
 | Method | Path | Body | 回應 `data` |
 | --- | --- | --- | --- |
-| POST | `feedback/getTable` | `{ page, pageSize, sort?, keyword?, filters?: { rating?, hasComment?, from?, to? } }` | `{ items: [{ id, rating, reason, comment, answerDecision, createdAt, sessionId, messageId }], total }` |
+| POST | `feedback/getTable` | `{ page, pageSize, sort?, keyword?, filters?: { rating?, hasComment?, from?, to? } }` | `{ items: [{ id, rating, reason, comment, answerDecision, createdAt, updatedAt, sessionId, messageId }], total }` |
 | GET | `feedback/getFilters` | — | `{ rating: [{ value, label }] }` |
 | GET | `feedback/:id` | — | 回饋欄位加 `conversation` |
 
-- `keyword` 比對原因與留言；`sort.field` 為 `createdAt`。
+- 每則回答只有一筆回饋：使用者改評分或補原因時更新同一筆，`updatedAt` 為最後一次的時間。`keyword` 比對原因與留言；`sort.field` 為 `createdAt`。
 - `conversation`：有 `Conversation:read` 時為 `{ sessionId, sessionStatus, question, answer }`（`question`／`answer` 為 `{ id, content, answerDecision, createdAt }` 或 `null`），並留稽核；沒有時為 `null`。
 
 ### 6.5 待審項目 `reviewItems`（讀取 `ReviewItem:read`、更新 `ReviewItem:update`）

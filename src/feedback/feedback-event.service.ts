@@ -30,21 +30,29 @@ export class FeedbackEventService {
     const { message, session, toolCalls, evidenceRefs } = await this.validateContext(input);
     const intent = input.intent ?? 'other';
 
+    const customerId = input.customerScope.customerId;
+    const toolCallIds = toolCalls.map((toolCall) => toolCall.id);
+    const evidenceRefIds = evidenceRefs.map((evidenceRef) => evidenceRef.id);
+
     return this.prisma.db.$transaction(async (transaction) => {
       const database = transaction as FeedbackTransactionClient;
-      const feedbackEvent = await database.feedbackEvent.create({
-        data: {
-          customerId: input.customerScope.customerId,
-          requestId: input.requestId,
-          messageId: input.messageId,
-          rating: input.rating,
-          reason: input.reason,
-          comment: input.comment,
-          intent,
-          toolCallIds: toolCalls.map((toolCall) => toolCall.id),
-          evidenceRefIds: evidenceRefs.map((evidenceRef) => evidenceRef.id),
-          answerDecision: message.answerDecision as AnswerDecisionStatus
-        }
+      // One feedback per answer (the session, and so the answer, belongs to one actor): a later rating
+      // or an added reason replaces it.
+      const previous = await database.feedbackEvent.findFirst({ where: { customerId, messageId: input.messageId } });
+      const fields = {
+        requestId: input.requestId,
+        rating: input.rating,
+        reason: input.reason ?? null,
+        comment: input.comment ?? null,
+        intent,
+        toolCallIds,
+        evidenceRefIds,
+        answerDecision: message.answerDecision as AnswerDecisionStatus
+      };
+      const feedbackEvent = await database.feedbackEvent.upsert({
+        where: { customerId_messageId: { customerId, messageId: input.messageId } },
+        create: { customerId, messageId: input.messageId, ...fields },
+        update: fields
       });
 
       await this.auditWriter.append({
@@ -54,10 +62,11 @@ export class FeedbackEventService {
         messageId: input.messageId,
         eventType: 'feedback_received',
         decision: message.answerDecision,
-        evidenceRefIds: evidenceRefs.map((evidenceRef) => evidenceRef.id),
-        metadata: toJsonInput({ feedbackEventId: feedbackEvent.id, rating: input.rating, intent, reasonProvided: Boolean(input.reason), commentProvided: Boolean(input.comment), toolCallIds: toolCalls.map((toolCall) => toolCall.id), evidenceRefIds: evidenceRefs.map((evidenceRef) => evidenceRef.id), answerDecision: message.answerDecision })
+        evidenceRefIds,
+        metadata: toJsonInput({ feedbackEventId: feedbackEvent.id, rating: input.rating, previousRating: previous?.rating ?? null, intent, reasonProvided: Boolean(input.reason), commentProvided: Boolean(input.comment), toolCallIds, evidenceRefIds, answerDecision: message.answerDecision })
       }, database);
 
+      const wasActionable = previous ? isActionableFeedback(previous.rating, previous.intent ?? 'other') : false;
       const reviewItem = isActionableFeedback(input.rating, intent)
         ? await this.reviewItemService.createFromFeedback({
             customerScope: input.customerScope,
@@ -71,10 +80,15 @@ export class FeedbackEventService {
             intent,
             reason: input.reason,
             comment: input.comment,
-            toolCallIds: toolCalls.map((toolCall) => toolCall.id),
-            evidenceRefIds: evidenceRefs.map((evidenceRef) => evidenceRef.id)
+            toolCallIds,
+            evidenceRefIds,
+            reopen: !wasActionable
           }, database)
         : undefined;
+      if (!reviewItem && wasActionable) {
+        await this.reviewItemService.withdrawFeedbackReview({ customerScope: input.customerScope, requestId: input.requestId,
+          sessionId: session.id, messageId: input.messageId, feedbackEventId: feedbackEvent.id }, database);
+      }
 
       return { feedbackEventId: feedbackEvent.id, messageId: input.messageId, rating: feedbackEvent.rating, intent: feedbackEvent.intent, reviewItemId: reviewItem?.id ?? null };
     });

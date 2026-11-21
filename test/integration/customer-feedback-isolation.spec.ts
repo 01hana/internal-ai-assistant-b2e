@@ -20,7 +20,7 @@ describe('T064 Customer A/B FeedbackEvent isolation expected-red', () => {
   const jwt = createInternalIdentityJwtFixture();
   let app: INestApplication;
   let state: Us1TestState;
-  let prismaMock: Record<string, { create?: jest.Mock; findMany?: jest.Mock }>;
+  let prismaMock: Record<string, { create?: jest.Mock; findMany?: jest.Mock; upsert?: jest.Mock }>;
 
   beforeEach(async () => {
     ({ app, state, prismaMock } = await createUs1TestAppWithState({
@@ -66,7 +66,7 @@ describe('T064 Customer A/B FeedbackEvent isolation expected-red', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
 
     expect(snapshot()).toEqual(before);
-    expect(prismaMock.feedbackEvent.create).not.toHaveBeenCalled();
+    expect(prismaMock.feedbackEvent.upsert).not.toHaveBeenCalled();
     expect(prismaMock.toolCall.findMany).not.toHaveBeenCalled();
   });
 
@@ -140,7 +140,7 @@ describe('T064 Customer A/B FeedbackEvent isolation expected-red', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
 
     expect(snapshot()).toEqual(before);
-    expect(prismaMock.feedbackEvent.create).not.toHaveBeenCalled();
+    expect(prismaMock.feedbackEvent.upsert).not.toHaveBeenCalled();
     expect(prismaMock.toolCall.findMany).not.toHaveBeenCalled();
     expect(prismaMock.evidenceRef.findMany).not.toHaveBeenCalled();
   });
