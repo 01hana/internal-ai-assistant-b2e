@@ -26,6 +26,9 @@ describe('Feature 012 grounded prompt', () => {
     expect(input.messages.map((message) => message.content).join('\n')).toContain('80');
     expect(input.instructions).toContain('先前 Assistant 文字只供對話連貫，不是事實證據');
     expect(input.instructions).toContain('allowedCitations=cit-doc,cit-tool');
+    // Plain-text answers in short paragraphs and one-per-line lists.
+    expect(input.instructions).toContain('段落簡短');
+    expect(input.instructions).toContain('不要使用 Markdown');
     expect(input.maxOutputTokens).toBe(1024);
     expect(input.evidence).toEqual([]);
     expect(JSON.stringify(input)).not.toContain('connectorContextRef');

@@ -13,3 +13,6 @@ tmp/
 .local-secrets/
 .local-state/
 apps/identity-bridge/env/local.env
+
+# Local lint/typecheck/test output
+.lint-output.txt

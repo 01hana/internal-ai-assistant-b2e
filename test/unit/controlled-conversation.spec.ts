@@ -24,13 +24,13 @@ describe('controlled generic conversation', () => {
 
   it.each(['你能做什麼？', '我可以查什麼？', '我能查詢哪些資料？',
     '我要怎麼查詢工單統計？'])('uses only current scoped offers for %s', async (text) => {
-    const selector = { select: jest.fn(), describeAvailable: jest.fn(async () => ['已授權查詢（今天、本週）']) };
+    const selector = { select: jest.fn(), describeAvailable: jest.fn(async () => [{ label: '已授權查詢', contents: ['新增數'], periods: ['今天', '本週'] }]) };
     const pipeline = new RuleBasedQueryUnderstandingPipeline(new DefaultTokenizerAdapter(),
       await createCapabilityResolutionFixtureService(), undefined, undefined, undefined, undefined, selector as never);
     const output = await pipeline.understand({ requestId: 'request', sessionId: 'session', messageId: 'message',
       text, hostIntegrationContext: host, identityContext: {} as never });
     expect(selector.describeAvailable).toHaveBeenCalledWith(host);
-    expect(output.conversationReply?.text).toContain('已授權查詢');
+    expect(output.conversationReply?.text).toContain('1. 已授權查詢（今天、本週）');
     expect(output.candidateTools).toEqual([]);
   });
 

@@ -53,7 +53,7 @@ describe('LLM Tool Selection with an existing scoped C01 catalog', () => {
         } }
       } } } : found;
     });
-    expect((await service.describeAvailable(host)).join(' ')).toContain('新增工單數');
+    expect(JSON.stringify(await service.describeAvailable(host))).toContain('新增工單數');
     expect(await service.describeAvailable({ ...host, permissionScopes: [] })).toEqual([]);
     expect(await service.describeAvailable({ ...host, integrationId: 'another-integration' })).toEqual([]);
     expect(await service.describeAvailable({ ...host, customerId: 'customer-b' })).toEqual([]);
@@ -84,7 +84,11 @@ describe('LLM Tool Selection with an existing scoped C01 catalog', () => {
       { generateAnswer: jest.fn() } as never, { append: jest.fn() } as never);
     const scoped = { ...host, customerId: 'customer-a', integrationId: 'integration-erp', hostApp: 'erp',
       permissionScopes: ['dashboard:read'] };
-    const description = (await service.describeAvailable(scoped)).join(' ');
+    const available = await service.describeAvailable(scoped);
+    // One entry per capability: the daily, weekly and monthly bindings merge their periods.
+    expect(new Set(available.map((entry) => entry.label)).size).toBe(available.length);
+    expect(available.some((entry) => ['今天', '本週', '本月'].every((period) => entry.periods.includes(period)))).toBe(true);
+    const description = JSON.stringify(available);
     for (const metric of demoMetricNames) expect(description).toContain(metric === 'AvgCompletionRate' ? '完工率' : {
       NewOrders: '新增工單統計', CompletedOrders: '完工工單統計',
       InProductionOrders: '生產中工單統計', OverdueOrders: '逾期工單統計',
@@ -99,7 +103,7 @@ describe('LLM Tool Selection with an existing scoped C01 catalog', () => {
     harness.tools.resolveExactToolForCustomer.mockImplementation(async (key: string, version: string, customerId: string) =>
       key === 'demo.shinmone.kpistats.weekly'
         ? { deniedReason: 'customer_policy_denied' } : active(key, version, customerId));
-    const withoutWeekly = (await service.describeAvailable(scoped)).join(' ');
+    const withoutWeekly = JSON.stringify(await service.describeAvailable(scoped));
     expect(withoutWeekly).not.toContain('本週');
     expect(withoutWeekly).toContain('今天');
     expect(withoutWeekly).toContain('本月');

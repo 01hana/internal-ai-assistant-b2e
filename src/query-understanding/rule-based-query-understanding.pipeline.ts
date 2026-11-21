@@ -30,6 +30,7 @@ import { RiskLevel } from '../generated/prisma/enums';
 import { ConversationSemanticReconstructorService } from '../assistant/conversation/conversation-semantic-reconstructor.service';
 import { FollowUpSemanticResolverService } from '../assistant/conversation/follow-up-semantic-resolver.service';
 import type { ConversationSemanticFrame } from '../assistant/conversation/conversation.types';
+import { capabilityOverviewText } from './capability-overview-text';
 
 const DEPENDENT_FOLLOW_UP = /(呢|那個|你剛|剛才|剛剛|前面|同樣|再列一次|這個(?!月))/;
 const VAGUE_DEIXIS = /^\s*那個(?:呢)?[？?。!！]?\s*$/;
@@ -61,9 +62,7 @@ export class RuleBasedQueryUnderstandingPipeline implements QueryUnderstandingPi
     } else {
       const available = input.identityContext && this.llmToolSelection
         ? await this.llmToolSelection.describeAvailable(input.hostIntegrationContext).catch(() => []) : [];
-      reply = available.length > 0
-        ? `依目前權限可使用的查詢功能：${available.join('；')}。請直接用自然語言提問；實際查詢仍會驗證資料範圍。`
-        : '目前沒有可使用的查詢功能。如需使用，請向系統管理者申請權限。';
+      reply = capabilityOverviewText(available);
     }
     return {
       taskType: conversationalIntent, sentences: splitQuerySentences(normalizedText), tokens: [], phrases: [],

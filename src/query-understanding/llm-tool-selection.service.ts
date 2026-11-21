@@ -13,6 +13,7 @@ import { createCustomerScopeFromHostIntegrationContext } from '../host-integrati
 import { LlmExecutionService } from '../llm/llm-execution.service';
 import { ToolRegistryService } from '../tools/tool-registry.service';
 import type { RegisteredToolDefinition } from '../tools/tool-registry.types';
+import type { AvailableCapabilitySummary } from './capability-overview-text';
 import { approvedOutputSummary } from './tool-capability-summary';
 import { parseTimeRanges } from './time-range.parser';
 
@@ -58,11 +59,14 @@ export class LlmToolSelectionService {
 
   private readonly available: AvailableCapabilityService;
 
-  /** Uses exactly the same scoped, policy and permission filtered offers as model selection. */
-  async describeAvailable(host: HostIntegrationContext): Promise<readonly string[]> {
+  /**
+   * Uses exactly the same scoped, policy and permission filtered offers as model selection. One entry
+   * per capability: bindings of the same capability (one per period) merge their periods and contents.
+   */
+  async describeAvailable(host: HostIntegrationContext): Promise<readonly AvailableCapabilitySummary[]> {
     const { catalog, offered, offeredAuthorities } = await this.resolveOffered(host);
     if (offered.length > MAX_CANDIDATES) return [];
-    const labels = new Set<string>();
+    const byCapability = new Map<string, { label: string; contents: Set<string>; periods: Set<string> }>();
     for (const item of offered) {
       const tool = offeredAuthorities.get(`${item.toolKey}@${item.toolVersion}`);
       if (!tool) continue;
@@ -71,22 +75,26 @@ export class LlmToolSelectionService {
       const summary = approvedOutputSummary(tool, resultPolicy.policy, host.permissionScopes,
         { maxDepth: 2, maxFields: 16 });
       if (summary.length === 0) continue;
-      const named = summary?.filter((field) => field.path.split('.').length === 2 && field.description)
-        .map((field) => field.description!) ?? [];
       const capability = catalog?.capabilities.find((entry) => entry.capabilityKey === item.capabilityKey);
       if (!capability) continue;
       const binding = catalog?.bindings.find((entry) => entry.bindingId === item.bindingId && entry.active);
       if (!binding) continue;
-      const periods = capability.parameters.filter((entry) => entry.type === 'enum')
-        .flatMap((entry) => {
-          const constraint = binding.semanticConstraints.find((rule) => rule.parameterName === entry.parameterName);
-          return entry.values.filter((value) => !constraint || constraint.allowedValues.includes(value.value))
-            .map((value) => value.aliases[0] ?? value.value);
-        });
-      const firstPeriod = periods[0];
-      labels.add(`${capability.safeLabel}${named.length > 0 ? `：${named.slice(0, 12).join('、')}` : ''}${periods.length > 0 ? `（${[...new Set(periods)].slice(0, 6).join('、')}）` : ''}；例如「請查詢${firstPeriod ?? ''}${capability.safeLabel}」`);
+      const entry = byCapability.get(capability.capabilityKey)
+        ?? { label: capability.safeLabel, contents: new Set<string>(), periods: new Set<string>() };
+      byCapability.set(capability.capabilityKey, entry);
+      for (const field of summary) {
+        if (field.path.split('.').length === 2 && field.description) entry.contents.add(field.description);
+      }
+      for (const parameter of capability.parameters.filter((definition) => definition.type === 'enum')) {
+        const constraint = binding.semanticConstraints.find((rule) => rule.parameterName === parameter.parameterName);
+        for (const value of parameter.values) {
+          if (!constraint || constraint.allowedValues.includes(value.value)) entry.periods.add(value.aliases[0] ?? value.value);
+        }
+      }
     }
-    return Object.freeze([...labels].slice(0, 12));
+    return Object.freeze([...byCapability.values()].slice(0, 12).map((entry) => Object.freeze({
+      label: entry.label, contents: Object.freeze([...entry.contents].slice(0, 12)), periods: Object.freeze([...entry.periods].slice(0, 6))
+    })));
   }
 
   private async resolveOffered(host: HostIntegrationContext): Promise<{
