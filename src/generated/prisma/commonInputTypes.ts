@@ -505,6 +505,13 @@ export type EnumAssistantExperienceConfigStatusFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumAssistantExperienceConfigStatusFilter<$PrismaModel> | $Enums.AssistantExperienceConfigStatus
 }
 
+export type EnumAssistantExperienceConfigSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.AssistantExperienceConfigSource | Prisma.EnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.AssistantExperienceConfigSource[] | Prisma.ListEnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AssistantExperienceConfigSource[] | Prisma.ListEnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAssistantExperienceConfigSourceFilter<$PrismaModel> | $Enums.AssistantExperienceConfigSource
+}
+
 export type EnumAssistantExperienceConfigStatusWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.AssistantExperienceConfigStatus | Prisma.EnumAssistantExperienceConfigStatusFieldRefInput<$PrismaModel>
   in?: $Enums.AssistantExperienceConfigStatus[] | Prisma.ListEnumAssistantExperienceConfigStatusFieldRefInput<$PrismaModel>
@@ -513,6 +520,16 @@ export type EnumAssistantExperienceConfigStatusWithAggregatesFilter<$PrismaModel
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumAssistantExperienceConfigStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumAssistantExperienceConfigStatusFilter<$PrismaModel>
+}
+
+export type EnumAssistantExperienceConfigSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.AssistantExperienceConfigSource | Prisma.EnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.AssistantExperienceConfigSource[] | Prisma.ListEnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AssistantExperienceConfigSource[] | Prisma.ListEnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAssistantExperienceConfigSourceWithAggregatesFilter<$PrismaModel> | $Enums.AssistantExperienceConfigSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumAssistantExperienceConfigSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumAssistantExperienceConfigSourceFilter<$PrismaModel>
 }
 
 export type EnumAssistantMessageRoleFilter<$PrismaModel = never> = {
@@ -1478,6 +1495,13 @@ export type NestedEnumAssistantExperienceConfigStatusFilter<$PrismaModel = never
   not?: Prisma.NestedEnumAssistantExperienceConfigStatusFilter<$PrismaModel> | $Enums.AssistantExperienceConfigStatus
 }
 
+export type NestedEnumAssistantExperienceConfigSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.AssistantExperienceConfigSource | Prisma.EnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.AssistantExperienceConfigSource[] | Prisma.ListEnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AssistantExperienceConfigSource[] | Prisma.ListEnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAssistantExperienceConfigSourceFilter<$PrismaModel> | $Enums.AssistantExperienceConfigSource
+}
+
 export type NestedEnumAssistantExperienceConfigStatusWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.AssistantExperienceConfigStatus | Prisma.EnumAssistantExperienceConfigStatusFieldRefInput<$PrismaModel>
   in?: $Enums.AssistantExperienceConfigStatus[] | Prisma.ListEnumAssistantExperienceConfigStatusFieldRefInput<$PrismaModel>
@@ -1486,6 +1510,16 @@ export type NestedEnumAssistantExperienceConfigStatusWithAggregatesFilter<$Prism
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumAssistantExperienceConfigStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumAssistantExperienceConfigStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumAssistantExperienceConfigSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.AssistantExperienceConfigSource | Prisma.EnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.AssistantExperienceConfigSource[] | Prisma.ListEnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AssistantExperienceConfigSource[] | Prisma.ListEnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAssistantExperienceConfigSourceWithAggregatesFilter<$PrismaModel> | $Enums.AssistantExperienceConfigSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumAssistantExperienceConfigSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumAssistantExperienceConfigSourceFilter<$PrismaModel>
 }
 
 export type NestedEnumAssistantMessageRoleFilter<$PrismaModel = never> = {

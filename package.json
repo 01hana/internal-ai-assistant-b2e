@@ -60,6 +60,7 @@
     "prisma": "^7.10.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "semver": "^7.8.6",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
@@ -71,6 +72,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^25.9.3",
     "@types/nodemailer": "^8.0.2",
+    "@types/semver": "^7.8.0",
     "@types/supertest": "^7.2.0",
     "eslint": "^9.39.4",
     "globals": "^16.5.0",

@@ -5,10 +5,9 @@ import type { HostIntegrationContext } from '../host-integration/host-integratio
 import type { DeclaredChoiceV1 } from '../query-understanding/query-understanding.types';
 import type { NormalizedPageContext } from '../assistant/page-context/page-context.types';
 import { AssistantExperienceRepository } from './assistant-experience.repository';
-import type { ExperienceChoiceV1, QuickReplyV1 } from './assistant-experience.types';
+import { DEFAULT_ASSISTANT_GREETING, type ExperienceChoiceV1, type QuickReplyV1 } from './assistant-experience.types';
 
-/** Generic Core greeting used when an integration has no active experience configuration. */
-export const DEFAULT_ASSISTANT_GREETING = '你好，我是系統內的 AI 助理，可以依你的權限協助查詢資料。';
+export { DEFAULT_ASSISTANT_GREETING } from './assistant-experience.types';
 
 export interface AssistantOpeningV1 {
   readonly configVersion: string | null;

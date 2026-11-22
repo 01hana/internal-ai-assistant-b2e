@@ -9,7 +9,7 @@
 - [x] T002 Migration `20261122000000_feature016_experience_config_source`（`source`、`createdByUserId`）、schema、ledger。
 - [x] T003 Core：`DEFAULT_ASSISTANT_GREETING` 移到 types；repository `saveVersion`、`reactivate`（樂觀鎖、同交易稽核）、`listVersionNumbers`、`findVersionForReview`、`nextExperienceVersion`（`semver`）；013 測試照常通過。
 - [x] T004 後台：`ExperienceConfig` 權限移除 `create`；`ExperienceValidationModule`（載入 Pack）、`ASSISTANT_CAPABILITY_PACK_PATHS_JSON` 環境驗證、`AuditTarget` 與事件類型 `admin_experience_config_saved`／`admin_experience_config_activated`（含標籤）；架構測試改為逐檔放行並加相依走訪。
-- [ ] T005 **Gate 0**：使用者 `npx prisma generate`、migrate（本機與測試資料庫）、ledger 與架構測試、typecheck、013 與後台既有測試。`FEATURE016_GATE_0=PASS`。
+- [x] T005 **Gate 0**：使用者 `npx prisma generate`、migrate（本機與測試資料庫）、ledger 與架構測試、typecheck、013 與後台既有測試。`FEATURE016_GATE_0=PASS`。
 
 **Phase 0 執行證據（2026-11-22）**：
 

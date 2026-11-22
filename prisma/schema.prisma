@@ -213,6 +213,12 @@ enum AssistantExperienceConfigStatus {
   retired
 }
 
+/// Feature 016: provisioning only supplies initial content; it does not replace a version saved in the admin back-office.
+enum AssistantExperienceConfigSource {
+  provisioning
+  admin
+}
+
 enum ClarificationQuestionStatus {
   pending
   answered
@@ -640,6 +646,9 @@ model AssistantExperienceConfig {
   activeSlot    String?                         @unique
   payload       Json
   checksum      String
+  source        AssistantExperienceConfigSource @default(provisioning)
+  /// Admin back-office user who saved this version; null for provisioning. No foreign key: the admin tables are not Core's.
+  createdByUserId String?
   createdAt     DateTime                        @default(now())
   activatedAt   DateTime?
 

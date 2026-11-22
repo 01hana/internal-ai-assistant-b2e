@@ -21,7 +21,7 @@ export class AdminMailService {
       subject: '後台帳號開通：請設定您的密碼',
       ...render([
         `${recipient.name} 您好：`,
-        `已為您建立後台帳號「${recipient.account}」。請在 ${formatTime(expiresAt)} 前點擊以下連結設定密碼：`,
+        `已為您建立後台帳號「${recipient.account}」。請在 ${formatTime(expiresAt, this.settings.timeZone)} 前點擊以下連結設定密碼：`,
         link,
         '此連結只能使用一次。若連結失效，請聯絡您的管理者重新寄送。'
       ], link)
@@ -35,7 +35,7 @@ export class AdminMailService {
       subject: '後台帳號：重設密碼',
       ...render([
         `${recipient.name} 您好：`,
-        `我們收到後台帳號「${recipient.account}」的重設密碼申請。請在 ${formatTime(expiresAt)} 前點擊以下連結設定新密碼：`,
+        `我們收到後台帳號「${recipient.account}」的重設密碼申請。請在 ${formatTime(expiresAt, this.settings.timeZone)} 前點擊以下連結設定新密碼：`,
         link,
         '此連結只能使用一次。若不是您本人申請，請忽略這封信，您的密碼不會改變。'
       ], link)
@@ -66,8 +66,13 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
 }
 
-function formatTime(value: Date): string {
-  return new Intl.DateTimeFormat('zh-TW', {
-    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
-  }).format(value);
+/**
+ * `2026/11/21 10:00` in the deployment's time zone. Assembled from parts: ICU versions differ in the separators
+ * `format()` puts between date and time (a thin space in newer Node releases).
+ */
+function formatTime(value: Date, timeZone: string): string {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(value).map((part) => [part.type, part.value]));
+  return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`;
 }

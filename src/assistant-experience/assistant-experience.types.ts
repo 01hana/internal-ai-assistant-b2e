@@ -1,5 +1,8 @@
 import type { CanonicalParameterValueV1 } from '../capabilities/capability-pack.types';
 
+/** Generic Core greeting used when an integration has no active experience configuration. */
+export const DEFAULT_ASSISTANT_GREETING = '你好，我是系統內的 AI 助理，可以依你的權限協助查詢資料。';
+
 /** Feature 013 experience configuration payload v1. Customer text lives in customers/<customer>/assistant-experience/. */
 export type SemanticReviewStatus = 'NEEDS_HUMAN_REVIEW' | 'HUMAN_VERIFIED';
 

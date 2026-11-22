@@ -5,6 +5,7 @@ import type { AdminMailMessage, AdminMailTransport } from '../../src/admin/mail/
 /** Feature 014 Phase 2 (T009): invitation and reset mail content; delivery failures do not throw. */
 const settings = Object.create(AdminSettings.prototype) as AdminSettings;
 Object.defineProperty(settings, 'webOrigin', { get: () => 'https://admin.example.test' });
+Object.defineProperty(settings, 'timeZone', { get: () => 'Asia/Taipei' });
 
 class RecordingTransport implements AdminMailTransport {
   readonly sent: AdminMailMessage[] = [];

@@ -15,7 +15,7 @@ const baseEnv = {
 describe('admin environment', () => {
   it('accepts a local configuration with the log mail transport and applies defaults', () => {
     const env = validateAdminEnvironment({ ...baseEnv });
-    expect(env).toMatchObject({ ADMIN_PORT: 3200, ADMIN_COOKIE_SECURE: 'true', ADMIN_MAIL_TRANSPORT: 'log', ADMIN_ENABLE_SWAGGER_DOCS: 'false', ADMIN_TRUSTED_PROXY_HOPS: 0, ADMIN_TIME_ZONE: 'Asia/Taipei', NODE_ENV: 'development' });
+    expect(env).toMatchObject({ ADMIN_PORT: 3200, ADMIN_COOKIE_SECURE: 'true', ADMIN_MAIL_TRANSPORT: 'log', ADMIN_ENABLE_SWAGGER_DOCS: 'false', ADMIN_TRUSTED_PROXY_HOPS: 0, ADMIN_TIME_ZONE: 'Asia/Taipei', ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]', NODE_ENV: 'development' });
   });
 
   it.each([
@@ -28,6 +28,7 @@ describe('admin environment', () => {
     ['Swagger docs in production', { NODE_ENV: 'production', ADMIN_MAIL_TRANSPORT: 'smtp', ADMIN_SMTP_HOST: 'smtp.example.test',
       ADMIN_SMTP_PORT: '587', ADMIN_MAIL_FROM: 'Admin <no-reply@example.test>', ADMIN_ENABLE_SWAGGER_DOCS: 'true' }, /ADMIN_ENABLE_SWAGGER_DOCS=true/],
     ['an unknown time zone', { ADMIN_TIME_ZONE: 'Mars/Olympus' }, /ADMIN_TIME_ZONE/],
+    ['capability packs that are not a JSON array', { ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '/app/pack.json' }, /ASSISTANT_CAPABILITY_PACK_PATHS_JSON/],
     ['a negative proxy hop count', { ADMIN_TRUSTED_PROXY_HOPS: '-1' }, /ADMIN_TRUSTED_PROXY_HOPS/],
     ['smtp without host, port and sender', { ADMIN_MAIL_TRANSPORT: 'smtp' }, /ADMIN_SMTP_HOST.*ADMIN_SMTP_PORT.*ADMIN_MAIL_FROM/]
   ])('rejects %s', (_label, override, message) => {

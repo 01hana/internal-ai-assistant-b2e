@@ -27,10 +27,12 @@ export type AdminAuditEventType =
   | 'admin_user_group_updated'
   | 'admin_user_group_deleted'
   | 'admin_conversation_viewed'
-  | 'admin_review_item_updated';
+  | 'admin_review_item_updated'
+  | 'admin_experience_config_saved'
+  | 'admin_experience_config_activated';
 
 export type AuditActor = { id: string; account: string; isDeveloper: boolean };
-export type AuditTarget = { type: 'User' | 'UserGroup' | 'AssistantSession' | 'ReviewItem'; id: string; isDeveloper?: boolean };
+export type AuditTarget = { type: 'User' | 'UserGroup' | 'AssistantSession' | 'ReviewItem' | 'ExperienceConfig'; id: string; isDeveloper?: boolean };
 
 export type AdminAuditRecord = {
   eventType: AdminAuditEventType;
