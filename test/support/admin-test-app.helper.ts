@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModuleBuilder } from '@nestjs/testing';
 import request = require('supertest');
 import { configureAdminApp } from '../../src/admin/admin-app.setup';
 import { AdminModule } from '../../src/admin/admin.module';
@@ -90,20 +90,25 @@ export async function configureAdminTestEnvironment(overrides: Record<string, st
     ADMIN_ENABLE_SWAGGER_DOCS: 'false',
     ADMIN_TRUSTED_PROXY_HOPS: '0',
     ADMIN_TIME_ZONE: 'Asia/Taipei',
+    ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]',
     ...overrides
   });
 }
 
-/** `env` overrides the test ADMIN_* settings for this app only (e.g. `{ ADMIN_ENABLE_SWAGGER_DOCS: 'true' }`). */
-export async function createAdminTestApp(env: Record<string, string> = {}): Promise<AdminTestContext> {
+/**
+ * `env` overrides the test ADMIN_* settings for this app only (e.g. `{ ADMIN_ENABLE_SWAGGER_DOCS: 'true' }`);
+ * `override` replaces further providers (e.g. the Tool registry the Capability Pack loader checks).
+ */
+export async function createAdminTestApp(env: Record<string, string> = {},
+  override: (builder: TestingModuleBuilder) => TestingModuleBuilder = (builder) => builder): Promise<AdminTestContext> {
   const releaseLock = await acquireAdminDbLock();
   try {
     await configureAdminTestEnvironment(env);
     const clock = new TestClock();
     const mail = new RecordingMail();
-    const moduleRef = await Test.createTestingModule({ imports: [AdminModule] })
+    const moduleRef = await override(Test.createTestingModule({ imports: [AdminModule] })
       .overrideProvider(ADMIN_CLOCK).useValue(clock.now)
-      .overrideProvider(ADMIN_MAIL_TRANSPORT).useValue(mail)
+      .overrideProvider(ADMIN_MAIL_TRANSPORT).useValue(mail))
       .compile();
     const app = moduleRef.createNestApplication({ logger: false });
     configureAdminApp(app);

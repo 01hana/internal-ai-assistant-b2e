@@ -22,6 +22,8 @@ import { AdminAuditController, AssistantAuditController } from './audit-events/a
 import { ConversationContentService } from './conversations/conversation-content';
 import { ConversationsController } from './conversations/conversations.controller';
 import { ConversationsService } from './conversations/conversations.service';
+import { ExperienceConfigsController } from './experience-config/experience-configs.controller';
+import { ExperienceConfigsService } from './experience-config/experience-configs.service';
 import { ExperienceValidationModule } from './experience-config/experience-validation.module';
 import { FeedbackController } from './feedback/feedback.controller';
 import { FeedbackService } from './feedback/feedback.service';
@@ -44,7 +46,7 @@ import { UsersService } from './users/users.service';
 @Module({
   imports: [AdminConfigModule, ExperienceValidationModule, PrismaModule, ThrottlerModule.forRoot(ADMIN_THROTTLERS)],
   controllers: [
-    AdminAuditController, AdminAuthController, AdminHealthController, AssistantAuditController, ConversationsController, FeedbackController, GroupsController, ReviewItemsController, StatsController, UsersController
+    AdminAuditController, AdminAuthController, AdminHealthController, AssistantAuditController, ConversationsController, ExperienceConfigsController, FeedbackController, GroupsController, ReviewItemsController, StatsController, UsersController
   ],
   providers: [
     // Order matters: session → CSRF → permission.
@@ -66,6 +68,7 @@ import { UsersService } from './users/users.service';
     AdminMailService,
     ConversationContentService,
     ConversationsService,
+    ExperienceConfigsService,
     FeedbackService,
     GroupsService,
     ReviewItemsService,
