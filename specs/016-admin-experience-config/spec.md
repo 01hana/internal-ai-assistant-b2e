@@ -67,7 +67,7 @@ Feature 013 的體驗設定（問候語、Quick Reply、追問建議）只能由
 
 1. **Given** 目前 active 版本的 `source` 為 `admin`，**when** 執行 provisioning 指令寫入另一個版本，**then** 失敗 `ADMIN_MANAGED`，不寫入；加上 `--force` 才寫入（`source: provisioning`）。
 2. **Given** 沒有 active 版本，或 active 版本的 `source` 為 `provisioning`，**then** 行為與 013 相同。
-3. `--check` 照常只驗證；同版本同內容仍為 `UNCHANGED`。
+3. `--check` 也回報 `ADMIN_MANAGED`（讓檢查結果與實際寫入一致）；同版本同內容仍為 `UNCHANGED`。
 
 ### User Story 5 — Core 調整（Priority: P1）
 
@@ -75,12 +75,13 @@ Feature 013 的體驗設定（問候語、Quick Reply、追問建議）只能由
 2. **Given** `AssistantExperienceRepository.activate`，**then** 接受 `source`、`createdByUserId`；新增 `listVersions`、`reactivate`，供後台與指令共用。
 3. **Given** `DEFAULT_ASSISTANT_GREETING`，**then** 移到 `assistant-experience.types.ts`（service 重新匯出），後台不需載入 service。
 4. **Given** 使用者點選的選項在目前 active 版本中已不存在或已無權限，**when** 送出訊息，**then** Core 在確認對話可見後回傳 409 `EXPERIENCE_CHOICE_UNAVAILABLE`（不再當成找不到對話）；不寫入訊息、不輸出 SSE。對話不存在或不可見仍為原本的錯誤。
-5. **Given** SDK 收到 `EXPERIENCE_CHOICE_UNAVAILABLE`，**then** 提示「這個選項已更新，請重新選擇」，並重新取得開場的 Quick Reply（`internal-ai-assistant` repo，直接在 main 修改）。
-6. 除上述外，Core 讀取 active 版本、組 opening、追問建議、解析點選的行為不變；既有 013 測試全數通過。
+5. **Given** Gateway 收到 Core 的 409 `EXPERIENCE_CHOICE_UNAVAILABLE`（格式安全的 JSON 錯誤），**then** 原樣轉送給前端，不再轉成 503 `BACKEND_UNAVAILABLE`；其他非 2xx 仍為 503。
+6. **Given** SDK 收到 409，**then** 回報 `choice_unavailable`，沿用 Frontend 003 既有的處理：移除該選項、在原位置提示「這個選項目前無法使用，請直接輸入問題。」，不重置對話（`internal-ai-assistant` repo，直接在 main 修改）。Core 沒有「重新取得開場」的 API，不另外新增。
+7. 除上述外，Core 讀取 active 版本、組 opening、追問建議、解析點選的行為不變；既有 013 測試全數通過。
 
 ## Edge Cases
 
-- **已開啟對話中的舊選項**：使用者在新版本儲存前開啟的對話，按鈕仍是舊的。`id` 仍存在 → 依新版本的內容執行；`id` 已被刪除 → `EXPERIENCE_CHOICE_UNAVAILABLE`，SDK 提示並更新選項（US5-4、5）。
+- **已開啟對話中的舊選項**：使用者在新版本儲存前開啟的對話，按鈕仍是舊的。`id` 仍存在 → 依新版本的內容執行；`id` 已被刪除 → `EXPERIENCE_CHOICE_UNAVAILABLE`，Gateway 轉送，SDK 移除該選項並提示（US5-4～6）。
 - **Capability Pack 換版**：引用的能力被停用時，Core 本來就不顯示（013）；後台讀取設定照常回傳，下一次儲存或回復時 validator 會指出錯誤，使用者需移除或修改。
 - **儲存的舊版本無法解析**（payload 格式未來改版）：列表照常顯示，詳情 `valid: false`，不能回復。
 - **後台 process 沒有載入 Pack**：`catalog` 回 `available: false`，validate／儲存／回復回 422（`NO_ACTIVE_PACK`）。
@@ -130,4 +131,4 @@ Feature 013 的體驗設定（問候語、Quick Reply、追問建議）只能由
 6. **權限**：只有「檢視」（`read`）與「編輯」（`update`，含儲存與回復）；移除 `create`。（2026-11-22 使用者決定）
 7. **語系與 HostApp**：沿用目前 active 版本，不在後台修改。
 8. **選項 ID**：新項目由後端產生，既有 ID 不變，前端不需顯示 ID。
-9. **刪除的選項被點選**：Core 回傳 `EXPERIENCE_CHOICE_UNAVAILABLE`，SDK 提示「這個選項已更新」並重新取得 Quick Reply。（2026-11-22 使用者決定）
+9. **刪除的選項被點選**：Core 回傳 `EXPERIENCE_CHOICE_UNAVAILABLE`，SDK 移除該選項並提示。（2026-11-22 使用者決定；實作時發現 Gateway 會把串流前的錯誤一律轉成 503，SDK 原本的 404 處理經 Gateway 從未生效，因此 Gateway 一併修改；SDK 沿用既有的移除與提示，不另外重新取得開場。）

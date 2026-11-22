@@ -34,7 +34,7 @@ Gateway `/health` 與 Bridge `/ready` 僅供內部/Host 健康查驗，不加入
 
 後台 API 與 Core 使用同一個 image，以 `node dist/src/admin-main.js` 啟動為獨立容器 `admin-api`，路徑前綴 `/api/v1/admin`，一個部署只服務一個 Customer（`ADMIN_CUSTOMER_ID`，啟動時必須已存在）。架構見 [`docs/architecture/admin-back-office.md`](../../docs/architecture/admin-back-office.md)。
 
-1. **設定**：依 `config/admin.env.example` 建立 `$DEMO_CONFIG_DIR/admin.env`（權限 600）：`DATABASE_URL`（與 Core 相同）、`ADMIN_CUSTOMER_ID`、`ADMIN_WEB_ORIGIN`（後台網站的 `https://` 來源）、`ADMIN_MAIL_FROM` 與 `ADMIN_SMTP_*`；選填 `ADMIN_TIME_ZONE`（統計切分日期的時區，預設 `Asia/Taipei`）。SMTP 密碼與其他服務的密碼一樣放在這個 env 檔。`compose.env` 新增 `DEMO_ADMIN_HOST_PORT`（核准的 loopback port）。`NODE_ENV=production` 下，信件改寫入日誌、cookie 不加 Secure、開啟 Swagger 都會拒絕啟動。
+1. **設定**：依 `config/admin.env.example` 建立 `$DEMO_CONFIG_DIR/admin.env`（權限 600）：`DATABASE_URL`（與 Core 相同）、`ADMIN_CUSTOMER_ID`、`ADMIN_WEB_ORIGIN`（後台網站的 `https://` 來源）、`ADMIN_MAIL_FROM` 與 `ADMIN_SMTP_*`；`ASSISTANT_CAPABILITY_PACK_PATHS_JSON`（與 `core.env` 相同，Feature 016 體驗設定編輯以它驗證；Pack 目錄也唯讀掛載到 `admin-api`，`preflight` 檢查兩者一致）；選填 `ADMIN_TIME_ZONE`（統計切分日期的時區，預設 `Asia/Taipei`）。SMTP 密碼與其他服務的密碼一樣放在這個 env 檔。`compose.env` 新增 `DEMO_ADMIN_HOST_PORT`（核准的 loopback port）。`NODE_ENV=production` 下，信件改寫入日誌、cookie 不加 Secure、開啟 Swagger 都會拒絕啟動。
 2. **網路**：`admin-api` 需要能連到 SMTP 伺服器（`egress`）；`ADMIN_TRUSTED_PROXY_HOPS=1` 固定在 Compose，代表前面恰好有一層公司 Nginx，速率限制與稽核使用 Nginx 帶入的 `X-Forwarded-For`。不要讓外部直接連到 host port。
 3. **Nginx**：後台網站使用獨立網域，同一個 server block 提供網站靜態檔與 `/api/v1/admin/` 轉送（見 `nginx-host-routes.example.conf` 末段）；`/api/v1/admin/health` 只供主機與 Compose 健康檢查，不對外開放。Nginx 跑在 Docker 時，`compose.company-nginx.yaml` 讓 `admin-api` 以別名 `ai-assistant-admin` 加入公司代理網路。
 4. **首次部署**：`preflight` 會檢查 `admin.env` 與 port；`app` 在 Core 之後啟動 `admin-api` 並等 healthy。接著執行 `./deploy.sh admin-bootstrap <compose.env> --account <帳號> --name <名稱> --email <email>` 建立第一個帳號（開發工程師群組）：只在沒有任何後台使用者時可執行，寄出首次登入信並在終端機顯示一次連結（72 小時、單次有效）。寄信結果會顯示在輸出中，可藉此確認 SMTP 設定。之後的帳號一律由後台建立並寄邀請信。
@@ -70,7 +70,7 @@ docker compose --env-file /approved/path/compose.env -f deploy/demo/compose.yaml
 
 1. 開發機執行 `deploy/demo/prepare-delivery.sh`，產生 `provision/assistant-experience.json`（不進版控）並一起交付。
 2. 主機在 `db`（含 Feature 013 migration）與 `provision` 之後執行 `./deploy.sh experience <compose.env>`：先 `--check` 唯讀驗證（schema、Customer／Integration／HostApp、每個選項宣告的能力與參數都能解析到 Active Pack、語意審核為 `HUMAN_VERIFIED`），通過才寫入並啟用；失敗不寫入任何資料。
-3. 之後修改文案或選項：提高 `configVersion` 後重跑步驟 1、2。Core 每次請求都讀 active 設定，不需要重啟。同版本、同內容重跑不會新增紀錄；內容改了卻沒提高版本會被拒絕（`VERSION_CONFLICT`）。要退回舊版，重新交付舊版檔案再跑一次即可。
+3. **Feature 016 起，之後的修改在後台的體驗設定頁進行**（儲存即生效、可回復舊版本）；設定檔只提供新部署的初始內容。目前生效的版本是後台儲存的時，`experience` 會以 `ADMIN_MANAGED` 拒絕，避免覆蓋後台的修改；確定要以設定檔取代時，在 Core image 內以 `--force` 執行 provisioning 指令。Core 每次請求都讀 active 設定，不需要重啟。同版本、同內容重跑不會新增紀錄；內容改了卻沒提高版本會被拒絕（`VERSION_CONFLICT`）。
 
 沒有 active 設定時，開場回 Core 預設問候、`quickReplies` 為空，其他功能不受影響。
 

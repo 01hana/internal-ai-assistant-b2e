@@ -364,16 +364,9 @@ describe('analytics-ready raw event records', () => {
 
     expect(positiveResponse.status).toBe(201);
     expect(negativeResponse.status).toBe(201);
+    // One feedback per answer: the negative rating updates the positive one; both remain in the audit.
     expect(newFeedbackEvents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          requestId: 'req-analytics-feedback-positive',
-          messageId: answeredMessage?.id,
-          rating: 'positive',
-          intent: 'other',
-          answerDecision: 'answered',
-          createdAt: expect.any(Date)
-        }),
+      [
         expect.objectContaining({
           requestId: 'req-analytics-feedback-negative',
           messageId: answeredMessage?.id,
@@ -384,7 +377,7 @@ describe('analytics-ready raw event records', () => {
           answerDecision: 'answered',
           createdAt: expect.any(Date)
         })
-      ])
+      ]
     );
     expect(newReviewItems).toHaveLength(1);
     expect(newReviewItems[0]).toEqual(

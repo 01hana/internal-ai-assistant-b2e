@@ -9,7 +9,7 @@ import {
   resetAdminTables, seedUser, type Signed, signIn, signInWithPermissions
 } from '../support/admin-test-app.helper';
 
-/** Feature 016 US1, US2 (T006–T008): viewing and saving experience configurations. */
+/** Feature 016 US1–US3 (T006–T010): viewing, saving, version history and restoring experience configurations. */
 jest.setTimeout(60_000);
 
 describeDbBackedAdmin('admin experience config (Feature 016)', () => {
@@ -138,9 +138,84 @@ describeDbBackedAdmin('admin experience config (Feature 016)', () => {
     expect((await read(path, developer)).body.data.config.createdBy).toEqual({ account: 'dev.one', label: 'dev.one' });
   });
 
+  const versions = (body: object = {}, signed = admin) => fromSite(api(ctx.app).post(`${path}/versions/getTable`), signed).send(body);
+  const restore = (configVersion: string, baseConfigVersion: string | null, signed = admin) =>
+    fromSite(api(ctx.app).post(`${path}/versions/${configVersion}/activate`), signed).send({ baseConfigVersion });
+
+  it('lists versions with their source and author, newest first (US3-1)', async () => {
+    await save(editedConfig(null)).expect(200);
+    await save(editedConfig('1.0.0', '第二版')).expect(200);
+    const { body } = await versions().expect(200);
+    expect(body.data.total).toBe(2);
+    expect(body.data.items.map((item: { configVersion: string; status: string }) => [item.configVersion, item.status]))
+      .toEqual([['1.0.1', 'active'], ['1.0.0', 'retired']]);
+    expect(body.data.items[0]).toMatchObject({ source: 'admin', createdBy: { account: 'ops.admin' } });
+    expect(JSON.stringify(body)).not.toContain('第二版');
+    expect((await versions({ filters: { status: ['retired'] } })).body.data.items).toHaveLength(1);
+    expect((await versions({ filters: { source: ['provisioning'] } })).body.data.total).toBe(0);
+    await versions({ filters: { status: ['deleted'] } }).expect(400);
+  });
+
+  it('shows one version, and an old version that no longer parses without its content (US3-2)', async () => {
+    await save(editedConfig(null)).expect(200);
+    expect((await read(`${path}/versions/1.0.0`).expect(200)).body.data).toMatchObject({ configVersion: '1.0.0', valid: true, greeting: { text: '你好，我可以協助查詢工單。' } });
+    await ctx.db.assistantExperienceConfig.create({ data: { customerId: ADMIN_TEST_CUSTOMER, integrationId: ADMIN_EXPERIENCE_INTEGRATION,
+      configVersion: '0.9.0', status: 'retired', checksum: 'x', payload: { version: '0', greeting: '舊格式' } } });
+    const old = await read(`${path}/versions/0.9.0`).expect(200);
+    expect(old.body.data).toMatchObject({ configVersion: '0.9.0', source: 'provisioning', createdBy: null, valid: false });
+    expect(old.body.data.errors.length).toBeGreaterThan(0);
+    expect(JSON.stringify(old.body)).not.toContain('舊格式');
+    expect((await restore('0.9.0', '1.0.0').expect(422)).body.error.code).toBe('EXPERIENCE_CONFIG_UNREADABLE');
+    await read(`${path}/versions/3.0.0`).expect(404);
+  });
+
+  it('restores an earlier version without a new version number, audited, and Core uses it (US3-3, SC-002)', async () => {
+    await save(editedConfig(null)).expect(200);
+    await save(editedConfig('1.0.0', '第二版')).expect(200);
+    const { body } = await restore('1.0.0', '1.0.1').expect(200);
+    expect(body.data).toMatchObject({ unchanged: false, config: { configVersion: '1.0.0', greeting: { text: '你好，我可以協助查詢工單。' } } });
+    expect((await coreService().buildOpening(coreHost)).configVersion).toBe('1.0.0');
+    expect(await ctx.db.assistantExperienceConfig.count({ where: { integrationId: ADMIN_EXPERIENCE_INTEGRATION } })).toBe(2);
+    const [event] = await ctx.db.userAuditEvent.findMany({ where: { eventType: 'admin_experience_config_activated' } });
+    expect(event.metadata).toEqual({ integrationId: ADMIN_EXPERIENCE_INTEGRATION, configVersion: '1.0.0', previousVersion: '1.0.1' });
+
+    expect((await restore('1.0.0', '1.0.0').expect(200)).body.data.unchanged).toBe(true);
+    expect((await restore('1.0.1', '1.0.1').expect(409)).body.error.code).toBe('EXPERIENCE_CONFIG_CHANGED');
+    await restore('9.9.9', '1.0.0').expect(404);
+    // The next save still numbers after the highest version.
+    expect((await save(editedConfig('1.0.0', '第三版')).expect(200)).body.data.config.configVersion).toBe('1.0.2');
+  });
+
+  it('re-checks a restored version against the packs loaded now (US3-3)', async () => {
+    await save(editedConfig(null)).expect(200);
+    await save(editedConfig('1.0.0', '第二版')).expect(200);
+    const row = await ctx.db.assistantExperienceConfig.findFirstOrThrow({ where: { integrationId: ADMIN_EXPERIENCE_INTEGRATION, configVersion: '1.0.0' } });
+    const payload = row.payload as { quickReplies: Array<Record<string, unknown>> };
+    payload.quickReplies[1] = { ...payload.quickReplies[1], capabilityKey: 'retired.capability' };
+    await ctx.db.assistantExperienceConfig.update({ where: { id: row.id }, data: { payload: payload as never } });
+    const { body } = await restore('1.0.0', '1.0.1').expect(422);
+    expect(body.error.details.errors).toContainEqual({ path: '$.quickReplies[1].capabilityKey', code: 'CAPABILITY_NOT_IN_PACK' });
+    expect((await read(path)).body.data.config.configVersion).toBe('1.0.1');
+  });
+
+  it('lets ExperienceConfig:read list versions and only ExperienceConfig:update restore them (FR-009)', async () => {
+    await save(editedConfig(null)).expect(200);
+    await save(editedConfig('1.0.0', '第二版')).expect(200);
+    const reader = await signInWithPermissions(ctx, 'config.reader', ['ExperienceConfig:read']);
+    const nobody = await signInWithPermissions(ctx, 'no.config', ['Stats:read']);
+    await versions({}, reader).expect(200);
+    await read(`${path}/versions/1.0.0`, reader).expect(200);
+    await versions({}, nobody).expect(403);
+    await restore('1.0.0', '1.0.1', reader).expect(403);
+  });
+
   it('reports the catalogue as unavailable when no pack is loaded for the integration', async () => {
     await closeAdminTestApp(ctx);
     ctx = await createAdminTestApp({ ASSISTANT_CAPABILITY_PACK_PATHS_JSON: '[]' }, withFixtureTools);
+    // Another test file may have held the shared lock in between and reset the tables: seed again.
+    await resetAdminTables(ctx.db);
+    await resetExperienceData(ctx.db);
+    await seedUser(ctx.db, { account: 'ops.admin', groups: ['admin'] });
     admin = await signIn(ctx.app, 'ops.admin');
     expect((await read(`${path}/catalog`).expect(200)).body.data).toEqual({ available: false, hostApps: [ADMIN_EXPERIENCE_HOST_APP], capabilities: [] });
     expect((await save(editedConfig(null)).expect(422)).body.error.details.errors).toContainEqual({ path: '$.hostApps[0]', code: 'NO_ACTIVE_PACK' });

@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { HttpException } from '@nestjs/common';
 import type { Response } from 'express';
+import { BackendMessageRejectedError } from '../../src/backend-client/gateway-backend-client.service';
 import { GatewayAssistantController } from '../../src/operations/gateway-assistant.controller';
 import type { GatewayTrustChainHandler } from '../../src/backend-client/gateway-trust-chain.handler';
 import { IdentityServiceUnavailableError } from '../../src/signing/identity-service-unavailable.error';
@@ -304,6 +305,17 @@ describe('GatewayAssistantController Feature 013 choice input (T024)', () => {
     expect(handler.sendStreamMessage).toHaveBeenCalledWith(expect.objectContaining({
       sessionId: 'session-owned-001', choiceId: 'order-status-10001', pageContext: { module: 'orders' } }));
     expect((handler.sendStreamMessage as jest.Mock).mock.calls[0][0]).not.toHaveProperty('message');
+  });
+
+  it('passes a Backend rejection of a choice through as JSON, without opening a stream (Feature 016)', async () => {
+    const rejection = { requestId: 'backend-req', error: { code: 'EXPERIENCE_CHOICE_UNAVAILABLE', message: '這個選項已更新，請重新選擇。' } };
+    const handler = { sendStreamMessage: jest.fn(async () => { throw new BackendMessageRejectedError(409, rejection); }) } as unknown as GatewayTrustChainHandler;
+    const response = new TestResponse();
+    await new GatewayAssistantController(handler).sendStreamMessage('Bearer upstream-token', 'choice-gone', undefined,
+      'session-owned-001', { choiceId: 'removed-choice' }, response as unknown as Response);
+    expect(response.statusCode).toBe(409);
+    expect(response.sent).toEqual(rejection);
+    expect(response.writes).toEqual([]);
   });
 
   it.each([

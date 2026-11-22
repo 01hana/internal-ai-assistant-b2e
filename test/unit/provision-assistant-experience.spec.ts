@@ -27,7 +27,8 @@ class FakeStore implements AssistantExperienceConfigStore {
     const existing = await this.findVersion(payload.customerId, payload.integrationId, payload.configVersion);
     if (existing) { Object.assign(existing, { status: 'active' }); return existing; }
     const row = { id: `row-${this.rows.length + 1}`, customerId: payload.customerId, integrationId: payload.integrationId,
-      configVersion: payload.configVersion, status: 'active', checksum, activatedAt: new Date(), payload } as StoredExperienceConfig;
+      configVersion: payload.configVersion, status: 'active', checksum, source: 'provisioning', createdByUserId: null, createdAt: new Date(),
+      activatedAt: new Date(), payload } as StoredExperienceConfig;
     this.rows.push(row);
     return row;
   }
@@ -90,12 +91,40 @@ describe('ProvisionAssistantExperienceCommand (Feature 013 T015)', () => {
   });
 });
 
+describe('ProvisionAssistantExperienceCommand with the admin back-office (Feature 016 US4)', () => {
+  const options = { checkOnly: false, allowUnverified: false };
+  const savedInAdmin = async () => {
+    const store = new FakeStore();
+    const command = new ProvisionAssistantExperienceCommand(store, { validate: jest.fn(async () => []) });
+    await command.execute(raw(), options);
+    Object.assign(store.rows[0], { configVersion: '1.0.1', source: 'admin', createdByUserId: 'admin-user' });
+    return { store, command };
+  };
+  const code = async (work: Promise<unknown>) => {
+    try { await work; return 'NO_ERROR'; } catch (error) { return error instanceof ProvisionAssistantExperienceError ? error.code : String(error); }
+  };
+
+  it('does not replace a version saved in the admin, also in check mode', async () => {
+    const { store, command } = await savedInAdmin();
+    expect(await code(command.execute({ ...raw(), configVersion: '2.0.0' }, options))).toBe('ADMIN_MANAGED');
+    expect(await code(command.execute({ ...raw(), configVersion: '2.0.0' }, { ...options, checkOnly: true }))).toBe('ADMIN_MANAGED');
+    expect(store.activations).toBe(1);
+  });
+
+  it('replaces it with --force', async () => {
+    const { store, command } = await savedInAdmin();
+    expect((await command.execute({ ...raw(), configVersion: '2.0.0' }, { ...options, force: true })).outcome).toBe('ACTIVATED');
+    expect(store.rows.find((row) => row.status === 'active')).toMatchObject({ configVersion: '2.0.0', source: 'provisioning' });
+  });
+});
+
 describe('provision CLI arguments', () => {
   it('accepts --file with optional flags and rejects anything else', () => {
-    expect(parseProvisionCliArguments(['--file', 'a.json'])).toEqual({ file: 'a.json', checkOnly: false, allowUnverified: false });
+    expect(parseProvisionCliArguments(['--file', 'a.json'])).toEqual({ file: 'a.json', checkOnly: false, allowUnverified: false, force: false });
     expect(parseProvisionCliArguments(['--check', '--file', 'a.json', '--allow-unverified']))
-      .toEqual({ file: 'a.json', checkOnly: true, allowUnverified: true });
-    for (const argv of [[], ['--file'], ['--file', '--check'], ['--file', 'a', '--file', 'b'], ['--force', '--file', 'a']]) {
+      .toEqual({ file: 'a.json', checkOnly: true, allowUnverified: true, force: false });
+    expect(parseProvisionCliArguments(['--force', '--file', 'a.json'])).toMatchObject({ force: true });
+    for (const argv of [[], ['--file'], ['--file', '--check'], ['--file', 'a', '--file', 'b'], ['--force', '--force', '--file', 'a'], ['--yes', '--file', 'a']]) {
       expect(() => parseProvisionCliArguments(argv)).toThrow('Usage');
     }
   });

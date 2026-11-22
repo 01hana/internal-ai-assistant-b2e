@@ -99,9 +99,10 @@ describe('session opening and Quick Reply selection', () => {
     it.each([
       ['unknown ID', 'not-configured'],
       ['a choice the actor may not run', 'work-order-progress']
-    ])('rejects %s like a missing session and writes nothing', async (_label, choiceId) => {
+    ])('rejects %s as no longer available and writes nothing (Feature 016)', async (_label, choiceId) => {
       const result = await send(`req-f013-reject-${choiceId}`, { choiceId });
-      expect(result.response.status).toBe(404);
+      expect(result.response.status).toBe(409);
+      expect(result.response.body).toMatchObject({ error: { code: 'EXPERIENCE_CHOICE_UNAVAILABLE' } });
       expect(result.messages).toEqual([]);
       expect(result.audit.map((event) => event.eventType)).not.toEqual(expect.arrayContaining(['message_received']));
       expect(result.audit.map((event) => event.eventType)).not.toEqual(expect.arrayContaining(['quick_reply_selected']));
@@ -119,7 +120,8 @@ describe('session opening and Quick Reply selection', () => {
   describe('Customer isolation (T023)', () => {
     it('does not accept Customer A choices in a Customer B session', async () => {
       const result = await send('req-f013-cross', { choiceId: 'order-status-10001' }, 'session-hidden-001', fixture.canonicalClaims.customerB);
-      expect(result.response.status).toBe(404);
+      // The session is Customer B's own; Customer A's choice is not in Customer B's configuration (Feature 016: 409).
+      expect(result.response.status).toBe(409);
       expect(result.messages).toEqual([]);
     });
   });

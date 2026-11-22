@@ -10,7 +10,8 @@ import {
   createIdentityHeaders,
   createUs1TestAppWithState,
   parseSseResponse,
-  Us1TestState
+  Us1TestState,
+  withoutSeededFeedback
 } from '../support/us1-test-app.helper';
 import { DEFAULT_INTERNAL_IDENTITY_JWT_FIXTURE } from '../support/internal-identity-jwt.helper';
 import { RetrievalCoverageService } from '../../src/assistant/grounding/retrieval-coverage.service';
@@ -453,6 +454,7 @@ describe('internal assistant core deterministic eval baseline', () => {
     });
 
     it('feedback-review-linkage', async () => {
+      withoutSeededFeedback(testApp.state);
       const initialFeedbackCount = testApp.state.feedbackEvents.length;
       const initialReviewCount = testApp.state.reviewItems.length;
 

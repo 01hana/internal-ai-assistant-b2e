@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request = require('supertest');
 import { AssistantMessageRole } from '../../src/generated/prisma/enums';
-import { createIdentityHeaders, createUs1TestAppWithState, Us1TestState } from '../support/us1-test-app.helper';
+import { createIdentityHeaders, createUs1TestAppWithState, Us1TestState, withoutSeededFeedback } from '../support/us1-test-app.helper';
 
 describe('feedback to review linkage integration', () => {
   let app: INestApplication;
@@ -44,6 +44,7 @@ describe('feedback to review linkage integration', () => {
   }
 
   it('records positive feedback without creating review item', async () => {
+    withoutSeededFeedback(state);
     const initialFeedbackCount = state.feedbackEvents.length;
     const initialReviewCount = state.reviewItems.length;
 

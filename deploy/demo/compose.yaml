@@ -176,6 +176,9 @@ services:
       ADMIN_TRUSTED_PROXY_HOPS: "1"
       NODE_EXTRA_CA_CERTS: /run/secrets/trusted_ca
     secrets: [trusted_ca]
+    # Feature 016: the experience config editor lists and validates against the same packs as Core (read-only).
+    volumes:
+      - ${DEMO_CAPABILITY_PACK_DIR:?Set an approved pack directory}:/app/customer-capability-packs:ro
     ports:
       - "127.0.0.1:${DEMO_ADMIN_HOST_PORT:?Set an approved loopback port}:3200"
     depends_on:

@@ -173,6 +173,20 @@ describe('GatewayBackendClient SSE send-message transport contract (T064-B)', ()
       body: JSON.stringify({ choiceId: 'order-status-10001', pageContext: sendStreamMessageInput.pageContext }) }));
   });
 
+  it('passes through a safe 409 rejection (EXPERIENCE_CHOICE_UNAVAILABLE) and hides any other failure (Feature 016)', async () => {
+    const rejection = { requestId: 'backend-req', error: { code: 'EXPERIENCE_CHOICE_UNAVAILABLE', message: '這個選項已更新，請重新選擇。' } };
+    const respond = (status: number, body: unknown) => createSseHarness(['internal-sse-token-reject'],
+      async () => ({ ok: false, status, json: async () => body })).client;
+    const { message: _message, ...withoutMessage } = sendStreamMessageInput;
+    const input = { ...withoutMessage, choiceId: 'removed-choice' };
+    await expect(respond(409, rejection).sendStreamMessage(canonicalIdentity, 'session-owned-001', input))
+      .rejects.toMatchObject({ code: 'BACKEND_MESSAGE_REJECTED', statusCode: 409, body: rejection });
+    await expect(respond(500, rejection).sendStreamMessage(canonicalIdentity, 'session-owned-001', input))
+      .rejects.toMatchObject({ code: 'BACKEND_UNAVAILABLE', statusCode: 503 });
+    await expect(respond(409, { error: 'raw backend detail' }).sendStreamMessage(canonicalIdentity, 'session-owned-001', input))
+      .rejects.toMatchObject({ code: 'BACKEND_UNAVAILABLE', statusCode: 503 });
+  });
+
   it('rejects send input with both or neither of message and choiceId', async () => {
     const harness = createSseHarness(['internal-sse-token-unused']);
     await expect(harness.client.sendStreamMessage(canonicalIdentity, 'session-owned-001',

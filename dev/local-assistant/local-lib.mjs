@@ -589,6 +589,8 @@ export function localAdminEnvironment(rootEnv, backendEnv, databaseUrl, readPack
     ADMIN_MAIL_TRANSPORT: 'log',
     ADMIN_ENABLE_SWAGGER_DOCS: 'true',
     ...overrides,
+    // Feature 016: the experience config editor validates against the packs the local backend loads.
+    ASSISTANT_CAPABILITY_PACK_PATHS_JSON: backendEnv.ASSISTANT_CAPABILITY_PACK_PATHS_JSON ?? '[]',
     NODE_ENV: 'development',
     ADMIN_PORT: String(PORTS.admin),
     ADMIN_CUSTOMER_ID: customerId

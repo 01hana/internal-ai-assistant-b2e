@@ -1,4 +1,4 @@
-# 前端串接指南：後台管理 API（Feature 014、015）
+# 前端串接指南：後台管理 API（Feature 014、015、016）
 
 給後台網站（`internal-ai-assistant-admin`，Nuxt 4 + Nuxt UI）串接用。架構見 [`docs/architecture/admin-back-office.md`](../architecture/admin-back-office.md)；本機啟動 API 後，完整的欄位說明可在 Swagger UI `http://localhost:3200/api/v1/admin/docs` 查看與試打。
 
@@ -168,6 +168,36 @@
 - 後台稽核每一列：`{ id, timestamp, requestId, eventType, actor: { account, label }, targetType, targetId, ipSummary, userAgentSummary, metadata }`。非開發工程師看到開發工程師為「開發工程師」（`account: null`）；對象是開發工程師帳號的事件，`targetId` 與 `metadata` 為 `null`；以 `actorAccount` 篩選時不會查出開發工程師的紀錄。
 - `sort.field` 為 `timestamp`（預設，新到舊）。沒有修改或刪除稽核的 API。
 
-## 7. subject 名稱的型別
+## 7. 體驗設定 `experienceConfigs`（Feature 016；檢視 `ExperienceConfig:read`、編輯 `ExperienceConfig:update`）
+
+問候語、Quick Reply 與追問建議，每個整合一份。**儲存即生效**：每次儲存產生下一個版本（`1.0.0`、`1.0.1`…，前端不需處理版本號）並立即成為 Assistant 使用的版本；舊版本保留，可回復。
+
+| Method | Path | 權限 | Body | 回應 `data` |
+| --- | --- | --- | --- | --- |
+| GET | `experienceConfigs/getIntegrations` | 檢視 | — | `[{ integrationId, hostApps, current: { configVersion, source, activatedAt } \| null }]` |
+| GET | `experienceConfigs/:integrationId` | 檢視 | — | `{ integrationId, hostApps, defaultGreeting, config }` |
+| GET | `experienceConfigs/:integrationId/catalog` | 檢視 | — | `{ available, hostApps, capabilities }` |
+| POST | `experienceConfigs/:integrationId/validate` | 編輯 | 編輯內容 | `{ valid, errors: [{ path, code }] }` |
+| POST | `experienceConfigs/:integrationId` | 編輯 | 編輯內容 | `{ unchanged, integrationId, hostApps, defaultGreeting, config }` |
+| POST | `experienceConfigs/:integrationId/versions/getTable` | 檢視 | `{ page, pageSize, sort?, filters?: { status?, source? } }` | `{ items, total }` |
+| GET | `experienceConfigs/:integrationId/versions/:configVersion` | 檢視 | — | 版本資訊與內容 |
+| POST | `experienceConfigs/:integrationId/versions/:configVersion/activate` | 編輯 | `{ baseConfigVersion }` | 同儲存 |
+
+- **`config`**：`{ configVersion, source, createdBy, activatedAt, greeting: { text }, maxQuickReplies, quickReplies, followUps }`；還沒有設定時為 `null`，編輯畫面以 `defaultGreeting`（Assistant 預設問候語）與空的清單開始。`source` 為 `admin`（後台儲存）或 `provisioning`（部署時的設定檔）；`createdBy` 為 `{ account, label }`（開發工程師對非開發工程師顯示為 `{ account: null, label: '開發工程師' }`），設定檔寫入的版本為 `null`。
+- **編輯內容**：`{ baseConfigVersion, greeting: { text }, maxQuickReplies, quickReplies, followUps }`。
+  - `baseConfigVersion`：開始編輯時讀到的 `config.configVersion`（沒有設定時 `null`），必填。
+  - Quick Reply：`{ id?, kind: 'capability' | 'capability_overview', label, message, priority, capabilityKey?, parameters?, pageScope?: { modules } }`；`capability_overview`（「你能查詢哪些資料？」）不帶 `capabilityKey`、`parameters`。
+  - 追問建議：`{ id?, whenCapabilityKey, whenParameters?, label, message, capabilityKey, parameters? }`：回答 `whenCapabilityKey`（且參數符合 `whenParameters`）之後出現。
+  - 新項目不帶 `id`，由後端產生（`qr-…`、`fu-…`）；**已有的 `id` 必須原樣送回**（已開啟的對話以 `id` 點選）。
+  - 長度、數量等限制與 Feature 013 相同（標籤 40 字、訊息 200 字、問候語 500 字、Quick Reply 最多 20、追問建議最多 50、`maxQuickReplies` 1–6、`priority` 0–1000），由後端檢查。
+- **能力目錄**：`capabilities: [{ capabilityKey, label, parameters: [{ name, type: 'enum', required, values: [{ value, aliases }] } | { name, type: 'bounded_string', required, maxLength }] }]`。下拉選單顯示 `label`；enum 值可顯示 `aliases[0]`。`available: false` 表示後台沒有載入此整合的 Capability Pack，此時無法儲存。
+- **錯誤**：
+  - 422 `EXPERIENCE_CONFIG_INVALID`：`details.errors` 為 `[{ path, code }]`，`path` 如 `$.quickReplies[1].label`，可對應到欄位。常見 `code`：`REQUIRED`、`EMPTY`、`TOO_LONG`、`OUT_OF_RANGE`（數值或項目數超出範圍）、`DUPLICATE_ID`、`UNKNOWN_KEY`、`CAPABILITY_NOT_IN_PACK`（能力不存在或已停用）、`PARAMETER_VALUE_NOT_DECLARED`、`PARAMETERS_NOT_BOUND`（這組參數沒有對應的查詢）、`NO_ACTIVE_PACK`。
+  - 409 `EXPERIENCE_CONFIG_CHANGED`：開始編輯後已有人儲存或回復；請重新讀取。
+  - 404 `INTEGRATION_NOT_FOUND`、`EXPERIENCE_CONFIG_VERSION_NOT_FOUND`。
+- **內容沒有變更**時儲存回傳 `unchanged: true`，不產生新版本。
+- **版本**（第一版前端可不做）：列表每一列 `{ configVersion, status: 'active' | 'retired', source, createdBy, createdAt, activatedAt }`，`sort.field` 為 `createdAt`（預設）或 `activatedAt`；單一版本另有 `valid`、`errors` 與內容欄位（無法解析的舊版本 `valid: false`、不含內容，回復時 422 `EXPERIENCE_CONFIG_UNREADABLE`）。回復會重新以目前的 Capability Pack 檢查。
+
+## 8. subject 名稱的型別
 
 前端不引用後端程式。選單與路由所需的 subject 名稱在前端以型別檔維護（`User`、`UserGroup`、`AuditEvent`、`Stats`、`Conversation`、`ReviewItem`、`Feedback`、`ExperienceConfig`），並以測試比對 `groups/getPermissions` 的回傳，避免兩邊不一致。

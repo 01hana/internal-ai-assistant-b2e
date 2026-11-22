@@ -39,6 +39,9 @@ export class FeedbackEventService {
       // One feedback per answer (the session, and so the answer, belongs to one actor): a later rating
       // or an added reason replaces it.
       const previous = await database.feedbackEvent.findFirst({ where: { customerId, messageId: input.messageId } });
+      // Read before the upsert changes the row.
+      const previousRating = previous?.rating ?? null;
+      const wasActionable = previous ? isActionableFeedback(previous.rating, previous.intent ?? 'other') : false;
       const fields = {
         requestId: input.requestId,
         rating: input.rating,
@@ -63,10 +66,9 @@ export class FeedbackEventService {
         eventType: 'feedback_received',
         decision: message.answerDecision,
         evidenceRefIds,
-        metadata: toJsonInput({ feedbackEventId: feedbackEvent.id, rating: input.rating, previousRating: previous?.rating ?? null, intent, reasonProvided: Boolean(input.reason), commentProvided: Boolean(input.comment), toolCallIds, evidenceRefIds, answerDecision: message.answerDecision })
+        metadata: toJsonInput({ feedbackEventId: feedbackEvent.id, rating: input.rating, previousRating, intent, reasonProvided: Boolean(input.reason), commentProvided: Boolean(input.comment), toolCallIds, evidenceRefIds, answerDecision: message.answerDecision })
       }, database);
 
-      const wasActionable = previous ? isActionableFeedback(previous.rating, previous.intent ?? 'other') : false;
       const reviewItem = isActionableFeedback(input.rating, intent)
         ? await this.reviewItemService.createFromFeedback({
             customerScope: input.customerScope,
