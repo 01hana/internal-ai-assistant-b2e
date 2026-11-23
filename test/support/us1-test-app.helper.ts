@@ -2121,6 +2121,15 @@ function createInitialState(): MockState {
 }
 
 /**
+ * One feedback per answer: the seed already holds a feedback for `message-owned-assistant-001`. Tests that start
+ * from an answer nobody has rated yet remove it (in place, so the delegates keep the same array).
+ */
+export function withoutSeededFeedback(state: Us1TestState, messageId = 'message-owned-assistant-001'): void {
+  const kept = state.feedbackEvents.filter((item) => item.messageId !== messageId);
+  state.feedbackEvents.splice(0, state.feedbackEvents.length, ...kept);
+}
+
+/**
  * The in-memory delegates intentionally apply only predicates supplied by the
  * runtime. They never synthesize a Customer predicate, so an unscoped query
  * remains observable as an expected-red Customer isolation failure.

@@ -8,7 +8,8 @@ import { INTERNAL_IDENTITY_TOKEN_VERIFIER, InternalIdentityTokenVerifier } from 
 import {
   createAuthorizedInternalIdentityHeaders,
   createUs1TestAppWithState,
-  Us1TestState
+  Us1TestState,
+  withoutSeededFeedback
 } from '../support/us1-test-app.helper';
 import {
   createInternalIdentityJwtFixture,
@@ -31,6 +32,7 @@ describe('T064 Customer A/B FeedbackEvent isolation expected-red', () => {
 
   it('persists immutable Customer ownership from explicit CustomerScope', async () => {
     const identityContext = await verifiedIdentityContext('customerA', 'req-t064-own-create');
+    withoutSeededFeedback(state);
     const customerScope = createCustomerScopeFromIdentityContext(identityContext);
     const before = snapshot();
 
@@ -160,6 +162,7 @@ describe('T064 Customer A/B FeedbackEvent isolation expected-red', () => {
 
   it('rolls back FeedbackEvent, ReviewItem, and both audits when review_item_created audit fails', async () => {
     const identityContext = await verifiedIdentityContext('customerA', 'req-t067-review-audit-rollback');
+    withoutSeededFeedback(state);
     state.workflowAuditFailureEventTypes.push('review_item_created');
     const before = snapshot();
 

@@ -17,7 +17,7 @@ export interface ProvisionExperienceResult {
 }
 
 export type ProvisionExperienceErrorCode =
-  | 'INVALID_PAYLOAD' | 'UNVERIFIED_CONTENT' | 'PACK_MISMATCH' | 'CUSTOMER_NOT_FOUND' | 'VERSION_CONFLICT';
+  | 'INVALID_PAYLOAD' | 'UNVERIFIED_CONTENT' | 'PACK_MISMATCH' | 'CUSTOMER_NOT_FOUND' | 'VERSION_CONFLICT' | 'ADMIN_MANAGED';
 
 export class ProvisionAssistantExperienceError extends Error {
   constructor(readonly code: ProvisionExperienceErrorCode, readonly errors: readonly ExperienceConfigError[] = []) {
@@ -26,14 +26,23 @@ export class ProvisionAssistantExperienceError extends Error {
   }
 }
 
+export type ProvisionExperienceOptions = Readonly<{
+  checkOnly: boolean;
+  allowUnverified: boolean;
+  /** Feature 016: replace a version saved in the admin back-office. */
+  force?: boolean;
+}>;
+
 /**
  * Validates an experience configuration file and activates it. Nothing is written unless every check passes.
  * Re-running the same version with the same content is a no-op; the same version with different content is rejected.
+ * Feature 016: the file only supplies initial content — once the admin back-office saved the active version, another
+ * file version is refused (ADMIN_MANAGED, also in check mode) unless `force`.
  */
 export class ProvisionAssistantExperienceCommand {
   constructor(private readonly store: AssistantExperienceConfigStore, private readonly validator: ExperiencePayloadValidator) {}
 
-  async execute(input: unknown, options: Readonly<{ checkOnly: boolean; allowUnverified: boolean }>): Promise<ProvisionExperienceResult> {
+  async execute(input: unknown, options: ProvisionExperienceOptions): Promise<ProvisionExperienceResult> {
     const parsed = parseAssistantExperiencePayload(input);
     if (!parsed.ok) throw new ProvisionAssistantExperienceError('INVALID_PAYLOAD', parsed.errors);
     const payload = parsed.payload;
@@ -52,8 +61,11 @@ export class ProvisionAssistantExperienceCommand {
     if (existing && existing.checksum !== checksum) {
       throw new ProvisionAssistantExperienceError('VERSION_CONFLICT', [{ path: '$.configVersion', code: 'CONTENT_CHANGED_WITHOUT_NEW_VERSION' }]);
     }
-    if (options.checkOnly) return result('VALIDATED');
     const active = await this.store.findActive(payload.customerId, payload.integrationId);
+    if (active?.source === 'admin' && active.configVersion !== payload.configVersion && !options.force) {
+      throw new ProvisionAssistantExperienceError('ADMIN_MANAGED', [{ path: '$.configVersion', code: 'ACTIVE_VERSION_SAVED_IN_ADMIN' }]);
+    }
+    if (options.checkOnly) return result('VALIDATED');
     if (existing && active?.id === existing.id) return result('UNCHANGED');
     await this.store.activate(payload, checksum);
     return result(existing ? 'REACTIVATED' : 'ACTIVATED');

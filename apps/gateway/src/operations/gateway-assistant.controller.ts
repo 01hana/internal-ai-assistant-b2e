@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, 
 import { randomUUID } from 'node:crypto';
 import type { Response } from 'express';
 import { GatewayTrustChainHandler } from '../backend-client/gateway-trust-chain.handler';
-import { GATEWAY_SESSION_LIST_CURSOR_PATTERN, GATEWAY_SESSION_LIST_LIMIT_PATTERN } from '../backend-client/gateway-backend-client.service';
+import { BackendMessageRejectedError, GATEWAY_SESSION_LIST_CURSOR_PATTERN, GATEWAY_SESSION_LIST_LIMIT_PATTERN } from '../backend-client/gateway-backend-client.service';
 import type { GatewayHistoryQuery, GatewaySessionListQuery } from '../backend-client/gateway-backend-client.service';
 import { IdentityResolutionError } from '../integration-registry/canonical-identity-resolver.service';
 import { IdentityServiceUnavailableError } from '../signing/identity-service-unavailable.error';
@@ -214,6 +214,7 @@ export class GatewayAssistantController {
         traceparent: optionalHeader(traceparent)
       });
     } catch (error) {
+      if (error instanceof BackendMessageRejectedError) return writeReadResponse(response, error);
       throw projectTrustChainError(error);
     }
 

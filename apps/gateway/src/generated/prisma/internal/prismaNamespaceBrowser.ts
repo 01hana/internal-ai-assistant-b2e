@@ -360,6 +360,8 @@ export const AssistantExperienceConfigScalarFieldEnum = {
   activeSlot: 'activeSlot',
   payload: 'payload',
   checksum: 'checksum',
+  source: 'source',
+  createdByUserId: 'createdByUserId',
   createdAt: 'createdAt',
   activatedAt: 'activatedAt'
 } as const

@@ -43,7 +43,7 @@
 - 使用者點 Quick Reply 或延伸建議時送 `choiceId`；使用者自己打字時照舊送 `message`。兩者同時送或都不送會回 400。
 - 先在畫面上顯示該按鈕的 `label` 作為使用者訊息即可。伺服器會把設定中的完整問句存成使用者訊息，所以之後讀歷史時看到的文字可能和 label 不同。
 - 回應仍是同一條 SSE 串流，處理方式不變。
-- `choiceId` 不存在、已不在目前的設定中、或使用者已沒有權限：回 **404**（與 session 不存在相同）。建議前端移除該按鈕，並提示使用者直接輸入問題。
+- `choiceId` 不存在、已不在目前的設定中（例如後台已修改體驗設定）、或使用者已沒有權限：回 **409** `EXPERIENCE_CHOICE_UNAVAILABLE`（Feature 016 起；Feature 013 為 404），不寫入訊息、不開始 SSE。建議前端移除該按鈕，並提示使用者重新選擇或直接輸入問題。session 不存在仍為 404。
 - `choiceId` 格式：小寫英數字開頭，可含 `.`、`_`、`-`，最多 64 字。
 
 ## 3. 回答後的建議（延伸建議、能力總覽）
@@ -125,6 +125,6 @@ SSE `final` 事件的 `data` 可能多一個 `suggestions`（沒有時不會出�
 - [ ] 開新 session 顯示 `greeting` 與 `quickReplies`；空陣列時不顯示按鈕區。
 - [ ] 點選項送 `choiceId`（不送 `message`），並帶目前頁面的 `pageContext`。
 - [ ] `final.suggestions` 顯示在最新回答下方，送出下一則訊息後隱藏。
-- [ ] `choiceId` 回 404 時移除按鈕並提示改用輸入。
+- [ ] `choiceId` 回 409 `EXPERIENCE_CHOICE_UNAVAILABLE` 時移除按鈕並提示改用輸入。
 - [ ] 對話紀錄列表分頁（`nextCursor`），點擊後還原對話。
 - [ ] 封存後從列表移除，並在目前畫面開新 session。

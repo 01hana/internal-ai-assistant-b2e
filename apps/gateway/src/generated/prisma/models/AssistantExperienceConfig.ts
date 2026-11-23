@@ -33,6 +33,8 @@ export type AssistantExperienceConfigMinAggregateOutputType = {
   status: $Enums.AssistantExperienceConfigStatus | null
   activeSlot: string | null
   checksum: string | null
+  source: $Enums.AssistantExperienceConfigSource | null
+  createdByUserId: string | null
   createdAt: Date | null
   activatedAt: Date | null
 }
@@ -45,6 +47,8 @@ export type AssistantExperienceConfigMaxAggregateOutputType = {
   status: $Enums.AssistantExperienceConfigStatus | null
   activeSlot: string | null
   checksum: string | null
+  source: $Enums.AssistantExperienceConfigSource | null
+  createdByUserId: string | null
   createdAt: Date | null
   activatedAt: Date | null
 }
@@ -58,6 +62,8 @@ export type AssistantExperienceConfigCountAggregateOutputType = {
   activeSlot: number
   payload: number
   checksum: number
+  source: number
+  createdByUserId: number
   createdAt: number
   activatedAt: number
   _all: number
@@ -72,6 +78,8 @@ export type AssistantExperienceConfigMinAggregateInputType = {
   status?: true
   activeSlot?: true
   checksum?: true
+  source?: true
+  createdByUserId?: true
   createdAt?: true
   activatedAt?: true
 }
@@ -84,6 +92,8 @@ export type AssistantExperienceConfigMaxAggregateInputType = {
   status?: true
   activeSlot?: true
   checksum?: true
+  source?: true
+  createdByUserId?: true
   createdAt?: true
   activatedAt?: true
 }
@@ -97,6 +107,8 @@ export type AssistantExperienceConfigCountAggregateInputType = {
   activeSlot?: true
   payload?: true
   checksum?: true
+  source?: true
+  createdByUserId?: true
   createdAt?: true
   activatedAt?: true
   _all?: true
@@ -183,6 +195,8 @@ export type AssistantExperienceConfigGroupByOutputType = {
   activeSlot: string | null
   payload: runtime.JsonValue
   checksum: string
+  source: $Enums.AssistantExperienceConfigSource
+  createdByUserId: string | null
   createdAt: Date
   activatedAt: Date | null
   _count: AssistantExperienceConfigCountAggregateOutputType | null
@@ -217,6 +231,8 @@ export type AssistantExperienceConfigWhereInput = {
   activeSlot?: Prisma.StringNullableFilter<"AssistantExperienceConfig"> | string | null
   payload?: Prisma.JsonFilter<"AssistantExperienceConfig">
   checksum?: Prisma.StringFilter<"AssistantExperienceConfig"> | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceFilter<"AssistantExperienceConfig"> | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.StringNullableFilter<"AssistantExperienceConfig"> | string | null
   createdAt?: Prisma.DateTimeFilter<"AssistantExperienceConfig"> | Date | string
   activatedAt?: Prisma.DateTimeNullableFilter<"AssistantExperienceConfig"> | Date | string | null
   customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
@@ -231,6 +247,8 @@ export type AssistantExperienceConfigOrderByWithRelationInput = {
   activeSlot?: Prisma.SortOrderInput | Prisma.SortOrder
   payload?: Prisma.SortOrder
   checksum?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  createdByUserId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   activatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   customer?: Prisma.CustomerOrderByWithRelationInput
@@ -249,6 +267,8 @@ export type AssistantExperienceConfigWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.EnumAssistantExperienceConfigStatusFilter<"AssistantExperienceConfig"> | $Enums.AssistantExperienceConfigStatus
   payload?: Prisma.JsonFilter<"AssistantExperienceConfig">
   checksum?: Prisma.StringFilter<"AssistantExperienceConfig"> | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceFilter<"AssistantExperienceConfig"> | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.StringNullableFilter<"AssistantExperienceConfig"> | string | null
   createdAt?: Prisma.DateTimeFilter<"AssistantExperienceConfig"> | Date | string
   activatedAt?: Prisma.DateTimeNullableFilter<"AssistantExperienceConfig"> | Date | string | null
   customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
@@ -263,6 +283,8 @@ export type AssistantExperienceConfigOrderByWithAggregationInput = {
   activeSlot?: Prisma.SortOrderInput | Prisma.SortOrder
   payload?: Prisma.SortOrder
   checksum?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  createdByUserId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   activatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.AssistantExperienceConfigCountOrderByAggregateInput
@@ -282,6 +304,8 @@ export type AssistantExperienceConfigScalarWhereWithAggregatesInput = {
   activeSlot?: Prisma.StringNullableWithAggregatesFilter<"AssistantExperienceConfig"> | string | null
   payload?: Prisma.JsonWithAggregatesFilter<"AssistantExperienceConfig">
   checksum?: Prisma.StringWithAggregatesFilter<"AssistantExperienceConfig"> | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceWithAggregatesFilter<"AssistantExperienceConfig"> | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.StringNullableWithAggregatesFilter<"AssistantExperienceConfig"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"AssistantExperienceConfig"> | Date | string
   activatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AssistantExperienceConfig"> | Date | string | null
 }
@@ -294,6 +318,8 @@ export type AssistantExperienceConfigCreateInput = {
   activeSlot?: string | null
   payload: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum: string
+  source?: $Enums.AssistantExperienceConfigSource
+  createdByUserId?: string | null
   createdAt?: Date | string
   activatedAt?: Date | string | null
   customer: Prisma.CustomerCreateNestedOneWithoutAssistantExperienceConfigsInput
@@ -308,6 +334,8 @@ export type AssistantExperienceConfigUncheckedCreateInput = {
   activeSlot?: string | null
   payload: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum: string
+  source?: $Enums.AssistantExperienceConfigSource
+  createdByUserId?: string | null
   createdAt?: Date | string
   activatedAt?: Date | string | null
 }
@@ -320,6 +348,8 @@ export type AssistantExperienceConfigUpdateInput = {
   activeSlot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceFieldUpdateOperationsInput | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   activatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   customer?: Prisma.CustomerUpdateOneRequiredWithoutAssistantExperienceConfigsNestedInput
@@ -334,6 +364,8 @@ export type AssistantExperienceConfigUncheckedUpdateInput = {
   activeSlot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceFieldUpdateOperationsInput | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   activatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -347,6 +379,8 @@ export type AssistantExperienceConfigCreateManyInput = {
   activeSlot?: string | null
   payload: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum: string
+  source?: $Enums.AssistantExperienceConfigSource
+  createdByUserId?: string | null
   createdAt?: Date | string
   activatedAt?: Date | string | null
 }
@@ -359,6 +393,8 @@ export type AssistantExperienceConfigUpdateManyMutationInput = {
   activeSlot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceFieldUpdateOperationsInput | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   activatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -372,6 +408,8 @@ export type AssistantExperienceConfigUncheckedUpdateManyInput = {
   activeSlot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceFieldUpdateOperationsInput | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   activatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -401,6 +439,8 @@ export type AssistantExperienceConfigCountOrderByAggregateInput = {
   activeSlot?: Prisma.SortOrder
   payload?: Prisma.SortOrder
   checksum?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  createdByUserId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   activatedAt?: Prisma.SortOrder
 }
@@ -413,6 +453,8 @@ export type AssistantExperienceConfigMaxOrderByAggregateInput = {
   status?: Prisma.SortOrder
   activeSlot?: Prisma.SortOrder
   checksum?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  createdByUserId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   activatedAt?: Prisma.SortOrder
 }
@@ -425,6 +467,8 @@ export type AssistantExperienceConfigMinOrderByAggregateInput = {
   status?: Prisma.SortOrder
   activeSlot?: Prisma.SortOrder
   checksum?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  createdByUserId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   activatedAt?: Prisma.SortOrder
 }
@@ -475,6 +519,10 @@ export type EnumAssistantExperienceConfigStatusFieldUpdateOperationsInput = {
   set?: $Enums.AssistantExperienceConfigStatus
 }
 
+export type EnumAssistantExperienceConfigSourceFieldUpdateOperationsInput = {
+  set?: $Enums.AssistantExperienceConfigSource
+}
+
 export type AssistantExperienceConfigCreateWithoutCustomerInput = {
   id?: string
   integrationId: string
@@ -483,6 +531,8 @@ export type AssistantExperienceConfigCreateWithoutCustomerInput = {
   activeSlot?: string | null
   payload: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum: string
+  source?: $Enums.AssistantExperienceConfigSource
+  createdByUserId?: string | null
   createdAt?: Date | string
   activatedAt?: Date | string | null
 }
@@ -495,6 +545,8 @@ export type AssistantExperienceConfigUncheckedCreateWithoutCustomerInput = {
   activeSlot?: string | null
   payload: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum: string
+  source?: $Enums.AssistantExperienceConfigSource
+  createdByUserId?: string | null
   createdAt?: Date | string
   activatedAt?: Date | string | null
 }
@@ -537,6 +589,8 @@ export type AssistantExperienceConfigScalarWhereInput = {
   activeSlot?: Prisma.StringNullableFilter<"AssistantExperienceConfig"> | string | null
   payload?: Prisma.JsonFilter<"AssistantExperienceConfig">
   checksum?: Prisma.StringFilter<"AssistantExperienceConfig"> | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceFilter<"AssistantExperienceConfig"> | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.StringNullableFilter<"AssistantExperienceConfig"> | string | null
   createdAt?: Prisma.DateTimeFilter<"AssistantExperienceConfig"> | Date | string
   activatedAt?: Prisma.DateTimeNullableFilter<"AssistantExperienceConfig"> | Date | string | null
 }
@@ -549,6 +603,8 @@ export type AssistantExperienceConfigCreateManyCustomerInput = {
   activeSlot?: string | null
   payload: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum: string
+  source?: $Enums.AssistantExperienceConfigSource
+  createdByUserId?: string | null
   createdAt?: Date | string
   activatedAt?: Date | string | null
 }
@@ -561,6 +617,8 @@ export type AssistantExperienceConfigUpdateWithoutCustomerInput = {
   activeSlot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceFieldUpdateOperationsInput | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   activatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -573,6 +631,8 @@ export type AssistantExperienceConfigUncheckedUpdateWithoutCustomerInput = {
   activeSlot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceFieldUpdateOperationsInput | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   activatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -585,6 +645,8 @@ export type AssistantExperienceConfigUncheckedUpdateManyWithoutCustomerInput = {
   activeSlot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   checksum?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumAssistantExperienceConfigSourceFieldUpdateOperationsInput | $Enums.AssistantExperienceConfigSource
+  createdByUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   activatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -600,6 +662,8 @@ export type AssistantExperienceConfigSelect<ExtArgs extends runtime.Types.Extens
   activeSlot?: boolean
   payload?: boolean
   checksum?: boolean
+  source?: boolean
+  createdByUserId?: boolean
   createdAt?: boolean
   activatedAt?: boolean
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
@@ -614,6 +678,8 @@ export type AssistantExperienceConfigSelectCreateManyAndReturn<ExtArgs extends r
   activeSlot?: boolean
   payload?: boolean
   checksum?: boolean
+  source?: boolean
+  createdByUserId?: boolean
   createdAt?: boolean
   activatedAt?: boolean
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
@@ -628,6 +694,8 @@ export type AssistantExperienceConfigSelectUpdateManyAndReturn<ExtArgs extends r
   activeSlot?: boolean
   payload?: boolean
   checksum?: boolean
+  source?: boolean
+  createdByUserId?: boolean
   createdAt?: boolean
   activatedAt?: boolean
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
@@ -642,11 +710,13 @@ export type AssistantExperienceConfigSelectScalar = {
   activeSlot?: boolean
   payload?: boolean
   checksum?: boolean
+  source?: boolean
+  createdByUserId?: boolean
   createdAt?: boolean
   activatedAt?: boolean
 }
 
-export type AssistantExperienceConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "integrationId" | "configVersion" | "status" | "activeSlot" | "payload" | "checksum" | "createdAt" | "activatedAt", ExtArgs["result"]["assistantExperienceConfig"]>
+export type AssistantExperienceConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "integrationId" | "configVersion" | "status" | "activeSlot" | "payload" | "checksum" | "source" | "createdByUserId" | "createdAt" | "activatedAt", ExtArgs["result"]["assistantExperienceConfig"]>
 export type AssistantExperienceConfigInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
 }
@@ -675,6 +745,11 @@ export type $AssistantExperienceConfigPayload<ExtArgs extends runtime.Types.Exte
     activeSlot: string | null
     payload: runtime.JsonValue
     checksum: string
+    source: $Enums.AssistantExperienceConfigSource
+    /**
+     * Admin back-office user who saved this version; null for provisioning. No foreign key: the admin tables are not Core's.
+     */
+    createdByUserId: string | null
     createdAt: Date
     activatedAt: Date | null
   }, ExtArgs["result"]["assistantExperienceConfig"]>
@@ -1109,6 +1184,8 @@ export interface AssistantExperienceConfigFieldRefs {
   readonly activeSlot: Prisma.FieldRef<"AssistantExperienceConfig", 'String'>
   readonly payload: Prisma.FieldRef<"AssistantExperienceConfig", 'Json'>
   readonly checksum: Prisma.FieldRef<"AssistantExperienceConfig", 'String'>
+  readonly source: Prisma.FieldRef<"AssistantExperienceConfig", 'AssistantExperienceConfigSource'>
+  readonly createdByUserId: Prisma.FieldRef<"AssistantExperienceConfig", 'String'>
   readonly createdAt: Prisma.FieldRef<"AssistantExperienceConfig", 'DateTime'>
   readonly activatedAt: Prisma.FieldRef<"AssistantExperienceConfig", 'DateTime'>
 }

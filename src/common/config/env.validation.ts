@@ -1,5 +1,6 @@
 import { plainToInstance, Transform } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Matches, Max, Min, validateSync } from 'class-validator';
+import { isJsonStringArray } from './json-string-array';
 
 export const MAX_INTERNAL_IDENTITY_CLOCK_TOLERANCE_SECONDS = 300;
 
@@ -124,13 +125,4 @@ export function validateEnvironment(config: Record<string, unknown>) {
   }
 
   return validatedConfig;
-}
-
-function isJsonStringArray(value: string): boolean {
-  try {
-    const parsed: unknown = JSON.parse(value);
-    return Array.isArray(parsed) && parsed.every((entry) => typeof entry === 'string');
-  } catch {
-    return false;
-  }
 }

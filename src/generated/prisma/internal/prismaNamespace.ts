@@ -3780,6 +3780,8 @@ export const AssistantExperienceConfigScalarFieldEnum = {
   activeSlot: 'activeSlot',
   payload: 'payload',
   checksum: 'checksum',
+  source: 'source',
+  createdByUserId: 'createdByUserId',
   createdAt: 'createdAt',
   activatedAt: 'activatedAt'
 } as const
@@ -4572,6 +4574,20 @@ export type EnumAssistantExperienceConfigStatusFieldRefInput<$PrismaModel> = Fie
  * Reference to a field of type 'AssistantExperienceConfigStatus[]'
  */
 export type ListEnumAssistantExperienceConfigStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantExperienceConfigStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'AssistantExperienceConfigSource'
+ */
+export type EnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantExperienceConfigSource'>
+    
+
+
+/**
+ * Reference to a field of type 'AssistantExperienceConfigSource[]'
+ */
+export type ListEnumAssistantExperienceConfigSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssistantExperienceConfigSource[]'>
     
 
 

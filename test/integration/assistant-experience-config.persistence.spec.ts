@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { parseAssistantExperiencePayload } from '../../src/assistant-experience/assistant-experience.parser';
-import { AssistantExperienceRepository, experienceChecksum } from '../../src/assistant-experience/assistant-experience.repository';
+import {
+  AssistantExperienceRepository,
+  ExperienceConfigChangedError,
+  experienceChecksum
+} from '../../src/assistant-experience/assistant-experience.repository';
 import type { AssistantExperiencePayloadV1 } from '../../src/assistant-experience/assistant-experience.types';
 import { ReviewSourceType } from '../../src/generated/prisma/enums';
 import { createUs1DbClient, describeDbBackedUs1 } from '../support/us1-db-test.helper';
@@ -41,6 +45,41 @@ describeDbBackedUs1('AssistantExperienceConfig persistence', () => {
     await repository.activate(payload('1.0.0', 'integration-other'), 'b');
     expect((await repository.findActive('customer-a', 'integration-erp'))?.configVersion).toBe('1.0.0');
     expect((await repository.findActive('customer-a', 'integration-other'))?.configVersion).toBe('1.0.0');
+  });
+
+  it('records who wrote a version: provisioning by default, the admin user when given (Feature 016)', async () => {
+    await repository.activate(payload('1.0.0'), 'a');
+    await repository.saveVersion(payload('1.0.1'), 'b', { source: 'admin', createdByUserId: 'admin-user-1' }, { expectedActiveVersion: '1.0.0' });
+    expect((await repository.findVersion('customer-a', 'integration-erp', '1.0.0'))).toMatchObject({ source: 'provisioning', createdByUserId: null });
+    expect((await repository.findActive('customer-a', 'integration-erp'))).toMatchObject({ configVersion: '1.0.1', source: 'admin', createdByUserId: 'admin-user-1' });
+    expect((await repository.listVersionNumbers('customer-a', 'integration-erp')).sort()).toEqual(['1.0.0', '1.0.1']);
+  });
+
+  it('reactivates an old version and rejects a change made from a stale active version (Feature 016)', async () => {
+    await repository.activate(payload('1.0.0'), 'a');
+    await repository.activate(payload('1.0.1'), 'b');
+    await expect(repository.reactivate('customer-a', 'integration-erp', '1.0.0', { expectedActiveVersion: '1.0.0' }))
+      .rejects.toBeInstanceOf(ExperienceConfigChangedError);
+    const afterActivate = jest.fn(async () => undefined);
+    await repository.reactivate('customer-a', 'integration-erp', '1.0.0', { expectedActiveVersion: '1.0.1', afterActivate });
+    expect(afterActivate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ configVersion: '1.0.0', status: 'active' }));
+    expect((await repository.findVersion('customer-a', 'integration-erp', '1.0.1'))?.status).toBe('retired');
+  });
+
+  it('rolls back the activation when the same-transaction side effect fails (Feature 016)', async () => {
+    await repository.activate(payload('1.0.0'), 'a');
+    await expect(repository.saveVersion(payload('1.0.1'), 'b', { source: 'admin', createdByUserId: 'u' },
+      { expectedActiveVersion: '1.0.0', afterActivate: async () => { throw new Error('audit failed'); } })).rejects.toThrow('audit failed');
+    expect((await repository.findActive('customer-a', 'integration-erp'))?.configVersion).toBe('1.0.0');
+    expect(await repository.findVersion('customer-a', 'integration-erp', '1.0.1')).toBeNull();
+  });
+
+  it('lets only one of two concurrent saves from the same active version win (Feature 016)', async () => {
+    await repository.activate(payload('1.0.0'), 'a');
+    const save = () => repository.saveVersion(payload('1.0.1'), 'b', { source: 'admin', createdByUserId: 'u' }, { expectedActiveVersion: '1.0.0' });
+    const results = await Promise.allSettled([save(), save()]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.find((result) => result.status === 'rejected')).toMatchObject({ reason: expect.any(ExperienceConfigChangedError) });
   });
 
   it('allows a null session title and the unsupported_question review source', async () => {

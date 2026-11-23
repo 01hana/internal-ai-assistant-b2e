@@ -10,28 +10,34 @@ import { ProvisionAssistantExperienceCommand, ProvisionAssistantExperienceError 
 
 /**
  * Usage (compiled into the Core image so it can run inside the deployment):
- *   node dist/src/assistant-experience/provision-assistant-experience.cli.js --file <path> [--check] [--allow-unverified]
- * Validates against the Capability Packs configured by ASSISTANT_CAPABILITY_PACK_PATHS_JSON.
+ *   node dist/src/assistant-experience/provision-assistant-experience.cli.js --file <path> [--check] [--allow-unverified] [--force]
+ * Validates against the Capability Packs configured by ASSISTANT_CAPABILITY_PACK_PATHS_JSON. `--force` replaces a
+ * version saved in the admin back-office (Feature 016: otherwise refused, ADMIN_MANAGED).
  */
 export interface ProvisionCliArguments {
   readonly file: string;
   readonly checkOnly: boolean;
   readonly allowUnverified: boolean;
+  readonly force: boolean;
 }
+
+const USAGE = 'Usage: --file <path> [--check] [--allow-unverified] [--force]';
 
 export function parseProvisionCliArguments(argv: readonly string[]): ProvisionCliArguments {
   let file: string | undefined;
   let checkOnly = false;
   let allowUnverified = false;
+  let force = false;
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index];
     if (flag === '--file' && argv[index + 1] && !argv[index + 1].startsWith('--') && file === undefined) file = argv[++index];
     else if (flag === '--check' && !checkOnly) checkOnly = true;
     else if (flag === '--allow-unverified' && !allowUnverified) allowUnverified = true;
-    else throw new Error('Usage: --file <path> [--check] [--allow-unverified]');
+    else if (flag === '--force' && !force) force = true;
+    else throw new Error(USAGE);
   }
-  if (!file) throw new Error('Usage: --file <path> [--check] [--allow-unverified]');
-  return { file, checkOnly, allowUnverified };
+  if (!file) throw new Error(USAGE);
+  return { file, checkOnly, allowUnverified, force };
 }
 
 @Module({ imports: [AppConfigModule, AssistantExperienceModule] })

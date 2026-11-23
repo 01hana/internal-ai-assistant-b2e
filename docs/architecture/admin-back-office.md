@@ -1,11 +1,11 @@
-# 後台管理 API 架構（Feature 014、015）
+# 後台管理 API 架構（Feature 014、015、016）
 
 客戶管理後台（使用者、群組，之後的統計、對話稽核、體驗設定）的後端。規格與決策見 [`specs/014-admin-foundation/`](../../specs/014-admin-foundation/spec.md)；前端串接見 [`docs/frontend-integration/admin-api.md`](../frontend-integration/admin-api.md)。
 
 ## 1. 行程與邊界
 
 - 程式在 Core 的 `src/admin/`，以獨立進入點 `src/admin-main.ts`（`dist/src/admin-main.js`）啟動：與 Core 同一份 build 與 Docker image，但為獨立行程、連接埠 3200、路徑前綴 `/api/v1/admin`。
-- Core 的 `AppModule` 不引入後台；後台不引入 Assistant、LLM、檢索、連接器等模組，也不接受 Gateway 或 Core 的身分 token（架構測試 `test/architecture/admin-boundary.guard.spec.ts` 鎖定）。
+- Core 的 `AppModule` 不引入後台；後台不引入 Assistant、LLM、檢索、連接器等模組（Feature 016 只放行驗證體驗設定所需的檔案，見 §7），也不接受 Gateway 或 Core 的身分 token（架構測試 `test/architecture/admin-boundary.guard.spec.ts` 鎖定）。
 - 一個部署只服務一個 Customer：後台資料表沒有 `customerId`，由 `ADMIN_CUSTOMER_ID` 決定；該 Customer 不存在時拒絕啟動。
 - HTTP 設定集中在 `admin-app.setup.ts`（helmet、cookie、CORS 只允許 `ADMIN_WEB_ORIGIN` 列出的來源、驗證、錯誤格式、`trust proxy`、本機 Swagger），進入點與測試共用。
 
@@ -21,6 +21,7 @@ src/admin/
   bootstrap/      第一個帳號的 CLI
   health/         GET health（含資料庫檢查）
   conversations/ stats/ feedback/ review-items/ audit-events/   015 營運檢視（唯讀；待審項目可改處理狀態）
+  experience-config/   016 體驗設定的檢視、編輯與版本回復
   common/         分頁查詢、批次 ids、DTO transform、請求資訊
 ```
 
@@ -55,10 +56,19 @@ src/admin/
 - **唯讀讀取 Assistant 資料**：後台以 Prisma 直接查 `AssistantSession`、`AssistantMessage`、`FeedbackEvent`、`ReviewItem`、`AuditEvent`，一律以 `ADMIN_CUSTOMER_ID` 過濾；不 import Core 的 Assistant、feedback 等模組（架構測試以實際路徑判斷）。
 - **對話內容只有一個出口**：`conversations/conversation-content.ts` 檢查 `Conversation:read`，依序「讀取 → 寫 `admin_conversation_viewed` → 回傳」，稽核寫入失敗就不回傳內容。列表只含對話標題，不寫稽核。
 - **統計**在 PostgreSQL 彙總（`date_trunc`、`AT TIME ZONE ADMIN_TIME_ZONE`、`generate_series` 補 0），參數化的 `$queryRaw`。
-- **待審項目對應的訊息**：`COALESCE(suggestedImprovement->>'messageId', sourceId)`，集中在 `review-items/review-item-source.ts`。處理狀態寫在 `ReviewItem`（`note`、`resolvedAt`），處理紀錄以 `admin_review_item_updated` 稽核為準。
+- **待審項目對應的訊息**：`suggestedImprovement.messageId`，沒有時為 `sourceId`，集中在 `review-items/review-item-source.ts` 的 `messageIdOf`。對話詳情只回每則回答的評分，不含回饋原因與待審項目。處理狀態寫在 `ReviewItem`（`note`、`resolvedAt`），處理紀錄以 `admin_review_item_updated` 稽核為準。
 - **開發工程師遮蔽**集中在 `audit/audit-actor.ts`（後台稽核與待審項目的處理紀錄共用）。
 - Core 舊的 `/api/v1/admin/assistant/review-items` 已移除；架構測試確保 Core 沒有 `/admin` 路由。
 
-## 7. 擴充（Feature 016 之後）
+## 7. 體驗設定（Feature 016）
+
+- **沿用 013 的資料與規則**：版本表 `AssistantExperienceConfig`、payload v1、parser（結構）與 validator（Capability Pack 交叉驗證）。後台不另寫欄位規則。
+- **儲存即生效**：`repository.saveVersion` 只新增版本（版本號為所有版本中最大者的下一個 patch），在同一交易中退役原 active、啟用新版本並寫入 `admin_experience_config_saved`；稽核失敗則整筆不生效。回復舊版本用 `reactivate`（不產生新版本號，`admin_experience_config_activated`）。兩者都以 `baseConfigVersion` 做樂觀鎖，同時儲存時只有一個成功（唯一鍵衝突轉為 409）。
+- **來源**：`source`（`provisioning`／`admin`）與 `createdByUserId`（不建外鍵，顯示時由後台查詢並遮蔽開發工程師）。provisioning 指令在 active 版本為後台儲存時拒絕覆蓋（`ADMIN_MANAGED`），需 `--force`。
+- **後台載入 Capability Pack**：`experience-config/experience-validation.module.ts` 只提供 Pack 載入、目錄、binding 解析、Tool 註冊表與體驗設定的 parser／validator／repository；`ASSISTANT_CAPABILITY_PACK_PATHS_JSON` 必須與 Core 相同（部署範本掛載同一個 Pack 目錄，`preflight` 檢查）。架構測試沿相對 import 走訪後台實際載入的檔案，禁止的模組只放行列出的檔案，清單沒有多餘項目。
+- **權限**：`ExperienceConfig` 只有 `read`（檢視、能力目錄、版本）與 `update`（驗證、儲存、回復）。
+- **已開啟對話的舊選項**：Core 對不再提供的選項回 409 `EXPERIENCE_CHOICE_UNAVAILABLE`，Gateway 原樣轉送，SDK 移除該按鈕並提示。
+
+## 8. 擴充
 
 新增 subject 或動作只需修改 `src/admin/permissions/subjects.ts`：內建群組自動取得，自訂群組不會自動取得。新模組放在 `src/admin/<模組>/`，在 `AdminModule` 註冊，並為每個路由宣告權限；若需要讀取 Assistant 的資料，於架構測試逐一放行所需模組。

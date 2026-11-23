@@ -9,7 +9,6 @@ import { periodWhere } from '../common/period.dto';
 import type { RequestMeta } from '../common/request-meta';
 import { keywordWhere, orderByOf, pageArgs, type TablePage } from '../common/table-query.dto';
 import { AdminSettings } from '../config/admin-settings';
-import { reviewItemsForMessages } from '../review-items/review-item-source';
 import { ConversationContentService } from './conversation-content';
 import type { ConversationFiltersDto, ConversationTableQueryDto } from './conversations.dto';
 
@@ -56,7 +55,10 @@ export class ConversationsService {
     return { status: optionsOf(SESSION_STATUS_LABELS), hostApps: hostApps.map(({ hostApp }) => ({ value: hostApp, label: hostApp })) };
   }
 
-  /** The conversation with its newest messages (at most 500), their feedback and review items. Audited. */
+  /**
+   * The conversation with its newest messages (at most 500). Each answer carries only its rating (one feedback per
+   * answer); the reason and review items live on their own pages. Audited.
+   */
   async get(principal: AdminPrincipal, id: string, meta: RequestMeta) {
     const customerId = this.settings.customerId;
     const session = await this.prisma.db.assistantSession.findFirst({ where: { customerId, id } });
@@ -65,10 +67,10 @@ export class ConversationsService {
       where: { customerId, sessionId: id, role: { in: VISIBLE_ROLES } },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: MESSAGE_LIMIT + 1,
-      include: { feedbackEvents: { select: { id: true, rating: true, reason: true, comment: true, createdAt: true }, orderBy: { createdAt: 'asc' } } }
+      // Older data may hold several feedback rows for one answer: the latest one counts.
+      include: { feedbackEvents: { select: { rating: true }, orderBy: { updatedAt: 'desc' }, take: 1 } }
     });
     const messages = newest.slice(0, MESSAGE_LIMIT).reverse();
-    const reviewItems = await reviewItemsForMessages(this.prisma, customerId, messages.map((message) => message.id));
 
     await this.content.recordView(principal, meta, id, { via: 'conversation' });
     return {
@@ -80,8 +82,7 @@ export class ConversationsService {
         content: message.content,
         answerDecision: message.answerDecision,
         createdAt: message.createdAt.toISOString(),
-        feedback: message.feedbackEvents.map((feedback) => ({ ...feedback, createdAt: feedback.createdAt.toISOString() })),
-        reviewItems: reviewItems.filter((item) => item.messageId === message.id).map(({ id: itemId, sourceType, status }) => ({ id: itemId, sourceType, status }))
+        feedback: message.feedbackEvents[0]?.rating ?? null
       }))
     };
   }

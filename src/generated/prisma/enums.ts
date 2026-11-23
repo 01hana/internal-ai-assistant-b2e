@@ -285,6 +285,14 @@ export const AssistantExperienceConfigStatus = {
 export type AssistantExperienceConfigStatus = (typeof AssistantExperienceConfigStatus)[keyof typeof AssistantExperienceConfigStatus]
 
 
+export const AssistantExperienceConfigSource = {
+  provisioning: 'provisioning',
+  admin: 'admin'
+} as const
+
+export type AssistantExperienceConfigSource = (typeof AssistantExperienceConfigSource)[keyof typeof AssistantExperienceConfigSource]
+
+
 export const ClarificationQuestionStatus = {
   pending: 'pending',
   answered: 'answered',

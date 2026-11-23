@@ -147,6 +147,9 @@ preflight() {
     grep -qE "^$v=.+" "$CONFIG_DIR/admin.env" 2>/dev/null || { warn "admin.env 的 $v 尚未填入"; fail=1; }
   done
   [ -s "$PACK_DIR/shinmone-scm-kpistats.json" ] || { warn "Active Pack 尚未上傳到 $PACK_DIR"; fail=1; }
+  # Feature 016：後台的體驗設定編輯以同一份 Capability Pack 驗證
+  [ "$(grep -E '^ASSISTANT_CAPABILITY_PACK_PATHS_JSON=' "$CONFIG_DIR/admin.env" 2>/dev/null)" = "$(grep -E '^ASSISTANT_CAPABILITY_PACK_PATHS_JSON=' "$CONFIG_DIR/core.env" 2>/dev/null)" ] \
+    || { warn "admin.env 的 ASSISTANT_CAPABILITY_PACK_PATHS_JSON 必須與 core.env 相同"; fail=1; }
   grep -qE '^GATEWAY_SIGNING_KEY_REFERENCE=file://' "$CONFIG_DIR/gateway.env" 2>/dev/null || { warn "gateway.env 的 GATEWAY_SIGNING_KEY_REFERENCE 必須是 file:///run/secrets/gateway_signing_key"; fail=1; }
 
   echo "== Secrets（${SECRET_DIR}，只檢查是否存在）"

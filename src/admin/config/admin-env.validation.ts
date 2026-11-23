@@ -1,5 +1,6 @@
 import { plainToInstance, Transform } from 'class-transformer';
 import { ArrayNotEmpty, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsTimeZone, IsUrl, Max, Min, validateSync } from 'class-validator';
+import { isJsonStringArray } from '../../common/config/json-string-array';
 
 const runtimeEnvironments = ['development', 'test', 'production'] as const;
 const booleanStrings = ['true', 'false'] as const;
@@ -59,6 +60,14 @@ export class AdminEnvironmentVariables {
   @IsTimeZone()
   ADMIN_TIME_ZONE = 'Asia/Taipei';
 
+  /**
+   * Feature 016: the Capability Packs Core loads (same value as Core's), as a JSON array of file paths. The experience
+   * config editor lists their capabilities and validates against them; `[]` leaves editing unavailable.
+   */
+  @IsOptional()
+  @IsString()
+  ASSISTANT_CAPABILITY_PACK_PATHS_JSON = '[]';
+
   /** Serves Swagger UI at /api/v1/admin/docs. Local development only (rejected in production). */
   @IsOptional()
   @IsIn(booleanStrings)
@@ -116,6 +125,10 @@ export function validateAdminEnvironment(config: Record<string, unknown>): Admin
   }
   if (validated.ADMIN_COOKIE_SECURE === 'false' && validated.NODE_ENV === 'production') {
     messages.push('ADMIN_COOKIE_SECURE=false is only allowed outside production.');
+  }
+
+  if (!isJsonStringArray(validated.ASSISTANT_CAPABILITY_PACK_PATHS_JSON)) {
+    messages.push('ASSISTANT_CAPABILITY_PACK_PATHS_JSON must be a JSON array of file paths.');
   }
 
   if (messages.length > 0) {

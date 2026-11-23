@@ -1,12 +1,12 @@
 import 'reflect-metadata';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { AdminModule } from '../../src/admin/admin.module';
 import { ROUTE_ACCESS } from '../../src/admin/authorization/route-access.decorator';
 
 /**
  * Feature 014 T016: the admin API is a separate process. Core never loads it, it never loads the
- * Assistant runtime, and every admin route declares its access.
+ * Assistant runtime (Feature 016: apart from the listed experience-config files), and every admin route declares its access.
  */
 const root = process.cwd();
 const src = join(root, 'src');
@@ -20,6 +20,34 @@ function sourceFiles(directory: string): string[] {
 }
 
 const importsOf = (file: string) => [...readFileSync(file, 'utf8').matchAll(/from\s+['"]([^'"]+)['"]|require\(['"]([^'"]+)['"]\)/g)].map((match) => match[1] ?? match[2]);
+/** Core modules the admin API must not load (Feature 014): Assistant runtime, LLM, retrieval, connectors… */
+const ADMIN_FORBIDDEN_MODULES = new Set(['assistant', 'assistant-experience', 'llm', 'query-understanding', 'query-scope', 'retrieval', 'tools',
+  'connectors', 'capabilities', 'host-integration', 'identity', 'approvals', 'evidence', 'feedback']);
+
+/** Feature 016 FR-008: the only files of those modules the admin API may load, to validate experience configurations. */
+const ADMIN_ALLOWED_CORE_FILES = new Set([
+  'assistant-experience/assistant-experience.types.ts',
+  'assistant-experience/assistant-experience.parser.ts',
+  'assistant-experience/assistant-experience.validator.ts',
+  'assistant-experience/assistant-experience.repository.ts',
+  'capabilities/capability-catalog.registry.ts',
+  'capabilities/capability-pack.loader.ts',
+  'capabilities/capability-pack.parser.ts',
+  'capabilities/capability-binding-resolver.service.ts',
+  'capabilities/capability-parameter-resolver.service.ts',
+  'tools/tool-registry.service.ts',
+  'tools/tool-registry.types.ts',
+  'tools/customer-tool-policy.service.ts',
+  'identity/customer-scope.types.ts'
+]);
+
+const runtimeImportsOf = (file: string) => [...readFileSync(file, 'utf8').matchAll(/^(?:import|export)\s+(?!type\s)[^;]*?from\s+['"](\.[^'"]+)['"]/gms)].map((match) => match[1]);
+
+function resolveSource(file: string, specifier: string): string[] {
+  const base = join(dirname(file), specifier);
+  return [`${base}.ts`, join(base, 'index.ts')].filter((candidate) => candidate.startsWith(src + sep) && !candidate.includes(`${sep}generated${sep}`) && existsSync(candidate));
+}
+
 const isAdminFile = (file: string) => file.startsWith(join(src, 'admin') + '/') || file === join(src, 'admin-main.ts');
 
 describe('admin API boundary (Feature 014)', () => {
@@ -31,17 +59,23 @@ describe('admin API boundary (Feature 014)', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('does not load the Assistant runtime, LLM, retrieval or connectors', () => {
-    // Resolved against src/, so the admin API's own folders (e.g. src/admin/feedback) are not mistaken for Core modules.
-    const forbidden = new Set(['assistant', 'assistant-experience', 'llm', 'query-understanding', 'query-scope', 'retrieval', 'tools', 'connectors',
-      'capabilities', 'host-integration', 'identity', 'approvals', 'evidence', 'feedback']);
-    const coreModuleOf = (file: string, specifier: string) => relative(src, join(dirname(file), specifier)).split(sep)[0];
-    const offenders = sourceFiles(join(src, 'admin'))
-      .concat(join(src, 'admin-main.ts'))
-      .flatMap((file) => importsOf(file)
-        .filter((specifier) => specifier.startsWith('.') && forbidden.has(coreModuleOf(file, specifier)))
-        .map((specifier) => `${relative(root, file)} -> ${specifier}`));
+  it('does not load the Assistant runtime, LLM, retrieval or connectors (Feature 016: only the listed experience-config files)', () => {
+    // Every file the admin API loads at runtime, followed through relative imports; `import type` is erased by TypeScript.
+    const seen = new Set<string>();
+    const pending = sourceFiles(join(src, 'admin')).concat(join(src, 'admin-main.ts'));
+    while (pending.length > 0) {
+      const file = pending.pop()!;
+      if (seen.has(file)) continue;
+      seen.add(file);
+      pending.push(...runtimeImportsOf(file).flatMap((specifier) => resolveSource(file, specifier)));
+    }
+    const offenders = [...seen]
+      .map((file) => relative(src, file).split(sep).join('/'))
+      .filter((path) => ADMIN_FORBIDDEN_MODULES.has(path.split('/')[0]) && !ADMIN_ALLOWED_CORE_FILES.has(path));
     expect(offenders).toEqual([]);
+    // The list stays exact: an entry the admin API no longer loads is removed.
+    const loaded = new Set([...seen].map((file) => relative(src, file).split(sep).join('/')));
+    expect([...ADMIN_ALLOWED_CORE_FILES].filter((path) => !loaded.has(path))).toEqual([]);
   });
 
   it('declares route access on every admin controller method', () => {

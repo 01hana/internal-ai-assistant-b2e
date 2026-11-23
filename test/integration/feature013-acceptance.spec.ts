@@ -74,7 +74,8 @@ describe('Feature 013 acceptance', () => {
         expect(result.status).toBe(200);
         expect(result.resolution).toEqual(expect.objectContaining({ outcome: 'RESOLVED', reasonCode: 'DECLARED_CHOICE' }));
       } else {
-        expect(result.status).toBe(404);
+        // Feature 016: a choice that is not offered is EXPERIENCE_CHOICE_UNAVAILABLE (was a missing session).
+        expect(result.status).toBe(409);
         expect(result.resolution).toBeUndefined();
       }
     }

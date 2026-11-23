@@ -74,7 +74,9 @@ export const ADMIN_AUDIT_EVENT_LABELS = {
   admin_user_group_updated: '修改群組',
   admin_user_group_deleted: '刪除群組',
   admin_conversation_viewed: '查看對話內容',
-  admin_review_item_updated: '更新待審項目'
+  admin_review_item_updated: '更新待審項目',
+  admin_experience_config_saved: '儲存體驗設定',
+  admin_experience_config_activated: '回復體驗設定版本'
 } satisfies Record<AdminAuditEventType, string>;
 
 /** `{ value, label }` options for `getFilters`, in declaration order. */

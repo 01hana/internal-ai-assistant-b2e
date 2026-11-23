@@ -166,9 +166,14 @@ export class GatewayBackendClient {
         body,
         signal: abortController.signal
       });
+      if (!response.ok && typeof response.json === 'function') {
+        const failure: unknown = await response.json();
+        if (isSafeBackendReadFailure(response.status, failure, MESSAGE_REJECTIONS)) throw new BackendMessageRejectedError(response.status, failure);
+      }
       if (!response.ok || !isReadableSseBody(response.body)) throw new BackendUnavailableError();
       return forwardSseStream(response.body, abortController);
-    } catch {
+    } catch (error) {
+      if (error instanceof BackendMessageRejectedError) throw error;
       throw new BackendUnavailableError();
     }
   }
@@ -214,6 +219,18 @@ export class GatewayBackendClient {
     } catch {
       throw new BackendUnavailableError();
     }
+  }
+}
+
+/**
+ * Feature 016: Core refused the message before any SSE output for a reason the client can act on (an experience
+ * choice that no longer exists, 409). The Backend's JSON error is passed through instead of BACKEND_UNAVAILABLE.
+ */
+export class BackendMessageRejectedError extends Error {
+  readonly code = 'BACKEND_MESSAGE_REJECTED';
+
+  constructor(readonly statusCode: number, readonly body: unknown) {
+    super('Backend rejected the message.');
   }
 }
 
@@ -266,6 +283,8 @@ const SESSION_READ_FAILURES: readonly number[] = Object.freeze([401, 403, 404]);
 const SESSION_LIST_FAILURES: readonly number[] = Object.freeze([400, 401, 403]);
 /** Feedback: invalid input or not an answer (400), identity (401/403), message not found for this Customer (404). */
 const FEEDBACK_FAILURES: readonly number[] = Object.freeze([400, 401, 403, 404]);
+/** Send message: the choice is no longer offered (409 EXPERIENCE_CHOICE_UNAVAILABLE, Feature 016). */
+const MESSAGE_REJECTIONS: readonly number[] = Object.freeze([409]);
 
 function isSafeBackendReadFailure(statusCode: number, body: unknown, allowedStatuses: readonly number[]): boolean {
   if (!allowedStatuses.includes(statusCode) || !isRecord(body) || !isNonBlankString(body.requestId) || !isRecord(body.error)) return false;

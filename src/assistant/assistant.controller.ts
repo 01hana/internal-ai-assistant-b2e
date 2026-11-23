@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
@@ -150,11 +151,14 @@ export class AssistantController {
 
     const customerScope = createCustomerScopeFromHostIntegrationContext(host);
     await this.assistantSessionService.getVisibleSession(sessionId, customerScope);
-    // Feature 013: a choice is resolved and permission-checked before any SSE output; unknown or no
-    // longer permitted choices are indistinguishable from a missing session.
+    // Feature 013: a choice is resolved and permission-checked before any SSE output. Feature 016: once the session is
+    // known to be visible, a choice that is no longer offered (edited in the admin, or no longer permitted) is a 409 the
+    // client acts on by showing the current choices; it reveals nothing beyond "not available".
     const experienceChoice = body.choiceId === undefined || !this.experience ? undefined
       : await this.experience.resolveChoice(host, body.choiceId);
-    if (body.choiceId !== undefined && !experienceChoice) throw this.assistantSessionService.createSessionNotFoundError();
+    if (body.choiceId !== undefined && !experienceChoice) {
+      throw new ConflictException({ error: "EXPERIENCE_CHOICE_UNAVAILABLE", message: "這個選項已更新，請重新選擇。" });
+    }
     const message = experienceChoice ? experienceChoice.message : body.message!;
 
     response.status(HttpStatus.OK);

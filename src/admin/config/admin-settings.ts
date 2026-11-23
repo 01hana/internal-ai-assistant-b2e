@@ -47,6 +47,11 @@ export class AdminSettings {
     return this.env.ADMIN_TIME_ZONE;
   }
 
+  /** Feature 016: Capability Pack files (JSON array), loaded at startup like Core. */
+  get capabilityPackPathsJson(): string {
+    return this.env.ASSISTANT_CAPABILITY_PACK_PATHS_JSON;
+  }
+
   get trustedProxyHops(): number {
     return this.env.ADMIN_TRUSTED_PROXY_HOPS;
   }

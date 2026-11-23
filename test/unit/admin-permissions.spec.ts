@@ -39,7 +39,7 @@ describe('admin permissions', () => {
       Conversation: ['read'],
       ReviewItem: ['read', 'update'],
       Feedback: ['read'],
-      ExperienceConfig: ['read', 'create', 'update']
+      ExperienceConfig: ['read', 'update']
     });
     expect(permissionCatalog().map((entry) => entry.subject)).toEqual(Object.keys(ADMIN_SUBJECTS));
     expect(permissionCatalog().every((entry) => entry.label.length > 0)).toBe(true);
@@ -55,7 +55,7 @@ describe('admin permissions', () => {
     expect(formatPermission(parsePermission(value)!)).toBe(value);
   });
 
-  it.each(['Conversation:readContent', 'ReviewItem:resolve', 'ExperienceConfig:activate', 'User:assignGroup',
+  it.each(['Conversation:readContent', 'ReviewItem:resolve', 'ExperienceConfig:activate', 'ExperienceConfig:create', 'User:assignGroup',
     'Conversation:update', 'Unknown:read', 'all:read', 'User', 'User:read:extra', ''])('rejects %s', (value) => {
     expect(parsePermission(value)).toBeNull();
   });

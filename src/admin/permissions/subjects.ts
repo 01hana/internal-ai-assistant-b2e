@@ -24,7 +24,7 @@ export const ADMIN_SUBJECTS = {
   Conversation: { label: '對話紀錄', actions: ['read'] },
   ReviewItem: { label: '待處理項目', actions: ['read', 'update'] },
   Feedback: { label: '使用者回饋', actions: ['read'] },
-  ExperienceConfig: { label: '體驗設定', actions: ['read', 'create', 'update'] }
+  ExperienceConfig: { label: '體驗設定', actions: ['read', 'update'] }
 } as const satisfies Record<string, SubjectDefinition>;
 
 export type AdminSubject = keyof typeof ADMIN_SUBJECTS;
