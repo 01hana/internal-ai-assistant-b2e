@@ -1,7 +1,7 @@
 # Tasks: Feature 016 — Admin Experience Config
 
 **Spec**: [`spec.md`](./spec.md)　**Design**: [`design.md`](./design.md)　**Plan**: [`plan.md`](./plan.md)
-**Status**: 完成（Gate 2 PASS，2026-11-22）；與後台前端 Feature 002 一起部署
+**Status**: 完成（Gate 2 PASS，2026-11-22）；2026-11-23 合併到 main，與後台前端 Feature 002 一起部署
 
 ## Phase 0 — 基線與共用
 
