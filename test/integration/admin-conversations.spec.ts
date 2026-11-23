@@ -71,15 +71,19 @@ describeDbBackedAdmin('admin conversations (Feature 015)', () => {
   });
 
   describe('content (US1-3, SC-003, SC-004)', () => {
-    it('returns the messages with feedback and review items, and records every read', async () => {
+    it('returns the messages with each answer\'s rating only, and records every read', async () => {
       const { body } = await read(ids.stock).expect(200);
       expect(body.data).toMatchObject({ id: ids.stock, status: 'active', truncated: false });
       expect(body.data.messages.map((message: { role: string; content: string }) => [message.role, message.content]))
         .toEqual([['user', '庫存還有多少？'], ['assistant', '目前無法回答。']]);
-      expect(body.data.messages[1]).toMatchObject({ answerDecision: 'no_answer', reviewItems: [{ sourceType: 'no_answer', status: 'open' }] });
+      expect(body.data.messages[1]).toMatchObject({ answerDecision: 'no_answer', feedback: null });
+      expect(body.data.messages[1]).not.toHaveProperty('reviewItems');
+      expect(body.data).not.toHaveProperty('reviewItems');
 
       const shipped = await read(ids.shipped).expect(200);
-      expect(shipped.body.data.messages[1].feedback).toEqual([expect.objectContaining({ rating: 'negative', reason: 'wrong' })]);
+      expect(shipped.body.data.messages[1].feedback).toBe('negative');
+      // The reason and comment stay on the feedback page.
+      expect(JSON.stringify(shipped.body)).not.toContain('wrong');
 
       await read(ids.stock).expect(200);
       const events = await viewed();

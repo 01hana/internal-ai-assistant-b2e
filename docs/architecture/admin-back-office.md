@@ -56,7 +56,7 @@ src/admin/
 - **唯讀讀取 Assistant 資料**：後台以 Prisma 直接查 `AssistantSession`、`AssistantMessage`、`FeedbackEvent`、`ReviewItem`、`AuditEvent`，一律以 `ADMIN_CUSTOMER_ID` 過濾；不 import Core 的 Assistant、feedback 等模組（架構測試以實際路徑判斷）。
 - **對話內容只有一個出口**：`conversations/conversation-content.ts` 檢查 `Conversation:read`，依序「讀取 → 寫 `admin_conversation_viewed` → 回傳」，稽核寫入失敗就不回傳內容。列表只含對話標題，不寫稽核。
 - **統計**在 PostgreSQL 彙總（`date_trunc`、`AT TIME ZONE ADMIN_TIME_ZONE`、`generate_series` 補 0），參數化的 `$queryRaw`。
-- **待審項目對應的訊息**：`COALESCE(suggestedImprovement->>'messageId', sourceId)`，集中在 `review-items/review-item-source.ts`。處理狀態寫在 `ReviewItem`（`note`、`resolvedAt`），處理紀錄以 `admin_review_item_updated` 稽核為準。
+- **待審項目對應的訊息**：`suggestedImprovement.messageId`，沒有時為 `sourceId`，集中在 `review-items/review-item-source.ts` 的 `messageIdOf`。對話詳情只回每則回答的評分，不含回饋原因與待審項目。處理狀態寫在 `ReviewItem`（`note`、`resolvedAt`），處理紀錄以 `admin_review_item_updated` 稽核為準。
 - **開發工程師遮蔽**集中在 `audit/audit-actor.ts`（後台稽核與待審項目的處理紀錄共用）。
 - Core 舊的 `/api/v1/admin/assistant/review-items` 已移除；架構測試確保 Core 沒有 `/admin` 路由。
 

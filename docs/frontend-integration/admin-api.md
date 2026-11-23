@@ -111,7 +111,7 @@
 
 - 列表每一列：`{ id, title, actorId, organizationId, hostApp, status, messageCount, createdAt, lastMessageAt, hasNegativeFeedback, hasUnanswered }`。`status` 預設不含 `deleted`（使用者已刪除的對話，要看時明確傳入）；`keyword` 比對標題；`sort.field` 為 `lastMessageAt`（預設，新到舊）或 `createdAt`；`period` 篩選最後訊息時間。
 - `hasUnanswered`：有「無法回答」「權限不足」「工具失敗」的回答（「需澄清」不算）。
-- 詳情：對話欄位加上 `truncated` 與 `messages: [{ id, role: 'user' | 'assistant', content, answerDecision, createdAt, feedback: [{ id, rating, reason, comment, createdAt }], reviewItems: [{ id, sourceType, status }] }]`，依時間排序；超過 500 則時只回最新 500 則，`truncated: true`。
+- 詳情：對話欄位加上 `truncated` 與 `messages: [{ id, role: 'user' | 'assistant', content, answerDecision, createdAt, feedback }]`。`feedback` 為該則回答的評分（`positive`／`negative`，沒有回饋為 `null`）；回饋的原因與留言在回饋頁，待審項目在待審項目頁，對話詳情不提供。訊息依時間排序；超過 500 則時只回最新 500 則，`truncated: true`。
 
 ### 6.3 統計 `stats`（`Stats:read`）
 
