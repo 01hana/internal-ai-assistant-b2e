@@ -36,6 +36,8 @@ TAG="$(envval DEMO_IMAGE_TAG)"
 CONFIG_DIR="$(envval DEMO_CONFIG_DIR)"; SECRET_DIR="$(envval DEMO_SECRET_DIR)"; PACK_DIR="$(envval DEMO_CAPABILITY_PACK_DIR)"
 
 PROXY_NET="$(envval DEMO_COMPANY_PROXY_NETWORK)"
+# 後台 API 尚未準備好（網域、SMTP）時設 DEMO_ADMIN_ENABLED=false：只部署助理，略過 admin-api
+ADMIN_ENABLED="$(envval DEMO_ADMIN_ENABLED)"; ADMIN_ENABLED="${ADMIN_ENABLED:-true}"
 dc() {
   local files=(-f "$DIR/compose.yaml" -f "$DIR/compose.images.yaml")
   [ -n "$PROXY_NET" ] && files+=(-f "$DIR/compose.company-nginx.yaml")
@@ -105,6 +107,10 @@ start_edge() {
 }
 
 start_admin() { # 需要 migration 完成、ADMIN_CUSTOMER_ID 已存在（provision 之後）
+  if [ "$ADMIN_ENABLED" = false ]; then
+    warn "略過後台 API（compose.env 的 DEMO_ADMIN_ENABLED=false）"
+    return 0
+  fi
   dc up -d --pull never --no-build --no-deps admin-api
   wait_healthy admin-api 120
 }
@@ -142,14 +148,18 @@ preflight() {
     [ "$(stat -c %a "$p")" = 600 ] || warn "$f.env 權限是 $(stat -c %a "$p")，建議 600"
   done
   grep -qE '^OPENAI_API_KEY=.+' "$CONFIG_DIR/core.env" 2>/dev/null || { warn "core.env 的 OPENAI_API_KEY 尚未填入"; fail=1; }
+  [ -s "$PACK_DIR/shinmone-scm-kpistats.json" ] || { warn "Active Pack 尚未上傳到 $PACK_DIR"; fail=1; }
+  if [ "$ADMIN_ENABLED" = false ]; then
+    warn "後台 API 未啟用（DEMO_ADMIN_ENABLED=false），略過 admin.env 內容檢查"
+  else
   grep -qE '^ADMIN_WEB_ORIGIN=https://' "$CONFIG_DIR/admin.env" 2>/dev/null || { warn "admin.env 的 ADMIN_WEB_ORIGIN 必須是後台網站的 https:// 網址"; fail=1; }
   for v in ADMIN_CUSTOMER_ID ADMIN_MAIL_FROM ADMIN_SMTP_HOST ADMIN_SMTP_PORT; do
     grep -qE "^$v=.+" "$CONFIG_DIR/admin.env" 2>/dev/null || { warn "admin.env 的 $v 尚未填入"; fail=1; }
   done
-  [ -s "$PACK_DIR/shinmone-scm-kpistats.json" ] || { warn "Active Pack 尚未上傳到 $PACK_DIR"; fail=1; }
   # Feature 016：後台的體驗設定編輯以同一份 Capability Pack 驗證
   [ "$(grep -E '^ASSISTANT_CAPABILITY_PACK_PATHS_JSON=' "$CONFIG_DIR/admin.env" 2>/dev/null)" = "$(grep -E '^ASSISTANT_CAPABILITY_PACK_PATHS_JSON=' "$CONFIG_DIR/core.env" 2>/dev/null)" ] \
     || { warn "admin.env 的 ASSISTANT_CAPABILITY_PACK_PATHS_JSON 必須與 core.env 相同"; fail=1; }
+  fi
   grep -qE '^GATEWAY_SIGNING_KEY_REFERENCE=file://' "$CONFIG_DIR/gateway.env" 2>/dev/null || { warn "gateway.env 的 GATEWAY_SIGNING_KEY_REFERENCE 必須是 file:///run/secrets/gateway_signing_key"; fail=1; }
 
   echo "== Secrets（${SECRET_DIR}，只檢查是否存在）"
@@ -231,6 +241,7 @@ case "$CMD" in
     dc ps
     ok "所有服務已啟動。Compose healthy 不等於業務與安全驗收通過，請接著做 E2E 測試。" ;;
   admin-bootstrap)
+    [ "$ADMIN_ENABLED" != false ] || die "後台 API 未啟用（DEMO_ADMIN_ENABLED=false）"
     check_images
     # 在後台 API 的 image 與 admin.env 內執行；邀請連結會寄出，並只在這個終端機顯示一次
     dc run --rm --no-deps -T admin-api node dist/src/admin/bootstrap/admin-bootstrap.cli.js "${@:3}" ;;
