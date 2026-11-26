@@ -41,6 +41,8 @@ ADMIN_ENABLED="$(envval DEMO_ADMIN_ENABLED)"; ADMIN_ENABLED="${ADMIN_ENABLED:-tr
 dc() {
   local files=(-f "$DIR/compose.yaml" -f "$DIR/compose.images.yaml")
   [ -n "$PROXY_NET" ] && files+=(-f "$DIR/compose.company-nginx.yaml")
+  # 主機專屬設定（不進版控），例如 PostgreSQL 18 的資料 volume
+  [ -f "$DIR/compose.local.yaml" ] && files+=(-f "$DIR/compose.local.yaml")
   docker compose --env-file "$ENV_FILE" "${files[@]}" "$@"
 }
 
@@ -85,7 +87,26 @@ backup_db() { # label
   ok "資料庫已備份：${f}（$(du -h "$f" | cut -f1)）"
 }
 
+check_pg_layout() {
+  # PostgreSQL 18 起官方 image 的資料在 /var/lib/postgresql（PGDATA=/var/lib/postgresql/18/docker），
+  # 17 以前在 /var/lib/postgresql/data。掛載位置不符時容器會初始化一個空資料庫，所以先擋下。
+  local img major targets want
+  img="$(envval DEMO_POSTGRES_IMAGE)"
+  major="$(docker image inspect "$img" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | sed -n 's/^PG_MAJOR=//p' | head -1)"
+  [ -n "$major" ] || die "無法判斷 $img 的 PostgreSQL 版本（image 是否已存在？）"
+  targets="$(dc config --format json 2>/dev/null | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+print(" ".join(v.get("target", "") for v in d["services"]["postgres"].get("volumes", []) if v.get("type") == "volume"))')"
+  if [ "${major%%.*}" -ge 18 ]; then want=/var/lib/postgresql; else want=/var/lib/postgresql/data; fi
+  case " $targets " in
+    *" $want "*) ok "PostgreSQL ${major}，資料 volume 掛在 ${want}" ;;
+    *) die "PostgreSQL ${major} 的資料應掛在 ${want}，目前掛在：${targets:-（無）}。直接啟動會變成空資料庫，已停止（見 compose.local.yaml）" ;;
+  esac
+}
+
 run_migration() {
+  check_pg_layout
   dc up -d --pull never --no-build postgres
   wait_healthy postgres 120
   echo "執行 migration（prisma migrate deploy）…"
@@ -172,7 +193,7 @@ preflight() {
   for p in "$(envval DEMO_GATEWAY_HOST_PORT)" "$(envval DEMO_BRIDGE_HOST_PORT)" "$(envval DEMO_ADMIN_HOST_PORT)"; do
     [ -z "$p" ] && continue
     if ss -ltn "( sport = :$p )" 2>/dev/null | grep -q LISTEN; then
-      dc ps --format '{{.Publishers}}' 2>/dev/null | grep -q ":$p->" && ok "127.0.0.1:$p 由本專案使用中" || { warn "Port $p 已被其他程式占用"; fail=1; }
+      dc ps --format '{{.Ports}}' 2>/dev/null | grep -qE "(^|[ ,])127\.0\.0\.1:$p->" && ok "127.0.0.1:$p 由本專案使用中" || { warn "Port $p 已被其他程式占用"; fail=1; }
     else ok "Port $p 可用"; fi
   done
   local sub; sub="$(envval DEMO_BACKEND_SUBNET)"
@@ -197,6 +218,10 @@ for line in sys.stdin:
   if [ -n "$PROXY_NET" ]; then
     docker network inspect "$PROXY_NET" >/dev/null 2>&1 && ok "公司反向代理網路 $PROXY_NET 存在" || { warn "找不到 Docker 網路 $PROXY_NET"; fail=1; }
   fi
+
+  echo "== PostgreSQL 資料位置"
+  [ -f "$DIR/compose.local.yaml" ] && ok "套用主機專屬設定 compose.local.yaml"
+  ( check_pg_layout ) || fail=1
 
   echo "== Compose 語法"
   if dc config --quiet; then ok "compose 設定可解析"; else fail=1; fi

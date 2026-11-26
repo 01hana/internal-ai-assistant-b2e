@@ -20,3 +20,6 @@ nginx-ui-*.conf
 
 # 編輯工具在連結資料夾留下的暫存檔
 .fuse_hidden*
+
+# 主機專屬的 compose 覆寫（例如資料 volume 名稱），只放在該主機
+compose.local.yaml
