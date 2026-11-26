@@ -67,6 +67,7 @@
 | DELETE | `users` | `User:delete` | `{ ids }` | `{ deleted }` |
 
 - `page` 從 1 開始，`pageSize` 最多 100；`sort.field` 可用 `account`、`name`、`lastLoginAt`、`createdAt`；`keyword` 比對帳號、名稱、email。
+- 列表中登入者本人（符合搜尋與篩選時）永遠是第 1 頁第 1 筆，不受排序影響，之後的頁面不會再出現；其他人依排序（預設建立時間新到舊）。`total` 含本人。
 - 帳號 3–64 字元，限英數字與 `.`、`_`、`-`，建立後不可修改；帳號與 email 不分大小寫唯一（`ACCOUNT_TAKEN`、`EMAIL_TAKEN`）。
 - `inviteSent: false` 表示使用者已建立但信沒寄出，請提示管理者稍後「重寄邀請信」。
 - email：`invitationPending` 為 `true` 時可修改（舊連結失效，需重寄）；已啟用後只有開發工程師能改（其他人 `EMAIL_LOCKED`），表單應改為唯讀並提示聯絡開發工程師。

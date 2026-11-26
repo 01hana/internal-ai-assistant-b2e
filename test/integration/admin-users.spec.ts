@@ -66,6 +66,18 @@ describeDbBackedAdmin('admin users (Feature 014)', () => {
       await send('post', '/getTable', admin, { sort: { field: 'passwordHash', order: 'asc' } }).expect(400);
     });
 
+    it('puts the signed-in user first on page 1, outside the sort, and not again on later pages', async () => {
+      await seedUser(ctx.db, { account: 'agent.two', groups: ['客服'] });
+      const ordered = (response: { body: { data: { items: Array<{ account: string }> } } }) => response.body.data.items.map((item) => item.account);
+      const ascending = { sort: { field: 'account', order: 'asc' } };
+      expect(ordered(await send('post', '/getTable', admin, ascending))).toEqual(['ops.admin', 'agent.one', 'agent.two']);
+      const first = await send('post', '/getTable', admin, { ...ascending, pageSize: 2 }).expect(200);
+      expect([ordered(first), first.body.data.total]).toEqual([['ops.admin', 'agent.one'], 3]);
+      expect(ordered(await send('post', '/getTable', admin, { ...ascending, pageSize: 2, page: 2 }))).toEqual(['agent.two']);
+      // Not matching the search: not shown at all.
+      expect(ordered(await send('post', '/getTable', admin, { keyword: 'agent' }))).toEqual(expect.not.arrayContaining(['ops.admin']));
+    });
+
     it('offers group and status filters without the developer group for non-developers', async () => {
       const { body } = await getAs('/getFilters', admin).expect(200);
       expect(body.data.groups.map((group: { label: string }) => group.label)).toEqual(['最高管理者', '客服']);

@@ -42,15 +42,25 @@ export class UsersService {
     private readonly groups: GroupsService
   ) {}
 
+  /**
+   * The signed-in user is always the first row of page 1 (when the search and filters match), outside the sort;
+   * the others follow in the requested order, so page 1 holds one fewer of them and later pages shift by one.
+   */
   async table(principal: AdminPrincipal, query: UserTableQueryDto): Promise<TablePage<UserView>> {
     const where: Prisma.UserWhereInput = {
       AND: [this.visible(principal), keywordWhere(query.keyword, ['account', 'name', 'email']), filtersWhere(query.filters)]
     };
-    const [rows, total] = await this.prisma.db.$transaction([
-      this.prisma.db.user.findMany({ where, include: WITH_GROUPS, orderBy: orderByOf(query.sort, SORTABLE, { createdAt: 'desc' }), ...pageArgs(query) }),
-      this.prisma.db.user.count({ where })
+    const selfId = principal.user.id;
+    const self = await this.prisma.db.user.findFirst({ where: { AND: [where, { id: selfId }] }, include: WITH_GROUPS });
+    const others: Prisma.UserWhereInput = self ? { AND: [where, { id: { not: selfId } }] } : where;
+    const { skip, take } = pageArgs(query);
+    const firstPage = skip === 0;
+    const page = !self ? { skip, take } : firstPage ? { skip: 0, take: take - 1 } : { skip: skip - 1, take };
+    const [rows, count] = await this.prisma.db.$transaction([
+      this.prisma.db.user.findMany({ where: others, include: WITH_GROUPS, orderBy: orderByOf(query.sort, SORTABLE, { createdAt: 'desc' }), ...page }),
+      this.prisma.db.user.count({ where: others })
     ]);
-    return { items: rows.map(toUserView), total };
+    return { items: [...(self && firstPage ? [self] : []), ...rows].map(toUserView), total: count + (self ? 1 : 0) };
   }
 
   async filters(principal: AdminPrincipal) {
