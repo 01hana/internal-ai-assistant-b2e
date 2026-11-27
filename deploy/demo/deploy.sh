@@ -13,6 +13,7 @@
 #   ./deploy.sh app        <compose.env>                 # 啟動 gateway → 啟用簽章金鑰 → 啟動 core → 啟動後台 API
 #   ./deploy.sh admin-bootstrap <compose.env> --account <a> --name <n> --email <e>  # 建立第一個後台帳號（開發工程師），只在沒有任何後台使用者時可執行
 #   ./deploy.sh upgrade    <compose.env> <images.tar> <sha256>  # 升級既有部署：備份 → 載入 → 切換 TAG → migration → 體驗設定 → core → gateway → 後台 API → edge
+#   ./deploy.sh rollout    <compose.env>                 # upgrade 中途停止後，以目前的 DEMO_IMAGE_TAG 接續：migration → 體驗設定 → core → gateway → 後台 API → edge
 #   ./deploy.sh backup     <compose.env>                 # 備份資料庫到 backups/
 #   ./deploy.sh status     <compose.env>                 # 查看本專案容器狀態與最近日誌
 #   ./deploy.sh stop       <compose.env>                 # 只停止本專案容器，保留資料與日誌
@@ -26,7 +27,7 @@ die()  { echo "✗ $*" >&2; exit 1; }
 ok()   { echo "✓ $*"; }
 warn() { echo "! $*"; }
 
-[ -n "$CMD" ] && [ -n "$ENV_FILE" ] || { sed -n '2,18p' "$0"; exit 1; }
+[ -n "$CMD" ] && [ -n "$ENV_FILE" ] || { sed -n '2,19p' "$0"; exit 1; }
 [ -f "$ENV_FILE" ] || die "找不到 compose.env：$ENV_FILE"
 ENV_FILE="$(cd "$(dirname "$ENV_FILE")" && pwd)/$(basename "$ENV_FILE")"
 
@@ -134,6 +135,40 @@ start_admin() { # 需要 migration 完成、ADMIN_CUSTOMER_ID 已存在（provis
   fi
   dc up -d --pull never --no-build --no-deps admin-api
   wait_healthy admin-api 120
+}
+
+rollout_experience() {
+  # Feature 016 起體驗設定可在後台修改；目前生效版本由後台儲存時回 ADMIN_MANAGED，保留後台的版本、略過設定檔
+  local out
+  if out="$(experience check 2>&1)"; then echo "$out"; experience write; return 0; fi
+  echo "$out"
+  if grep -q '"code":"ADMIN_MANAGED"' <<<"$out"; then
+    warn "體驗設定目前由後台管理（ADMIN_MANAGED），保留後台的版本，略過設定檔"
+    return 0
+  fi
+  die "體驗設定檢查失敗，未寫入；尚未重建任何服務（可修正後執行 ./deploy.sh rollout $ENV_FILE 接續）"
+}
+
+rollout() { # 以 compose.env 目前的 DEMO_IMAGE_TAG 完成 migration → 體驗設定 → 依序重建服務
+  echo; echo "== 3/6 Migration"; run_migration
+  echo; echo "== 4/6 體驗設定"; rollout_experience
+  echo; echo "== 5/6 Core → Gateway → 後台 API（Core 先升級，避免新 Gateway 轉發舊 Core 不認得的請求）"
+  dc up -d --pull never --no-build --no-deps core
+  wait_healthy core 240
+  dc up -d --pull never --no-build --no-deps gateway
+  wait_healthy gateway 120
+  provision activate-key || die "Gateway 簽章金鑰檢查失敗"
+  start_admin
+  echo; echo "== 6/6 Connector / Bridge"
+  start_edge
+  echo; dc ps
+  echo "== 各服務使用的 TAG"
+  local bad=0 svc img
+  for svc in core gateway bridge connector $([ "$ADMIN_ENABLED" = false ] || echo admin-api); do
+    img="$(docker inspect -f '{{.Config.Image}}' "$(dc ps -q "$svc")" 2>/dev/null || echo 未執行)"
+    case "$img" in *":$TAG"|*":$TAG-amd64") ok "$svc  $img" ;; *) warn "$svc  $img（不是 $TAG）"; bad=1 ;; esac
+  done
+  [ "$bad" = 0 ] || die "有服務沒有切換到 $TAG"
 }
 
 check_images() {
@@ -271,6 +306,12 @@ case "$CMD" in
     # 在後台 API 的 image 與 admin.env 內執行；邀請連結會寄出，並只在這個終端機顯示一次
     dc run --rm --no-deps -T admin-api node dist/src/admin/bootstrap/admin-bootstrap.cli.js "${@:3}" ;;
   backup) backup_db manual ;;
+  rollout)
+    # upgrade 在 TAG 切換後中途停止時，修正問題後以目前的 DEMO_IMAGE_TAG 接續完成
+    check_images
+    echo "== 以 DEMO_IMAGE_TAG=$TAG 接續升級"
+    rollout
+    ok "完成：$TAG" ;;
   upgrade)
     TAR="${3:-}"; SUM="${4:-}"
     [ -f "$TAR" ] && [ -f "$SUM" ] || die "用法：./deploy.sh upgrade <compose.env> <images.tar> <sha256>"
@@ -296,20 +337,7 @@ print(tags[0] if len(tags) == 1 else "")' 2>/dev/null || true)"
     sed -i "s/^DEMO_IMAGE_TAG=.*/DEMO_IMAGE_TAG=$NEW_TAG/" "$ENV_FILE"
     [ "$(envval DEMO_IMAGE_TAG)" = "$NEW_TAG" ] || die "compose.env 更新失敗"
     ok "DEMO_IMAGE_TAG=${NEW_TAG}（舊設定保存在 $(basename "$ENV_FILE").bak-${OLD_TAG}）"
-    echo; echo "== 3/6 Migration"; run_migration
-    echo; echo "== 4/6 體驗設定"
-    experience check || die "體驗設定檢查失敗，未寫入；服務仍在舊版執行"
-    experience write
-    echo; echo "== 5/6 Core → Gateway → 後台 API（Core 先升級，避免新 Gateway 轉發舊 Core 不認得的請求）"
-    dc up -d --pull never --no-build --no-deps core
-    wait_healthy core 240
-    dc up -d --pull never --no-build --no-deps gateway
-    wait_healthy gateway 120
-    provision activate-key || die "Gateway 簽章金鑰檢查失敗"
-    start_admin
-    echo; echo "== 6/6 Connector / Bridge"
-    start_edge
-    echo; dc ps
+    rollout
     ok "升級完成：$NEW_TAG"
     echo "回滾：把 compose.env 換回 $(basename "$ENV_FILE").bak-${OLD_TAG}，再依序重建 core、gateway、edge（migration 不倒退）" ;;
   status) dc ps; dc logs --tail 100 ;;
