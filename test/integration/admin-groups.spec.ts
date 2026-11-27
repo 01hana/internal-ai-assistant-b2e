@@ -169,6 +169,35 @@ describeDbBackedAdmin('admin groups (Feature 014)', () => {
       expect(options.body.data.map((option: { label: string }) => option.label)).toEqual(['最高管理者', 'no.groups-group', 'user.manager-group']);
     });
 
+    it('never lets anyone grant more than they hold or edit their own group', async () => {
+      const manager = await signInWith('group.manager', ['UserGroup:read', 'UserGroup:create', 'UserGroup:update', 'UserGroup:delete', 'User:read']);
+      const own = (await ctx.db.userGroup.findUniqueOrThrow({ where: { name: 'group.manager-group' } })).id;
+      const narrow = await customGroup('窄', ['User:read']);
+      const wide = await customGroup('寬', ['User:read', 'User:delete']);
+      const create = (signed: Signed, permissions: string[]) => fromSite(api(ctx.app).post(base), signed).send({ name: `新-${permissions.length}`, permissions });
+      const patch = (id: string, body: object) => fromSite(api(ctx.app).patch(`${base}/${id}`), manager).send(body);
+
+      expect((await create(manager, ['User:read', 'User:delete'])).body.error.code).toBe('PERMISSIONS_BEYOND_YOUR_OWN');
+      expect((await create(manager, ['User:read'])).status).toBe(201);
+      expect((await patch(narrow.id, { permissions: ['User:read', 'User:delete'] })).status).toBe(403);
+      expect((await patch(narrow.id, { name: '窄 2', permissions: [] })).status).toBe(200);
+      expect((await patch(own, { name: 'x' })).body.error.code).toBe('CANNOT_EDIT_OWN_GROUP');
+      expect((await patch(wide.id, { name: 'x' })).body.error.code).toBe('GROUP_BEYOND_YOUR_PERMISSIONS');
+      expect((await fromSite(api(ctx.app).delete(base), manager).send({ ids: [wide.id] })).status).toBe(403);
+      expect((await fromSite(api(ctx.app).delete(base), admin).send({ ids: [wide.id] })).status).toBe(200);
+
+      const manageable = Object.fromEntries((await table(manager)).body.data.items.map((item: { name: string; manageable: boolean }) => [item.name, item.manageable]));
+      expect(manageable).toEqual({ '最高管理者': false, 'group.manager-group': false, '窄 2': true, '新-1': true });
+      const options = await api(ctx.app).get(`${base}/getOptions`).set('Cookie', manager.cookie);
+      expect(Object.fromEntries(options.body.data.map((option: { label: string; assignable: boolean }) => [option.label, option.assignable])))
+        .toEqual({ '最高管理者': false, 'group.manager-group': true, '窄 2': true, '新-1': true });
+    });
+
+    it('lets holders of all:manage assign the admin group', async () => {
+      const options = await api(ctx.app).get(`${base}/getOptions`).set('Cookie', admin.cookie);
+      expect(options.body.data.every((option: { assignable: boolean }) => option.assignable)).toBe(true);
+    });
+
     it('requires a session', async () => {
       expect((await fromSite(api(ctx.app).post(`${base}/getTable`)).send({})).status).toBe(401);
     });

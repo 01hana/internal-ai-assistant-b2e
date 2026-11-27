@@ -13,8 +13,9 @@ import type { RequestMeta } from '../common/request-meta';
 import { keywordWhere, orderByOf, pageArgs, type TablePage } from '../common/table-query.dto';
 import { GroupsService } from '../groups/groups.service';
 import { AdminMailService } from '../mail/admin-mail.service';
-import { ADMIN_GROUP_CODE, type AdminAbilityAction, DEVELOPER_GROUP_CODE } from '../permissions';
-import { assertAdminRemains, assertKeepsOwnSystemGroups, assertNotSelf, isActiveAdmin } from './user-policy';
+import { type AdminAbilityAction, DEVELOPER_GROUP_CODE } from '../permissions';
+import { canGrantGroup } from '../authorization/grant-policy';
+import { assertNotSelf } from './user-policy';
 import { toUserView, type UserView } from './user-view';
 import type { BatchStatusDto, CreateUserDto, UpdateUserDto, UserTableFiltersDto, UserTableQueryDto } from './users.dto';
 
@@ -24,7 +25,6 @@ const WITH_GROUPS = { groups: true } as const;
 const SORTABLE = ['account', 'name', 'lastLoginAt', 'createdAt'] as const;
 const STATUS_OPTIONS = [{ value: true, label: '啟用' }, { value: false, label: '停用' }];
 const USER_NOT_FOUND = { error: 'user_not_found', message: '找不到使用者。' };
-const ACTIVE_ADMIN: Prisma.UserWhereInput = { status: true, groups: { some: { code: ADMIN_GROUP_CODE }, none: { code: DEVELOPER_GROUP_CODE } } };
 
 /**
  * Feature 014 US4: back-office users. Visibility comes from the caller's CASL ability (non-developers
@@ -95,19 +95,18 @@ export class UsersService {
   /** Name and groups; the email only while the invitation is pending, unless the caller is a developer (US4-2, US4-3). */
   async update(principal: AdminPrincipal, id: string, input: UpdateUserDto, meta: RequestMeta): Promise<UserView> {
     const current = await this.findVisible(principal, id, 'update');
-    const groups = input.groupIds === undefined ? undefined : await this.assignableGroups(principal, input.groupIds);
+    if (input.groupIds !== undefined && current.id === principal.user.id && !sameIds(current.groups, input.groupIds)) {
+      throw new BadRequestException({ error: 'cannot_change_own_groups', message: '不能修改自己的群組，請由其他管理者調整。' });
+    }
+    const groups = input.groupIds === undefined ? undefined : await this.assignableGroups(principal, input.groupIds, current.groups);
     const activated = current.passwordHash !== null;
     const emailChanged = input.email !== undefined && input.email !== current.email;
     if (emailChanged && activated && !principal.isDeveloper) {
       throw new BadRequestException({ error: 'email_locked', message: '使用者啟用後 email 不可修改，請聯絡開發工程師處理。' });
     }
-    if (groups && current.id === principal.user.id) assertKeepsOwnSystemGroups(current.groups, groups);
 
     const updated = await uniqueOrConflict(() => this.prisma.db.$transaction(async (tx) => {
       if (emailChanged) await assertAvailable(tx, { email: input.email }, id);
-      if (groups && isActiveAdmin(current) && !isActiveAdmin({ ...current, groups })) {
-        assertAdminRemains([current], await countActiveAdmins(tx, [id]));
-      }
       const user = await tx.user.update({
         where: { id },
         data: {
@@ -133,7 +132,6 @@ export class UsersService {
     const changingIds = changing.map((user) => user.id);
 
     await this.prisma.db.$transaction(async (tx) => {
-      if (!input.status) assertAdminRemains(changing.filter(isActiveAdmin), await countActiveAdmins(tx, changingIds));
       await tx.user.updateMany({ where: { id: { in: changingIds } }, data: { status: input.status } });
       for (const user of changing) {
         if (!input.status) await this.sessions.revokeAllForUser(user.id, tx);
@@ -168,7 +166,6 @@ export class UsersService {
     assertNotSelf(principal.user.id, ids, 'delete');
 
     await this.prisma.db.$transaction(async (tx) => {
-      assertAdminRemains(users.filter(isActiveAdmin), await countActiveAdmins(tx, ids));
       await tx.user.deleteMany({ where: { id: { in: ids } } });
       for (const user of users) {
         await this.audit.record({
@@ -213,14 +210,23 @@ export class UsersService {
     }
   }
 
-  /** Groups to assign must exist; only developers may assign the developer group (US4-5). */
-  private async assignableGroups(principal: AdminPrincipal, ids: readonly string[]): Promise<UserGroup[]> {
+  /**
+   * Groups to assign must exist; only developers may assign the developer group (US4-5). Every group
+   * added or removed must grant nothing the caller lacks; groups the user keeps are not re-checked.
+   */
+  private async assignableGroups(principal: AdminPrincipal, ids: readonly string[], current: readonly UserGroup[] = []): Promise<UserGroup[]> {
     const unique = uniqueIds(ids);
     const groups = await this.prisma.db.userGroup.findMany({ where: { id: { in: unique } } });
     const missing = unique.filter((id) => !groups.some((group) => group.id === id));
     if (missing.length > 0) throw new BadRequestException({ error: 'group_not_found', message: '找不到群組。', details: { ids: missing } });
     if (!principal.isDeveloper && groups.some((group) => group.code === DEVELOPER_GROUP_CODE)) {
       throw new ForbiddenException({ error: 'developer_group_forbidden', message: '只有開發工程師可以指派「開發工程師」群組。' });
+    }
+    const added = groups.filter((group) => !current.some((kept) => kept.id === group.id));
+    const removed = current.filter((group) => !groups.some((kept) => kept.id === group.id));
+    const beyond = [...added, ...removed].filter((group) => !canGrantGroup(principal.user, group));
+    if (beyond.length > 0) {
+      throw new ForbiddenException({ error: 'group_beyond_your_permissions', message: '不能指派權限超過自己的群組。', details: { ids: beyond.map((group) => group.id) } });
     }
     return groups;
   }
@@ -254,10 +260,11 @@ function filtersWhere(filters: UserTableFiltersDto | undefined): Prisma.UserWher
   };
 }
 
-/** Active admins other than `excludedIds` (US4-7). */
-function countActiveAdmins(db: Db, excludedIds: readonly string[]): Promise<number> {
-  return db.user.count({ where: { AND: [ACTIVE_ADMIN, { id: { notIn: [...excludedIds] } }] } });
+function sameIds(groups: readonly Pick<UserGroup, 'id'>[], ids: readonly string[]): boolean {
+  const next = new Set(ids);
+  return next.size === groups.length && groups.every((group) => next.has(group.id));
 }
+
 
 /** Accounts and emails are unique regardless of case (both are stored in lower case). */
 async function assertAvailable(db: Db, values: { account?: string; email?: string }, exceptId?: string): Promise<void> {

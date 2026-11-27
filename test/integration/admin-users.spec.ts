@@ -170,33 +170,49 @@ describeDbBackedAdmin('admin users (Feature 014)', () => {
     });
   });
 
-  describe('protection rules (US4-6, US4-7)', () => {
-    it('forbids disabling or deleting yourself and leaving your own built-in group', async () => {
+  describe('protection rules (US4-6)', () => {
+    it('forbids disabling or deleting yourself and changing your own groups', async () => {
       await seedUser(ctx.db, { account: 'ops.second', groups: ['admin'] });
       await send('patch', '/batch', admin, { ids: [ids.admin], status: false }).expect(400);
       await send('delete', '', admin, { ids: [ids.admin] }).expect(400);
-      const leave = await send('put', `/${ids.admin}`, admin, { groupIds: [ids.support] }).expect(400);
-      expect(leave.body.error).toMatchObject({ code: 'CANNOT_LEAVE_SYSTEM_GROUP', details: { groups: ['admin'] } });
+      const leave = await send('put', `/${ids.admin}`, admin, { groupIds: [ids.adminGroup, ids.support] }).expect(400);
+      expect(leave.body.error.code).toBe('CANNOT_CHANGE_OWN_GROUPS');
+      await send('put', `/${ids.admin}`, admin, { name: '改名', groupIds: [ids.adminGroup] }).expect(200);
     });
 
-    it('keeps at least one active admin, developers not counted', async () => {
-      const disable = await send('patch', '/batch', developer, { ids: [ids.admin], status: false }).expect(400);
-      expect(disable.body.error).toMatchObject({ code: 'LAST_ADMIN', details: { ids: [ids.admin] } });
-      await send('delete', '', developer, { ids: [ids.admin] }).expect(400);
-      await send('put', `/${ids.admin}`, developer, { groupIds: [ids.support] }).expect(400);
-      await send('put', `/${ids.admin}`, developer, { groupIds: [ids.adminGroup, ids.developerGroup] }).expect(400);
+    it('never lets anyone grant more than they hold', async () => {
+      const manager = await signInWith('user.manager', ['User:read', 'User:update', 'Conversation:read']);
+      const managerGroup = (await ctx.db.userGroup.findUniqueOrThrow({ where: { name: 'user.manager-group' } })).id;
+      const wider = (await ctx.db.userGroup.create({ data: { name: '稽核', permissions: ['AuditEvent:read'] } })).id;
+      const managerId = (await ctx.db.user.findUniqueOrThrow({ where: { account: 'user.manager' } })).id;
 
-      const second = await seedUser(ctx.db, { account: 'ops.second', groups: ['admin'] });
-      await send('delete', '', admin, { ids: [second.id] }).expect(200);
+      const escalate = await send('put', `/${managerId}`, manager, { groupIds: [managerGroup, ids.adminGroup] }).expect(400);
+      expect(escalate.body.error.code).toBe('CANNOT_CHANGE_OWN_GROUPS');
+      const promote = await send('put', `/${ids.agent}`, manager, { groupIds: [ids.support, ids.adminGroup] }).expect(403);
+      expect(promote.body.error).toMatchObject({ code: 'GROUP_BEYOND_YOUR_PERMISSIONS', details: { ids: [ids.adminGroup] } });
+      await send('put', `/${ids.agent}`, manager, { groupIds: [ids.support, wider] }).expect(403);
+      // Removing a more powerful group is as much beyond the caller as adding it.
+      await send('put', `/${ids.admin}`, manager, { groupIds: [ids.support] }).expect(403);
+      // Groups the user keeps are not re-checked.
+      await send('put', `/${ids.admin}`, manager, { name: '改名', groupIds: [ids.adminGroup] }).expect(200);
+      await send('put', `/${ids.agent}`, manager, { groupIds: [managerGroup] }).expect(200);
+      const agent = await ctx.db.user.findUniqueOrThrow({ where: { id: ids.agent }, include: { groups: true } });
+      expect(agent.groups.map((group) => group.id)).toEqual([managerGroup]);
+    });
+
+    it('lets the last admin be disabled, moved or deleted (no minimum number of admins)', async () => {
+      await send('patch', '/batch', developer, { ids: [ids.admin], status: false }).expect(200);
+      await send('put', `/${ids.admin}`, developer, { groupIds: [ids.support] }).expect(200);
+      await send('delete', '', developer, { ids: [ids.admin] }).expect(200);
     });
 
     it('rejects a whole batch when any user breaks a rule or is missing', async () => {
       const second = await seedUser(ctx.db, { account: 'ops.second', groups: ['admin'] });
-      await send('patch', '/batch', developer, { ids: [ids.agent, ids.admin, second.id], status: false }).expect(400);
+      await send('patch', '/batch', admin, { ids: [ids.agent, ids.admin, second.id], status: false }).expect(400);
       const missing = await send('patch', '/batch', admin, { ids: [ids.agent, 'missing-user'], status: false }).expect(404);
       expect(missing.body.error).toMatchObject({ code: 'USER_NOT_FOUND', details: { ids: ['missing-user'] } });
       expect(await ctx.db.user.count({ where: { status: false } })).toBe(0);
-      await send('delete', '', developer, { ids: [ids.agent, ids.admin, second.id] }).expect(400);
+      await send('delete', '', admin, { ids: [ids.agent, ids.admin, second.id] }).expect(400);
       expect(await ctx.db.user.count()).toBe(4);
     });
   });
@@ -243,7 +259,8 @@ describeDbBackedAdmin('admin users (Feature 014)', () => {
       await send('patch', '/batch', reader, { ids: [ids.agent], status: false }).expect(403);
       await send('delete', '', reader, { ids: [ids.agent] }).expect(403);
 
-      const manager = await signInWith('user.manager', ['User:manage']);
+      // Conversation:read too, or the 客服 group would be beyond them.
+      const manager = await signInWith('user.manager', ['User:manage', 'Conversation:read']);
       await send('post', '', manager, newUser()).expect(201);
       await send('put', `/${ids.admin}`, manager, { groupIds: [ids.adminGroup, ids.support] }).expect(200);
 

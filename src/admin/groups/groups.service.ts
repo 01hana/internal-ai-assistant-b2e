@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { accessibleBy } from '@casl/prisma/runtime';
 import type { Prisma, UserGroup } from '../../generated/prisma/client';
 import type { AdminAbilityAction } from '../permissions';
@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UserAuditService } from '../audit/user-audit.service';
 import { actorOf } from '../auth/admin-auth.service';
 import { selectableGroupsWhere } from '../authorization/admin-ability.factory';
+import { canGrantGroup, canGrantPermissions, canManageGroup } from '../authorization/grant-policy';
 import type { AdminPrincipal } from '../common/admin-request';
 import { type IdsDto, uniqueIds } from '../common/ids.dto';
 import { isUniqueViolation } from '../common/prisma-errors';
@@ -22,6 +23,8 @@ export type GroupView = {
   isSystem: boolean;
   /** Custom groups: their own permissions. Built-in groups: from src/admin/permissions (`all:manage`). */
   permissions: string[];
+  /** Whether the caller may edit or delete it: custom, not one of their own groups, no more powerful than them. */
+  manageable: boolean;
   memberCount: number;
   createdAt: string;
   updatedAt: string;
@@ -34,6 +37,9 @@ const SORTABLE = ['name', 'createdAt', 'updatedAt'] as const;
 const SYSTEM_FIRST: Prisma.UserGroupOrderByWithRelationInput[] = [{ isSystem: 'desc' }, { code: { sort: 'asc', nulls: 'last' } }];
 const DUPLICATE_NAME = { error: 'group_name_taken', message: '已有相同名稱的群組。' };
 const SYSTEM_GROUP_LOCKED = { error: 'system_group_locked', message: '內建群組不可修改或刪除。' };
+const PERMISSIONS_BEYOND = { error: 'permissions_beyond_your_own', message: '不能授予自己沒有的權限。' };
+const OWN_GROUP_LOCKED = { error: 'cannot_edit_own_group', message: '不能修改自己所屬的群組，請由其他管理者調整。' };
+const GROUP_BEYOND = { error: 'group_beyond_your_permissions', message: '不能修改或刪除權限超過自己的群組。' };
 
 /**
  * Feature 014 US3: user groups. Visibility comes from the caller's CASL ability (non-developers never
@@ -54,15 +60,16 @@ export class GroupsService {
       }),
       this.prisma.db.userGroup.count({ where })
     ]);
-    return { items: rows.map(toGroupView), total };
+    return { items: rows.map((row) => toGroupView(row, principal)), total };
   }
 
-  async options(principal: AdminPrincipal): Promise<Array<{ id: string; label: string; isSystem: boolean }>> {
+  /** `assignable`: the caller may put users into (or take them out of) this group — it grants nothing they lack. */
+  async options(principal: AdminPrincipal): Promise<Array<{ id: string; label: string; isSystem: boolean; assignable: boolean }>> {
     const groups = await this.prisma.db.userGroup.findMany({
       where: selectableGroupsWhere(principal.isDeveloper),
       orderBy: [...SYSTEM_FIRST, { name: 'asc' }]
     });
-    return groups.map((group) => ({ id: group.id, label: group.name, isSystem: group.isSystem }));
+    return groups.map((group) => ({ id: group.id, label: group.name, isSystem: group.isSystem, assignable: canGrantGroup(principal.user, group) }));
   }
 
   permissions() {
@@ -70,11 +77,11 @@ export class GroupsService {
   }
 
   async get(principal: AdminPrincipal, id: string): Promise<GroupView> {
-    return toGroupView(await this.findVisible(principal, id));
+    return toGroupView(await this.findVisible(principal, id), principal);
   }
 
   async create(principal: AdminPrincipal, input: CreateGroupDto, meta: RequestMeta): Promise<GroupView> {
-    const permissions = validPermissions(input.permissions);
+    const permissions = grantablePermissions(principal, input.permissions);
     try {
       const group = await this.prisma.db.$transaction(async (tx) => {
         const created = await tx.userGroup.create({
@@ -87,7 +94,7 @@ export class GroupsService {
         }, tx);
         return created;
       });
-      return toGroupView(group);
+      return toGroupView(group, principal);
     } catch (error) {
       if (isUniqueViolation(error)) throw new ConflictException(DUPLICATE_NAME);
       throw error;
@@ -97,7 +104,9 @@ export class GroupsService {
   async update(principal: AdminPrincipal, id: string, input: UpdateGroupDto, meta: RequestMeta): Promise<GroupView> {
     const current = await this.findVisible(principal, id, 'update');
     if (current.isSystem) throw new BadRequestException(SYSTEM_GROUP_LOCKED);
-    const permissions = input.permissions === undefined ? undefined : validPermissions(input.permissions);
+    if (principal.user.groups.some((own) => own.id === current.id)) throw new ForbiddenException(OWN_GROUP_LOCKED);
+    if (!canManageGroup(principal.user, current)) throw new ForbiddenException(GROUP_BEYOND);
+    const permissions = input.permissions === undefined ? undefined : grantablePermissions(principal, input.permissions);
     try {
       const updated = await this.prisma.db.$transaction(async (tx) => {
         const group = await tx.userGroup.update({
@@ -115,7 +124,7 @@ export class GroupsService {
         }, tx);
         return group;
       });
-      return toGroupView(updated);
+      return toGroupView(updated, principal);
     } catch (error) {
       if (isUniqueViolation(error)) throw new ConflictException(DUPLICATE_NAME);
       throw error;
@@ -133,6 +142,8 @@ export class GroupsService {
     if (missing.length > 0) throw new NotFoundException({ error: 'group_not_found', message: '找不到群組。', details: { ids: missing } });
     const locked = groups.filter((group) => group.isSystem);
     if (locked.length > 0) throw new BadRequestException({ ...SYSTEM_GROUP_LOCKED, details: { ids: locked.map((group) => group.id) } });
+    const beyond = groups.filter((group) => !canManageGroup(principal.user, group));
+    if (beyond.length > 0) throw new ForbiddenException({ ...GROUP_BEYOND, details: { ids: beyond.map((group) => group.id) } });
     const inUse = groups.filter((group) => group._count.users > 0);
     if (inUse.length > 0) {
       throw new BadRequestException({ error: 'group_has_members', message: '群組仍有成員，請先移除成員。', details: { ids: inUse.map((group) => group.id) } });
@@ -171,7 +182,14 @@ function validPermissions(values: readonly string[]): string[] {
   return result.permissions;
 }
 
-function toGroupView(group: GroupWithCount): GroupView {
+/** Valid custom-group permissions the caller holds themselves. */
+function grantablePermissions(principal: AdminPrincipal, values: readonly string[]): string[] {
+  const permissions = validPermissions(values);
+  if (!canGrantPermissions(principal.user, [{ code: null, permissions }])) throw new ForbiddenException(PERMISSIONS_BEYOND);
+  return permissions;
+}
+
+function toGroupView(group: GroupWithCount, principal: AdminPrincipal): GroupView {
   return {
     id: group.id,
     code: group.code,
@@ -179,6 +197,7 @@ function toGroupView(group: GroupWithCount): GroupView {
     description: group.description,
     isSystem: group.isSystem,
     permissions: isSystemGroupCode(group.code) ? [...SYSTEM_GROUPS[group.code].permissions] : group.permissions,
+    manageable: !group.isSystem && canManageGroup(principal.user, group),
     memberCount: group._count.users,
     createdAt: group.createdAt.toISOString(),
     updatedAt: group.updatedAt.toISOString()

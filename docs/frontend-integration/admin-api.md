@@ -23,7 +23,7 @@
 成功：`{ "requestId": "…", "data": … }`。失敗：
 
 ```json
-{ "requestId": "…", "error": { "code": "LAST_ADMIN", "message": "至少需保留一位啟用中的最高管理者。", "details": { "ids": ["…"] } } }
+{ "requestId": "…", "error": { "code": "CANNOT_DELETE_SELF", "message": "不可刪除自己的帳號。", "details": { "ids": ["…"] } } }
 ```
 
 - `message` 是可以直接顯示的中文訊息；程式判斷請用 `code`。
@@ -72,17 +72,19 @@
 - `inviteSent: false` 表示使用者已建立但信沒寄出，請提示管理者稍後「重寄邀請信」。
 - email：`invitationPending` 為 `true` 時可修改（舊連結失效，需重寄）；已啟用後只有開發工程師能改（其他人 `EMAIL_LOCKED`），表單應改為唯讀並提示聯絡開發工程師。
 - 重寄邀請只限尚未設定密碼、啟用中的使用者（`ALREADY_ACTIVATED`、`USER_DISABLED`）。
-- 其他規則錯誤：`DEVELOPER_GROUP_FORBIDDEN`（403）、`CANNOT_DISABLE_SELF`、`CANNOT_DELETE_SELF`、`CANNOT_LEAVE_SYSTEM_GROUP`、`LAST_ADMIN`、`GROUP_NOT_FOUND`、`USER_NOT_FOUND`。
-- 群組下拉選單用 `groups/getOptions`（見下節）。
+- 不能授予超過自己的權限：新增或移除的群組，權限都必須是登入者本身權限的子集，否則 403 `GROUP_BEYOND_YOUR_PERMISSIONS`（`details.ids`）；使用者原本就有、這次沒變動的群組不重新檢查。只有持有 `all:manage` 的人（開發工程師、最高管理者）能指派「最高管理者」。
+- 不能修改自己的群組：編輯自己時 `groupIds` 若與目前不同，回 400 `CANNOT_CHANGE_OWN_GROUPS`；表單應把群組欄位設為唯讀（名稱仍可改）。
+- 其他規則錯誤：`DEVELOPER_GROUP_FORBIDDEN`（403）、`CANNOT_DISABLE_SELF`、`CANNOT_DELETE_SELF`、`GROUP_NOT_FOUND`、`USER_NOT_FOUND`。
+- 群組下拉選單用 `groups/getOptions`（見下節），`assignable: false` 的選項應停用。
 
 ## 5. 群組 `groups`
 
-`group` 的形狀：`{ id, code, name, description, isSystem, permissions, memberCount, createdAt, updatedAt }`；內建群組的 `code` 為 `developer`／`admin`，自訂群組為 `null`。
+`group` 的形狀：`{ id, code, name, description, isSystem, permissions, manageable, memberCount, createdAt, updatedAt }`；內建群組的 `code` 為 `developer`／`admin`，自訂群組為 `null`。`manageable` 依登入者計算：自訂群組、不是自己所屬、權限不超過自己時為 `true`，前端只在 `true` 時提供編輯與刪除，其餘唯讀。
 
 | Method | Path | 權限 | Body | 回應 `data` |
 | --- | --- | --- | --- | --- |
 | POST | `groups/getTable` | `UserGroup:read` | `{ page, pageSize, sort?, keyword? }` | `{ items: group[], total }` |
-| GET | `groups/getOptions` | `User:read` 或 `UserGroup:read` | — | `[{ id, label, isSystem }]` |
+| GET | `groups/getOptions` | `User:read` 或 `UserGroup:read` | — | `[{ id, label, isSystem, assignable }]` |
 | GET | `groups/getPermissions` | `UserGroup:read` | — | `[{ subject, label, actions }]` |
 | GET | `groups/:id` | `UserGroup:read` | — | `group` |
 | POST | `groups` | `UserGroup:create` | `{ name, description?, permissions }` | `group` |
@@ -90,6 +92,8 @@
 | DELETE | `groups` | `UserGroup:delete` | `{ ids }` | `{ deleted }` |
 
 - 權限矩陣以 `groups/getPermissions` 產生（列為 subject、欄為 action），不要寫死在前端；`permissions` 送 `subject:action` 字串，例如 `["User:read", "Conversation:read"]`。
+- 新增或修改群組時，勾選的權限必須是登入者本身擁有的（矩陣中其他格應停用），否則 403 `PERMISSIONS_BEYOND_YOUR_OWN`。
+- 不能修改自己所屬的群組（403 `CANNOT_EDIT_OWN_GROUP`）；不能修改或刪除權限超過自己的群組（403 `GROUP_BEYOND_YOUR_PERMISSIONS`，刪除時附 `details.ids`）。
 - 內建群組不可修改或刪除（`SYSTEM_GROUP_LOCKED`）；有成員的群組不可刪除（`GROUP_HAS_MEMBERS`）；名稱重複為 `GROUP_NAME_TAKEN`；不允許的權限為 `INVALID_PERMISSIONS`（`details.invalid`）。
 
 ## 6. 營運檢視（Feature 015）

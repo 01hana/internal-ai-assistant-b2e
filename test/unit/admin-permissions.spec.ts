@@ -4,6 +4,7 @@ import {
   ADMIN_ACTIONS,
   ADMIN_SUBJECTS,
   ALL_MANAGE,
+  coversPermissions,
   effectivePermissions,
   formatPermission,
   normalizeCustomGroupPermissions,
@@ -95,5 +96,17 @@ describe('admin permissions', () => {
       { action: 'read', subject: 'Conversation' }, { action: 'read', subject: 'Feedback' }, { action: 'update', subject: 'ReviewItem' }
     ]);
     expect(effectivePermissions([])).toEqual([]);
+  });
+
+  it('covers only permissions the holder has; all:manage covers everything', () => {
+    const custom = (...permissions: string[]) => effectivePermissions([{ code: null, permissions }]);
+    const admin = effectivePermissions([{ code: 'admin', permissions: [] }]);
+    const held = custom('User:read', 'User:update', 'UserGroup:read');
+    expect(coversPermissions(held, custom('User:read'))).toBe(true);
+    expect(coversPermissions(held, custom())).toBe(true);
+    expect(coversPermissions(held, custom('User:read', 'User:delete'))).toBe(false);
+    expect(coversPermissions(held, admin)).toBe(false);
+    expect(coversPermissions(admin, custom('User:delete', 'UserGroup:delete'))).toBe(true);
+    expect(coversPermissions(admin, effectivePermissions([{ code: 'developer', permissions: [] }]))).toBe(true);
   });
 });
